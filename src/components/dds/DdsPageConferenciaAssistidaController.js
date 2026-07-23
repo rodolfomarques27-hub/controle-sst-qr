@@ -54,12 +54,99 @@ export default function criarControladorConferenciaAssistidaDds({
 
                 if (indice !== indiceDia) return atual;
 
+                const alteracaoTema =
+                    campo === "temaConfirmado";
+
+                const alteracaoConfirmacao =
+                    alteracaoTema ||
+                    campo ===
+                        "responsavelConfirmado";
+
                 return {
                     ...atual,
                     [campo]: String(valor ?? ""),
-                    origemTemaConfirmado:
-                        "transcricao_manual",
-                    semAtividadeConfirmada: false,
+                    ...(alteracaoTema
+                        ? {
+                            origemTemaConfirmado:
+                                "transcricao_manual",
+                            origemDocumentalTemaConfirmado: "",
+                        }
+                        : {}),
+                    ...(alteracaoConfirmacao
+                        ? {
+                            semAtividadeConfirmada:
+                                false,
+                        }
+                        : {}),
+                };
+            })
+        );
+
+        setErroFechamentoConferenciaDds("");
+    }
+
+    /*
+     * dds_proveniencia_tema_ocr_v1
+     *
+     * A sugestão OCR somente se torna confirmação oficial
+     * após ação explícita do usuário.
+     */
+    function usarSugestaoOcrTemaConferenciaAssistidaDds(
+        indiceDia,
+        sugestaoOcrTema
+    ) {
+        if (conferenciaOficialConcluidaDds) return;
+
+        const sugestao =
+            sugestaoOcrTema &&
+            typeof sugestaoOcrTema === "object"
+                ? sugestaoOcrTema
+                : {};
+
+        const temaSugerido = String(
+            sugestao?.temaSugerido || ""
+        ).trim();
+
+        const responsavelSugerido = String(
+            sugestao?.responsavelSugerido || ""
+        ).trim();
+
+        if (
+            !temaSugerido &&
+            !responsavelSugerido
+        ) {
+            return;
+        }
+
+        setTemasConferenciaAssistidaDds((atuais) =>
+            diasRegistroScannerDds.map((_, indice) => {
+                const atual =
+                    atuais[indice] &&
+                    typeof atuais[indice] === "object"
+                        ? atuais[indice]
+                        : {};
+
+                if (indice !== indiceDia) return atual;
+
+                return {
+                    ...atual,
+                    ...(temaSugerido
+                        ? {
+                            temaConfirmado:
+                                temaSugerido,
+                            origemTemaConfirmado:
+                                "ocr_local_confirmado",
+                            origemDocumentalTemaConfirmado: "",
+                        }
+                        : {}),
+                    ...(responsavelSugerido
+                        ? {
+                            responsavelConfirmado:
+                                responsavelSugerido,
+                        }
+                        : {}),
+                    semAtividadeConfirmada:
+                        false,
                 };
             })
         );
@@ -99,6 +186,7 @@ export default function criarControladorConferenciaAssistidaDds({
                             : dia.responsavelPlanejado,
                     origemTemaConfirmado:
                         "planejamento_confirmado",
+                    origemDocumentalTemaConfirmado: "",
                     semAtividadeConfirmada:
                         Boolean(
                             dia.semAtividadePlanejada
@@ -144,6 +232,7 @@ export default function criarControladorConferenciaAssistidaDds({
                             ),
                     origemTemaConfirmado:
                         "transcricao_manual",
+                    origemDocumentalTemaConfirmado: "",
                     semAtividadeConfirmada:
                         proximoSemAtividade,
                 };
@@ -175,10 +264,72 @@ export default function criarControladorConferenciaAssistidaDds({
                     dia.responsavelConfirmado,
                 origemTemaConfirmado:
                     dia.origemTemaConfirmado || "",
+                origemDocumentalTemaConfirmado:
+                    dia.origemDocumentalTemaConfirmado || "",
                 semAtividadeConfirmada:
                     Boolean(
                         dia.semAtividadeConfirmada
                     ),
+                jornadaTipo:
+                    dia.jornadaTipo || "",
+                jornadaRotulo:
+                    dia.jornadaRotulo || "",
+                horaEntrada:
+                    dia.horaEntrada || "",
+                horaSaida:
+                    dia.horaSaida || "",
+                horaInicioAlmoco:
+                    dia.horaInicioAlmoco || "",
+                horaFimAlmoco:
+                    dia.horaFimAlmoco || "",
+                horaInicioDds:
+                    dia.horaInicioDds || "",
+                horaFimDds:
+                    dia.horaFimDds || "",
+                minutosNormaisPrevistos:
+                    Number(
+                        dia.minutosNormaisPrevistos ||
+                        0
+                    ),
+                minutosTrabalhados:
+                    Number(
+                        dia.minutosTrabalhados ||
+                        0
+                    ),
+                minutosRegulares:
+                    Number(
+                        dia.minutosRegulares ||
+                        0
+                    ),
+                minutosExtras:
+                    Number(
+                        dia.minutosExtras ||
+                        0
+                    ),
+                minutosDds:
+                    Number(
+                        dia.minutosDds ||
+                        0
+                    ),
+                horasTrabalhadas:
+                    Number(
+                        dia.horasTrabalhadas ||
+                        0
+                    ),
+                horasRegulares:
+                    Number(
+                        dia.horasRegulares ||
+                        0
+                    ),
+                horasExtras:
+                    Number(
+                        dia.horasExtras ||
+                        0
+                    ),
+                jornadaValida:
+                    dia.jornadaValida === true,
+                jornadaPendente:
+                    dia.jornadaPendente === true,
                 status: dia.statusTranscricao,
             })
         );
@@ -226,11 +377,23 @@ export default function criarControladorConferenciaAssistidaDds({
             );
         }
 
+        const redefinirComoManual =
+            campo === "nome";
+
         setParticipantesAdicionaisConferenciaDds((atuais) =>
             atuais.map((participante, indiceAtual) =>
                 indiceAtual === indice
                     ? {
                         ...participante,
+                        ...(redefinirComoManual
+                            ? {
+                                colaboradorCadastroChave: "",
+                                colaboradorId: "",
+                                codigoSafescan: "",
+                                origem: "adicional",
+                                tipo: "visitante",
+                            }
+                            : {}),
                         [campo]: valorSeguro,
                     }
                     : participante
@@ -256,6 +419,11 @@ export default function criarControladorConferenciaAssistidaDds({
                         nome: "",
                         funcao: "",
                         empresa: "",
+                        colaboradorCadastroChave: "",
+                        colaboradorId: "",
+                        codigoSafescan: "",
+                        origem: "adicional",
+                        tipo: "visitante",
                     }
                     : item
             )
@@ -281,6 +449,25 @@ export default function criarControladorConferenciaAssistidaDds({
 
             for (const dia of diasAtivosConferenciaAssistidaDds) {
                 proximo[obterChaveFrequenciaAssistidaDds(numero, dia)] = "presente";
+            }
+
+            return proximo;
+        });
+    }
+
+    function marcarSemanaAusenteAssistidaDds(numero) {
+        if (conferenciaOficialConcluidaDds) return;
+
+        setConferenciaAssistidaDds((atual) => {
+            const proximo = { ...atual };
+
+            for (const dia of diasAtivosConferenciaAssistidaDds) {
+                proximo[
+                    obterChaveFrequenciaAssistidaDds(
+                        numero,
+                        dia
+                    )
+                ] = "ausente";
             }
 
             return proximo;
@@ -654,6 +841,8 @@ export default function criarControladorConferenciaAssistidaDds({
                             ? "visitante"
                             : "colaborador"
                     ),
+                    colaboradorId: participante.colaboradorId || "",
+                    colaboradorCadastroChave: participante.colaboradorCadastroChave || "",
                     idAdicional: participante.idAdicional || "",
                 })),
                 fechamento: dadosAtuais?.conferenciaAssistida?.fechamento || fechamentoConferenciaAssistidaDds || null,
@@ -728,8 +917,81 @@ export default function criarControladorConferenciaAssistidaDds({
                     origemTemaConfirmado: String(
                         item?.origemTemaConfirmado || ""
                     ),
+                    origemDocumentalTemaConfirmado:
+                        String(
+                            item?.origemDocumentalTemaConfirmado ||
+                                ""
+                        ),
                     semAtividadeConfirmada:
                         item?.semAtividadeConfirmada === true,
+                    jornadaTipo: String(
+                        item?.jornadaTipo || ""
+                    ),
+                    jornadaRotulo: String(
+                        item?.jornadaRotulo || ""
+                    ),
+                    horaEntrada: String(
+                        item?.horaEntrada || ""
+                    ),
+                    horaSaida: String(
+                        item?.horaSaida || ""
+                    ),
+                    horaInicioAlmoco: String(
+                        item?.horaInicioAlmoco || ""
+                    ),
+                    horaFimAlmoco: String(
+                        item?.horaFimAlmoco || ""
+                    ),
+                    horaInicioDds: String(
+                        item?.horaInicioDds || ""
+                    ),
+                    horaFimDds: String(
+                        item?.horaFimDds || ""
+                    ),
+                    minutosNormaisPrevistos:
+                        Number(
+                            item?.minutosNormaisPrevistos ||
+                            0
+                        ),
+                    minutosTrabalhados:
+                        Number(
+                            item?.minutosTrabalhados ||
+                            0
+                        ),
+                    minutosRegulares:
+                        Number(
+                            item?.minutosRegulares ||
+                            0
+                        ),
+                    minutosExtras:
+                        Number(
+                            item?.minutosExtras ||
+                            0
+                        ),
+                    minutosDds:
+                        Number(
+                            item?.minutosDds ||
+                            0
+                        ),
+                    horasTrabalhadas:
+                        Number(
+                            item?.horasTrabalhadas ||
+                            0
+                        ),
+                    horasRegulares:
+                        Number(
+                            item?.horasRegulares ||
+                            0
+                        ),
+                    horasExtras:
+                        Number(
+                            item?.horasExtras ||
+                            0
+                        ),
+                    jornadaValida:
+                        item?.jornadaValida === true,
+                    jornadaPendente:
+                        item?.jornadaPendente === true,
                 }))
             );
 
@@ -794,6 +1056,104 @@ export default function criarControladorConferenciaAssistidaDds({
             setErroFechamentoConferenciaDds(
                 `Complete o tema e o responsável da folha assinada antes de concluir. Dias pendentes: ${nomesDias}.`
             );
+            return;
+        }
+
+        if (
+            estatisticasTemasConferenciaAssistidaDds
+                .jornadasPendentes > 0
+        ) {
+            const nomesDias =
+                estatisticasTemasConferenciaAssistidaDds
+                    .diasJornadaPendente
+                    .map(
+                        (dia) =>
+                            dia.nome ||
+                            dia.curto ||
+                            dia.data
+                    )
+                    .filter(Boolean)
+                    .join(", ");
+
+            setErroFechamentoConferenciaDds(
+                `Informe entrada e saída válidas antes de concluir. Jornadas pendentes: ${nomesDias}.`
+            );
+            return;
+        }
+
+        /*
+         * dds_origem_documental_tema_confirmado_v1
+         *
+         * O método usado para preencher o tema não comprova sua
+         * presença na folha assinada. A origem documental deve ser
+         * confirmada explicitamente para cada dia com DDS aplicado.
+         */
+        const origensDocumentaisPermitidasDds =
+            new Set([
+                "pdf_assinado",
+                "sistema_manual",
+            ]);
+
+        const diasSemOrigemDocumentalDds =
+            diasConferenciaAssistidaDds.filter(
+                (dia) => {
+                    if (
+                        dia.semAtividadeConfirmada ===
+                        true
+                    ) {
+                        return false;
+                    }
+
+                    const temaPreenchido =
+                        Boolean(
+                            String(
+                                dia.temaConfirmado ||
+                                ""
+                            ).trim()
+                        );
+
+                    const responsavelPreenchido =
+                        Boolean(
+                            String(
+                                dia.responsavelConfirmado ||
+                                ""
+                            ).trim()
+                        );
+
+                    if (
+                        !temaPreenchido ||
+                        !responsavelPreenchido
+                    ) {
+                        return false;
+                    }
+
+                    return !origensDocumentaisPermitidasDds.has(
+                        String(
+                            dia.origemDocumentalTemaConfirmado ||
+                            ""
+                        ).trim()
+                    );
+                }
+            );
+
+        if (
+            diasSemOrigemDocumentalDds.length > 0
+        ) {
+            const nomesDias =
+                diasSemOrigemDocumentalDds
+                    .map(
+                        (dia) =>
+                            dia.nome ||
+                            dia.curto ||
+                            dia.data
+                    )
+                    .filter(Boolean)
+                    .join(", ");
+
+            setErroFechamentoConferenciaDds(
+                `Confirme a origem documental do tema antes de concluir. Dias pendentes: ${nomesDias}.`
+            );
+
             return;
         }
 
@@ -873,6 +1233,8 @@ export default function criarControladorConferenciaAssistidaDds({
                             ? "visitante"
                             : "colaborador"
                     ),
+                    colaboradorId: participante.colaboradorId || "",
+                    colaboradorCadastroChave: participante.colaboradorCadastroChave || "",
                     idAdicional: participante.idAdicional || "",
                 })),
                 fechamento,
@@ -981,6 +1343,8 @@ export default function criarControladorConferenciaAssistidaDds({
                             ? "visitante"
                             : "colaborador"
                     ),
+                    colaboradorId: participante.colaboradorId || "",
+                    colaboradorCadastroChave: participante.colaboradorCadastroChave || "",
                     idAdicional: participante.idAdicional || "",
                 })),
             };
@@ -1044,12 +1408,14 @@ export default function criarControladorConferenciaAssistidaDds({
 
     return {
         atualizarTemaConferenciaAssistidaDds,
+        usarSugestaoOcrTemaConferenciaAssistidaDds,
         usarPlanejamentoTemaConferenciaAssistidaDds,
         alternarSemAtividadeConferenciaAssistidaDds,
         atualizarParticipanteAdicionalConferenciaDds,
         limparParticipanteAdicionalConferenciaDds,
         definirStatusFrequenciaAssistidaDds,
         marcarSemanaCompletaAssistidaDds,
+        marcarSemanaAusenteAssistidaDds,
         limparParticipanteConferenciaAssistidaDds,
         limparConferenciaAssistidaDds,
         salvarConferenciaAssistidaDds,

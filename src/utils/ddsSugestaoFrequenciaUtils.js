@@ -43,7 +43,19 @@ export function montarSugestoesFrequenciaDds({ participantes = [], dias = [], ma
         const numero = Number(participante?.numero || 0);
         const pagina = Number(participante?.paginaEsperada || 0);
         const numeroLinha = obterNumeroLinhaDds(participante);
-        const linhaNaoAnalisada = participante?.status === "pagina_nao_analisada" || !pagina || numeroLinha <= 0;
+        const statusParticipante = String(
+            participante?.status || ""
+        ).trim();
+
+        const identificacaoNaoConfirmada =
+            statusParticipante === "nao_localizado" ||
+            statusParticipante === "manual" ||
+            statusParticipante === "pendente";
+
+        const linhaNaoAnalisada =
+            statusParticipante === "pagina_nao_analisada" ||
+            !pagina ||
+            numeroLinha <= 0;
         const marcacaoSemana = marcacoes.find((item) => (
             Number(item?.pagina || 0) === pagina &&
             Number(item?.numeroLinha || 0) === numeroLinha &&
@@ -53,6 +65,26 @@ export function montarSugestoesFrequenciaDds({ participantes = [], dias = [], ma
 
         for (const dia of dias) {
             const chave = obterChaveSugestaoFrequenciaDds(numero, dia);
+
+            if (identificacaoNaoConfirmada) {
+                const naoLocalizado =
+                    statusParticipante === "nao_localizado";
+
+                sugestoes[chave] = {
+                    sugestao: "manual",
+                    confianca: 0,
+                    origem: naoLocalizado
+                        ? "participante_nao_localizado"
+                        : "identificacao_nao_confirmada",
+                    requerConferenciaManual: true,
+                    prioridade: "normal",
+                    motivo: naoLocalizado
+                        ? "Nome ou código SafeScan não localizado na página esperada; confira esta linha manualmente."
+                        : "A identificação textual do participante não foi confirmada; confira esta linha manualmente.",
+                };
+
+                continue;
+            }
 
             if (linhaNaoAnalisada) {
                 sugestoes[chave] = {

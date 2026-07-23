@@ -171,7 +171,16 @@ export default function useDdsScannerConferenciaDerivados({
         } else if (!qualidadeLeituraArquivoScannerDds.confiavel) {
             statusGeral = "Exige conferência manual";
             statusVisual = "manual";
-        } else if (codigoLocalizado || empresaLocalizada || obraLocalizada || periodoLocalizado) {
+        } else if (
+            codigoLocalizado ||
+            (
+                periodoLocalizado &&
+                (
+                    empresaLocalizada ||
+                    obraLocalizada
+                )
+            )
+        ) {
             statusGeral = "Pré-conferência estrutural compatível";
             statusVisual = "ok";
         } else {
@@ -509,6 +518,213 @@ export default function useDdsScannerConferenciaDerivados({
             .trim()
             .toLowerCase();
 
+        const normalizarHoraDds = (valor = "") => {
+            const hora = String(valor ?? "").trim();
+
+            return /^\d{2}:\d{2}$/.test(hora)
+                ? hora
+                : "";
+        };
+
+        const horaParaMinutosDds = (valor = "") => {
+            const hora = normalizarHoraDds(valor);
+
+            if (!hora) return null;
+
+            const [horas, minutos] = hora
+                .split(":")
+                .map(Number);
+
+            if (
+                !Number.isInteger(horas) ||
+                !Number.isInteger(minutos) ||
+                horas < 0 ||
+                horas > 23 ||
+                minutos < 0 ||
+                minutos > 59
+            ) {
+                return null;
+            }
+
+            return horas * 60 + minutos;
+        };
+
+        const obterPadraoJornadaDds = (posicaoSemana) => {
+            if (
+                posicaoSemana >= 1 &&
+                posicaoSemana <= 4
+            ) {
+                return {
+                    jornadaTipo: "segunda_quinta",
+                    jornadaRotulo: "Segunda a quinta",
+                    horaEntrada: "07:00",
+                    horaSaida: "17:00",
+                    horaInicioAlmoco: "12:00",
+                    horaFimAlmoco: "13:00",
+                    horaInicioDds: "07:00",
+                    horaFimDds: "07:10",
+                    minutosNormais: 540,
+                };
+            }
+
+            if (posicaoSemana === 5) {
+                return {
+                    jornadaTipo: "sexta",
+                    jornadaRotulo: "Sexta-feira",
+                    horaEntrada: "07:00",
+                    horaSaida: "16:00",
+                    horaInicioAlmoco: "12:00",
+                    horaFimAlmoco: "13:00",
+                    horaInicioDds: "07:00",
+                    horaFimDds: "07:10",
+                    minutosNormais: 480,
+                };
+            }
+
+            if (posicaoSemana === 6) {
+                return {
+                    jornadaTipo: "sabado_extra",
+                    jornadaRotulo: "Sábado · hora extra integral",
+                    horaEntrada: "07:00",
+                    horaSaida: "",
+                    horaInicioAlmoco: "12:00",
+                    horaFimAlmoco: "13:00",
+                    horaInicioDds: "07:00",
+                    horaFimDds: "07:10",
+                    minutosNormais: 0,
+                };
+            }
+
+            return {
+                jornadaTipo: "domingo_extra",
+                jornadaRotulo: "Domingo · hora extra integral",
+                horaEntrada: "",
+                horaSaida: "",
+                horaInicioAlmoco: "",
+                horaFimAlmoco: "",
+                horaInicioDds: "",
+                horaFimDds: "",
+                minutosNormais: 0,
+            };
+        };
+
+        const calcularJornadaDds = ({
+            horaEntrada,
+            horaSaida,
+            horaInicioAlmoco,
+            horaFimAlmoco,
+            horaInicioDds,
+            horaFimDds,
+            minutosNormais,
+            semAtividade,
+        }) => {
+            if (semAtividade) {
+                return {
+                    jornadaValida: true,
+                    jornadaPendente: false,
+                    minutosTrabalhados: 0,
+                    minutosRegulares: 0,
+                    minutosExtras: 0,
+                    minutosDds: 0,
+                };
+            }
+
+            const entrada =
+                horaParaMinutosDds(horaEntrada);
+
+            const saida =
+                horaParaMinutosDds(horaSaida);
+
+            if (
+                entrada === null ||
+                saida === null ||
+                saida <= entrada
+            ) {
+                return {
+                    jornadaValida: false,
+                    jornadaPendente: true,
+                    minutosTrabalhados: 0,
+                    minutosRegulares: 0,
+                    minutosExtras: 0,
+                    minutosDds: 0,
+                };
+            }
+
+            const inicioAlmoco =
+                horaParaMinutosDds(horaInicioAlmoco);
+
+            const fimAlmoco =
+                horaParaMinutosDds(horaFimAlmoco);
+
+            const minutosAlmoco =
+                inicioAlmoco !== null &&
+                fimAlmoco !== null &&
+                fimAlmoco > inicioAlmoco
+                    ? Math.max(
+                        0,
+                        Math.min(saida, fimAlmoco) -
+                        Math.max(entrada, inicioAlmoco)
+                    )
+                    : 0;
+
+            const inicioDds =
+                horaParaMinutosDds(horaInicioDds);
+
+            const fimDds =
+                horaParaMinutosDds(horaFimDds);
+
+            const minutosDds =
+                inicioDds !== null &&
+                fimDds !== null &&
+                fimDds > inicioDds
+                    ? Math.max(
+                        0,
+                        Math.min(saida, fimDds) -
+                        Math.max(entrada, inicioDds)
+                    )
+                    : 0;
+
+            const minutosTrabalhados =
+                Math.max(
+                    0,
+                    saida -
+                    entrada -
+                    minutosAlmoco
+                );
+
+            const limiteNormal =
+                Math.max(
+                    0,
+                    Number(minutosNormais || 0)
+                );
+
+            const minutosRegulares =
+                limiteNormal > 0
+                    ? Math.min(
+                        minutosTrabalhados,
+                        limiteNormal
+                    )
+                    : 0;
+
+            const minutosExtras =
+                limiteNormal > 0
+                    ? Math.max(
+                        0,
+                        minutosTrabalhados -
+                        limiteNormal
+                    )
+                    : minutosTrabalhados;
+
+            return {
+                jornadaValida: true,
+                jornadaPendente: false,
+                minutosTrabalhados,
+                minutosRegulares,
+                minutosExtras,
+                minutosDds,
+            };
+        };
+
         return diasRegistroScannerDds.map((dia, posicao) => {
             const temaPlanejado = String(
                 dia?.tema || dia?.titulo || dia?.descricao || ""
@@ -566,6 +782,59 @@ export default function useDdsScannerConferenciaDerivados({
             const semAtividadeConfirmada =
                 confirmado?.semAtividadeConfirmada === true;
 
+            const padraoJornadaDds =
+                obterPadraoJornadaDds(posicao);
+
+            const horaEntrada =
+                normalizarHoraDds(
+                    confirmado?.horaEntrada ??
+                    padraoJornadaDds.horaEntrada
+                );
+
+            const horaSaida =
+                normalizarHoraDds(
+                    confirmado?.horaSaida ??
+                    padraoJornadaDds.horaSaida
+                );
+
+            const horaInicioAlmoco =
+                normalizarHoraDds(
+                    confirmado?.horaInicioAlmoco ??
+                    padraoJornadaDds.horaInicioAlmoco
+                );
+
+            const horaFimAlmoco =
+                normalizarHoraDds(
+                    confirmado?.horaFimAlmoco ??
+                    padraoJornadaDds.horaFimAlmoco
+                );
+
+            const horaInicioDds =
+                normalizarHoraDds(
+                    confirmado?.horaInicioDds ??
+                    padraoJornadaDds.horaInicioDds
+                );
+
+            const horaFimDds =
+                normalizarHoraDds(
+                    confirmado?.horaFimDds ??
+                    padraoJornadaDds.horaFimDds
+                );
+
+            const resultadoJornadaDds =
+                calcularJornadaDds({
+                    horaEntrada,
+                    horaSaida,
+                    horaInicioAlmoco,
+                    horaFimAlmoco,
+                    horaInicioDds,
+                    horaFimDds,
+                    minutosNormais:
+                        padraoJornadaDds.minutosNormais,
+                    semAtividade:
+                        semAtividadeConfirmada,
+                });
+
             const statusTranscricao = semAtividadeConfirmada
                 ? "sem_atividade"
                 : temaConfirmadoPreenchido &&
@@ -587,7 +856,60 @@ export default function useDdsScannerConferenciaDerivados({
                 origemTemaConfirmado: String(
                     confirmado?.origemTemaConfirmado || ""
                 ).trim(),
+                origemDocumentalTemaConfirmado:
+                    String(
+                        confirmado?.origemDocumentalTemaConfirmado ||
+                            ""
+                    ).trim(),
                 semAtividadeConfirmada,
+                jornadaTipo:
+                    padraoJornadaDds.jornadaTipo,
+                jornadaRotulo:
+                    padraoJornadaDds.jornadaRotulo,
+                horaEntrada,
+                horaSaida,
+                horaInicioAlmoco,
+                horaFimAlmoco,
+                horaInicioDds,
+                horaFimDds,
+                minutosNormaisPrevistos:
+                    padraoJornadaDds.minutosNormais,
+                jornadaValida:
+                    resultadoJornadaDds.jornadaValida,
+                jornadaPendente:
+                    resultadoJornadaDds.jornadaPendente,
+                minutosTrabalhados:
+                    resultadoJornadaDds.minutosTrabalhados,
+                minutosRegulares:
+                    resultadoJornadaDds.minutosRegulares,
+                minutosExtras:
+                    resultadoJornadaDds.minutosExtras,
+                minutosDds:
+                    resultadoJornadaDds.minutosDds,
+                horasTrabalhadas:
+                    Number(
+                        (
+                            resultadoJornadaDds
+                                .minutosTrabalhados /
+                            60
+                        ).toFixed(2)
+                    ),
+                horasRegulares:
+                    Number(
+                        (
+                            resultadoJornadaDds
+                                .minutosRegulares /
+                            60
+                        ).toFixed(2)
+                    ),
+                horasExtras:
+                    Number(
+                        (
+                            resultadoJornadaDds
+                                .minutosExtras /
+                            60
+                        ).toFixed(2)
+                    ),
                 statusTranscricao,
             };
         });
@@ -620,6 +942,56 @@ export default function useDdsScannerConferenciaDerivados({
                     ).trim()
             );
 
+            const minutosTrabalhados =
+                ativos.reduce(
+                    (total, dia) =>
+                        total +
+                        Number(
+                            dia.minutosTrabalhados ||
+                            0
+                        ),
+                    0
+                );
+
+            const minutosRegulares =
+                ativos.reduce(
+                    (total, dia) =>
+                        total +
+                        Number(
+                            dia.minutosRegulares ||
+                            0
+                        ),
+                    0
+                );
+
+            const minutosExtras =
+                ativos.reduce(
+                    (total, dia) =>
+                        total +
+                        Number(
+                            dia.minutosExtras ||
+                            0
+                        ),
+                    0
+                );
+
+            const minutosDds =
+                ativos.reduce(
+                    (total, dia) =>
+                        total +
+                        Number(
+                            dia.minutosDds ||
+                            0
+                        ),
+                    0
+                );
+
+            const diasJornadaPendente =
+                ativos.filter(
+                    (dia) =>
+                        dia.jornadaPendente
+                );
+
             return {
                 temasConfirmados: ativos.filter(
                     (dia) =>
@@ -640,6 +1012,46 @@ export default function useDdsScannerConferenciaDerivados({
                     ).length,
                 pendencias: pendentes.length,
                 diasPendentes: pendentes,
+                diasComJornada:
+                    ativos.filter(
+                        (dia) =>
+                            dia.jornadaValida
+                    ).length,
+                jornadasPendentes:
+                    diasJornadaPendente.length,
+                diasJornadaPendente,
+                minutosTrabalhados,
+                minutosRegulares,
+                minutosExtras,
+                minutosDds,
+                horasTrabalhadas:
+                    Number(
+                        (
+                            minutosTrabalhados /
+                            60
+                        ).toFixed(2)
+                    ),
+                horasRegulares:
+                    Number(
+                        (
+                            minutosRegulares /
+                            60
+                        ).toFixed(2)
+                    ),
+                horasExtras:
+                    Number(
+                        (
+                            minutosExtras /
+                            60
+                        ).toFixed(2)
+                    ),
+                horasDds:
+                    Number(
+                        (
+                            minutosDds /
+                            60
+                        ).toFixed(2)
+                    ),
             };
         }, [diasConferenciaAssistidaDds]);
 
@@ -655,6 +1067,8 @@ export default function useDdsScannerConferenciaDerivados({
             ))
             .map((participante) => ({
                 ...participante,
+                // dds_separacao_lista_impressa_manual_v1
+                origemBaseDds: "gabarito",
                 origem: participante?.origem || "cadastro",
                 tipo: participante?.tipo || "colaborador",
             }));
@@ -666,15 +1080,57 @@ export default function useDdsScannerConferenciaDerivados({
                 .filter((participante) =>
                     String(participante?.nome || "").trim()
                 )
-                .map((participante) => ({
-                    ...participante,
-                    nome: String(participante.nome || "").trim(),
-                    funcao: String(participante.funcao || "").trim(),
-                    empresa: String(participante.empresa || "").trim(),
-                    codigoSafescan: "",
-                    origem: "adicional",
-                    tipo: "visitante",
-                })),
+                .map((participante) => {
+                    const colaboradorId = String(
+                        participante?.colaboradorId ||
+                        participante?.colaborador_id ||
+                        ""
+                    ).trim();
+
+                    const codigoSafescan = String(
+                        participante?.codigoSafescan ||
+                        participante?.codigoFuncionario ||
+                        participante?.codigo_funcionario ||
+                        ""
+                    ).trim();
+
+                    const origem = String(
+                        participante?.origem ||
+                        (
+                            colaboradorId ||
+                            codigoSafescan
+                                ? "cadastro_adicional"
+                                : "adicional"
+                        )
+                    ).trim();
+
+                    const tipo = String(
+                        participante?.tipo ||
+                        (
+                            origem === "cadastro_adicional"
+                                ? "colaborador"
+                                : "visitante"
+                        )
+                    ).trim();
+
+                    return {
+                        ...participante,
+                        origemBaseDds: "complementar",
+                        nome: String(participante.nome || "").trim(),
+                        funcao: String(participante.funcao || "").trim(),
+                        empresa: String(participante.empresa || "").trim(),
+                        colaboradorId,
+                        colaboradorCadastroChave: String(
+                            participante?.colaboradorCadastroChave ||
+                            codigoSafescan ||
+                            colaboradorId ||
+                            ""
+                        ).trim(),
+                        codigoSafescan,
+                        origem,
+                        tipo,
+                    };
+                }),
         [participantesAdicionaisConferenciaDds]
     );
 

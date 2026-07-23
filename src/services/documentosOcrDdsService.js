@@ -597,25 +597,46 @@ export function criarFluxoLeituraDds({
                 // Liberação de memória sem bloquear o fluxo.
             }
 
-            const ordenadas = tentativas.sort((a, b) => {
+            const ordenadas = [...tentativas].sort((a, b) => {
                 const scoreA = Number(a.score || 0) + Math.min(20, Number(a.confianca || 0) / 5);
                 const scoreB = Number(b.score || 0) + Math.min(20, Number(b.confianca || 0) / 5);
                 return scoreB - scoreA;
             });
 
             const melhor = ordenadas[0] || null;
+
+            const porPagina = [...tentativas].sort(
+                (a, b) =>
+                    Number(a?.pagina || 0) -
+                    Number(b?.pagina || 0)
+            );
+
             const textoFinal = limparTextoPossivelDocumento(
-                ordenadas
+                porPagina
                     .filter((item) => item?.texto)
-                    .slice(0, 2)
-                    .map((item) => `Página ${item.pagina}: ${item.texto}`)
+                    .map(
+                        (item) =>
+                            `Página ${item.pagina}: ${item.texto}`
+                    )
                     .join(" ")
             );
 
-            const linhasOcr = ordenadas.flatMap((item) => item?.linhasOcr || []).slice(0, 120);
-            const assinaturasTabela = ordenadas.flatMap((item) => item?.assinaturasTabela || []).slice(0, 60);
-            const marcacoesDdsDias = ordenadas.flatMap((item) => item?.marcacoesDdsDias || []).slice(0, 520);
-            const assinaturasDocumento = ordenadas.flatMap((item) => item?.assinaturasDocumento || []).slice(0, 30);
+            const linhasOcr = porPagina
+                .flatMap((item) => item?.linhasOcr || [])
+                .slice(0, 120);
+
+            const assinaturasTabela = porPagina
+                .flatMap((item) => item?.assinaturasTabela || [])
+                .slice(0, 60);
+
+            const marcacoesDdsDias = porPagina
+                .flatMap((item) => item?.marcacoesDdsDias || [])
+                .slice(0, 520);
+
+            const assinaturasDocumento = porPagina
+                .flatMap((item) => item?.assinaturasDocumento || [])
+                .slice(0, 30);
+
             const score = Number(melhor?.score || 0);
 
             avisos.push(`OCR direcionado DDS analisou página(s) ${paginas.join(", ")} em resolução ampliada para buscar código/cabeçalho do DDS.`);

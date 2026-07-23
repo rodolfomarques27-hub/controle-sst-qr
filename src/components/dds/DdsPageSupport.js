@@ -774,7 +774,9 @@ export default function criarSuporteDds() {
 
             return (
                 origem === "adicional" ||
-                tipo === "visitante"
+                origem === "cadastro_adicional" ||
+                tipo === "visitante" ||
+                Boolean(participante?.idAdicional)
             );
         });
 
@@ -818,6 +820,38 @@ export default function criarSuporteDds() {
                         ? linhaSalva
                         : numeroPadrao;
 
+                const colaboradorId = String(
+                    salvo?.colaboradorId ||
+                    salvo?.colaborador_id ||
+                    ""
+                );
+
+                const codigoSafescan = String(
+                    salvo?.codigoSafescan ||
+                    salvo?.codigoFuncionario ||
+                    salvo?.codigo_funcionario ||
+                    ""
+                );
+
+                const origem = String(
+                    salvo?.origem ||
+                    (
+                        colaboradorId ||
+                        codigoSafescan
+                            ? "cadastro_adicional"
+                            : "adicional"
+                    )
+                );
+
+                const tipo = String(
+                    salvo?.tipo ||
+                    (
+                        origem === "cadastro_adicional"
+                            ? "colaborador"
+                            : "visitante"
+                    )
+                );
+
                 return {
                     idAdicional:
                         salvo?.idAdicional ||
@@ -831,9 +865,16 @@ export default function criarSuporteDds() {
                         salvo?.empresaNome ||
                         ""
                     ),
-                    codigoSafescan: "",
-                    origem: "adicional",
-                    tipo: "visitante",
+                    colaboradorId,
+                    colaboradorCadastroChave: String(
+                        salvo?.colaboradorCadastroChave ||
+                        codigoSafescan ||
+                        colaboradorId ||
+                        ""
+                    ),
+                    codigoSafescan,
+                    origem,
+                    tipo,
                     status: "manual",
                 };
             }

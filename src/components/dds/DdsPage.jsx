@@ -117,6 +117,1939 @@ const {
     temaDdsSemAtividade,
 });
 
+function escaparHtmlRelatorioAnaliticoDds(valor) {
+    return String(valor ?? "").replace(
+        /[&<>"']/g,
+        (caractere) => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#039;",
+        })[caractere]
+    );
+}
+
+function formatarDataRelatorioAnaliticoDds(valor) {
+    const texto = String(valor || "").trim();
+
+    if (!texto) {
+        return "-";
+    }
+
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(texto)) {
+        return texto;
+    }
+
+    const textoNormalizado =
+        /^\d{4}-\d{2}-\d{2}$/.test(texto)
+            ? `${texto}T12:00:00`
+            : texto;
+
+    const data =
+        new Date(textoNormalizado);
+
+    if (Number.isNaN(data.getTime())) {
+        return texto;
+    }
+
+    return data.toLocaleDateString("pt-BR");
+}
+
+function obterIndicadorRelatorioAnaliticoDds(
+    relatorio,
+    nome
+) {
+    return (
+        relatorio?.blocos
+            ?.flatMap(
+                (bloco) =>
+                    bloco?.indicadores || []
+            )
+            .find(
+                (indicador) =>
+                    indicador?.nome === nome
+            ) ||
+        null
+    );
+}
+
+function obterClasseNivelRelatorioAnaliticoDds(nivel) {
+    if (nivel === "critico") {
+        return "border-red-200 bg-red-50 text-red-800";
+    }
+
+    if (nivel === "atencao") {
+        return "border-amber-200 bg-amber-50 text-amber-800";
+    }
+
+    if (nivel === "normal") {
+        return "border-emerald-200 bg-emerald-50 text-emerald-800";
+    }
+
+    return "border-slate-200 bg-slate-100 text-slate-600";
+}
+
+function obterRotuloNivelRelatorioAnaliticoDds(nivel) {
+    if (nivel === "critico") {
+        return "🔴 Crítico";
+    }
+
+    if (nivel === "atencao") {
+        return "🟡 Atenção";
+    }
+
+    if (nivel === "normal") {
+        return "🟢 Normal";
+    }
+
+    return "⚪ Sem dado";
+}
+
+function RelatorioAnaliticoSstDdsCard({
+    relatorio,
+    codigoDds,
+    obra,
+    periodoInicio,
+    periodoFim,
+}) {
+    /*
+     * dds_relatorio_analitico_estado_visual_persistente_v1
+     *
+     * Mantém a preferência de abertura do relatório analítico
+     * após a atualização da página no mesmo navegador.
+     */
+    const chaveEstadoVisualRelatorioAnaliticoDds =
+        "safescan:dds:relatorio-analitico-expandido";
+
+    const [aberto, setAberto] =
+        useState(() => {
+            if (
+                typeof window === "undefined"
+            ) {
+                return true;
+            }
+
+            try {
+                const estadoSalvo =
+                    window.localStorage.getItem(
+                        chaveEstadoVisualRelatorioAnaliticoDds
+                    );
+
+                if (
+                    estadoSalvo === "recolhido"
+                ) {
+                    return false;
+                }
+
+                if (
+                    estadoSalvo === "expandido"
+                ) {
+                    return true;
+                }
+            } catch {
+                // O relatório permanece funcional sem armazenamento local.
+            }
+
+            return true;
+        });
+
+    function alternarEstadoVisualRelatorioAnaliticoDds() {
+        const proximoValor =
+            !aberto;
+
+        setAberto(
+            proximoValor
+        );
+
+        if (
+            typeof window !== "undefined"
+        ) {
+            try {
+                window.localStorage.setItem(
+                    chaveEstadoVisualRelatorioAnaliticoDds,
+                    proximoValor
+                        ? "expandido"
+                        : "recolhido"
+                );
+            } catch {
+                // O clique continua funcionando sem armazenamento local.
+            }
+        }
+    }
+
+    const [abaAtiva, setAbaAtiva] =
+        useState("resumo");
+
+    if (!relatorio) {
+        return null;
+    }
+
+    const blocos =
+        Array.isArray(relatorio.blocos)
+            ? relatorio.blocos
+            : [];
+
+    const resumo =
+        relatorio.resumo || {};
+
+    // dds_apresentacao_composicao_base_v1
+    const composicaoBaseParticipantes =
+        relatorio.composicaoBaseParticipantes || {};
+
+    const normalizarQuantidadeComposicaoBase =
+        (valor, fallback = 0) => {
+            const numero =
+                Number(valor);
+
+            return Number.isFinite(numero)
+                ? Math.max(0, numero)
+                : fallback;
+        };
+
+    const participantesTotal =
+        normalizarQuantidadeComposicaoBase(
+            composicaoBaseParticipantes.totalAnalisado ??
+            resumo.participantes,
+            0
+        );
+
+    const participantesComplementares =
+        normalizarQuantidadeComposicaoBase(
+            composicaoBaseParticipantes
+                .participantesComplementares ??
+            resumo.participantesComplementares,
+            0
+        );
+
+    const participantesGabarito =
+        normalizarQuantidadeComposicaoBase(
+            composicaoBaseParticipantes
+                .participantesGabarito ??
+            resumo.participantesGabarito,
+            Math.max(
+                0,
+                participantesTotal -
+                    participantesComplementares
+            )
+        );
+
+    const descricaoComposicaoBase =
+        String(
+            composicaoBaseParticipantes.descricao ||
+            `Composição da base: ${participantesTotal} = ${participantesGabarito} participante(s) do gabarito + ${participantesComplementares} participante(s) complementar(es).`
+        ).trim();
+
+    const presencas =
+        Math.max(
+            0,
+            Number(resumo.presencas || 0)
+        );
+
+    const ausencias =
+        Math.max(
+            0,
+            Number(resumo.ausencias || 0)
+        );
+
+    const manuais =
+        Math.max(
+            0,
+            Number(resumo.manuais || 0)
+        );
+
+    const totalFrequencias =
+        presencas +
+        ausencias +
+        manuais;
+
+    const assiduidadeGeral =
+        totalFrequencias > 0
+            ? Number(
+                (
+                    presencas /
+                    totalFrequencias *
+                    100
+                ).toFixed(2)
+            )
+            : null;
+
+    const absenteismoGeral =
+        totalFrequencias > 0
+            ? Number(
+                (
+                    ausencias /
+                    totalFrequencias *
+                    100
+                ).toFixed(2)
+            )
+            : null;
+
+    const formatarPercentual =
+        (valor) =>
+            valor === null ||
+            valor === undefined ||
+            !Number.isFinite(Number(valor))
+                ? "Sem dado"
+                : `${Number(valor).toLocaleString(
+                    "pt-BR",
+                    {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                    }
+                )}%`;
+
+    const nivelAssiduidade =
+        assiduidadeGeral === null
+            ? "nao_calculavel"
+            : assiduidadeGeral < 80
+                ? "critico"
+                : assiduidadeGeral < 90
+                    ? "atencao"
+                    : "normal";
+
+    const nivelAbsenteismo =
+        absenteismoGeral === null
+            ? "nao_calculavel"
+            : absenteismoGeral > 20
+                ? "critico"
+                : absenteismoGeral > 10
+                    ? "atencao"
+                    : "normal";
+
+    const criarCardIndicador =
+        (
+            nomeIndicador,
+            titulo
+        ) => {
+            const indicador =
+                obterIndicadorRelatorioAnaliticoDds(
+                    relatorio,
+                    nomeIndicador
+                );
+
+            return {
+                titulo,
+                valor:
+                    indicador?.valor ||
+                    "Sem dado",
+                nivel:
+                    indicador?.nivel ||
+                    "nao_calculavel",
+            };
+        };
+
+    const cardsResumo = [
+        {
+            titulo: "Assiduidade geral",
+            valor:
+                formatarPercentual(
+                    assiduidadeGeral
+                ),
+            nivel:
+                nivelAssiduidade,
+        },
+        {
+            titulo: "Absenteísmo geral",
+            valor:
+                formatarPercentual(
+                    absenteismoGeral
+                ),
+            nivel:
+                nivelAbsenteismo,
+        },
+        criarCardIndicador(
+            "Taxa de cobertura de DDS",
+            "Cobertura do DDS"
+        ),
+        criarCardIndicador(
+            "Taxa de preenchimento completo",
+            "Preenchimento documental"
+        ),
+        criarCardIndicador(
+            "Rotatividade aparente",
+            "Rotatividade aparente"
+        ),
+        criarCardIndicador(
+            "Percentual de assinaturas suspeitas",
+            "Assinaturas suspeitas"
+        ),
+    ];
+
+    const abas = [
+        {
+            id: "resumo",
+            rotulo: "Resumo executivo",
+            bloco: null,
+        },
+        ...blocos.map(
+            (
+                bloco,
+                indice
+            ) => ({
+                id:
+                    `bloco-${indice}`,
+                rotulo:
+                    String(
+                        bloco?.titulo ||
+                        `Bloco ${indice + 1}`
+                    ).replace(
+                        /^\d+\.\s*/,
+                        ""
+                    ),
+                bloco,
+            })
+        ),
+    ];
+
+    const abaSelecionada =
+        abas.find(
+            (aba) =>
+                aba.id === abaAtiva
+        ) ||
+        abas[0];
+
+    const top3 =
+        Array.isArray(relatorio.top3)
+            ? relatorio.top3
+            : [];
+
+    function imprimirRelatorioAnaliticoDds() {
+        const janela =
+            window.open(
+                "",
+                "_blank",
+                "width=1500,height=950"
+            );
+
+        if (!janela) {
+            window.alert(
+                "O navegador bloqueou a janela de impressão. Libere os pop-ups para gerar o PDF analítico."
+            );
+
+            return;
+        }
+
+        const cardsHtml =
+            cardsResumo
+                .map(
+                    (card) => `
+                        <div class="resumo-card">
+                            <span>${escaparHtmlRelatorioAnaliticoDds(card.titulo)}</span>
+                            <strong>${escaparHtmlRelatorioAnaliticoDds(card.valor)}</strong>
+                            <small>${escaparHtmlRelatorioAnaliticoDds(
+                                obterRotuloNivelRelatorioAnaliticoDds(
+                                    card.nivel
+                                )
+                            )}</small>
+                        </div>
+                    `
+                )
+                .join("");
+
+        const top3Html =
+            top3.length > 0
+                ? top3
+                    .map(
+                        (
+                            indicador,
+                            indice
+                        ) => `
+                            <article class="prioridade">
+                                <span>Prioridade ${indice + 1}</span>
+                                <strong>${escaparHtmlRelatorioAnaliticoDds(indicador.nome)}</strong>
+                                <b>${escaparHtmlRelatorioAnaliticoDds(indicador.valor)}</b>
+                                <p>${escaparHtmlRelatorioAnaliticoDds(indicador.interpretacao)}</p>
+                            </article>
+                        `
+                    )
+                    .join("")
+                : `
+                    <p class="sem-prioridade">
+                        Nenhum indicador calculável atingiu nível crítico ou de atenção.
+                    </p>
+                `;
+
+        const blocosHtml =
+            blocos
+                .map(
+                    (bloco) => {
+                        const linhas =
+                            (
+                                bloco?.indicadores ||
+                                []
+                            )
+                                .map(
+                                    (indicador) => {
+                                        const detalhes =
+                                            Array.isArray(
+                                                indicador.detalhes
+                                            ) &&
+                                            indicador.detalhes.length > 0
+                                                ? `
+                                                    <ul>
+                                                        ${indicador.detalhes
+                                                            .map(
+                                                                (detalhe) =>
+                                                                    `<li>${escaparHtmlRelatorioAnaliticoDds(detalhe)}</li>`
+                                                            )
+                                                            .join("")}
+                                                    </ul>
+                                                `
+                                                : "";
+
+                                        return `
+                                            <tr>
+                                                <td class="nome">
+                                                    ${escaparHtmlRelatorioAnaliticoDds(indicador.nome)}
+                                                </td>
+                                                <td class="valor">
+                                                    ${escaparHtmlRelatorioAnaliticoDds(indicador.valor)}
+                                                </td>
+                                                <td>
+                                                    ${escaparHtmlRelatorioAnaliticoDds(indicador.interpretacao)}
+                                                    ${detalhes}
+                                                </td>
+                                                <td class="alerta">
+                                                    ${escaparHtmlRelatorioAnaliticoDds(
+                                                        obterRotuloNivelRelatorioAnaliticoDds(
+                                                            indicador.nivel
+                                                        )
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }
+                                )
+                                .join("");
+
+                        return `
+                            <section class="bloco">
+                                <h2>${escaparHtmlRelatorioAnaliticoDds(bloco.titulo)}</h2>
+
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Indicador</th>
+                                            <th>Valor</th>
+                                            <th>Interpretação e detalhes</th>
+                                            <th>Alerta</th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody>
+                                        ${linhas}
+                                    </tbody>
+                                </table>
+                            </section>
+                        `;
+                    }
+                )
+                .join("");
+
+        janela.document.open();
+
+        janela.document.write(`
+            <!doctype html>
+            <html lang="pt-BR">
+                <head>
+                    <meta charset="utf-8" />
+                    <title>Relatório Analítico SST — DDS</title>
+
+                    <style>
+                        @page {
+                            size: A4 landscape;
+                            margin: 9mm;
+                        }
+
+                        * {
+                            box-sizing: border-box;
+                        }
+
+                        body {
+                            margin: 0;
+                            color: #0f172a;
+                            font-family: Arial, Helvetica, sans-serif;
+                            font-size: 9px;
+                        }
+
+                        .cabecalho {
+                            border-radius: 12px;
+                            background: #0f172a;
+                            color: #ffffff;
+                            padding: 16px 18px;
+                        }
+
+                        .cabecalho small {
+                            display: block;
+                            color: #6ee7b7;
+                            font-size: 8px;
+                            font-weight: 800;
+                            letter-spacing: .12em;
+                            text-transform: uppercase;
+                        }
+
+                        .cabecalho h1 {
+                            margin: 5px 0 4px;
+                            font-size: 21px;
+                        }
+
+                        .cabecalho p {
+                            margin: 2px 0;
+                            color: #e2e8f0;
+                            line-height: 1.4;
+                        }
+
+                        .identificacao {
+                            display: grid;
+                            grid-template-columns:
+                                1fr
+                                1.5fr
+                                1fr
+                                1fr;
+                            gap: 6px;
+                            margin-top: 8px;
+                        }
+
+                        .identificacao div,
+                        .resumo-card {
+                            border: 1px solid #cbd5e1;
+                            border-radius: 8px;
+                            background: #ffffff;
+                            padding: 8px;
+                        }
+
+                        .identificacao span,
+                        .resumo-card span {
+                            display: block;
+                            color: #64748b;
+                            font-size: 7px;
+                            font-weight: 800;
+                            letter-spacing: .05em;
+                            text-transform: uppercase;
+                        }
+
+                        .identificacao strong,
+                        .resumo-card strong {
+                            display: block;
+                            margin-top: 4px;
+                            color: #0f172a;
+                            font-size: 11px;
+                        }
+
+                        .resumo {
+                            display: grid;
+                            grid-template-columns:
+                                repeat(6, 1fr);
+                            gap: 6px;
+                            margin-top: 8px;
+                        }
+
+                        .resumo-card {
+                            min-height: 62px;
+                            text-align: center;
+                        }
+
+                        .resumo-card small {
+                            display: block;
+                            margin-top: 5px;
+                            font-size: 7px;
+                            font-weight: 800;
+                        }
+
+                        .top3 {
+                            margin-top: 8px;
+                            border: 1px solid #fecaca;
+                            border-radius: 10px;
+                            background: #fef2f2;
+                            padding: 8px;
+                        }
+
+                        .top3 h2 {
+                            margin: 0 0 7px;
+                            color: #991b1b;
+                            font-size: 10px;
+                            text-transform: uppercase;
+                        }
+
+                        .prioridades {
+                            display: grid;
+                            grid-template-columns:
+                                repeat(3, 1fr);
+                            gap: 6px;
+                        }
+
+                        .prioridade {
+                            border: 1px solid #fecaca;
+                            border-radius: 8px;
+                            background: #ffffff;
+                            padding: 8px;
+                        }
+
+                        .prioridade span {
+                            display: block;
+                            color: #dc2626;
+                            font-size: 7px;
+                            font-weight: 800;
+                            text-transform: uppercase;
+                        }
+
+                        .prioridade strong,
+                        .prioridade b {
+                            display: block;
+                            margin-top: 4px;
+                        }
+
+                        .prioridade p,
+                        .sem-prioridade {
+                            margin: 5px 0 0;
+                            line-height: 1.4;
+                        }
+
+                        .bloco {
+                            margin-top: 8px;
+                            break-inside: avoid-page;
+                        }
+
+                        .bloco h2 {
+                            margin: 0;
+                            border: 1px solid #cbd5e1;
+                            border-bottom: 0;
+                            border-radius: 8px 8px 0 0;
+                            background: #e2e8f0;
+                            padding: 6px 8px;
+                            font-size: 10px;
+                        }
+
+                        table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            table-layout: fixed;
+                        }
+
+                        th,
+                        td {
+                            border: 1px solid #cbd5e1;
+                            padding: 5px;
+                            vertical-align: top;
+                            line-height: 1.35;
+                        }
+
+                        th {
+                            background: #f8fafc;
+                            color: #475569;
+                            font-size: 7px;
+                            text-align: left;
+                            text-transform: uppercase;
+                        }
+
+                        th:nth-child(1) {
+                            width: 20%;
+                        }
+
+                        th:nth-child(2) {
+                            width: 15%;
+                        }
+
+                        th:nth-child(3) {
+                            width: 52%;
+                        }
+
+                        th:nth-child(4) {
+                            width: 13%;
+                        }
+
+                        td.nome,
+                        td.valor,
+                        td.alerta {
+                            font-weight: 800;
+                        }
+
+                        td.valor,
+                        td.alerta {
+                            text-align: center;
+                        }
+
+                        ul {
+                            margin: 5px 0 0;
+                            padding-left: 15px;
+                        }
+
+                        li {
+                            margin: 2px 0;
+                        }
+
+                        @media print {
+                            body {
+                                print-color-adjust: exact;
+                                -webkit-print-color-adjust: exact;
+                            }
+                        }
+                    </style>
+                </head>
+
+                <body>
+                    <header class="cabecalho">
+                        <small>
+                            SafeScan Brasil |
+                            Relatório analítico SST
+                        </small>
+
+                        <h1>
+                            Indicadores consolidados do DDS
+                        </h1>
+
+                        <p>
+                            Presença, absenteísmo, cobertura,
+                            conformidade documental, riscos,
+                            comparativos e engajamento.
+                        </p>
+                    </header>
+
+                    <section class="identificacao">
+                        <div>
+                            <span>Código DDS</span>
+                            <strong>
+                                ${escaparHtmlRelatorioAnaliticoDds(
+                                    codigoDds || "-"
+                                )}
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>Obra / setor</span>
+                            <strong>
+                                ${escaparHtmlRelatorioAnaliticoDds(
+                                    obra || "-"
+                                )}
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>Período</span>
+                            <strong>
+                                ${escaparHtmlRelatorioAnaliticoDds(
+                                    formatarDataRelatorioAnaliticoDds(
+                                        periodoInicio
+                                    )
+                                )}
+                                a
+                                ${escaparHtmlRelatorioAnaliticoDds(
+                                    formatarDataRelatorioAnaliticoDds(
+                                        periodoFim
+                                    )
+                                )}
+                            </strong>
+                        </div>
+
+                        <div>
+                            <span>Base analisada</span>
+                            <strong>
+                                ${escaparHtmlRelatorioAnaliticoDds(
+                                    participantesTotal
+                                )}
+                                participante(s) |
+                                ${escaparHtmlRelatorioAnaliticoDds(
+                                    resumo.diasAtivos || 0
+                                )}
+                                dia(s)
+                                <br />
+                                Gabarito:
+                                ${escaparHtmlRelatorioAnaliticoDds(
+                                    participantesGabarito
+                                )}
+                                | Complementares:
+                                ${escaparHtmlRelatorioAnaliticoDds(
+                                    participantesComplementares
+                                )}
+                            </strong>
+                        </div>
+                    </section>
+
+                    <section class="resumo">
+                        ${cardsHtml}
+                    </section>
+
+                    <section class="top3">
+                        <h2>
+                            ${relatorio?.tituloPontosAtencao || "Pontos de atenção"}
+                        </h2>
+
+                        <div class="prioridades">
+                            ${top3Html}
+                        </div>
+                    </section>
+
+                    ${blocosHtml}
+                </body>
+            </html>
+        `);
+
+        janela.document.close();
+        janela.focus();
+
+        window.setTimeout(
+            () => {
+                janela.print();
+            },
+            400
+        );
+    }
+
+    // dds_exportacao_xlsx_exceljs_v1
+    async function exportarRelatorioAnaliticoDdsXlsxTeste() {
+        try {
+            const moduloExcelJs =
+                await import("exceljs");
+
+            const ExcelJS =
+                moduloExcelJs?.default &&
+                typeof moduloExcelJs.default.Workbook ===
+                    "function"
+                    ? moduloExcelJs.default
+                    : moduloExcelJs;
+
+            if (
+                typeof ExcelJS?.Workbook !==
+                "function"
+            ) {
+                throw new Error(
+                    "A classe Workbook do ExcelJS não foi localizada."
+                );
+            }
+
+            const workbook =
+                new ExcelJS.Workbook();
+
+            workbook.creator =
+                "SafeScan Brasil";
+
+            workbook.lastModifiedBy =
+                "SafeScan Brasil";
+
+            workbook.created =
+                new Date();
+
+            workbook.modified =
+                new Date();
+
+            workbook.subject =
+                "Relatório Analítico SST — DDS";
+
+            workbook.title =
+                "Relatório Analítico SST — DDS";
+
+            workbook.description =
+                "Teste técnico da infraestrutura XLSX do relatório analítico DDS.";
+
+            const planilha =
+                workbook.addWorksheet(
+                    "Resumo técnico",
+                    {
+                        views: [
+                            {
+                                state: "frozen",
+                                ySplit: 1,
+                            },
+                        ],
+                    }
+                );
+
+            planilha.columns = [
+                {
+                    key: "campo",
+                    width: 32,
+                },
+                {
+                    key: "valor",
+                    width: 54,
+                },
+                {
+                    key: "alerta",
+                    width: 22,
+                },
+                {
+                    key: "interpretacao",
+                    width: 76,
+                },
+            ];
+
+            planilha.mergeCells(
+                "A1:D1"
+            );
+
+            const celulaTitulo =
+                planilha.getCell("A1");
+
+            celulaTitulo.value =
+                "RELATÓRIO ANALÍTICO SST — DDS";
+
+            celulaTitulo.font = {
+                bold: true,
+                size: 16,
+                color: {
+                    argb: "FFFFFFFF",
+                },
+            };
+
+            celulaTitulo.fill = {
+                type: "pattern",
+                pattern: "solid",
+                fgColor: {
+                    argb: "FF0F766E",
+                },
+            };
+
+            celulaTitulo.alignment = {
+                horizontal: "center",
+                vertical: "middle",
+            };
+
+            planilha.getRow(1).height =
+                28;
+
+            planilha.addRow([]);
+
+            planilha.addRow([
+                "Código DDS",
+                codigoDds || "-",
+            ]);
+
+            planilha.addRow([
+                "Obra / setor",
+                obra || "-",
+            ]);
+
+            planilha.addRow([
+                "Período",
+                `${formatarDataRelatorioAnaliticoDds(
+                    periodoInicio
+                )} a ${formatarDataRelatorioAnaliticoDds(
+                    periodoFim
+                )}`,
+            ]);
+
+            planilha.addRow([
+                "Participantes",
+                participantesTotal,
+            ]);
+
+            planilha.addRow([
+                "Participantes do gabarito",
+                participantesGabarito,
+            ]);
+
+            planilha.addRow([
+                "Participantes complementares",
+                participantesComplementares,
+            ]);
+
+            planilha.addRow([
+                "Composição da base",
+                descricaoComposicaoBase,
+            ]);
+
+            planilha.addRow([
+                "Dias ativos",
+                resumo.diasAtivos || 0,
+            ]);
+
+            planilha.addRow([]);
+
+            const linhaCabecalhoResumo =
+                planilha.addRow([
+                    "Indicador",
+                    "Valor",
+                    "Alerta",
+                    "Interpretação",
+                ]);
+
+            linhaCabecalhoResumo.font = {
+                bold: true,
+                color: {
+                    argb: "FFFFFFFF",
+                },
+            };
+
+            linhaCabecalhoResumo.fill = {
+                type: "pattern",
+                pattern: "solid",
+                fgColor: {
+                    argb: "FF334155",
+                },
+            };
+
+            cardsResumo.forEach(
+                (card) => {
+                    planilha.addRow([
+                        card.titulo,
+                        card.valor,
+                        obterRotuloNivelRelatorioAnaliticoDds(
+                            card.nivel
+                        ),
+                        "",
+                    ]);
+                }
+            );
+
+            planilha.addRow([]);
+
+            const linhaTituloPontos =
+                planilha.addRow([
+                    (
+                        relatorio
+                            ?.tituloPontosAtencao ||
+                        "Pontos de atenção"
+                    ).toLocaleUpperCase(
+                        "pt-BR"
+                    ),
+                ]);
+
+            planilha.mergeCells(
+                linhaTituloPontos.number,
+                1,
+                linhaTituloPontos.number,
+                4
+            );
+
+            linhaTituloPontos.font = {
+                bold: true,
+                color: {
+                    argb: "FF7C2D12",
+                },
+            };
+
+            linhaTituloPontos.fill = {
+                type: "pattern",
+                pattern: "solid",
+                fgColor: {
+                    argb: "FFFFEDD5",
+                },
+            };
+
+            const linhaCabecalhoPontos =
+                planilha.addRow([
+                    "Prioridade",
+                    "Indicador",
+                    "Valor",
+                    "Interpretação",
+                ]);
+
+            linhaCabecalhoPontos.font = {
+                bold: true,
+            };
+
+            top3.forEach(
+                (
+                    indicador,
+                    indice
+                ) => {
+                    planilha.addRow([
+                        indice + 1,
+                        indicador.nome,
+                        indicador.valor,
+                        indicador.interpretacao,
+                    ]);
+                }
+            );
+
+            planilha.eachRow(
+                {
+                    includeEmpty: false,
+                },
+                (linha) => {
+                    linha.alignment = {
+                        vertical: "top",
+                        wrapText: true,
+                    };
+                }
+            );
+
+            const buffer =
+                await workbook.xlsx.writeBuffer();
+
+            const arquivo =
+                new Blob(
+                    [buffer],
+                    {
+                        type:
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    }
+                );
+
+            const url =
+                URL.createObjectURL(
+                    arquivo
+                );
+
+            const link =
+                document.createElement(
+                    "a"
+                );
+
+            const codigoSeguro =
+                String(
+                    codigoDds ||
+                    "dds"
+                )
+                    .replace(
+                        /[^a-z0-9_-]+/gi,
+                        "-"
+                    )
+                    .replace(
+                        /^-+|-+$/g,
+                        ""
+                    );
+
+            link.href =
+                url;
+
+            link.download =
+                `relatorio-analitico-sst-${
+                    codigoSeguro ||
+                    "dds"
+                }-teste.xlsx`;
+
+            document.body.appendChild(
+                link
+            );
+
+            link.click();
+            link.remove();
+
+            window.setTimeout(
+                () => {
+                    URL.revokeObjectURL(
+                        url
+                    );
+                },
+                1000
+            );
+        }
+        catch (erro) {
+            console.error(
+                "Falha ao gerar o XLSX técnico do relatório DDS.",
+                erro
+            );
+
+            window.alert(
+                "Não foi possível gerar o XLSX técnico. Consulte o Console para verificar o erro."
+            );
+        }
+    }
+
+    function exportarRelatorioAnaliticoDds() {
+        const linhas = [
+            [
+                "RELATÓRIO ANALÍTICO SST — DDS",
+            ],
+            [],
+            [
+                "Código DDS",
+                codigoDds || "-",
+            ],
+            [
+                "Obra / setor",
+                obra || "-",
+            ],
+            [
+                "Período",
+                `${formatarDataRelatorioAnaliticoDds(
+                    periodoInicio
+                )} a ${formatarDataRelatorioAnaliticoDds(
+                    periodoFim
+                )}`,
+            ],
+            [
+                "Participantes",
+                participantesTotal,
+            ],
+            [
+                "Participantes do gabarito",
+                participantesGabarito,
+            ],
+            [
+                "Participantes complementares",
+                participantesComplementares,
+            ],
+            [
+                "Composição da base",
+                descricaoComposicaoBase,
+            ],
+            [
+                "Dias ativos",
+                resumo.diasAtivos || 0,
+            ],
+            [],
+            [
+                "RESUMO EXECUTIVO",
+            ],
+            [
+                "Indicador",
+                "Valor",
+                "Alerta",
+            ],
+            ...cardsResumo.map(
+                (card) => [
+                    card.titulo,
+                    card.valor,
+                    obterRotuloNivelRelatorioAnaliticoDds(
+                        card.nivel
+                    ),
+                ]
+            ),
+            [],
+            [
+                (
+                    relatorio
+                        ?.tituloPontosAtencao ||
+                    "Pontos de atenção"
+                ).toLocaleUpperCase(
+                    "pt-BR"
+                ),
+            ],
+            [
+                "Prioridade",
+                "Indicador",
+                "Valor",
+                "Interpretação",
+            ],
+            ...top3.map(
+                (
+                    indicador,
+                    indice
+                ) => [
+                    indice + 1,
+                    indicador.nome,
+                    indicador.valor,
+                    indicador.interpretacao,
+                ]
+            ),
+            [],
+            [
+                "INDICADORES COMPLETOS",
+            ],
+            [
+                "Bloco",
+                "Indicador",
+                "Valor",
+                "Interpretação",
+                "Alerta",
+                "Detalhes",
+            ],
+        ];
+
+        blocos.forEach(
+            (bloco) => {
+                (
+                    bloco?.indicadores ||
+                    []
+                ).forEach(
+                    (indicador) => {
+                        linhas.push([
+                            bloco.titulo,
+                            indicador.nome,
+                            indicador.valor,
+                            indicador.interpretacao,
+                            obterRotuloNivelRelatorioAnaliticoDds(
+                                indicador.nivel
+                            ),
+                            Array.isArray(
+                                indicador.detalhes
+                            )
+                                ? indicador.detalhes.join(
+                                    " | "
+                                )
+                                : "",
+                        ]);
+                    }
+                );
+            }
+        );
+
+        const escaparCsv =
+            (valor) =>
+                `"${String(
+                    valor ?? ""
+                ).replace(
+                    /"/g,
+                    '""'
+                )}"`;
+
+        const csv =
+            "\uFEFF" +
+            linhas
+                .map(
+                    (linha) =>
+                        linha
+                            .map(escaparCsv)
+                            .join(";")
+                )
+                .join("\r\n");
+
+        const arquivo =
+            new Blob(
+                [csv],
+                {
+                    type:
+                        "text/csv;charset=utf-8",
+                }
+            );
+
+        const url =
+            URL.createObjectURL(
+                arquivo
+            );
+
+        const link =
+            document.createElement("a");
+
+        const codigoSeguro =
+            String(
+                codigoDds ||
+                "dds"
+            )
+                .replace(
+                    /[^a-z0-9_-]+/gi,
+                    "-"
+                )
+                .replace(
+                    /^-+|-+$/g,
+                    ""
+                );
+
+        link.href = url;
+
+        link.download =
+            `relatorio-analitico-sst-${
+                codigoSeguro ||
+                "dds"
+            }.csv`;
+
+        document.body.appendChild(
+            link
+        );
+
+        link.click();
+        link.remove();
+
+        URL.revokeObjectURL(url);
+    }
+
+    return (
+        <section className="dds-no-print col-span-full w-full overflow-hidden rounded-3xl border border-slate-200 border-t-4 border-t-emerald-500 bg-white shadow-sm">
+            <div className="flex flex-col gap-4 px-4 py-4 xl:flex-row xl:items-start xl:justify-between">
+                {/*
+                 * dds_relatorio_analitico_cabecalho_sem_scroll_click_v1
+                 *
+                 * Permite abrir e fechar o relatório clicando
+                 * diretamente na área informativa do cabeçalho.
+                 */}
+                <div
+                    onClick={
+                        alternarEstadoVisualRelatorioAnaliticoDds
+                    }
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(evento) => {
+                        if (
+                            evento.key === "Enter" ||
+                            evento.key === " "
+                        ) {
+                            evento.preventDefault();
+
+                            alternarEstadoVisualRelatorioAnaliticoDds();
+                        }
+                    }}
+                    aria-expanded={aberto}
+                    aria-controls="conteudo-relatorio-analitico-dds"
+                    title={
+                        aberto
+                            ? "Clique para fechar o relatório"
+                            : "Clique para abrir o relatório"
+                    }
+                    className="min-w-0 flex-1 cursor-pointer rounded-2xl transition hover:bg-slate-50/80 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                >
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">
+                        Segurança do trabalho
+                    </p>
+
+                    <h3 className="mt-1 text-lg font-black text-slate-950">
+                        Relatório Analítico SST — DDS
+                    </h3>
+
+                    <p className="mt-1 max-w-4xl text-xs font-semibold leading-5 text-slate-500">
+                        Indicadores consolidados de presença,
+                        cobertura, conformidade documental,
+                        riscos, comparativos e engajamento.
+                    </p>
+
+                    <div className="mt-2 grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 text-[10px] font-bold text-slate-600">
+                        <span className="shrink-0 whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
+                            DDS: {codigoDds || "-"}
+                        </span>
+
+                        <span
+                            className="min-w-0 truncate whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 px-3 py-1"
+                            title={obra || "Obra não informada"}
+                        >
+                            {obra || "Obra não informada"}
+                        </span>
+
+                        <span className="shrink-0 whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
+                            {formatarDataRelatorioAnaliticoDds(
+                                periodoInicio
+                            )}
+                            {" a "}
+                            {formatarDataRelatorioAnaliticoDds(
+                                periodoFim
+                            )}
+                        </span>
+                    </div>
+                </div>
+
+                <div className="flex w-full flex-wrap items-center gap-2 xl:w-auto xl:justify-end">
+                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-emerald-800">
+                        Implantação{" "}
+                        {relatorio.progressoImplantacao}%
+                    </span>
+
+                    <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-sky-800">
+                        {resumo.indicadoresCalculados || 0}/
+                        {resumo.indicadoresTotal || 0} calculados
+                    </span>
+
+                    <button
+                        type="button"
+                        onClick={
+                            imprimirRelatorioAnaliticoDds
+                        }
+                        className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-[11px] font-black text-emerald-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-100"
+                    >
+                        Imprimir PDF analítico
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={
+                            exportarRelatorioAnaliticoDds
+                        }
+                        className="rounded-xl border border-sky-300 bg-sky-50 px-3 py-2 text-[11px] font-black text-sky-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-sky-100"
+                    >
+                        Exportar Excel analítico
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={
+                            exportarRelatorioAnaliticoDdsXlsxTeste
+                        }
+                        className="rounded-xl border border-indigo-300 bg-indigo-50 px-3 py-2 text-[11px] font-black text-indigo-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-indigo-100"
+                        title="Validação técnica da infraestrutura ExcelJS"
+                    >
+                        Exportar XLSX — teste técnico
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={(evento) => {
+                            evento.stopPropagation();
+
+                            alternarEstadoVisualRelatorioAnaliticoDds();
+                        }}
+                        aria-expanded={aberto}
+                        aria-controls="conteudo-relatorio-analitico-dds"
+                        title={
+                            aberto
+                                ? "Fechar conteúdo do relatório"
+                                : "Abrir conteúdo do relatório"
+                        }
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black text-slate-700 shadow-sm transition hover:bg-slate-50"
+                    >
+                        {aberto ? "Fechar" : "Abrir"}
+                    </button>
+                </div>
+            </div>
+
+            {aberto && (
+                <div id="conteudo-relatorio-analitico-dds">
+                    <div className="border-y border-slate-200 bg-slate-50 px-3 py-2">
+                        <div className="flex gap-2 overflow-x-auto pb-1">
+                            {abas.map(
+                                (aba) => (
+                                    <button
+                                        key={aba.id}
+                                        type="button"
+                                        onClick={() =>
+                                            setAbaAtiva(
+                                                aba.id
+                                            )
+                                        }
+                                        className={
+                                            "shrink-0 rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-wide transition " +
+                                            (
+                                                abaAtiva ===
+                                                aba.id
+                                                    ? "border-slate-900 bg-slate-900 text-white"
+                                                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900"
+                                            )
+                                        }
+                                    >
+                                        {aba.rotulo}
+                                    </button>
+                                )
+                            )}
+                        </div>
+                    </div>
+
+                    {abaSelecionada.id ===
+                    "resumo" ? (
+                        <div className="space-y-4 p-4">
+                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+                                {cardsResumo.map(
+                                    (card) => (
+                                        <div
+                                            key={card.titulo}
+                                            className={
+                                                "flex min-h-[100px] flex-col items-center justify-center rounded-2xl border p-3 text-center " +
+                                                obterClasseNivelRelatorioAnaliticoDds(
+                                                    card.nivel
+                                                )
+                                            }
+                                        >
+                                            <p className="text-[9px] font-black uppercase tracking-wide">
+                                                {card.titulo}
+                                            </p>
+
+                                            <p className="mt-2 text-lg font-black">
+                                                {card.valor}
+                                            </p>
+
+                                            <p className="mt-1 text-[9px] font-black uppercase tracking-wide">
+                                                {obterRotuloNivelRelatorioAnaliticoDds(
+                                                    card.nivel
+                                                )}
+                                            </p>
+                                        </div>
+                                    )
+                                )}
+                            </div>
+
+                            <section className="rounded-2xl border border-red-200 bg-red-50 p-4">
+                                <p className="text-[10px] font-black uppercase tracking-wide text-red-800">
+                                    {relatorio?.tituloPontosAtencao ||
+                                        "Pontos de atenção"}
+                                </p>
+
+                                {top3.length > 0 ? (
+                                    <div className="mt-3 grid gap-3 lg:grid-cols-3">
+                                        {top3.map(
+                                            (
+                                                indicador,
+                                                indice
+                                            ) => (
+                                                <div
+                                                    key={
+                                                        indicador.bloco +
+                                                        "-" +
+                                                        indicador.nome
+                                                    }
+                                                    className="rounded-xl border border-red-100 bg-white p-4"
+                                                >
+                                                    <p className="text-[9px] font-black uppercase tracking-wide text-red-600">
+                                                        Prioridade{" "}
+                                                        {indice + 1}
+                                                    </p>
+
+                                                    <p className="mt-2 text-sm font-black leading-5 text-slate-950">
+                                                        {indicador.nome}
+                                                    </p>
+
+                                                    <p className="mt-2 text-base font-black text-red-800">
+                                                        {indicador.valor}
+                                                    </p>
+
+                                                    <p className="mt-2 text-xs font-semibold leading-5 text-slate-600">
+                                                        {
+                                                            indicador.interpretacao
+                                                        }
+                                                    </p>
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
+                                ) : (
+                                    <p className="mt-3 text-sm font-bold text-emerald-800">
+                                        Nenhum indicador calculável atingiu nível crítico ou de atenção.
+                                    </p>
+                                )}
+                            </section>
+
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+                                <div className="rounded-xl border border-slate-200 bg-white p-3 text-center">
+                                    <p className="text-[9px] font-black uppercase text-slate-500">
+                                        Base total analisada
+                                    </p>
+
+                                    <p className="mt-1 text-lg font-black text-slate-950">
+                                        {participantesTotal}
+                                    </p>
+                                </div>
+
+                                <div className="rounded-xl border border-violet-200 bg-violet-50 p-3 text-center">
+                                    <p className="text-[9px] font-black uppercase text-violet-700">
+                                        Participantes do gabarito
+                                    </p>
+
+                                    <p className="mt-1 text-lg font-black text-violet-950">
+                                        {participantesGabarito}
+                                    </p>
+                                </div>
+
+                                <div className="rounded-xl border border-sky-200 bg-sky-50 p-3 text-center">
+                                    <p className="text-[9px] font-black uppercase text-sky-700">
+                                        Participantes complementares
+                                    </p>
+
+                                    <p className="mt-1 text-lg font-black text-sky-950">
+                                        {participantesComplementares}
+                                    </p>
+                                </div>
+
+                                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-center">
+                                    <p className="text-[9px] font-black uppercase text-emerald-700">
+                                        Presenças
+                                    </p>
+
+                                    <p className="mt-1 text-lg font-black text-emerald-900">
+                                        {presencas}
+                                    </p>
+                                </div>
+
+                                <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-center">
+                                    <p className="text-[9px] font-black uppercase text-red-700">
+                                        Ausências
+                                    </p>
+
+                                    <p className="mt-1 text-lg font-black text-red-900">
+                                        {ausencias}
+                                    </p>
+                                </div>
+
+                                <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-center">
+                                    <p className="text-[9px] font-black uppercase text-amber-700">
+                                        Pendências manuais
+                                    </p>
+
+                                    <p className="mt-1 text-lg font-black text-amber-900">
+                                        {manuais}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <section className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
+                                <p className="text-[10px] font-black uppercase tracking-wide text-sky-800">
+                                    Composição da base
+                                </p>
+
+                                <p className="mt-2 text-sm font-semibold leading-6 text-sky-950">
+                                    {descricaoComposicaoBase}
+                                </p>
+                            </section>
+                        </div>
+                    ) : (
+                        <div className="p-4">
+                            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                                <div className="border-b border-slate-200 bg-slate-100 px-4 py-3">
+                                    <h4 className="text-xs font-black uppercase tracking-wide text-slate-800">
+                                        {
+                                            abaSelecionada
+                                                .bloco
+                                                ?.titulo
+                                        }
+                                    </h4>
+                                </div>
+
+                                <div className="overflow-x-auto">
+                                    <table className="w-full min-w-[900px] border-collapse">
+                                        <thead>
+                                            <tr className="bg-slate-50 text-[9px] font-black uppercase tracking-wide text-slate-500">
+                                                <th className="w-[22%] border-b border-slate-200 px-4 py-3 text-left">
+                                                    Indicador
+                                                </th>
+
+                                                <th className="w-[16%] border-b border-slate-200 px-4 py-3 text-center">
+                                                    Valor
+                                                </th>
+
+                                                <th className="w-[48%] border-b border-slate-200 px-4 py-3 text-left">
+                                                    Interpretação e detalhamento
+                                                </th>
+
+                                                <th className="w-[14%] border-b border-slate-200 px-4 py-3 text-center">
+                                                    Alerta
+                                                </th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody>
+                                            {(
+                                                abaSelecionada
+                                                    .bloco
+                                                    ?.indicadores ||
+                                                []
+                                            ).map(
+                                                (indicador) => (
+                                                    <tr
+                                                        key={
+                                                            indicador.nome
+                                                        }
+                                                        className="align-top"
+                                                    >
+                                                        <td className="border-b border-slate-100 px-4 py-4 text-xs font-black leading-5 text-slate-900">
+                                                            {
+                                                                indicador.nome
+                                                            }
+                                                        </td>
+
+                                                        <td className="border-b border-slate-100 px-4 py-4 text-center text-xs font-black leading-5 text-slate-950">
+                                                            {
+                                                                indicador.valor
+                                                            }
+                                                        </td>
+
+                                                        <td className="border-b border-slate-100 px-4 py-4 text-xs font-semibold leading-5 text-slate-600">
+                                                            <p>
+                                                                {
+                                                                    indicador.interpretacao
+                                                                }
+                                                            </p>
+
+                                                            {Array.isArray(
+                                                                indicador.detalhes
+                                                            ) &&
+                                                                indicador
+                                                                    .detalhes
+                                                                    .length >
+                                                                    0 && (
+                                                                    <ul className="mt-3 space-y-1.5 border-l-2 border-slate-200 pl-4 text-[11px] font-bold leading-5 text-slate-500">
+                                                                        {indicador.detalhes.map(
+                                                                            (
+                                                                                detalhe,
+                                                                                indice
+                                                                            ) => (
+                                                                                <li
+                                                                                    key={
+                                                                                        indicador.nome +
+                                                                                        "-" +
+                                                                                        indice
+                                                                                    }
+                                                                                >
+                                                                                    {
+                                                                                        detalhe
+                                                                                    }
+                                                                                </li>
+                                                                            )
+                                                                        )}
+                                                                    </ul>
+                                                                )}
+                                                        </td>
+
+                                                        <td className="border-b border-slate-100 px-4 py-4 text-center">
+                                                            <span
+                                                                className={
+                                                                    "inline-flex rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-wide " +
+                                                                    obterClasseNivelRelatorioAnaliticoDds(
+                                                                        indicador.nivel
+                                                                    )
+                                                                }
+                                                            >
+                                                                {obterRotuloNivelRelatorioAnaliticoDds(
+                                                                    indicador.nivel
+                                                                )}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </section>
+                        </div>
+                    )}
+                </div>
+            )}
+        </section>
+    );
+}
+
+/*
+ * dds_formato_data_exibicao_br_v1
+ *
+ * Mantém as datas no formato ISO utilizado pelo banco,
+ * mas padroniza a apresentação visual como DD/MM/AAAA.
+ */
+function formatarDataExibicaoDds(
+    valor
+) {
+    const texto =
+        String(
+            valor ||
+            ""
+        ).trim();
+
+    if (!texto) {
+        return "-";
+    }
+
+    const formatoIso =
+        texto.match(
+            /^(\d{4})-(\d{2})-(\d{2})(?:[T\s].*)?$/
+        );
+
+    if (formatoIso) {
+        return (
+            formatoIso[3] +
+            "/" +
+            formatoIso[2] +
+            "/" +
+            formatoIso[1]
+        );
+    }
+
+    const formatoBrasileiro =
+        texto.match(
+            /^(\d{2})\/(\d{2})\/(\d{4})$/
+        );
+
+    if (formatoBrasileiro) {
+        return texto;
+    }
+
+    const data =
+        new Date(texto);
+
+    if (
+        Number.isNaN(
+            data.getTime()
+        )
+    ) {
+        return texto;
+    }
+
+    return new Intl.DateTimeFormat(
+        "pt-BR",
+        {
+            timeZone: "UTC",
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+        }
+    ).format(data);
+}
+
+
 export function DdsPage({
     supabase = null,
     colaboradores = [],
@@ -326,11 +2259,73 @@ export function DdsPage({
     const [registroScannerDds, setRegistroScannerDds] = useState(null);
     const [carregandoScannerDds, setCarregandoScannerDds] = useState(false);
     const [erroScannerDds, setErroScannerDds] = useState("");
+    const [registrosDisponiveisDds, setRegistrosDisponiveisDds] = useState([]);
+    const [carregandoRegistrosDisponiveisDds, setCarregandoRegistrosDisponiveisDds] = useState(false);
+    const [erroListaRegistrosDds, setErroListaRegistrosDds] = useState("");
+    const [empresaFiltroRegistrosDds, setEmpresaFiltroRegistrosDds] = useState("");
+    const [excluindoRegistroDdsId, setExcluindoRegistroDdsId] = useState("");
+    const [mensagemExclusaoRegistroDds, setMensagemExclusaoRegistroDds] = useState(null);
+    /*
+     * dds_lista_registros_estado_persistente_v1
+     *
+     * Mantém a preferência visual do usuário após atualização da página.
+     */
+    const [listaRegistrosDdsExpandida, setListaRegistrosDdsExpandida] = useState(() => {
+        if (
+            typeof window === "undefined"
+        ) {
+            return true;
+        }
+
+        try {
+            const estadoSalvo =
+                window.localStorage.getItem(
+                    "safescan:dds:listagem-registros-expandida"
+                );
+
+            if (
+                estadoSalvo === "fechada"
+            ) {
+                return false;
+            }
+
+            if (
+                estadoSalvo === "aberta"
+            ) {
+                return true;
+            }
+        } catch {
+            // O navegador pode bloquear o armazenamento local.
+        }
+
+        return true;
+    });
+
+    useEffect(() => {
+        if (
+            typeof window === "undefined"
+        ) {
+            return;
+        }
+
+        try {
+            window.localStorage.setItem(
+                "safescan:dds:listagem-registros-expandida",
+                listaRegistrosDdsExpandida
+                    ? "aberta"
+                    : "fechada"
+            );
+        } catch {
+            // A interface continua funcional mesmo sem localStorage.
+        }
+    }, [listaRegistrosDdsExpandida]);
     const [arquivoScannerDds, setArquivoScannerDds] = useState(null);
     const [erroArquivoScannerDds, setErroArquivoScannerDds] = useState("");
     const [leituraArquivoScannerDds, setLeituraArquivoScannerDds] = useState(null);
     const [carregandoLeituraArquivoScannerDds, setCarregandoLeituraArquivoScannerDds] = useState(false);
     const [erroLeituraArquivoScannerDds, setErroLeituraArquivoScannerDds] = useState("");
+    const [mensagemDocumentoPersistidoDds, setMensagemDocumentoPersistidoDds] = useState(null);
+    const [excluindoDocumentoPersistidoDds, setExcluindoDocumentoPersistidoDds] = useState(false);
     const [conferenciaAssistidaDds, setConferenciaAssistidaDds] = useState({});
     const [temasConferenciaAssistidaDds, setTemasConferenciaAssistidaDds] = useState([]);
     const [participantesAdicionaisConferenciaDds, setParticipantesAdicionaisConferenciaDds] = useState(() =>
@@ -407,10 +2402,1417 @@ export function DdsPage({
         orientacoesImportantes: orientacoesDdsEditaveis,
     }), [dadosDds, registroDdsConferencia, logoEmpresaDds, empresaSelecionadaDds, logoContratanteDds, empresaContratanteDds, logosEmpresasCabecalhoDds, recadosDdsEditaveis, orientacoesDdsEditaveis]);
 
-    const participantesRegistroScannerDds = useMemo(
-        () => Array.isArray(registroScannerDds?.dados?.participantes) ? registroScannerDds.dados.participantes : [],
-        [registroScannerDds]
-    );
+    /*
+     * dds_lista_completa_registros_persistidos
+     *
+     * Carrega todos os DDS cadastrados usando paginação de 500 registros.
+     * A listagem é utilizada no seletor e na tabela da Conferência DDS.
+     */
+    useEffect(() => {
+        let componenteAtivo = true;
+
+        async function carregarTodosRegistrosDisponiveisDds() {
+            if (!supabase) {
+                if (componenteAtivo) {
+                    setRegistrosDisponiveisDds([]);
+                    setErroListaRegistrosDds(
+                        "Supabase não disponível para listar os DDS cadastrados."
+                    );
+                }
+
+                return;
+            }
+
+            setCarregandoRegistrosDisponiveisDds(true);
+            setErroListaRegistrosDds("");
+
+            try {
+                const registrosAcumulados = [];
+                const tamanhoPagina = 500;
+                const limitePaginas = 100;
+
+                let paginaAtual = 0;
+
+                while (paginaAtual < limitePaginas) {
+                    const inicio =
+                        paginaAtual * tamanhoPagina;
+
+                    const fim =
+                        inicio + tamanhoPagina - 1;
+
+                    const {
+                        data,
+                        error,
+                    } = await supabase
+                        .from("dds_registros")
+                        .select(
+                            [
+                                "id",
+                                "codigo",
+                                "empresa_nome",
+                                "obra_nome",
+                                "periodo_inicio",
+                                "periodo_fim",
+                                "status",
+                                "created_at",
+                                "updated_at",
+                            ].join(",")
+                        )
+                        .order(
+                            "periodo_inicio",
+                            {
+                                ascending: false,
+                            }
+                        )
+                        .order(
+                            "created_at",
+                            {
+                                ascending: false,
+                            }
+                        )
+                        .range(
+                            inicio,
+                            fim
+                        );
+
+                    if (error) {
+                        throw new Error(
+                            error.message ||
+                            "Não foi possível listar os DDS cadastrados."
+                        );
+                    }
+
+                    const lote =
+                        Array.isArray(data)
+                            ? data
+                            : [];
+
+                    registrosAcumulados.push(
+                        ...lote
+                    );
+
+                    if (
+                        lote.length <
+                        tamanhoPagina
+                    ) {
+                        break;
+                    }
+
+                    paginaAtual += 1;
+                }
+
+                const registrosPorCodigo =
+                    new Map();
+
+                registrosAcumulados.forEach(
+                    (registro) => {
+                        const codigo =
+                            String(
+                                registro?.codigo ||
+                                ""
+                            )
+                                .trim()
+                                .toUpperCase();
+
+                        if (!codigo) {
+                            return;
+                        }
+
+                        registrosPorCodigo.set(
+                            codigo,
+                            {
+                                id:
+                                    registro?.id ||
+                                    codigo,
+                                codigo,
+                                empresaNome:
+                                    String(
+                                        registro?.empresa_nome ||
+                                        ""
+                                    ).trim(),
+                                obraNome:
+                                    String(
+                                        registro?.obra_nome ||
+                                        ""
+                                    ).trim(),
+                                periodoInicio:
+                                    String(
+                                        registro?.periodo_inicio ||
+                                        ""
+                                    ).trim(),
+                                periodoFim:
+                                    String(
+                                        registro?.periodo_fim ||
+                                        ""
+                                    ).trim(),
+                                status:
+                                    String(
+                                        registro?.status ||
+                                        "Ativo"
+                                    ).trim(),
+                            }
+                        );
+                    }
+                );
+
+                if (componenteAtivo) {
+                    setRegistrosDisponiveisDds(
+                        Array.from(
+                            registrosPorCodigo.values()
+                        )
+                    );
+                }
+            } catch (error) {
+                if (componenteAtivo) {
+                    setRegistrosDisponiveisDds([]);
+
+                    setErroListaRegistrosDds(
+                        error?.message ||
+                        "Não foi possível carregar os DDS cadastrados."
+                    );
+                }
+            } finally {
+                if (componenteAtivo) {
+                    setCarregandoRegistrosDisponiveisDds(
+                        false
+                    );
+                }
+            }
+        }
+
+        carregarTodosRegistrosDisponiveisDds();
+
+        return () => {
+            componenteAtivo = false;
+        };
+    }, [supabase]);
+
+
+    /*
+     * dds_exclusao_registro_lista_v1
+     *
+     * Exclui individualmente um DDS cadastrado, após a confirmação
+     * exata do código. O registro principal é removido primeiro.
+     * Depois são removidos os metadados e arquivos vinculados.
+     */
+    async function excluirRegistroCadastradoDds(
+        registro
+    ) {
+        if (!supabase) {
+            setMensagemExclusaoRegistroDds({
+                tipo: "erro",
+                texto:
+                    "Supabase não disponível para excluir o DDS.",
+            });
+
+            return;
+        }
+
+        const registroId =
+            String(
+                registro?.id ||
+                ""
+            ).trim();
+
+        const codigo =
+            String(
+                registro?.codigo ||
+                ""
+            )
+                .trim()
+                .toUpperCase();
+
+        if (
+            !registroId ||
+            !codigo
+        ) {
+            setMensagemExclusaoRegistroDds({
+                tipo: "erro",
+                texto:
+                    "O registro selecionado não possui identificação válida.",
+            });
+
+            return;
+        }
+
+        if (excluindoRegistroDdsId) {
+            return;
+        }
+
+        const confirmacaoDigitada =
+            window.prompt(
+                "Para excluir definitivamente este DDS, digite exatamente o código abaixo:\n\n" +
+                codigo
+            );
+
+        if (confirmacaoDigitada === null) {
+            return;
+        }
+
+        if (
+            String(confirmacaoDigitada)
+                .trim()
+                .toUpperCase() !==
+            codigo
+        ) {
+            setMensagemExclusaoRegistroDds({
+                tipo: "erro",
+                texto:
+                    "Código de confirmação incorreto. Nenhum DDS foi excluído.",
+            });
+
+            return;
+        }
+
+        const confirmado =
+            window.confirm(
+                "Confirma a exclusão definitiva do DDS " +
+                codigo +
+                "?\n\n" +
+                "O registro, o QR público e os PDFs vinculados deixarão de estar disponíveis."
+            );
+
+        if (!confirmado) {
+            return;
+        }
+
+        setExcluindoRegistroDdsId(
+            registroId
+        );
+
+        setMensagemExclusaoRegistroDds(
+            null
+        );
+
+        try {
+            const {
+                data:
+                    documentosConsultados,
+                error:
+                    erroConsultarDocumentos,
+            } =
+                await supabase
+                    .from("dds_documentos")
+                    .select(
+                        "id,bucket_id,caminho_storage"
+                    )
+                    .eq(
+                        "registro_id",
+                        registroId
+                    );
+
+            if (erroConsultarDocumentos) {
+                throw new Error(
+                    erroConsultarDocumentos.message ||
+                    "Não foi possível consultar os PDFs vinculados ao DDS."
+                );
+            }
+
+            const documentos =
+                Array.isArray(
+                    documentosConsultados
+                )
+                    ? documentosConsultados
+                    : [];
+
+            const {
+                data:
+                    registrosExcluidos,
+                error:
+                    erroExcluirRegistro,
+            } =
+                await supabase
+                    .from("dds_registros")
+                    .delete()
+                    .eq(
+                        "id",
+                        registroId
+                    )
+                    .eq(
+                        "codigo",
+                        codigo
+                    )
+                    .select(
+                        "id,codigo"
+                    );
+
+            if (erroExcluirRegistro) {
+                throw new Error(
+                    erroExcluirRegistro.message ||
+                    "Não foi possível excluir o registro DDS."
+                );
+            }
+
+            if (
+                !Array.isArray(
+                    registrosExcluidos
+                ) ||
+                registrosExcluidos.length === 0
+            ) {
+                throw new Error(
+                    "O banco não confirmou a exclusão. Verifique a permissão de exclusão do usuário."
+                );
+            }
+
+            const avisosLimpeza = [];
+
+            const idsDocumentos =
+                documentos
+                    .map(
+                        (documento) =>
+                            String(
+                                documento?.id ||
+                                ""
+                            ).trim()
+                    )
+                    .filter(Boolean);
+
+            if (idsDocumentos.length > 0) {
+                const {
+                    error:
+                        erroExcluirMetadados,
+                } =
+                    await supabase
+                        .from("dds_documentos")
+                        .delete()
+                        .in(
+                            "id",
+                            idsDocumentos
+                        );
+
+                if (erroExcluirMetadados) {
+                    avisosLimpeza.push(
+                        "metadados dos PDFs: " +
+                        (
+                            erroExcluirMetadados.message ||
+                            "falha desconhecida"
+                        )
+                    );
+                }
+            }
+
+            const caminhosPorBucket =
+                new Map();
+
+            documentos.forEach(
+                (documento) => {
+                    const bucket =
+                        String(
+                            documento?.bucket_id ||
+                            "dds-assinados"
+                        ).trim() ||
+                        "dds-assinados";
+
+                    const caminho =
+                        String(
+                            documento?.caminho_storage ||
+                            ""
+                        ).trim();
+
+                    if (!caminho) {
+                        return;
+                    }
+
+                    if (
+                        !caminhosPorBucket.has(
+                            bucket
+                        )
+                    ) {
+                        caminhosPorBucket.set(
+                            bucket,
+                            []
+                        );
+                    }
+
+                    caminhosPorBucket
+                        .get(bucket)
+                        .push(caminho);
+                }
+            );
+
+            for (
+                const [
+                    bucket,
+                    caminhosOriginais,
+                ] of caminhosPorBucket.entries()
+            ) {
+                const caminhos =
+                    Array.from(
+                        new Set(
+                            caminhosOriginais
+                        )
+                    );
+
+                if (caminhos.length === 0) {
+                    continue;
+                }
+
+                const {
+                    error:
+                        erroRemoverStorage,
+                } =
+                    await supabase.storage
+                        .from(bucket)
+                        .remove(caminhos);
+
+                if (erroRemoverStorage) {
+                    avisosLimpeza.push(
+                        "Storage " +
+                        bucket +
+                        ": " +
+                        (
+                            erroRemoverStorage.message ||
+                            "falha desconhecida"
+                        )
+                    );
+                }
+            }
+
+            setRegistrosDisponiveisDds(
+                (registrosAtuais) =>
+                    registrosAtuais.filter(
+                        (registroAtual) =>
+                            String(
+                                registroAtual?.id ||
+                                ""
+                            ).trim() !==
+                                registroId &&
+                            String(
+                                registroAtual?.codigo ||
+                                ""
+                            )
+                                .trim()
+                                .toUpperCase() !==
+                                codigo
+                    )
+            );
+
+            setHistoricoMensalMaoDeObraDds(
+                (registrosAtuais) =>
+                    (
+                        Array.isArray(
+                            registrosAtuais
+                        )
+                            ? registrosAtuais
+                            : []
+                    ).filter(
+                        (registroAtual) =>
+                            String(
+                                registroAtual?.id ||
+                                ""
+                            ).trim() !==
+                                registroId &&
+                            String(
+                                registroAtual?.codigo ||
+                                ""
+                            )
+                                .trim()
+                                .toUpperCase() !==
+                                codigo
+                    )
+            );
+
+            const codigoSelecionado =
+                String(
+                    codigoConferenciaDds ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
+
+            const codigoRegistroCarregado =
+                String(
+                    registroScannerDds?.codigo ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
+
+            const codigoRegistroEmitido =
+                String(
+                    registroDdsConferencia?.codigo ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
+
+            if (
+                codigoSelecionado === codigo ||
+                codigoRegistroCarregado === codigo ||
+                codigoRegistroEmitido === codigo
+            ) {
+                /*
+                 * dds_limpeza_completa_registro_excluido_v1
+                 *
+                 * O formulário corrente e suas preferências por empresa
+                 * permanecem intactos. Somente os estados pertencentes ao
+                 * registro persistido que foi excluído são descartados.
+                 */
+                setCodigoConferenciaDds("");
+                setRegistroScannerDds(null);
+                setRegistroDdsConferencia(null);
+                setErroScannerDds("");
+
+                setArquivoScannerDds(null);
+                setErroArquivoScannerDds("");
+                setLeituraArquivoScannerDds(null);
+                setErroLeituraArquivoScannerDds("");
+                setMensagemDocumentoPersistidoDds(null);
+
+                setConferenciaAssistidaDds({});
+                setTemasConferenciaAssistidaDds([]);
+                setParticipantesAdicionaisConferenciaDds(
+                    criarParticipantesAdicionaisConferenciaDds()
+                );
+                setConferenciaAssistidaSalvaEmDds("");
+                setErroConferenciaAssistidaDds("");
+
+                setFechamentoConferenciaAssistidaDds(null);
+                setErroFechamentoConferenciaDds("");
+
+                setReciboFinalEmitidoEmDds("");
+                setErroReciboFinalDds("");
+                setCodigoReciboCopiadoDds(false);
+            }
+
+            setMensagemExclusaoRegistroDds({
+                tipo:
+                    avisosLimpeza.length > 0
+                        ? "aviso"
+                        : "sucesso",
+                texto:
+                    avisosLimpeza.length > 0
+                        ? (
+                            "DDS " +
+                            codigo +
+                            " excluído, mas houve aviso na limpeza: " +
+                            avisosLimpeza.join(
+                                " | "
+                            )
+                        )
+                        : (
+                            "DDS " +
+                            codigo +
+                            " e seus PDFs vinculados foram excluídos com sucesso."
+                        ),
+            });
+        } catch (error) {
+            setMensagemExclusaoRegistroDds({
+                tipo: "erro",
+                texto:
+                    error?.message ||
+                    "Não foi possível excluir o DDS selecionado.",
+            });
+        } finally {
+            setExcluindoRegistroDdsId("");
+        }
+    }
+
+
+    /*
+     * dds_filtro_empresa_registros_v1
+     *
+     * Monta a relação de empresas e filtra os DDS sem alterar
+     * os registros originais carregados do Supabase.
+     */
+    const empresasFiltroRegistrosDds = useMemo(() => {
+        const empresasPorChave =
+            new Map();
+
+        registrosDisponiveisDds.forEach(
+            (registro) => {
+                const empresaNome =
+                    String(
+                        registro?.empresaNome ||
+                        ""
+                    ).trim();
+
+                if (!empresaNome) {
+                    return;
+                }
+
+                const chaveEmpresa =
+                    empresaNome.toLocaleUpperCase(
+                        "pt-BR"
+                    );
+
+                if (
+                    !empresasPorChave.has(
+                        chaveEmpresa
+                    )
+                ) {
+                    empresasPorChave.set(
+                        chaveEmpresa,
+                        empresaNome
+                    );
+                }
+            }
+        );
+
+        return Array.from(
+            empresasPorChave.values()
+        ).sort(
+            (empresaA, empresaB) =>
+                empresaA.localeCompare(
+                    empresaB,
+                    "pt-BR",
+                    {
+                        sensitivity:
+                            "base",
+                    }
+                )
+        );
+    }, [registrosDisponiveisDds]);
+
+    const registrosFiltradosDds = useMemo(() => {
+        const empresaSelecionada =
+            String(
+                empresaFiltroRegistrosDds ||
+                ""
+            ).trim();
+
+        if (!empresaSelecionada) {
+            return registrosDisponiveisDds;
+        }
+
+        const chaveEmpresaSelecionada =
+            empresaSelecionada.toLocaleUpperCase(
+                "pt-BR"
+            );
+
+        return registrosDisponiveisDds.filter(
+            (registro) =>
+                String(
+                    registro?.empresaNome ||
+                    ""
+                )
+                    .trim()
+                    .toLocaleUpperCase(
+                        "pt-BR"
+                    ) ===
+                chaveEmpresaSelecionada
+        );
+    }, [
+        empresaFiltroRegistrosDds,
+        registrosDisponiveisDds,
+    ]);
+
+    useEffect(() => {
+        if (
+            !empresaFiltroRegistrosDds ||
+            carregandoRegistrosDisponiveisDds
+        ) {
+            return;
+        }
+
+        const filtroAindaExiste =
+            empresasFiltroRegistrosDds.some(
+                (empresaNome) =>
+                    empresaNome.toLocaleUpperCase(
+                        "pt-BR"
+                    ) ===
+                    String(
+                        empresaFiltroRegistrosDds
+                    )
+                        .trim()
+                        .toLocaleUpperCase(
+                            "pt-BR"
+                        )
+            );
+
+        if (!filtroAindaExiste) {
+            setEmpresaFiltroRegistrosDds(
+                ""
+            );
+        }
+    }, [
+        carregandoRegistrosDisponiveisDds,
+        empresaFiltroRegistrosDds,
+        empresasFiltroRegistrosDds,
+    ]);
+
+
+    const participantesRegistroScannerDds = useMemo(() => {
+        /*
+         * sincronizacao_funcao_cadastro_atual_dds
+         *
+         * DDS aberto ou reaberto:
+         * utiliza a função atual do cadastro do colaborador.
+         *
+         * DDS oficialmente concluído:
+         * preserva o snapshot histórico registrado no fechamento.
+         */
+        const participantesSalvosDds =
+            Array.isArray(
+                registroScannerDds
+                    ?.dados
+                    ?.participantes
+            )
+                ? registroScannerDds
+                    .dados
+                    .participantes
+                : [];
+
+        const statusFechamentoDds =
+            normalizarTextoCodigoDds(
+                registroScannerDds
+                    ?.dados
+                    ?.conferenciaAssistida
+                    ?.fechamento
+                    ?.status ||
+                registroScannerDds
+                    ?.dados
+                    ?.fechamento
+                    ?.status ||
+                registroScannerDds
+                    ?.statusConferencia ||
+                ""
+            );
+
+        if (
+            statusFechamentoDds ===
+            "concluida"
+        ) {
+            return participantesSalvosDds;
+        }
+
+        const colaboradoresAtuaisDds =
+            Array.isArray(colaboradores)
+                ? colaboradores
+                : [];
+
+        if (
+            participantesSalvosDds.length === 0 ||
+            colaboradoresAtuaisDds.length === 0
+        ) {
+            return participantesSalvosDds;
+        }
+
+        const obterTextoCadastroDds = (
+            ...valores
+        ) => {
+            for (const valor of valores) {
+                if (
+                    valor === null ||
+                    valor === undefined ||
+                    typeof valor === "object"
+                ) {
+                    continue;
+                }
+
+                const texto =
+                    String(valor).trim();
+
+                if (texto) {
+                    return texto;
+                }
+            }
+
+            return "";
+        };
+
+        const normalizarChaveCadastroDds = (
+            valor
+        ) =>
+            normalizarTextoCodigoDds(
+                obterTextoCadastroDds(
+                    valor
+                )
+            );
+
+        const cadastrosPorCodigoDds =
+            new Map();
+
+        const cadastrosPorIdDds =
+            new Map();
+
+        const cadastrosPorNomeEmpresaDds =
+            new Map();
+
+        const cadastrosPorNomeUnicoDds =
+            new Map();
+
+        colaboradoresAtuaisDds.forEach(
+            (colaborador) => {
+                const nomeDds =
+                    obterTextoCadastroDds(
+                        colaborador?.nome,
+                        colaborador?.nomeCompleto,
+                        colaborador?.nome_completo,
+                        colaborador?.colaborador,
+                        colaborador?.nomeColaborador
+                    );
+
+                const empresaDds =
+                    obterTextoCadastroDds(
+                        colaborador
+                            ?.empresa
+                            ?.nome,
+                        colaborador
+                            ?.empresa
+                            ?.razao_social,
+                        colaborador
+                            ?.empresa
+                            ?.razaoSocial,
+                        colaborador
+                            ?.empresaExibicao,
+                        colaborador
+                            ?.empresa_exibicao,
+                        colaborador
+                            ?.empresaNome,
+                        colaborador
+                            ?.empresa_nome,
+                        colaborador
+                            ?.empresa
+                    );
+
+                const nomeNormalizadoDds =
+                    normalizarChaveCadastroDds(
+                        nomeDds
+                    );
+
+                const empresaNormalizadaDds =
+                    normalizarChaveCadastroDds(
+                        empresaDds
+                    );
+
+                const codigosDds = [
+                    colaborador
+                        ?.codigoFuncionario,
+                    colaborador
+                        ?.codigo_funcionario,
+                    colaborador
+                        ?.codigoSafescan,
+                    colaborador
+                        ?.codigoSafeScan,
+                    colaborador
+                        ?.codigo_safescan,
+                    colaborador
+                        ?.codigo,
+                    colaborador
+                        ?.codigo_colaborador,
+                    colaborador
+                        ?.codigoColaborador,
+                    colaborador
+                        ?.codigo_qr,
+                    colaborador
+                        ?.qr_codigo,
+                    colaborador
+                        ?.codigoQr,
+                    colaborador
+                        ?.matricula_esocial,
+                    colaborador
+                        ?.matriculaEsocial,
+                    colaborador
+                        ?.matricula,
+                ]
+                    .map(
+                        normalizarChaveCadastroDds
+                    )
+                    .filter(Boolean);
+
+                codigosDds.forEach(
+                    (codigoDds) => {
+                        if (
+                            !cadastrosPorCodigoDds
+                                .has(
+                                    codigoDds
+                                )
+                        ) {
+                            cadastrosPorCodigoDds
+                                .set(
+                                    codigoDds,
+                                    colaborador
+                                );
+                        }
+                    }
+                );
+
+                const idsDds = [
+                    colaborador?.id,
+                    colaborador
+                        ?.colaborador_id,
+                    colaborador
+                        ?.colaboradorId,
+                    colaborador?.token,
+                ]
+                    .map(
+                        normalizarChaveCadastroDds
+                    )
+                    .filter(Boolean);
+
+                idsDds.forEach(
+                    (idDds) => {
+                        if (
+                            !cadastrosPorIdDds
+                                .has(
+                                    idDds
+                                )
+                        ) {
+                            cadastrosPorIdDds
+                                .set(
+                                    idDds,
+                                    colaborador
+                                );
+                        }
+                    }
+                );
+
+                if (
+                    nomeNormalizadoDds &&
+                    empresaNormalizadaDds
+                ) {
+                    const chaveNomeEmpresaDds =
+                        `${nomeNormalizadoDds}|${empresaNormalizadaDds}`;
+
+                    if (
+                        !cadastrosPorNomeEmpresaDds
+                            .has(
+                                chaveNomeEmpresaDds
+                            )
+                    ) {
+                        cadastrosPorNomeEmpresaDds
+                            .set(
+                                chaveNomeEmpresaDds,
+                                colaborador
+                            );
+                    }
+                }
+
+                if (nomeNormalizadoDds) {
+                    if (
+                        !cadastrosPorNomeUnicoDds
+                            .has(
+                                nomeNormalizadoDds
+                            )
+                    ) {
+                        cadastrosPorNomeUnicoDds
+                            .set(
+                                nomeNormalizadoDds,
+                                colaborador
+                            );
+                    }
+                    else {
+                        cadastrosPorNomeUnicoDds
+                            .set(
+                                nomeNormalizadoDds,
+                                null
+                            );
+                    }
+                }
+            }
+        );
+
+        return participantesSalvosDds.map(
+            (participante) => {
+                const codigoParticipanteDds =
+                    normalizarChaveCadastroDds(
+                        obterTextoCadastroDds(
+                            participante
+                                ?.codigoSafescan,
+                            participante
+                                ?.codigoSafeScan,
+                            participante
+                                ?.codigoFuncionario,
+                            participante
+                                ?.codigo_funcionario,
+                            participante
+                                ?.codigo,
+                            participante
+                                ?.codigo_colaborador
+                        )
+                    );
+
+                const idParticipanteDds =
+                    normalizarChaveCadastroDds(
+                        obterTextoCadastroDds(
+                            participante
+                                ?.colaboradorId,
+                            participante
+                                ?.colaborador_id,
+                            participante
+                                ?.id
+                        )
+                    );
+
+                const nomeParticipanteDds =
+                    normalizarChaveCadastroDds(
+                        participante?.nome
+                    );
+
+                const empresaParticipanteDds =
+                    normalizarChaveCadastroDds(
+                        obterTextoCadastroDds(
+                            participante
+                                ?.empresa
+                                ?.nome,
+                            participante
+                                ?.empresaNome,
+                            participante
+                                ?.empresa_nome,
+                            participante
+                                ?.empresa
+                        )
+                    );
+
+                const chaveNomeEmpresaDds =
+                    nomeParticipanteDds &&
+                    empresaParticipanteDds
+                        ? `${nomeParticipanteDds}|${empresaParticipanteDds}`
+                        : "";
+
+                const colaboradorAtualDds =
+                    (
+                        codigoParticipanteDds &&
+                        cadastrosPorCodigoDds.get(
+                            codigoParticipanteDds
+                        )
+                    ) ||
+                    (
+                        idParticipanteDds &&
+                        cadastrosPorIdDds.get(
+                            idParticipanteDds
+                        )
+                    ) ||
+                    (
+                        chaveNomeEmpresaDds &&
+                        cadastrosPorNomeEmpresaDds.get(
+                            chaveNomeEmpresaDds
+                        )
+                    ) ||
+                    (
+                        nomeParticipanteDds &&
+                        cadastrosPorNomeUnicoDds.get(
+                            nomeParticipanteDds
+                        )
+                    ) ||
+                    null;
+
+                if (!colaboradorAtualDds) {
+                    return participante;
+                }
+
+                const funcaoAtualDds =
+                    obterTextoCadastroDds(
+                        colaboradorAtualDds
+                            ?.funcao
+                            ?.nome,
+                        colaboradorAtualDds
+                            ?.funcao
+                            ?.descricao,
+                        colaboradorAtualDds
+                            ?.cargo
+                            ?.nome,
+                        colaboradorAtualDds
+                            ?.cargo
+                            ?.descricao,
+                        colaboradorAtualDds
+                            ?.funcao,
+                        colaboradorAtualDds
+                            ?.funcaoNome,
+                        colaboradorAtualDds
+                            ?.funcao_nome,
+                        colaboradorAtualDds
+                            ?.funcaoDescricao,
+                        colaboradorAtualDds
+                            ?.funcao_descricao,
+                        colaboradorAtualDds
+                            ?.cargo,
+                        colaboradorAtualDds
+                            ?.cargoNome,
+                        colaboradorAtualDds
+                            ?.cargo_nome,
+                        colaboradorAtualDds
+                            ?.cargoDescricao,
+                        colaboradorAtualDds
+                            ?.cargo_descricao
+                    );
+
+                const funcaoSalvaDds =
+                    obterTextoCadastroDds(
+                        participante?.funcao
+                    );
+
+                if (
+                    !funcaoAtualDds ||
+                    normalizarChaveCadastroDds(
+                        funcaoAtualDds
+                    ) ===
+                    normalizarChaveCadastroDds(
+                        funcaoSalvaDds
+                    )
+                ) {
+                    return participante;
+                }
+
+                return {
+                    ...participante,
+                    funcao: funcaoAtualDds,
+                };
+            }
+        );
+    }, [
+        colaboradores,
+        registroScannerDds,
+    ]);
+
+    const colaboradoresCadastradosConferenciaDds = useMemo(() => {
+        const listaColaboradores = Array.isArray(colaboradores)
+            ? colaboradores
+            : [];
+
+        const codigosJaIncluidosDds = new Set(
+            participantesRegistroScannerDds
+                .map((participante) =>
+                    normalizarTextoCodigoDds(
+                        obterValorTextoDds(
+                            participante?.codigoSafescan,
+                            participante?.codigoSafeScan,
+                            participante?.codigoFuncionario,
+                            participante?.codigo_funcionario,
+                            participante?.codigo
+                        )
+                    )
+                )
+                .filter(Boolean)
+        );
+
+        const nomesEmpresasJaIncluidosDds = new Set(
+            participantesRegistroScannerDds
+                .map((participante) => {
+                    const nome = normalizarTextoCodigoDds(
+                        participante?.nome
+                    );
+
+                    const empresa = normalizarTextoCodigoDds(
+                        obterValorTextoDds(
+                            participante?.empresa,
+                            participante?.empresaNome,
+                            participante?.empresa_nome
+                        )
+                    );
+
+                    return nome
+                        ? `${nome}|${empresa}`
+                        : "";
+                })
+                .filter(Boolean)
+        );
+
+        const cadastrosPorChave = new Map();
+
+        listaColaboradores.forEach(
+            (colaborador, indice) => {
+                const nome = obterValorTextoDds(
+                    colaborador?.nome,
+                    colaborador?.nomeCompleto,
+                    colaborador?.nome_completo,
+                    colaborador?.colaborador,
+                    colaborador?.nomeColaborador
+                );
+
+                if (!nome) return;
+
+                const funcao = obterValorTextoDds(
+                    colaborador?.funcao,
+                    colaborador?.funcaoNome,
+                    colaborador?.funcao_nome,
+                    colaborador?.cargo,
+                    colaborador?.cargoNome,
+                    colaborador?.cargo_nome
+                );
+
+                const empresa = obterValorTextoDds(
+                    colaborador?.empresaExibicao,
+                    colaborador?.empresa_exibicao,
+                    colaborador?.empresaNome,
+                    colaborador?.empresa_nome,
+                    colaborador?.empresa?.nome,
+                    colaborador?.empresa
+                );
+
+                const colaboradorId =
+                    obterValorTextoDds(
+                        colaborador?.id,
+                        colaborador?.colaborador_id,
+                        colaborador?.colaboradorId,
+                        colaborador?.token
+                    );
+
+                const codigoSafescan =
+                    obterValorTextoDds(
+                        colaborador?.codigoFuncionario,
+                        colaborador?.codigo_funcionario,
+                        colaborador?.codigoSafescan,
+                        colaborador?.codigoSafeScan,
+                        colaborador?.codigo_safescan,
+                        colaborador?.codigo,
+                        colaborador?.codigo_colaborador,
+                        colaborador?.codigoColaborador,
+                        colaborador?.codigo_qr,
+                        colaborador?.qr_codigo,
+                        colaborador?.codigoQr,
+                        colaborador?.matricula_esocial,
+                        colaborador?.matriculaEsocial,
+                        colaborador?.matricula
+                    );
+
+                const codigoNormalizado =
+                    normalizarTextoCodigoDds(
+                        codigoSafescan
+                    );
+
+                const nomeEmpresaNormalizado =
+                    `${normalizarTextoCodigoDds(nome)}|${normalizarTextoCodigoDds(empresa)}`;
+
+                const jaIncluidoNoDds =
+                    (
+                        codigoNormalizado &&
+                        codigosJaIncluidosDds.has(
+                            codigoNormalizado
+                        )
+                    ) ||
+                    nomesEmpresasJaIncluidosDds.has(
+                        nomeEmpresaNormalizado
+                    );
+
+                if (jaIncluidoNoDds) return;
+
+                const chaveCadastro =
+                    codigoSafescan ||
+                    colaboradorId ||
+                    `cadastro-dds-${indice}-${normalizarTextoCodigoDds(nome)}`;
+
+                if (
+                    !cadastrosPorChave.has(
+                        chaveCadastro
+                    )
+                ) {
+                    cadastrosPorChave.set(
+                        chaveCadastro,
+                        {
+                            chaveCadastro,
+                            colaboradorId,
+                            codigoSafescan,
+                            nome,
+                            funcao,
+                            empresa,
+                        }
+                    );
+                }
+            }
+        );
+
+        return Array.from(
+            cadastrosPorChave.values()
+        ).sort((a, b) =>
+            a.nome.localeCompare(
+                b.nome,
+                "pt-BR",
+                {
+                    sensitivity: "base",
+                }
+            )
+        );
+    }, [
+        colaboradores,
+        participantesRegistroScannerDds,
+    ]);
+
+    const funcoesCadastradasConferenciaDds = useMemo(() => {
+        const funcoesPorChave = new Map();
+
+        colaboradoresCadastradosConferenciaDds.forEach(
+            (colaborador) => {
+                const funcao = String(
+                    colaborador?.funcao || ""
+                ).trim();
+
+                const chave =
+                    normalizarTextoCodigoDds(
+                        funcao
+                    );
+
+                if (
+                    funcao &&
+                    chave &&
+                    !funcoesPorChave.has(chave)
+                ) {
+                    funcoesPorChave.set(
+                        chave,
+                        funcao
+                    );
+                }
+            }
+        );
+
+        return Array.from(
+            funcoesPorChave.values()
+        ).sort((a, b) =>
+            a.localeCompare(
+                b,
+                "pt-BR",
+                {
+                    sensitivity: "base",
+                }
+            )
+        );
+    }, [
+        colaboradoresCadastradosConferenciaDds,
+    ]);
+
+    const empresasCadastradasConferenciaDds = useMemo(() => {
+        const empresasPorChave = new Map();
+
+        const nomesEmpresas = [
+            ...empresasDds.map(
+                (empresa) =>
+                    obterNomeEmpresaObjetoDds(
+                        empresa
+                    )
+            ),
+            ...colaboradoresCadastradosConferenciaDds.map(
+                (colaborador) =>
+                    colaborador?.empresa || ""
+            ),
+        ];
+
+        nomesEmpresas.forEach((empresa) => {
+            const nomeEmpresa =
+                String(empresa || "").trim();
+
+            const chave =
+                normalizarTextoCodigoDds(
+                    nomeEmpresa
+                );
+
+            if (
+                nomeEmpresa &&
+                chave &&
+                !empresasPorChave.has(chave)
+            ) {
+                empresasPorChave.set(
+                    chave,
+                    nomeEmpresa
+                );
+            }
+        });
+
+        return Array.from(
+            empresasPorChave.values()
+        ).sort((a, b) =>
+            a.localeCompare(
+                b,
+                "pt-BR",
+                {
+                    sensitivity: "base",
+                }
+            )
+        );
+    }, [
+        colaboradoresCadastradosConferenciaDds,
+        empresasDds,
+    ]);
 
 
     const {
@@ -418,6 +3820,8 @@ export function DdsPage({
         selecionarArquivoScannerDds,
         limparArquivoScannerDds,
         executarLeituraArquivoScannerDds,
+        analisarDocumentoPersistidoDds,
+        excluirDocumentoPersistidoDds,
     } = criarControladorScannerDds({
         arquivoScannerDds,
         carregandoLeituraArquivoScannerDds,
@@ -437,6 +3841,9 @@ export function DdsPage({
         setErroScannerDds,
         setLeituraArquivoScannerDds,
         setRegistroScannerDds,
+        excluindoDocumentoPersistidoDds,
+        setExcluindoDocumentoPersistidoDds,
+        setMensagemDocumentoPersistidoDds,
         supabase,
     });
 
@@ -542,10 +3949,17 @@ export function DdsPage({
                 participante?.tipo || ""
             ).trim().toLowerCase();
 
-            const categoria = (
+            const origemBaseDds = String(
+                participante?.origemBaseDds || ""
+            ).trim().toLowerCase();
+
+            const participanteComplementar =
+                origemBaseDds === "complementar" ||
                 origem === "adicional" ||
-                tipo === "visitante"
-            )
+                origem === "cadastro_adicional" ||
+                tipo === "visitante";
+
+            const categoria = participanteComplementar
                 ? adicionais
                 : cadastrados;
 
@@ -635,15 +4049,171 @@ export function DdsPage({
 
     const conferenciaOficialConcluidaDds = fechamentoConferenciaAssistidaDds?.status === "concluida";
 
+    const indicadoresJornadaResultadoOficialDds = useMemo(() => {
+        const diasFrequencia =
+            Array.isArray(
+                estatisticasConferenciaAssistidaDds
+                    ?.dias
+            )
+                ? estatisticasConferenciaAssistidaDds
+                    .dias
+                : [];
+
+        const obterChaveDiaJornadaDds = (
+            dia = {}
+        ) =>
+            String(
+                dia?.data ||
+                dia?.chave ||
+                dia?.id ||
+                dia?.curto ||
+                dia?.nome ||
+                ""
+            )
+                .trim()
+                .toLowerCase();
+
+        let minutosTotaisTrabalhados = 0;
+        let minutosTotaisExtras = 0;
+
+        diasAtivosConferenciaAssistidaDds.forEach(
+            (dia, indiceDia) => {
+                const chaveDia =
+                    obterChaveDiaJornadaDds(
+                        dia
+                    );
+
+                const resumoDia =
+                    diasFrequencia.find(
+                        (item) =>
+                            chaveDia &&
+                            obterChaveDiaJornadaDds(
+                                item
+                            ) === chaveDia
+                    ) ||
+                    diasFrequencia[indiceDia] ||
+                    {};
+
+                const presentesDia =
+                    Math.max(
+                        0,
+                        Number(
+                            resumoDia?.presentes ??
+                            resumoDia?.presencas ??
+                            resumoDia
+                                ?.quantidadePresentes ??
+                            0
+                        )
+                    );
+
+                const minutosTrabalhadosDia =
+                    Math.max(
+                        0,
+                        Number(
+                            dia?.minutosTrabalhados ||
+                            0
+                        )
+                    );
+
+                const minutosExtrasDia =
+                    Math.max(
+                        0,
+                        Number(
+                            dia?.minutosExtras ||
+                            0
+                        )
+                    );
+
+                minutosTotaisTrabalhados +=
+                    presentesDia *
+                    minutosTrabalhadosDia;
+
+                minutosTotaisExtras +=
+                    presentesDia *
+                    minutosExtrasDia;
+            }
+        );
+
+        const resumoOficial =
+            conferenciaOficialConcluidaDds
+                ? fechamentoConferenciaAssistidaDds
+                    ?.resumo
+                : null;
+
+        const presencas =
+            Math.max(
+                0,
+                Number(
+                    resumoOficial?.presencas ??
+                    estatisticasConferenciaAssistidaDds
+                        ?.presencas ??
+                    0
+                )
+            );
+
+        const ausencias =
+            Math.max(
+                0,
+                Number(
+                    resumoOficial?.ausencias ??
+                    estatisticasConferenciaAssistidaDds
+                        ?.ausencias ??
+                    0
+                )
+            );
+
+        const baseAbsenteismo =
+            presencas +
+            ausencias;
+
+        const percentualAbsenteismo =
+            baseAbsenteismo > 0
+                ? (
+                    ausencias /
+                    baseAbsenteismo
+                ) * 100
+                : 0;
+
+        return {
+            horasTotaisTrabalhadas:
+                Number(
+                    (
+                        minutosTotaisTrabalhados /
+                        60
+                    ).toFixed(2)
+                ),
+            horasExtras:
+                Number(
+                    (
+                        minutosTotaisExtras /
+                        60
+                    ).toFixed(2)
+                ),
+            absenteismo:
+                Number(
+                    percentualAbsenteismo.toFixed(
+                        2
+                    )
+                ),
+        };
+    }, [
+        conferenciaOficialConcluidaDds,
+        diasAtivosConferenciaAssistidaDds,
+        estatisticasConferenciaAssistidaDds,
+        fechamentoConferenciaAssistidaDds,
+    ]);
+
 
     const {
         atualizarTemaConferenciaAssistidaDds,
+        usarSugestaoOcrTemaConferenciaAssistidaDds,
         usarPlanejamentoTemaConferenciaAssistidaDds,
         alternarSemAtividadeConferenciaAssistidaDds,
         atualizarParticipanteAdicionalConferenciaDds,
         limparParticipanteAdicionalConferenciaDds,
         definirStatusFrequenciaAssistidaDds,
         marcarSemanaCompletaAssistidaDds,
+        marcarSemanaAusenteAssistidaDds,
         limparParticipanteConferenciaAssistidaDds,
         limparConferenciaAssistidaDds,
         salvarConferenciaAssistidaDds,
@@ -689,18 +4259,218 @@ export function DdsPage({
         temasConferenciaAssistidaDds,
     });
 
+    function selecionarParticipanteCadastradoConferenciaDds(
+        indice,
+        chaveCadastro
+    ) {
+        if (conferenciaOficialConcluidaDds) {
+            return;
+        }
 
+        const chaveSegura =
+            String(chaveCadastro || "").trim();
 
+        if (!chaveSegura) {
+            setParticipantesAdicionaisConferenciaDds(
+                (atuais) =>
+                    atuais.map(
+                        (
+                            participante,
+                            indiceAtual
+                        ) =>
+                            indiceAtual === indice
+                                ? {
+                                    ...participante,
+                                    colaboradorCadastroChave: "",
+                                    colaboradorId: "",
+                                    codigoSafescan: "",
+                                    origem: "adicional",
+                                    tipo: "visitante",
+                                }
+                                : participante
+                    )
+            );
 
+            return;
+        }
 
+        const colaboradorSelecionado =
+            colaboradoresCadastradosConferenciaDds.find(
+                (colaborador) =>
+                    colaborador.chaveCadastro ===
+                    chaveSegura
+            );
 
+        if (!colaboradorSelecionado) {
+            return;
+        }
 
+        limparParticipanteAdicionalConferenciaDds(
+            indice
+        );
 
+        setParticipantesAdicionaisConferenciaDds(
+            (atuais) =>
+                atuais.map(
+                    (
+                        participante,
+                        indiceAtual
+                    ) =>
+                        indiceAtual === indice
+                            ? {
+                                ...participante,
+                                colaboradorCadastroChave:
+                                    colaboradorSelecionado.chaveCadastro,
+                                colaboradorId:
+                                    colaboradorSelecionado.colaboradorId ||
+                                    "",
+                                codigoSafescan:
+                                    colaboradorSelecionado.codigoSafescan ||
+                                    "",
+                                nome:
+                                    colaboradorSelecionado.nome ||
+                                    "",
+                                funcao:
+                                    colaboradorSelecionado.funcao ||
+                                    "",
+                                empresa:
+                                    colaboradorSelecionado.empresa ||
+                                    "",
+                                origem:
+                                    "cadastro_adicional",
+                                tipo:
+                                    "colaborador",
+                                status:
+                                    "manual",
+                            }
+                            : participante
+                )
+        );
+    }
 
+    useEffect(() => {
+        if (conferenciaOficialConcluidaDds) {
+            return;
+        }
 
+        if (
+            participantesConferenciaAssistidaDds.length === 0 ||
+            diasAtivosConferenciaAssistidaDds.length === 0
+        ) {
+            return;
+        }
 
+        setConferenciaAssistidaDds((estadoAtual) => {
+            const estadoSeguro =
+                estadoAtual &&
+                typeof estadoAtual === "object"
+                    ? estadoAtual
+                    : {};
 
+            const proximoEstado = {
+                ...estadoSeguro,
+            };
 
+            let possuiAlteracao = false;
+
+            participantesConferenciaAssistidaDds.forEach(
+                (participante) => {
+                    const numero = Number(
+                        participante?.numero || 0
+                    );
+
+                    if (!numero) return;
+
+                    diasAtivosConferenciaAssistidaDds.forEach(
+                        (dia) => {
+                            const chave =
+                                obterChaveFrequenciaAssistidaDds(
+                                    numero,
+                                    dia
+                                );
+
+                            /*
+                             * preenchimento_automatico_confianca_92
+                             *
+                             * Nunca substitui uma decisão já registrada,
+                             * inclusive uma escolha manual representada por ?.
+                             */
+                            if (
+                                Object.prototype.hasOwnProperty.call(
+                                    proximoEstado,
+                                    chave
+                                )
+                            ) {
+                                return;
+                            }
+
+                            const sugestao =
+                                sugestoesFrequenciaDds?.[
+                                    obterChaveSugestaoFrequenciaDds(
+                                        numero,
+                                        dia
+                                    )
+                                ];
+
+                            const statusSugerido =
+                                String(
+                                    sugestao?.sugestao || ""
+                                )
+                                    .trim()
+                                    .toLowerCase();
+
+                            const confiancaBruta =
+                                Number(
+                                    sugestao?.confianca || 0
+                                );
+
+                            const confiancaPercentual =
+                                confiancaBruta > 0 &&
+                                confiancaBruta <= 1
+                                    ? confiancaBruta * 100
+                                    : confiancaBruta;
+
+                            const possuiSugestaoObjetiva =
+                                statusSugerido === "presente" ||
+                                statusSugerido === "ausente";
+
+                            const possuiConfiancaMinima =
+                                Number.isFinite(
+                                    confiancaPercentual
+                                ) &&
+                                confiancaPercentual >= 92;
+
+                            const possuiConflito =
+                                sugestao?.prioridade === "alta" ||
+                                sugestao?.requerConferenciaManual === true;
+
+                            if (
+                                !possuiSugestaoObjetiva ||
+                                !possuiConfiancaMinima ||
+                                possuiConflito
+                            ) {
+                                return;
+                            }
+
+                            proximoEstado[chave] =
+                                statusSugerido;
+
+                            possuiAlteracao = true;
+                        }
+                    );
+                }
+            );
+
+            return possuiAlteracao
+                ? proximoEstado
+                : estadoAtual;
+        });
+    }, [
+        conferenciaOficialConcluidaDds,
+        diasAtivosConferenciaAssistidaDds,
+        participantesConferenciaAssistidaDds,
+        sugestoesFrequenciaDds,
+    ]);
 
     // Restaurar Conferência Assistida salva no JSON dados.conferenciaAssistida.
     const {
@@ -939,11 +4709,14 @@ export function DdsPage({
     const {
         resultadoFinalApresentacaoDds,
         resumoControleMaoDeObraDds,
+        relatorioIndicadoresSstDds,
     } = useDdsResultadoApresentacaoDerivados({
         conferenciaAssistidaDds,
         dadosDds,
         diasAtivosConferenciaAssistidaDds,
+        diasConferenciaAssistidaDds,
         estatisticasConferenciaAssistidaDds,
+        estatisticasTemasConferenciaAssistidaDds,
         fechamentoConferenciaAssistidaDds,
         participantesConferenciaAssistidaDds,
         registroScannerDds,
@@ -1066,11 +4839,6 @@ export function DdsPage({
     ]);
 
 
-
-
-
-
-
     const calendariosMaoDeObraDds = [
         {
             id: "sao-jose-dos-campos-sp",
@@ -1162,23 +4930,6 @@ export function DdsPage({
     });
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     const {
         imprimirDdsComQrConferencia,
     } = criarControladorImpressaoDds({
@@ -1203,14 +4954,6 @@ export function DdsPage({
         setSalvandoRegistroDds,
         supabase,
     });
-
-
-
-
-
-
-
-
 
 
     return (
@@ -1497,43 +5240,430 @@ export function DdsPage({
                         <div className="mt-3 grid grid-cols-1 gap-3">
                             <form
                                 onSubmit={buscarRegistroScannerDds}
-                                className="flex flex-nowrap items-end gap-2 overflow-x-auto pb-1 lg:max-w-[640px]"
+                                className="grid grid-cols-1 gap-2 xl:grid-cols-[minmax(220px,0.45fr)_minmax(360px,1fr)_auto_auto] xl:items-end"
                             >
-                                <label className="block w-[200px] shrink-0">
+                                <label className="block min-w-0">
                                     <span className="text-[10px] font-black uppercase tracking-wide text-cyan-700">
-                                        Código do DDS
+                                        Empresa
                                     </span>
-                                    <input
-                                        type="text"
-                                        value={codigoConferenciaDds}
-                                        onChange={(evento) => setCodigoConferenciaDds(evento.target.value)}
-                                        placeholder={dadosDds.codigo || "Ex.: DDS-EMP-2026-06-14"}
-                                        className="mt-2 w-full rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 py-2 text-sm font-black text-slate-800 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
-                                    />
+
+                                    <select
+                                        value={empresaFiltroRegistrosDds}
+                                        disabled={carregandoRegistrosDisponiveisDds}
+                                        onChange={(evento) => {
+                                            const empresaSelecionada =
+                                                String(
+                                                    evento.target.value ||
+                                                    ""
+                                                ).trim();
+
+                                            setEmpresaFiltroRegistrosDds(
+                                                empresaSelecionada
+                                            );
+
+                                            setCodigoConferenciaDds("");
+                                            setRegistroScannerDds(null);
+                                            setErroScannerDds("");
+                                            setArquivoScannerDds(null);
+                                            setErroArquivoScannerDds("");
+                                            setLeituraArquivoScannerDds(null);
+                                            setErroLeituraArquivoScannerDds("");
+                                            setMensagemDocumentoPersistidoDds(null);
+                                            setMensagemExclusaoRegistroDds(null);
+                                        }}
+                                        className="mt-2 h-10 w-full min-w-0 rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 text-sm font-black text-slate-800 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        <option value="">
+                                            Todas as empresas
+                                        </option>
+
+                                        {empresasFiltroRegistrosDds.map(
+                                            (empresaNome) => (
+                                                <option
+                                                    key={empresaNome}
+                                                    value={empresaNome}
+                                                >
+                                                    {empresaNome}
+                                                </option>
+                                            )
+                                        )}
+                                    </select>
                                 </label>
 
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                    <button
-                                        type="submit"
-                                        disabled={carregandoScannerDds}
-                                        className="h-9 whitespace-nowrap shrink-0 rounded-xl bg-cyan-600 px-3 py-2 text-[11px] font-black text-white shadow-sm transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
-                                    >
-                                        {carregandoScannerDds ? "Buscando..." : "Buscar registro"}
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setCodigoConferenciaDds(dadosDds.codigo || "")}
-                                        className="h-9 whitespace-nowrap shrink-0 rounded-xl border border-cyan-200 bg-white px-3 py-2 text-[11px] font-black text-cyan-800 shadow-sm transition hover:bg-cyan-50"
-                                    >
-                                        Usar código atual
-                                    </button>
-                                </div>
+                                <label className="block min-w-0">
+                                    <span className="flex items-center justify-between gap-3 text-[10px] font-black uppercase tracking-wide text-cyan-700">
+                                        <span>
+                                            DDS cadastrados
+                                        </span>
 
-                                {erroScannerDds && (
-                                    <p className="mt-3 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
-                                        {erroScannerDds}
+                                        <span className="whitespace-nowrap text-slate-400">
+                                            {carregandoRegistrosDisponiveisDds
+                                                ? "Carregando..."
+                                                : empresaFiltroRegistrosDds
+                                                    ? `${registrosFiltradosDds.length} de ${registrosDisponiveisDds.length} registro(s)`
+                                                    : `${registrosDisponiveisDds.length} registro(s)`}
+                                        </span>
+                                    </span>
+
+                                    <select
+                                        value={codigoConferenciaDds}
+                                        disabled={carregandoRegistrosDisponiveisDds}
+                                        onChange={(evento) => {
+                                            const codigoSelecionado =
+                                                String(
+                                                    evento.target.value ||
+                                                    ""
+                                                )
+                                                    .trim()
+                                                    .toUpperCase();
+
+                                            setCodigoConferenciaDds(
+                                                codigoSelecionado
+                                            );
+
+                                            setRegistroScannerDds(null);
+                                            setErroScannerDds("");
+                                            setLeituraArquivoScannerDds(null);
+                                            setErroLeituraArquivoScannerDds("");
+                                            setMensagemDocumentoPersistidoDds(null);
+                                        }}
+                                        className="mt-2 h-10 w-full min-w-0 rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 text-sm font-black text-slate-800 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        <option value="">
+                                            {carregandoRegistrosDisponiveisDds
+                                                ? "Carregando DDS cadastrados..."
+                                                : registrosFiltradosDds.length > 0
+                                                    ? "Selecione um DDS cadastrado"
+                                                    : empresaFiltroRegistrosDds
+                                                        ? "Nenhum DDS para a empresa selecionada"
+                                                        : "Nenhum DDS cadastrado localizado"}
+                                        </option>
+
+                                        {codigoConferenciaDds &&
+                                            !registrosFiltradosDds.some(
+                                                (registro) =>
+                                                    registro.codigo ===
+                                                    String(
+                                                        codigoConferenciaDds
+                                                    )
+                                                        .trim()
+                                                        .toUpperCase()
+                                            ) && (
+                                                <option
+                                                    value={codigoConferenciaDds}
+                                                >
+                                                    {codigoConferenciaDds} — código atual
+                                                </option>
+                                            )}
+
+                                        {registrosFiltradosDds.map(
+                                            (registro) => (
+                                                <option
+                                                    key={
+                                                        registro.id ||
+                                                        registro.codigo
+                                                    }
+                                                    value={registro.codigo}
+                                                >
+                                                    {registro.codigo}
+                                                    {" — "}
+                                                    {registro.obraNome ||
+                                                        "Obra não informada"}
+                                                    {" — "}
+                                                    {formatarDataExibicaoDds(
+                                                        registro.periodoInicio
+                                                    )}
+                                                    {" a "}
+                                                    {formatarDataExibicaoDds(
+                                                        registro.periodoFim
+                                                    )}
+                                                </option>
+                                            )
+                                        )}
+                                    </select>
+                                </label>
+
+                                <button
+                                    type="submit"
+                                    disabled={
+                                        carregandoScannerDds ||
+                                        !codigoConferenciaDds
+                                    }
+                                    className="h-10 whitespace-nowrap rounded-xl bg-cyan-600 px-4 text-xs font-black text-white shadow-sm transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    {carregandoScannerDds
+                                        ? "Buscando..."
+                                        : "Buscar registro"}
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setCodigoConferenciaDds(
+                                            dadosDds.codigo ||
+                                            ""
+                                        );
+
+                                        setRegistroScannerDds(null);
+                                        setErroScannerDds("");
+                                        setLeituraArquivoScannerDds(null);
+                                        setErroLeituraArquivoScannerDds("");
+                                        setMensagemDocumentoPersistidoDds(null);
+                                    }}
+                                    className="h-10 whitespace-nowrap rounded-xl border border-cyan-200 bg-white px-4 text-xs font-black text-cyan-800 shadow-sm transition hover:bg-cyan-50"
+                                >
+                                    Usar código atual
+                                </button>
+
+                                {(erroScannerDds ||
+                                    erroListaRegistrosDds) && (
+                                    <p
+                                        data-dds-mensagem-consulta
+                                        className="w-fit max-w-full overflow-x-auto whitespace-nowrap rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 xl:col-span-4"
+                                    >
+                                        {erroScannerDds ||
+                                            erroListaRegistrosDds}
                                     </p>
                                 )}
+
+                                {mensagemExclusaoRegistroDds?.texto && (
+                                    <p
+                                        data-dds-mensagem-exclusao-registro
+                                        className={
+                                            mensagemExclusaoRegistroDds.tipo === "erro"
+                                                ? "w-fit max-w-full overflow-x-auto whitespace-nowrap rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 xl:col-span-4"
+                                                : mensagemExclusaoRegistroDds.tipo === "aviso"
+                                                    ? "w-fit max-w-full overflow-x-auto whitespace-nowrap rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800 xl:col-span-4"
+                                                    : "w-fit max-w-full overflow-x-auto whitespace-nowrap rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 xl:col-span-4"
+                                        }
+                                    >
+                                        {mensagemExclusaoRegistroDds.texto}
+                                    </p>
+                                )}
+
+                                <div
+                                    data-dds-lista-registros
+                                    className="overflow-hidden rounded-xl border border-slate-200 bg-white xl:col-span-4"
+                                >
+                                    {/* dds_lista_registros_header_click_v3 */}
+                                     <div
+                                         onClick={() =>
+                                             setListaRegistrosDdsExpandida(
+                                                 (valorAtual) => !valorAtual
+                                             )
+                                         }
+                                         role="button"
+                                         tabIndex={0}
+                                         aria-expanded={listaRegistrosDdsExpandida}
+                                         onKeyDown={(evento) => {
+                                             if (
+                                                 evento.target !==
+                                                 evento.currentTarget
+                                             ) {
+                                                 return;
+                                             }
+
+                                             if (
+                                                 evento.key === "Enter" ||
+                                                 evento.key === " "
+                                             ) {
+                                                 evento.preventDefault();
+
+                                                 setListaRegistrosDdsExpandida(
+                                                     (valorAtual) => !valorAtual
+                                                 );
+                                             }
+                                         }}
+                                         className={
+                                             listaRegistrosDdsExpandida
+                                                 ? "flex cursor-pointer items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-3 py-2 transition hover:bg-slate-100"
+                                                 : "flex cursor-pointer items-center justify-between gap-3 bg-slate-50 px-3 py-2 transition hover:bg-slate-100"
+                                         }
+                                     >
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase tracking-wide text-slate-700">
+                                                {empresaFiltroRegistrosDds
+                                                    ? "DDS da empresa selecionada"
+                                                    : "Todos os DDS cadastrados"}
+                                            </p>
+
+                                            <p className="mt-0.5 text-[10px] font-semibold text-slate-500">
+                                                {empresaFiltroRegistrosDds
+                                                    ? empresaFiltroRegistrosDds
+                                                    : "Selecione um registro para preencher o código da busca."}
+                                            </p>
+                                        </div>
+
+                                        {/* dds_balao_lista_registros_toggle_v1 */}
+                                        <button
+                                             type="button"
+                                             aria-label={
+                                                 listaRegistrosDdsExpandida
+                                                     ? "Ocultar DDS cadastrados"
+                                                     : "Mostrar DDS cadastrados"
+                                             }
+                                             className="shrink-0 cursor-pointer whitespace-nowrap rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1 text-[10px] font-black text-cyan-800 transition hover:border-cyan-300 hover:bg-cyan-100 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+                                         >
+                                             {empresaFiltroRegistrosDds
+                                                 ? `${registrosFiltradosDds.length} de ${registrosDisponiveisDds.length} registro(s)`
+                                                 : `${registrosDisponiveisDds.length} registro(s)`}
+                                             {" • "}
+                                             {listaRegistrosDdsExpandida ? "Ocultar" : "Mostrar"}
+                                         </button>
+                                    </div>
+
+                                    {listaRegistrosDdsExpandida && (
+                                         carregandoRegistrosDisponiveisDds ? (
+                                        <p className="px-3 py-4 text-center text-xs font-bold text-slate-500">
+                                            Carregando os DDS cadastrados...
+                                        </p>
+                                    ) : registrosFiltradosDds.length > 0 ? (
+                                        <div className="max-h-72 overflow-auto">
+                                            {/* dds_lista_registros_alinhamento_central_v1 */}
+                                            <table className="w-full min-w-[760px] table-fixed border-collapse text-center text-xs">
+                                                <thead className="sticky top-0 z-10 bg-slate-100 text-[9px] font-black uppercase tracking-wide text-slate-500">
+                                                    <tr>
+                                                        {/* dds_lista_codigo_empresa_alinhados_esquerda_v2 */}
+                                                         <th className="w-[16%] px-3 py-2 text-left">
+                                                             Código
+                                                         </th>
+
+                                                        <th className="w-[34%] px-3 py-2 text-left">
+                                                             Empresa / obra
+                                                         </th>
+
+                                                        <th className="w-[22%] px-3 py-2 text-center">
+                                                            Período
+                                                        </th>
+
+                                                        <th className="w-[12%] px-3 py-2 text-center">
+                                                            Status
+                                                        </th>
+
+                                                        <th className="w-[16%] px-3 py-2 text-center">
+                                                            Ação
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+
+                                                <tbody className="divide-y divide-slate-100">
+                                                    {registrosFiltradosDds.map(
+                                                        (registro) => (
+                                                            <tr
+                                                                key={
+                                                                    registro.id ||
+                                                                    registro.codigo
+                                                                }
+                                                                className={
+                                                                    registro.codigo ===
+                                                                    String(
+                                                                        codigoConferenciaDds ||
+                                                                        ""
+                                                                    )
+                                                                        .trim()
+                                                                        .toUpperCase()
+                                                                        ? "bg-cyan-50"
+                                                                        : "bg-white hover:bg-slate-50"
+                                                                }
+                                                            >
+                                                                <td className="whitespace-nowrap px-3 py-2 text-left font-black text-slate-900">
+                                                                    {registro.codigo}
+                                                                </td>
+
+                                                                <td className="px-3 py-2 text-left">
+                                                                     <p className="font-bold text-slate-800">
+                                                                        {registro.obraNome ||
+                                                                            "Obra não informada"}
+                                                                    </p>
+
+                                                                    <p className="mt-0.5 text-[10px] font-semibold text-slate-500">
+                                                                        {registro.empresaNome ||
+                                                                            "Empresa não informada"}
+                                                                    </p>
+                                                                </td>
+
+                                                                <td className="whitespace-nowrap px-3 py-2 text-center font-semibold text-slate-600">
+                                                                    {formatarDataExibicaoDds(
+                                                                        registro.periodoInicio
+                                                                    )}
+                                                                    {" a "}
+                                                                    {formatarDataExibicaoDds(
+                                                                        registro.periodoFim
+                                                                    )}
+                                                                </td>
+
+                                                                <td className="px-3 py-2 text-center">
+                                                                    <span className="inline-flex whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-emerald-800">
+                                                                        {registro.status ||
+                                                                            "Ativo"}
+                                                                    </span>
+                                                                </td>
+
+                                                                <td className="px-3 py-2 text-center">
+                                                                    <div className="flex items-center justify-center gap-2">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setCodigoConferenciaDds(
+                                                                                    registro.codigo
+                                                                                );
+
+                                                                                setRegistroScannerDds(null);
+                                                                                setErroScannerDds("");
+                                                                                setLeituraArquivoScannerDds(null);
+                                                                                setErroLeituraArquivoScannerDds("");
+                                                                                setMensagemDocumentoPersistidoDds(null);
+                                                                                setMensagemExclusaoRegistroDds(null);
+                                                                            }}
+                                                                            disabled={
+                                                                                Boolean(
+                                                                                    excluindoRegistroDdsId
+                                                                                )
+                                                                            }
+                                                                            className="whitespace-nowrap rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-[10px] font-black text-cyan-800 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                        >
+                                                                            Selecionar
+                                                                        </button>
+
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                excluirRegistroCadastradoDds(
+                                                                                    registro
+                                                                                )
+                                                                            }
+                                                                            disabled={
+                                                                                Boolean(
+                                                                                    excluindoRegistroDdsId
+                                                                                )
+                                                                            }
+                                                                            className="whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[10px] font-black text-red-700 transition hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                        >
+                                                                            {excluindoRegistroDdsId ===
+                                                                            String(
+                                                                                registro.id ||
+                                                                                ""
+                                                                            ).trim()
+                                                                                ? "Excluindo..."
+                                                                                : "Excluir"}
+                                                                        </button>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        )
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    ) : (
+                                         <p className="px-3 py-4 text-center text-xs font-bold text-slate-500">
+                                             {empresaFiltroRegistrosDds
+                                                 ? "Nenhum DDS foi localizado para a empresa selecionada."
+                                                 : "Nenhum DDS cadastrado foi localizado."}
+                                         </p>
+                                     )
+                                 )}
+                                </div>
                             </form>
 
                             <DdsLeituraArquivoScannerSection
@@ -1690,7 +5820,12 @@ export function DdsPage({
      alternarCardDds={alternarCardDds}
      alternarSemAtividadeConferenciaAssistidaDds={alternarSemAtividadeConferenciaAssistidaDds}
      atualizarParticipanteAdicionalConferenciaDds={atualizarParticipanteAdicionalConferenciaDds}
+     colaboradoresCadastradosConferenciaDds={colaboradoresCadastradosConferenciaDds}
+     empresasCadastradasConferenciaDds={empresasCadastradasConferenciaDds}
+     funcoesCadastradasConferenciaDds={funcoesCadastradasConferenciaDds}
+     selecionarParticipanteCadastradoConferenciaDds={selecionarParticipanteCadastradoConferenciaDds}
      atualizarTemaConferenciaAssistidaDds={atualizarTemaConferenciaAssistidaDds}
+     usarSugestaoOcrTemaConferenciaAssistidaDds={usarSugestaoOcrTemaConferenciaAssistidaDds}
      cardDdsAberto={cardDdsAberto}
      concluirConferenciaAssistidaDds={concluirConferenciaAssistidaDds}
      conferenciaAssistidaSalvaEmDds={conferenciaAssistidaSalvaEmDds}
@@ -1707,6 +5842,7 @@ export function DdsPage({
      limparParticipanteAdicionalConferenciaDds={limparParticipanteAdicionalConferenciaDds}
      limparParticipanteConferenciaAssistidaDds={limparParticipanteConferenciaAssistidaDds}
      marcarSemanaCompletaAssistidaDds={marcarSemanaCompletaAssistidaDds}
+     marcarSemanaAusenteAssistidaDds={marcarSemanaAusenteAssistidaDds}
      obterStatusFrequenciaAssistidaDds={obterStatusFrequenciaAssistidaDds}
      participantesAdicionaisAtivosConferenciaDds={participantesAdicionaisAtivosConferenciaDds}
      participantesAdicionaisConferenciaDds={participantesAdicionaisConferenciaDds}
@@ -1782,47 +5918,155 @@ export function DdsPage({
     {cardDdsAberto("resultadoOficial") && (
         <>
     <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-        <div className="rounded-xl bg-white/80 p-3 text-center ring-1 ring-white">
-            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Participantes</p>
-            <p className="mt-1 text-base font-black text-slate-950">{resultadoFinalApresentacaoDds.resumo.participantesTotal}</p>
+        <div className="flex min-h-[76px] flex-col items-center justify-center rounded-xl border border-slate-200 bg-slate-50 p-3 text-center ring-1 ring-slate-100">
+            <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                Participantes
+            </p>
+            <p className="mt-1 text-lg font-black leading-none text-slate-950">
+                {resultadoFinalApresentacaoDds.resumo.participantesTotal}
+            </p>
         </div>
-        <div className="rounded-xl bg-white/80 p-3 text-center ring-1 ring-white">
-            <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">{resultadoFinalApresentacaoDds.modoAssistido ? "Presenças" : "Localizados"}</p>
-            <p className="mt-1 text-base font-black text-emerald-900">{resultadoFinalApresentacaoDds.modoAssistido ? resultadoFinalApresentacaoDds.resumo.presencas : resultadoFinalApresentacaoDds.resumo.participantesLocalizados}</p>
+
+        <div className="flex min-h-[76px] flex-col items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-center ring-1 ring-emerald-100">
+            <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">
+                {resultadoFinalApresentacaoDds.modoAssistido ? "Presenças" : "Localizados"}
+            </p>
+            <p className="mt-1 text-lg font-black leading-none text-emerald-900">
+                {resultadoFinalApresentacaoDds.modoAssistido
+                    ? resultadoFinalApresentacaoDds.resumo.presencas
+                    : resultadoFinalApresentacaoDds.resumo.participantesLocalizados}
+            </p>
         </div>
-        <div className="rounded-xl bg-white/80 p-3 text-center ring-1 ring-white">
-            <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">{resultadoFinalApresentacaoDds.modoAssistido ? "Ausências" : "Manual"}</p>
-            <p className="mt-1 text-base font-black text-amber-900">{resultadoFinalApresentacaoDds.modoAssistido ? resultadoFinalApresentacaoDds.resumo.ausencias : resultadoFinalApresentacaoDds.resumo.participantesManuais}</p>
+
+        <div className="flex min-h-[76px] flex-col items-center justify-center rounded-xl border border-red-200 bg-red-50 p-3 text-center ring-1 ring-red-100">
+            <p className="text-[10px] font-black uppercase tracking-wide text-red-700">
+                {resultadoFinalApresentacaoDds.modoAssistido ? "Ausências" : "Manual"}
+            </p>
+            <p className="mt-1 text-lg font-black leading-none text-red-900">
+                {resultadoFinalApresentacaoDds.modoAssistido
+                    ? resultadoFinalApresentacaoDds.resumo.ausencias
+                    : resultadoFinalApresentacaoDds.resumo.participantesManuais}
+            </p>
         </div>
-        <div className="rounded-xl bg-white/80 p-3 text-center ring-1 ring-white">
-            <p className="text-[10px] font-black uppercase tracking-wide text-red-700">{resultadoFinalApresentacaoDds.modoAssistido ? "Manual/vazio" : "Não localizados"}</p>
-            <p className="mt-1 text-base font-black text-red-900">{resultadoFinalApresentacaoDds.modoAssistido ? resultadoFinalApresentacaoDds.resumo.manuais : resultadoFinalApresentacaoDds.resumo.participantesNaoLocalizados}</p>
+
+        <div className="flex min-h-[76px] flex-col items-center justify-center rounded-xl border border-amber-200 bg-amber-50 p-3 text-center ring-1 ring-amber-100">
+            <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">
+                {resultadoFinalApresentacaoDds.modoAssistido ? "Manual/vazio" : "Não localizados"}
+            </p>
+            <p className="mt-1 text-lg font-black leading-none text-amber-900">
+                {resultadoFinalApresentacaoDds.modoAssistido
+                    ? resultadoFinalApresentacaoDds.resumo.manuais
+                    : resultadoFinalApresentacaoDds.resumo.participantesNaoLocalizados}
+            </p>
         </div>
-        <div className="rounded-xl bg-white/80 p-3 text-center ring-1 ring-white">
-            <p className="text-[10px] font-black uppercase tracking-wide text-orange-700">{resultadoFinalApresentacaoDds.modoAssistido ? "Acumulado do período" : "Pág. não anexada"}</p>
-            <p className="mt-1 text-base font-black text-orange-900">{resultadoFinalApresentacaoDds.modoAssistido ? resultadoFinalApresentacaoDds.resumo.homemDia : resultadoFinalApresentacaoDds.resumo.participantesPaginasNaoAnalisadas}</p>
+
+        <div className="flex min-h-[76px] flex-col items-center justify-center rounded-xl border border-orange-200 bg-orange-50 p-3 text-center ring-1 ring-orange-100">
+            <p className="text-[10px] font-black uppercase tracking-wide text-orange-700">
+                {resultadoFinalApresentacaoDds.modoAssistido ? "Acumulado do período" : "Pág. não anexada"}
+            </p>
+            <p className="mt-1 text-lg font-black leading-none text-orange-900">
+                {resultadoFinalApresentacaoDds.modoAssistido
+                    ? resultadoFinalApresentacaoDds.resumo.homemDia
+                    : resultadoFinalApresentacaoDds.resumo.participantesPaginasNaoAnalisadas}
+            </p>
         </div>
     </div>
 
-    <div className="mt-4 grid gap-2 lg:grid-cols-3">
-        {resultadoFinalApresentacaoDds.itens.map((item, indice) => (
-            <div
-                key={`resultado-final-dds-${indice}`}
-                className="rounded-xl bg-white/80 p-3 ring-1 ring-white"
-            >
-                <p className={`text-[10px] font-black uppercase tracking-wide ${
-                    item.ok
-                        ? "text-emerald-700"
-                        : item.manual
-                            ? "text-amber-700"
-                            : "text-slate-400"
-                }`}>
-                    {item.ok ? "OK" : item.manual ? "Manual" : "Pendente"}
-                </p>
-                <p className="mt-1 text-sm font-black text-slate-950">{item.titulo}</p>
-                <p className="mt-1 text-xs font-bold leading-5 text-slate-600">{item.detalhe}</p>
+    {resultadoFinalApresentacaoDds.modoAssistido &&
+        conferenciaOficialConcluidaDds && (
+            <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="flex min-h-[96px] flex-col items-center justify-center rounded-xl border border-sky-200 bg-sky-50 p-3 text-center ring-1 ring-sky-100">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-sky-700">
+                        Horas totais trabalhadas
+                    </p>
+
+                    <p className="mt-2 text-xl font-black leading-none text-sky-950">
+                        {indicadoresJornadaResultadoOficialDds.horasTotaisTrabalhadas.toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                        })} h
+                    </p>
+
+                    <p className="mt-2 text-[9px] font-bold leading-4 text-sky-700">
+                        Soma das jornadas dos participantes presentes.
+                    </p>
+                </div>
+
+                <div className="flex min-h-[96px] flex-col items-center justify-center rounded-xl border border-orange-200 bg-orange-50 p-3 text-center ring-1 ring-orange-100">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-orange-700">
+                        Horas extras
+                    </p>
+
+                    <p className="mt-2 text-xl font-black leading-none text-orange-950">
+                        {indicadoresJornadaResultadoOficialDds.horasExtras.toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                        })} h
+                    </p>
+
+                    <p className="mt-2 text-[9px] font-bold leading-4 text-orange-700">
+                        Excedentes diários e jornadas extras integrais.
+                    </p>
+                </div>
+
+                <div className="flex min-h-[96px] flex-col items-center justify-center rounded-xl border border-violet-200 bg-violet-50 p-3 text-center ring-1 ring-violet-100 sm:col-span-2 xl:col-span-1">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-violet-700">
+                        Absenteísmo
+                    </p>
+
+                    <p className="mt-2 text-xl font-black leading-none text-violet-950">
+                        {indicadoresJornadaResultadoOficialDds.absenteismo.toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                        })}%
+                    </p>
+
+                    <p className="mt-2 text-[9px] font-bold leading-4 text-violet-700">
+                        Ausências sobre presenças e ausências apuradas.
+                    </p>
+                </div>
             </div>
-        ))}
+        )}
+
+    <div className="mt-4 grid gap-2 lg:grid-cols-3">
+        {resultadoFinalApresentacaoDds.itens.map((item, indice) => {
+            const classesCardResultadoDds = item.ok
+                ? "border-emerald-200 bg-emerald-50 ring-emerald-100"
+                : item.manual
+                    ? "border-amber-200 bg-amber-50 ring-amber-100"
+                    : "border-slate-200 bg-slate-50 ring-slate-100";
+
+            const classesStatusResultadoDds = item.ok
+                ? "border-emerald-200 text-emerald-700"
+                : item.manual
+                    ? "border-amber-200 text-amber-700"
+                    : "border-slate-200 text-slate-500";
+
+            return (
+                <div
+                    key={`resultado-final-dds-${indice}`}
+                    className={`flex min-h-[112px] flex-col items-center justify-center rounded-xl border p-4 text-center ring-1 ${classesCardResultadoDds}`}
+                >
+                    <span
+                        className={`inline-flex rounded-full border bg-white/80 px-3 py-1 text-[9px] font-black uppercase tracking-wide ${classesStatusResultadoDds}`}
+                    >
+                        {item.ok
+                            ? "OK"
+                            : item.manual
+                                ? "Manual"
+                                : "Pendente"}
+                    </span>
+
+                    <p className="mt-2 text-sm font-black text-slate-950">
+                        {item.titulo}
+                    </p>
+
+                    <p className="mt-1 max-w-[420px] text-xs font-bold leading-5 text-slate-600">
+                        {item.detalhe}
+                    </p>
+                </div>
+            );
+        })}
     </div>
         </>
     )}
@@ -1932,21 +6176,26 @@ export function DdsPage({
             alternarCardDds("controleMaoObra");
         }
     }}
-    className="flex min-h-[52px] cursor-default flex-col gap-3 rounded-xl transition hover:bg-slate-50 lg:flex-row lg:items-center lg:justify-between"
+    className="grid min-h-[76px] cursor-default gap-4 rounded-xl transition hover:bg-slate-50 2xl:grid-cols-[minmax(0,1fr)_auto] 2xl:items-start"
 >
-        <div>
+        <div className="min-w-0 2xl:max-w-4xl">
             <p className="text-sky-700 text-[10px] font-black uppercase tracking-wide">
                 Implantação / obra
             </p>
             <h4 className="mt-1 text-base font-black text-slate-950">
                 Controle mensal de mão de obra
             </h4>
-            <p className="mt-1 max-w-4xl text-xs font-semibold leading-5 text-slate-500">
-                Gera PDF e Excel consolidado por empresa/contratada e função, usando a Conferência Assistida como base de presença. Expediente normal: 07:00 às 17:00, almoço das 12:00 às 13:00 e DDS das 07:00 às 07:10.
-            </p>
+            <div className="mt-1 max-w-4xl text-xs font-semibold leading-5 text-slate-500">
+                <p>
+                    Gera PDF e Excel consolidado por empresa/contratada e função, usando a Conferência Assistida como base de presença.
+                </p>
+                <p>
+                    Expediente normal: Seg a qui 07:00 às 17:00 / sex 07:00 às 16:00, almoço das 12:00 às 13:00 / DDS das 07:00 às 07:10.
+                </p>
+            </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2" onClick={(evento) => evento.stopPropagation()}>
+        <div className="flex w-full flex-wrap items-start gap-2 2xl:w-auto 2xl:self-start 2xl:flex-nowrap 2xl:justify-end" onClick={(evento) => evento.stopPropagation()}>
             <button
                 type="button"
                 onClick={imprimirControleMaoDeObraDds}
@@ -1996,10 +6245,179 @@ export function DdsPage({
         </div>
     </div>
 
+
     <div className="mt-3 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-center text-xs font-bold leading-5 text-orange-900">
         <span className="font-black uppercase tracking-wide">Jornada padrão:</span>{" "}
-        Expediente normal das 07:00 às 17:00, almoço das 12:00 às 13:00 e DDS das 07:00 às 07:10.
+        Expediente normal: Seg a qui 07:00 às 17:00 / sex 07:00 às 16:00, almoço das 12:00 às 13:00 / DDS das 07:00 às 07:10.
     </div>
+
+    {false && relatorioIndicadoresSstDds && (
+        <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/80 shadow-sm">
+            <div className="flex flex-col gap-3 border-b border-slate-200 bg-white px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">
+                        Relatório analítico SST
+                    </p>
+
+                    <h4 className="mt-1 text-base font-black text-slate-950">
+                        Indicadores consolidados do DDS
+                    </h4>
+
+                    <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                        Presença, cobertura, conformidade, risco, comparativos e engajamento sem repetir a lista bruta.
+                    </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-emerald-800">
+                        Implantação {relatorioIndicadoresSstDds.progressoImplantacao}%
+                    </span>
+
+                    <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-sky-800">
+                        {relatorioIndicadoresSstDds.resumo.indicadoresCalculados}/{relatorioIndicadoresSstDds.resumo.indicadoresTotal} calculados
+                    </span>
+                </div>
+            </div>
+
+            <div className="grid gap-3 p-3 xl:grid-cols-2">
+                {relatorioIndicadoresSstDds.blocos.map((bloco) => (
+                    <section
+                        key={bloco.titulo}
+                        className="overflow-hidden rounded-xl border border-slate-200 bg-white"
+                    >
+                        <div className="border-b border-slate-200 bg-slate-100 px-3 py-2.5">
+                            <h5 className="text-[10px] font-black uppercase tracking-wide text-slate-800">
+                                {bloco.titulo}
+                            </h5>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                            <table className="w-full min-w-[620px] table-fixed border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-50 text-[8px] font-black uppercase tracking-wide text-slate-500">
+                                        <th className="w-[26%] border-b border-slate-200 px-3 py-2 text-left">
+                                            Indicador
+                                        </th>
+
+                                        <th className="w-[22%] border-b border-slate-200 px-3 py-2 text-center">
+                                            Valor
+                                        </th>
+
+                                        <th className="w-[38%] border-b border-slate-200 px-3 py-2 text-left">
+                                            Interpretação
+                                        </th>
+
+                                        <th className="w-[14%] border-b border-slate-200 px-3 py-2 text-center">
+                                            Alerta
+                                        </th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    {bloco.indicadores.map((indicador) => (
+                                        <tr
+                                            key={bloco.titulo + "-" + indicador.nome}
+                                            className="align-top"
+                                        >
+                                            <td className="border-b border-slate-100 px-3 py-3 text-[10px] font-black leading-4 text-slate-800">
+                                                {indicador.nome}
+                                            </td>
+
+                                            <td className="border-b border-slate-100 px-3 py-3 text-center text-[10px] font-black leading-4 text-slate-950">
+                                                {indicador.valor}
+                                            </td>
+
+                                            <td className="border-b border-slate-100 px-3 py-3 text-[9px] font-semibold leading-4 text-slate-600">
+                                                <p>
+                                                    {indicador.interpretacao}
+                                                </p>
+
+                                                {Array.isArray(indicador.detalhes) &&
+                                                    indicador.detalhes.length > 0 && (
+                                                        <p className="mt-1.5 text-[8px] font-bold leading-4 text-slate-500">
+                                                            {indicador.detalhes
+                                                                .slice(0, 8)
+                                                                .join(" • ")}
+                                                        </p>
+                                                    )}
+                                            </td>
+
+                                            <td className="border-b border-slate-100 px-2 py-3 text-center">
+                                                <span
+                                                    className={
+                                                        "inline-flex rounded-full border px-2 py-1 text-[8px] font-black uppercase tracking-wide " +
+                                                        (
+                                                            indicador.nivel === "critico"
+                                                                ? "border-red-200 bg-red-50 text-red-800"
+                                                                : indicador.nivel === "atencao"
+                                                                    ? "border-amber-200 bg-amber-50 text-amber-800"
+                                                                    : indicador.nivel === "normal"
+                                                                        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                                                                        : "border-slate-200 bg-slate-100 text-slate-600"
+                                                        )
+                                                    }
+                                                >
+                                                    {
+                                                        indicador.nivel === "critico"
+                                                            ? "🔴 Crítico"
+                                                            : indicador.nivel === "atencao"
+                                                                ? "🟡 Atenção"
+                                                                : indicador.nivel === "normal"
+                                                                    ? "🟢 Normal"
+                                                                    : "⚪ Sem dado"
+                                                    }
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                ))}
+            </div>
+
+            <section className="mx-3 mb-3 rounded-xl border border-red-200 bg-red-50 p-3">
+                <p className="text-[10px] font-black uppercase tracking-wide text-red-800">
+                    {relatorioIndicadoresSstDds?.tituloPontosAtencao ||
+                        "Pontos de atenção"}
+                </p>
+
+                {relatorioIndicadoresSstDds.top3.length > 0 ? (
+                    <div className="mt-2 grid gap-2 lg:grid-cols-3">
+                        {relatorioIndicadoresSstDds.top3.map((indicador, indice) => (
+                            <div
+                                key={indicador.bloco + "-" + indicador.nome}
+                                className="rounded-lg border border-red-100 bg-white px-3 py-2.5"
+                            >
+                                <p className="text-[8px] font-black uppercase tracking-wide text-red-600">
+                                    Prioridade {indice + 1}
+                                </p>
+
+                                <p className="mt-1 text-[10px] font-black leading-4 text-slate-900">
+                                    {indicador.nome}
+                                </p>
+
+                                <p className="mt-1 text-[9px] font-bold leading-4 text-slate-600">
+                                    {indicador.valor}
+                                </p>
+
+                                <p className="mt-1 text-[8px] font-semibold leading-4 text-slate-500">
+                                    {indicador.interpretacao}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="mt-2 text-xs font-bold text-emerald-800">
+                        Nenhum indicador calculável atingiu nível de atenção ou crítico.
+                    </p>
+                )}
+            </section>
+        </div>
+    )}
+
+
                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-600 xl:flex-nowrap">
             <span className="shrink-0 whitespace-nowrap text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
                 Calendário do relatório
@@ -2057,22 +6475,22 @@ export function DdsPage({
             alternarCardDds("historicoMaoObra");
         }
     }}
-    className="grid min-h-[52px] cursor-default gap-4 rounded-xl transition hover:bg-slate-50 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center"
+    className="grid min-h-[76px] cursor-default gap-4 rounded-xl transition hover:bg-slate-50 2xl:grid-cols-[minmax(0,1fr)_auto] 2xl:items-start"
 >
-        <div className="min-w-0">
+        <div className="min-w-0 2xl:max-w-3xl">
             <p className="text-slate-400 text-[10px] font-black uppercase tracking-wide">
                 Histórico mensal
             </p>
-            <h3 className="mt-1 whitespace-nowrap text-base font-black text-slate-950">
+            <h3 className="mt-1 text-base font-black text-slate-950">
                 Histórico mensal de mão de obra
             </h3>
-            <p className="mt-1 max-w-[620px] whitespace-nowrap text-xs font-semibold leading-5 text-slate-500">
+            <p className="mt-1 max-w-3xl text-xs font-semibold leading-5 text-slate-500">
                 Busca os DDS da obra selecionada no mês informado e resume a base oficial salva na Conferência Assistida.
             </p>
         </div>
 
-        <div className="flex flex-wrap items-end gap-2 xl:flex-nowrap xl:justify-end xl:min-w-[760px]" onClick={(evento) => evento.stopPropagation()}>
-            <label className="block">
+        <div className="flex w-full flex-wrap items-end gap-2 2xl:w-auto 2xl:self-start 2xl:flex-nowrap 2xl:justify-end" onClick={(evento) => evento.stopPropagation()}>
+            <label className="block w-full sm:w-[150px]">
                 <span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500">
                     Mês/Ano
                 </span>
@@ -2210,6 +6628,39 @@ export function DdsPage({
 </section>
 
 {registroScannerDds && (
+    <RelatorioAnaliticoSstDdsCard
+        relatorio={relatorioIndicadoresSstDds}
+        codigoDds={
+            registroScannerDds?.codigo ||
+            codigoConferenciaDds ||
+            dadosDds?.codigo ||
+            ""
+        }
+        obra={
+            registroScannerDds?.obraNome ||
+            registroScannerDds?.dados?.obraNome ||
+            registroScannerDds?.dados?.obraSetor ||
+            dadosDds?.obraSetor ||
+            dadosDds?.obraNome ||
+            ""
+        }
+        periodoInicio={
+            registroScannerDds?.periodoInicio ||
+            registroScannerDds?.dados?.periodoInicio ||
+            dadosDds?.periodoInicio ||
+            ""
+        }
+        periodoFim={
+            registroScannerDds?.periodoFim ||
+            registroScannerDds?.dados?.periodoFim ||
+            dadosDds?.periodoFim ||
+            ""
+        }
+    />
+)}
+
+
+{registroScannerDds && (
                                 <div data-dds-registro-localizado className="min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-emerald-500 bg-white p-4 shadow-sm lg:col-span-2">
                                     <div
     onClick={() => alternarCardDds("registroLocalizado")}
@@ -2238,7 +6689,7 @@ export function DdsPage({
             </span>
 
             <span className="shrink-0 whitespace-nowrap text-xs font-semibold text-slate-500">
-                Período: {registroScannerDds.periodoInicio || "-"} a {registroScannerDds.periodoFim || "-"}
+                Período: {formatarDataExibicaoDds(registroScannerDds.periodoInicio)} a {formatarDataExibicaoDds(registroScannerDds.periodoFim)}
             </span>
         </div>
     </div>
@@ -2260,6 +6711,34 @@ export function DdsPage({
 
         <button
             type="button"
+            onClick={analisarDocumentoPersistidoDds}
+            disabled={
+                carregandoLeituraArquivoScannerDds ||
+                excluindoDocumentoPersistidoDds
+            }
+            className="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-800 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+            {carregandoLeituraArquivoScannerDds
+                ? "Analisando PDF..."
+                : "Analisar PDF salvo"}
+        </button>
+
+        <button
+            type="button"
+            onClick={excluirDocumentoPersistidoDds}
+            disabled={
+                excluindoDocumentoPersistidoDds ||
+                carregandoLeituraArquivoScannerDds
+            }
+            className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-black text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+            {excluindoDocumentoPersistidoDds
+                ? "Excluindo PDF..."
+                : "Excluir PDF salvo"}
+        </button>
+
+        <button
+            type="button"
             onClick={() => alternarCardDds("registroLocalizado")}
             className="shrink-0"
         >
@@ -2270,15 +6749,52 @@ export function DdsPage({
     </div>
 </div>
 
+{mensagemDocumentoPersistidoDds?.texto && (
+    <p
+        className={
+            mensagemDocumentoPersistidoDds.tipo === "erro"
+                ? "mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700"
+                : "mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800"
+        }
+    >
+        {mensagemDocumentoPersistidoDds.texto}
+    </p>
+)}
+
 <div className="mt-4 grid gap-2 sm:grid-cols-3">
-    <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-violet-100 bg-violet-50 p-2.5 text-center ring-1 ring-violet-100">
+    {/* dds_rotulo_participantes_gabarito_registro_v1 */}
+    <div className="flex min-h-[76px] flex-col items-center justify-center rounded-xl border border-violet-100 bg-violet-50 p-2.5 text-center ring-1 ring-violet-100">
         <p className="text-[10px] font-black uppercase tracking-wide text-violet-700">
-            Participantes
+            Participantes do gabarito
         </p>
 
         <p className="mt-1 text-lg font-black text-violet-950">
             {participantesRegistroScannerDds.length}
         </p>
+
+        {Number(
+            relatorioIndicadoresSstDds
+                ?.composicaoBaseParticipantes
+                ?.participantesComplementares ||
+            0
+        ) > 0 && (
+            <p className="mt-1 text-[10px] font-bold leading-4 text-violet-700">
+                Base analisada:{" "}
+                {Number(
+                    relatorioIndicadoresSstDds
+                        ?.composicaoBaseParticipantes
+                        ?.totalAnalisado ||
+                    participantesRegistroScannerDds.length
+                )}{" "}
+                ({participantesRegistroScannerDds.length} +{" "}
+                {Number(
+                    relatorioIndicadoresSstDds
+                        ?.composicaoBaseParticipantes
+                        ?.participantesComplementares ||
+                    0
+                )} complementares)
+            </p>
+        )}
     </div>
 
     <div className="flex min-h-[56px] flex-col items-center justify-center rounded-xl border border-sky-100 bg-sky-50 p-2.5 text-center ring-1 ring-sky-100">

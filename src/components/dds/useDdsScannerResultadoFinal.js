@@ -117,8 +117,93 @@ export default function useDdsScannerResultadoFinal({
                                     salvo?.origemTemaConfirmado ||
                                         ""
                                 ),
+                            origemDocumentalTemaConfirmado:
+                                String(
+                                    salvo?.origemDocumentalTemaConfirmado ||
+                                        ""
+                                ),
                             semAtividadeConfirmada:
                                 salvo?.semAtividadeConfirmada ===
+                                true,
+                            jornadaTipo:
+                                String(
+                                    salvo?.jornadaTipo ||
+                                    ""
+                                ),
+                            jornadaRotulo:
+                                String(
+                                    salvo?.jornadaRotulo ||
+                                    ""
+                                ),
+                            horaEntrada:
+                                salvo?.horaEntrada ??
+                                undefined,
+                            horaSaida:
+                                salvo?.horaSaida ??
+                                undefined,
+                            horaInicioAlmoco:
+                                salvo?.horaInicioAlmoco ??
+                                undefined,
+                            horaFimAlmoco:
+                                salvo?.horaFimAlmoco ??
+                                undefined,
+                            horaInicioDds:
+                                salvo?.horaInicioDds ??
+                                undefined,
+                            horaFimDds:
+                                salvo?.horaFimDds ??
+                                undefined,
+                            minutosNormaisPrevistos:
+                                Number(
+                                    salvo
+                                        ?.minutosNormaisPrevistos ||
+                                    0
+                                ),
+                            minutosTrabalhados:
+                                Number(
+                                    salvo
+                                        ?.minutosTrabalhados ||
+                                    0
+                                ),
+                            minutosRegulares:
+                                Number(
+                                    salvo
+                                        ?.minutosRegulares ||
+                                    0
+                                ),
+                            minutosExtras:
+                                Number(
+                                    salvo
+                                        ?.minutosExtras ||
+                                    0
+                                ),
+                            minutosDds:
+                                Number(
+                                    salvo?.minutosDds ||
+                                    0
+                                ),
+                            horasTrabalhadas:
+                                Number(
+                                    salvo
+                                        ?.horasTrabalhadas ||
+                                    0
+                                ),
+                            horasRegulares:
+                                Number(
+                                    salvo
+                                        ?.horasRegulares ||
+                                    0
+                                ),
+                            horasExtras:
+                                Number(
+                                    salvo?.horasExtras ||
+                                    0
+                                ),
+                            jornadaValida:
+                                salvo?.jornadaValida ===
+                                true,
+                            jornadaPendente:
+                                salvo?.jornadaPendente ===
                                 true,
                         };
                     }
@@ -236,6 +321,7 @@ export default function useDdsScannerResultadoFinal({
                             temaConfirmado: "",
                             responsavelConfirmado: "",
                             origemTemaConfirmado: "",
+                            origemDocumentalTemaConfirmado: "",
                             semAtividadeConfirmada:
                                 Boolean(
                                     conferenciaSalva &&
@@ -277,6 +363,7 @@ export default function useDdsScannerResultadoFinal({
                 temaConfirmado: "",
                 responsavelConfirmado: "",
                 origemTemaConfirmado: "",
+                origemDocumentalTemaConfirmado: "",
                 semAtividadeConfirmada: false,
             }))
         );
