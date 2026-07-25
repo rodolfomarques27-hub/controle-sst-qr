@@ -1507,6 +1507,7 @@ ${erros.slice(0, 8).join("\n")}`
                                 const totalTreinamentos = Number(avaliacao.total || avaliacao.itens?.length || 0);
                                 const treinamentosEmDia = avaliacao.emDia.length;
                                 const treinamentosPendentes = avaliacao.pendentes.length;
+                                const treinamentosAVencer = Array.isArray(avaliacao.vencendo) ? avaliacao.vencendo.length : 0;
                                 const treinamentosVencidos = avaliacao.vencidos.length;
                                 const percentualTreinamentos = avaliacao.total > 0 ? Math.round((avaliacao.concluidos.length / avaliacao.total) * 100) : 100;
                                 const grupoPendenciasLinha = `linha-${Math.floor(index / 2)}`;
@@ -1596,6 +1597,10 @@ ${erros.slice(0, 8).join("\n")}`
                                                                 <span className="colaborador-lista-card__treinamentos-metrica colaborador-lista-card__treinamentos-metrica--pendentes">
                                                                     <strong>{treinamentosPendentes}</strong>
                                                                     <small>Pendentes</small>
+                                                                </span>
+                                                                <span className="colaborador-lista-card__treinamentos-metrica colaborador-lista-card__treinamentos-metrica--a-vencer">
+                                                                    <strong>{treinamentosAVencer}</strong>
+                                                                    <small>A vencer</small>
                                                                 </span>
                                                                 <span className="colaborador-lista-card__treinamentos-metrica colaborador-lista-card__treinamentos-metrica--vencidos">
                                                                     <strong>{treinamentosVencidos}</strong>

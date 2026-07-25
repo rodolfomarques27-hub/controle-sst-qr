@@ -344,7 +344,7 @@ export default function criarComponentesApresentacaoDds({
                                             <td className="border border-slate-300 px-1 py-0.5 text-center font-black">{participante.numero || indice + 1}</td>
                                             <td className="border border-slate-300 px-2 py-0.5 font-semibold">{participante.nome}</td>
                                             <td className="border border-slate-300 px-2 py-0.5 text-center font-semibold">{participante.funcao}</td>
-                                            <td className="border border-slate-300 px-2 py-0.5 text-center font-semibold">{participante.empresa}</td>
+                                            <td className="border border-slate-300 px-1 py-0.5 text-center font-semibold leading-tight" style={{ fontSize: String(participante.empresa || "").length > 34 ? "6px" : String(participante.empresa || "").length > 24 ? "7px" : "8px", overflowWrap: "normal", wordBreak: "normal" }}>{participante.empresa}</td>
                                             {diasSemana.map((dia) => (
                                                 <td key={dia.curto} className="border border-slate-300 px-1 py-0.5 text-center align-middle">
                                                     {dia.semAtividade ? <MarcacaoDiaSemAtividadeDds /> : null}
@@ -528,7 +528,7 @@ export default function criarComponentesApresentacaoDds({
                                             <td className="border border-slate-300 px-1 py-1.5 text-center font-black">{participante.numero}</td>
                                             <td className="border border-slate-300 px-2 py-1.5 font-semibold">{participante.nome}</td>
                                             <td className="border border-slate-300 px-2 py-1.5 text-center font-semibold">{participante.funcao}</td>
-                                            <td className="border border-slate-300 px-2 py-1.5 text-center font-semibold">{participante.empresa}</td>
+                                            <td className="border border-slate-300 px-1 py-1 text-center font-semibold leading-tight" style={{ fontSize: String(participante.empresa || "").length > 34 ? "6px" : String(participante.empresa || "").length > 24 ? "7px" : "8px", overflowWrap: "normal", wordBreak: "normal" }}>{participante.empresa}</td>
                                             {diasSemana.map((dia) => (
                                                 <td key={dia.curto} className="border border-slate-300 px-1 py-1.5 text-center align-middle">
                                                     {dia.semAtividade ? <MarcacaoDiaSemAtividadeDds /> : null}

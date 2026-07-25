@@ -10118,6 +10118,18 @@
   color: #be123c !important;
 }
 
+/* Cinco indicadores documentais, incluindo o alerta preventivo "A vencer". */
+.colaborador-lista-card__treinamentos-resumo,
+.colaborador-lista-card--pendencias-abertas .colaborador-lista-card__treinamentos-resumo {
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+}
+
+.colaborador-lista-card__treinamentos-metrica--a-vencer {
+  border-color: #fed7aa !important;
+  background: #fff7ed !important;
+  color: #c2410c !important;
+}
+
 .colaborador-lista-card__pendencias {
   width: 100% !important;
   max-width: 100% !important;
@@ -10230,7 +10242,7 @@
   width: 100% !important;
   max-width: 100% !important;
   min-height: 4.25rem !important;
-  padding: 0.62rem 17.25rem 0.62rem 0.74rem !important;
+  padding: 0.62rem 21.3rem 0.62rem 0.74rem !important;
   box-sizing: border-box !important;
 }
 
@@ -10271,7 +10283,7 @@
   right: 0.74rem !important;
   transform: translateY(-50%) !important;
   display: grid !important;
-  grid-template-columns: 4.45rem 3.55rem 3.8rem 3.65rem !important;
+  grid-template-columns: 4.45rem 3.55rem 3.8rem 3.65rem 3.65rem !important;
   gap: 0.42rem !important;
   width: auto !important;
   min-width: 0 !important;
@@ -10316,12 +10328,12 @@
 @media (min-width: 1180px) and (max-width: 1320px) {
   .colaborador-lista-card__treinamentos,
   .colaborador-lista-card--pendencias-abertas .colaborador-lista-card__treinamentos {
-    padding-right: 15.55rem !important;
+    padding-right: 19.3rem !important;
   }
 
   .colaborador-lista-card__treinamentos-resumo,
   .colaborador-lista-card--pendencias-abertas .colaborador-lista-card__treinamentos-resumo {
-    grid-template-columns: 4.05rem 3.25rem 3.45rem 3.35rem !important;
+    grid-template-columns: 4.05rem 3.25rem 3.45rem 3.35rem 3.35rem !important;
     gap: 0.34rem !important;
   }
 

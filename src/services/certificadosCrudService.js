@@ -47,7 +47,9 @@ function pontuarNomeNoArquivo(nomeArquivo = "", nomeColaborador = "") {
 
 
 function extrairNomePessoaDoNomeArquivo(nomeArquivo = "") {
-    const base = normalizarTextoBusca(String(nomeArquivo || "").replace(/\.[^.]+$/, ""))
+    const nomeSemExtensao = String(nomeArquivo || "").replace(/\.[^.]+$/, "");
+    const segmentoPessoa = nomeSemExtensao.split(/\s+(?:-|–|—)\s+/)[0] || nomeSemExtensao;
+    const base = normalizarTextoBusca(segmentoPessoa)
         .replace(/[_-]+/g, " ")
         .replace(/\b(nr\s*[-º]?\s*\d+|nr\d+|aso|atestado|saude|saúde|ocupacional|ficha|registro|clt|esocial|certificado|treinamento|integracao|integração|mobilizacao|mobilização|ordem|servico|serviço|pdf|documento|assinatura|lista)\b/g, " ")
         .replace(/[^a-z0-9]+/g, " ")

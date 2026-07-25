@@ -752,6 +752,9 @@ export function Dashboard({
         return {
             para,
             assunto: `Aviso SST - ${statusEmail} - ${item.colaborador?.nome || "Colaborador"}`,
+            sistema: "SafeScan Brasil",
+            remetenteNome: "SafeScan Brasil - Controle de SST",
+            urlSistema: "https://www.safescanbrasil.com.br",
             empresa,
             tstResponsavel: item.colaborador?.empresaTstResponsavel || "",
             itens: [

@@ -639,6 +639,19 @@ export default function criarSuporteDds() {
     function normalizarParticipantesDdsSistema(colaboradores = []) {
         const base = Array.isArray(colaboradores) ? colaboradores : [];
 
+        const obterEmpresaDiretaDds = (colaborador = {}) => {
+            const empresaDireta = obterValorTextoDds(
+                colaborador.empresaNome,
+                colaborador.empresa_nome,
+                colaborador.empresa
+            );
+            if (empresaDireta && !/\bsubcontratada\s*:/i.test(empresaDireta)) return empresaDireta;
+
+            const exibicao = obterValorTextoDds(colaborador.empresaExibicao, colaborador.empresa_exibicao);
+            const partes = String(exibicao || "").split(/\bsubcontratada\s*:/i);
+            return String(partes.length > 1 ? partes[partes.length - 1] : exibicao || empresaDireta).trim();
+        };
+
         return base
             .map((colaborador, indice) => ({
                 numero: indice + 1,
@@ -647,13 +660,7 @@ export default function criarSuporteDds() {
                 codigo_funcionario: obterCodigoSafescanParticipanteDds(colaborador),
                 nome: obterValorTextoDds(colaborador.nome, colaborador.nomeCompleto, colaborador.nome_completo),
                 funcao: obterFuncaoPessoaDds(colaborador),
-                empresa: obterValorTextoDds(
-                    colaborador.empresaExibicao,
-                    colaborador.empresa_exibicao,
-                    colaborador.empresaNome,
-                    colaborador.empresa_nome,
-                    colaborador.empresa
-                ),
+                empresa: obterEmpresaDiretaDds(colaborador),
             }))
             .filter((participante) => participante.nome && participante.nome !== "-")
             .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" }))

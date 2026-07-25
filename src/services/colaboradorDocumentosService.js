@@ -521,7 +521,12 @@ export function calcularVencimentoTreinamento(treinamentoId, dataRealizacao) {
 }
 
 export function inferirTreinamentoPorNomeArquivo(nomeArquivo = "") {
-    const texto = normalizarTextoBusca(nomeArquivo)
+    const nomeSemExtensao = String(nomeArquivo || "").replace(/\.[^.]+$/, "");
+    const segmentos = nomeSemExtensao.split(/\s+(?:-|–|—)\s+/).map((item) => item.trim()).filter(Boolean);
+    // Padrão oficial: antes do separador fica o colaborador; depois dele,
+    // o nome do treinamento/documento. Em nomes antigos, analisar tudo.
+    const segmentoDocumento = segmentos.length > 1 ? segmentos.slice(1).join(" ") : nomeSemExtensao;
+    const texto = normalizarTextoBusca(segmentoDocumento)
         .replace(/[_-]+/g, " ")
         .replace(/\.pdf$|\.png$|\.jpg$|\.jpeg$|\.webp$/g, " ")
         .replace(/\s+/g, " ")
