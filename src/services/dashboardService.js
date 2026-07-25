@@ -1,6 +1,7 @@
 export const painelPadraoDashboard = {
     cards: true,
     pendencias: true,
+    documentosAVencer30Dias: true,
     conformidade: true,
     colaboradoresFuncao: true,
     rankingEmpresas: true,
@@ -46,6 +47,7 @@ export const tamanhosPadraoCartasDashboard = {
 export const tamanhosPadraoBlocosDashboard = {
     cards: "destaque",
     pendencias: "grande",
+    documentosAVencer30Dias: "grande",
     conformidade: "medio",
     rankingEmpresas: "destaque",
     colaboradoresFuncao: "medio",
@@ -57,6 +59,7 @@ export const tamanhosPadraoBlocosDashboard = {
 export const ordemPadraoBlocosDashboard = [
     "cards",
     "pendencias",
+    "documentosAVencer30Dias",
     "conformidade",
     "rankingEmpresas",
     "colaboradoresFuncao",
@@ -92,6 +95,7 @@ export const opcoesTamanhoCartaDashboard = [
 export const opcoesPainelDashboard = [
     { chave: "cards", label: "Cards principais" },
     { chave: "pendencias", label: "Pendências críticas" },
+    { chave: "documentosAVencer30Dias", label: "Documentos a vencer em 30 dias" },
     { chave: "conformidade", label: "Resumo de conformidade" },
     { chave: "rankingEmpresas", label: "Ranking por empresa" },
     { chave: "colaboradoresFuncao", label: "Colaboradores por função" },
@@ -111,6 +115,7 @@ export const opcoesTamanhoBlocoDashboard = [
 
 export const blocosRecolhidosPadraoDashboard = {
     pendencias: false,
+    documentosAVencer30Dias: false,
     conformidade: false,
     rankingEmpresas: false,
     colaboradoresFuncao: false,

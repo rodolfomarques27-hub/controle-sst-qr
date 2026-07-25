@@ -283,6 +283,62 @@ function converterDataBrFormularioCertificadoParaIso(valor = "") {
 
     return normalizarDataIsoFormularioCertificado(mascarada);
 }
+// empresa_card_compacta_v1:
+// Exibe primeiro a empresa direta e preserva o vínculo completo no title.
+function obterRotuloEmpresaCompactoBaseCertificados(
+    colaborador = {}
+) {
+    const empresaCompleta =
+        String(
+            colaborador?.empresaExibicao ||
+            colaborador?.empresa_exibicao ||
+            colaborador?.empresaNome ||
+            colaborador?.empresa_nome ||
+            colaborador?.empresa ||
+            "Empresa não informada"
+        )
+            .replace(/\s+/g, " ")
+            .trim() ||
+        "Empresa não informada";
+
+    const partes =
+        empresaCompleta.split(
+            /\bsubcontratada\s*:/i
+        );
+
+    const nomeExtraido =
+        String(
+            partes.length > 1
+                ? partes[partes.length - 1]
+                : ""
+        )
+            .replace(/\s+/g, " ")
+            .trim();
+
+    const nomeDireto =
+        String(
+            colaborador?.empresaNome ||
+            colaborador?.empresa_nome ||
+            colaborador?.empresa ||
+            nomeExtraido ||
+            empresaCompleta
+        )
+            .replace(/\s+/g, " ")
+            .trim();
+
+    const ehSubcontratada =
+        Boolean(
+            colaborador?.empresaPaiId ||
+            colaborador?.empresa_pai_id ||
+            colaborador?.empresaPaiNome ||
+            colaborador?.empresa_pai_nome ||
+            partes.length > 1
+        );
+
+    return ehSubcontratada
+        ? `Sub... · ${nomeDireto}`
+        : empresaCompleta;
+}
 export function BaseCertificadosTreinamentos({
     documentos = [],
     documentosFiltrados = [],
@@ -588,8 +644,22 @@ export function BaseCertificadosTreinamentos({
                                         <p className="mt-1 break-words text-lg font-bold leading-snug text-slate-950">
                                             {colaborador.nome}
                                         </p>
-                                        <p className="mt-1 break-words text-sm text-slate-500">
-                                            {colaborador.empresaExibicao || colaborador.empresa}
+                                        <p
+                                            className="mt-1 max-w-full truncate text-sm text-slate-500"
+                                            title={
+                                                String(
+                                                    colaborador.empresaExibicao ||
+                                                    colaborador.empresa_exibicao ||
+                                                    colaborador.empresaNome ||
+                                                    colaborador.empresa_nome ||
+                                                    colaborador.empresa ||
+                                                    "Empresa não informada"
+                                                )
+                                            }
+                                        >
+                                            {obterRotuloEmpresaCompactoBaseCertificados(
+                                                colaborador
+                                            )}
                                         </p>
                                         <p className="mt-1 break-words text-xs font-semibold text-slate-600">
                                             Função: {colaborador.funcao || colaborador.cargo || "Não informada"}
@@ -600,9 +670,9 @@ export function BaseCertificadosTreinamentos({
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col gap-2 lg:items-end">
-                                    <div className="flex flex-wrap gap-2 lg:justify-end">
-                                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                                <div className="flex flex-col gap-2 lg:min-w-[360px] lg:items-end">
+                                    <div className="flex flex-wrap gap-2 lg:flex-nowrap lg:justify-end">
+                                        <span className="whitespace-nowrap rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
                                             {certificados.length} certificado(s)
                                         </span>
 
@@ -616,25 +686,25 @@ export function BaseCertificadosTreinamentos({
                                         )}
 
                                         {pendentes.length > 0 && (
-                                            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">
+                                            <span className="whitespace-nowrap rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">
                                                 {pendentes.length} faltando
                                             </span>
                                         )}
 
                                         {resumoStatus.emDia > 0 && (
-                                            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                                            <span className="whitespace-nowrap rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
                                                 {resumoStatus.emDia} em dia
                                             </span>
                                         )}
 
                                         {resumoStatus.aVencer > 0 && (
-                                            <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 ring-1 ring-orange-200">
+                                            <span className="whitespace-nowrap rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 ring-1 ring-orange-200">
                                                 {resumoStatus.aVencer} a vencer
                                             </span>
                                         )}
 
                                         {resumoStatus.vencidos > 0 && (
-                                            <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200">
+                                            <span className="whitespace-nowrap rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200">
                                                 {resumoStatus.vencidos} vencido(s)
                                             </span>
                                         )}
@@ -654,7 +724,7 @@ export function BaseCertificadosTreinamentos({
                                         <button
                                             type="button"
                                             onClick={alternarGrupoTreinamentosComPar}
-                                            className="treinamentos-base-certificados-card__acao-treinamentos inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                                            className="treinamentos-base-certificados-card__acao-treinamentos inline-flex min-w-[220px] items-center justify-center gap-2 rounded-xl bg-slate-950 px-6 py-2.5 text-xs font-semibold text-white hover:bg-slate-800"
                                         >
                                             {grupoAberto ? (
                                                 <>

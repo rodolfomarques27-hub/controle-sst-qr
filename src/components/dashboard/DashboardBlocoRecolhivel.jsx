@@ -54,6 +54,12 @@ const TEMAS_BLOCOS_RECOLHIVEIS = {
         acento: "from-orange-400 via-amber-500 to-yellow-500",
         icone: "bg-orange-100 text-orange-700 ring-orange-200/70",
     },
+    documentosAVencer30Dias: {
+        borda: "border-amber-200/80",
+        fundo: "bg-white/95",
+        acento: "from-amber-400 via-orange-500 to-yellow-400",
+        icone: "bg-amber-100 text-amber-700 ring-amber-200/70",
+    },
     documentosTipo: {
         borda: "border-sky-200/80",
         fundo: "bg-white/95",
@@ -86,6 +92,7 @@ function obterIconeBlocoRecolhivel(chaveBloco = "") {
     if (chaveBloco === "conformidade") return BadgeCheck;
     if (chaveBloco === "colaboradoresFuncao") return Users;
     if (chaveBloco === "alertas") return BellRing;
+    if (chaveBloco === "documentosAVencer30Dias") return FileText;
     if (chaveBloco === "documentosTipo") return ClipboardList;
     if (chaveBloco === "ultimosDocumentos") return FileText;
     if (chaveBloco === "auditoriasCampo") return History;

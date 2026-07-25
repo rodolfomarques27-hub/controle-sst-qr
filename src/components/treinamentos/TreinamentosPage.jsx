@@ -159,11 +159,89 @@ function obterNomeEmpresaFiltroCertificados(colaborador = {}) {
             colaborador?.empresaExibicao ||
             colaborador?.empresa ||
             "Empresa não informada"
-        ).trim() ||
+        ).replace(/\s+/g, " ").trim() ||
         "Empresa não informada"
     );
 }
 
+// rotulo_empresa_filtro_compacto_v1:
+// Mantém a identificação completa como valor lógico e usa um rótulo
+// compacto somente na apresentação do filtro nativo.
+function limitarRotuloEmpresaFiltroCertificados(
+    texto = "",
+    limite = 36
+) {
+    const valor =
+        String(texto || "")
+            .replace(/\s+/g, " ")
+            .trim();
+
+    if (valor.length <= limite) {
+        return valor;
+    }
+
+    return (
+        valor
+            .slice(
+                0,
+                Math.max(limite - 1, 1)
+            )
+            .trimEnd() +
+        "…"
+    );
+}
+
+function obterRotuloEmpresaFiltroCertificados(
+    colaborador = {}
+) {
+    const nomeCompleto =
+        obterNomeEmpresaFiltroCertificados(
+            colaborador
+        );
+
+    const partes =
+        nomeCompleto.split(
+            /\bsubcontratada\s*:/i
+        );
+
+    const nomeExtraido =
+        String(
+            partes.length > 1
+                ? partes[partes.length - 1]
+                : ""
+        )
+            .replace(/\s+/g, " ")
+            .trim();
+
+    const nomeDireto =
+        String(
+            colaborador?.empresaNome ||
+            colaborador?.empresa_nome ||
+            colaborador?.empresa ||
+            nomeExtraido ||
+            nomeCompleto
+        )
+            .replace(/\s+/g, " ")
+            .trim();
+
+    const ehSubcontratada =
+        Boolean(
+            colaborador?.empresaPaiId ||
+            colaborador?.empresa_pai_id ||
+            colaborador?.empresaPaiNome ||
+            colaborador?.empresa_pai_nome ||
+            partes.length > 1
+        );
+
+    const rotulo =
+        ehSubcontratada
+            ? `Subcontratada · ${nomeDireto}`
+            : nomeCompleto;
+
+    return limitarRotuloEmpresaFiltroCertificados(
+        rotulo
+    );
+}
 function obterChaveEmpresaFiltroCertificados(colaborador = {}) {
     const empresaId = String(
         colaborador?.empresaId ||
@@ -240,21 +318,35 @@ export function Treinamentos({
             const valor =
                 obterChaveEmpresaFiltroCertificados(colaborador);
 
+            const titulo =
+                obterNomeEmpresaFiltroCertificados(
+                    colaborador
+                );
+
             const nome =
-                obterNomeEmpresaFiltroCertificados(colaborador);
+                obterRotuloEmpresaFiltroCertificados(
+                    colaborador
+                );
 
             if (!empresasPorChave.has(valor)) {
                 empresasPorChave.set(valor, {
                     valor,
                     nome,
+                    titulo,
                 });
             }
         });
 
         return Array.from(empresasPorChave.values()).sort(
             (empresaA, empresaB) =>
-                empresaA.nome.localeCompare(
-                    empresaB.nome,
+                String(
+                    empresaA.titulo ||
+                    empresaA.nome
+                ).localeCompare(
+                    String(
+                        empresaB.titulo ||
+                        empresaB.nome
+                    ),
                     "pt-BR"
                 )
         );
@@ -1710,7 +1802,7 @@ export function Treinamentos({
                                     </div>
 
                                     {!cardsTreinamentosRecolhidos.filtros && (
-                                        <div className="mt-4 grid gap-3 xl:grid-cols-[minmax(0,1fr)_260px_220px]">
+                                        <div className="mt-4 grid gap-3 xl:grid-cols-[minmax(0,1fr)_360px_220px]">
                                             <div className="relative">
                                                 <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                                                 <input
@@ -1725,6 +1817,18 @@ export function Treinamentos({
                                                 value={filtroEmpresaCertificados}
                                                 onChange={(e) => setFiltroEmpresaCertificados(e.target.value)}
                                                 aria-label="Filtrar certificados por empresa"
+                                                title={
+                                                    filtroEmpresaCertificados === "Todas"
+                                                        ? "Todas as empresas"
+                                                        : (
+                                                            empresasFiltroCertificados.find(
+                                                                (empresa) =>
+                                                                    empresa.valor ===
+                                                                    filtroEmpresaCertificados
+                                                            )?.titulo ||
+                                                            ""
+                                                        )
+                                                }
                                                 className="treinamentos-filtros-certificados-card__select w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                             >
                                                 <option value="Todas">Todas as empresas</option>
@@ -1732,6 +1836,10 @@ export function Treinamentos({
                                                     <option
                                                         key={empresa.valor}
                                                         value={empresa.valor}
+                                                        title={
+                                                            empresa.titulo ||
+                                                            empresa.nome
+                                                        }
                                                     >
                                                         {empresa.nome}
                                                     </option>

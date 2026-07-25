@@ -672,6 +672,8 @@ export function AppContentRouter({
                     auditoria={auditoria}
                     auditoriasCampo={auditoriasCampo}
                     onSelectColab={onSelectColab}
+                    onVisualizarDocumentoEmpresa={onVisualizarDocumentoEmpresa}
+                    onVisualizarCertificado={onVisualizarCertificado}
                     onRegistrarEmailEnviado={onRegistrarEmailEnviado}
                     onAtualizarInformacoes={onAtualizarInformacoesDashboardSst}
                     atualizandoInformacoes={atualizandoDashboardSst}

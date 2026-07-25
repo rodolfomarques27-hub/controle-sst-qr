@@ -2,6 +2,7 @@ import React from "react";
 import { DashboardCardsGrid } from "./DashboardCardsGrid";
 import { DashboardAuditoriasCampo, DashboardTopDesviosCampo } from "./DashboardAuditoriasCampo";
 import { DashboardPendencias } from "./DashboardPendencias";
+import { DashboardDocumentosAVencer } from "./DashboardDocumentosAVencer";
 import { DashboardConformidade } from "./DashboardConformidade";
 import { DashboardRankingPendencias } from "./DashboardRankingPendencias";
 import { DashboardColaboradoresFuncao } from "./DashboardColaboradoresFuncao";
@@ -32,9 +33,14 @@ export function DashboardBlocoConteudo({
     alternarBlocoRecolhidoDashboard,
     topDesviosCampo,
     pendencias,
+    documentosAVencer30Dias,
     enviarAlertaEmailPendencia,
+    enviarAlertaEmailDocumentoEmpresa,
+    enviarAlertasDocumentosAVencer30Dias,
     enviandoEmail,
     onSelectColab,
+    onVisualizarDocumentoEmpresa,
+    onVisualizarCertificado,
     resumoConformidade,
     rankingPendenciasEmpresa,
     colaboradoresPorFuncao,
@@ -90,6 +96,23 @@ export function DashboardBlocoConteudo({
                 enviarAlertaEmailPendencia={enviarAlertaEmailPendencia}
                 enviandoEmail={enviandoEmail}
                 onSelectColab={onSelectColab}
+            />
+        );
+    }
+
+    if (chave === "documentosAVencer30Dias") {
+        return (
+            <DashboardDocumentosAVencer
+                documentos={documentosAVencer30Dias}
+                blocosRecolhidosDashboard={blocosRecolhidosDashboard}
+                alternarBlocoRecolhidoDashboard={alternarBlocoRecolhidoDashboard}
+                enviarAlertaEmailPendencia={enviarAlertaEmailPendencia}
+                enviarAlertaEmailDocumentoEmpresa={enviarAlertaEmailDocumentoEmpresa}
+                enviarAlertasDocumentosAVencer30Dias={enviarAlertasDocumentosAVencer30Dias}
+                enviandoEmail={enviandoEmail}
+                onSelectColab={onSelectColab}
+                onVisualizarDocumentoEmpresa={onVisualizarDocumentoEmpresa}
+                onVisualizarCertificado={onVisualizarCertificado}
             />
         );
     }

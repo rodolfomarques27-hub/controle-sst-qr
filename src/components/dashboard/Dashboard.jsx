@@ -141,6 +141,14 @@ function emailTstDaEmpresa(colaborador) {
     return normalizarEmailDestinatario(colaborador?.empresaTstEmail || "");
 }
 
+function emailTstDoCadastroEmpresa(empresa) {
+    return normalizarEmailDestinatario(
+        empresa?.tst_email ||
+        empresa?.tstEmail ||
+        ""
+    );
+}
+
 export function Dashboard({
     usuario = null,
     colaboradores = [],
@@ -149,6 +157,8 @@ export function Dashboard({
     auditoria = [],
     auditoriasCampo = [],
     onSelectColab,
+    onVisualizarDocumentoEmpresa,
+    onVisualizarCertificado,
     onRegistrarEmailEnviado,
     onAtualizarInformacoes,
     atualizandoInformacoes = false,
@@ -511,13 +521,88 @@ export function Dashboard({
 
     const cardsVisiveis = cardsOrdenados.filter((item) => cartasVisiveisDashboard[item.chave] !== false);
 
-    const obterEmpresaDocumentoDashboard = (documento = {}) => {
-        const empresa = empresasBanco.find(
+    const obterRegistroEmpresaDocumentoDashboard = (documento = {}) => {
+        return empresasBanco.find(
             (item) => String(item.id) === String(documento.empresa_id || documento.empresaId || "")
-        );
+        ) || null;
+    };
 
+    const obterEmpresaDocumentoDashboard = (documento = {}) => {
+        const empresa = obterRegistroEmpresaDocumentoDashboard(documento);
         return empresa?.nome || "Empresa não informada";
     };
+
+    const documentosAVencer30Dias = [
+        ...documentosAVencer.map((documento) => {
+            const empresa = obterRegistroEmpresaDocumentoDashboard(documento);
+            const diasCalculados =
+                documento.status?.dias ??
+                diasParaVencer(documento.data_vencimento || documento.dataVencimento);
+
+            return {
+                id: `empresa-${documento.id || documento.tipo_documento || documento.tipoDocumento || "documento"}`,
+                origem: "empresa",
+                documento,
+                empresa,
+                colaborador: null,
+                principal: empresa?.nome || "Empresa não informada",
+                apoio: "Documento empresarial",
+                nomeDocumento:
+                    documento.tipo_documento ||
+                    documento.tipoDocumento ||
+                    "Documento empresarial",
+                vencimento:
+                    documento.data_vencimento ||
+                    documento.dataVencimento ||
+                    "",
+                dias: diasCalculados,
+                status: documento.status || {
+                    chave: "vencendo",
+                    texto: "A vencer",
+                },
+            };
+        }),
+        ...documentosFuncionariosAVencer30Dias.map((item) => ({
+            id: `colaborador-${item.realizado?.id || item.colaborador?.id || "colaborador"}-${item.treinamento?.id || "documento"}`,
+            origem: "colaborador",
+            documento: item.realizado || null,
+            empresa: null,
+            colaborador: item.colaborador || null,
+            item,
+            principal: item.colaborador?.nome || "Colaborador não informado",
+            apoio:
+                item.colaborador?.empresaExibicao ||
+                item.colaborador?.empresa ||
+                "Empresa não informada",
+            nomeDocumento:
+                item.treinamento?.nome ||
+                "Documento não informado",
+            vencimento: item.vencimento || "",
+            dias: diasParaVencer(item.vencimento),
+            status: item.status || {
+                chave: "vencendo",
+                texto: "A vencer",
+            },
+        })),
+    ]
+        .filter(
+            (registro) =>
+                registro.dias !== null &&
+                registro.dias >= 0 &&
+                registro.dias <= 30
+        )
+        .sort(
+            (a, b) =>
+                a.dias - b.dias ||
+                String(a.principal || "").localeCompare(
+                    String(b.principal || ""),
+                    "pt-BR"
+                ) ||
+                String(a.nomeDocumento || "").localeCompare(
+                    String(b.nomeDocumento || ""),
+                    "pt-BR"
+                )
+        );
 
     const montarResumoDocumentoEmpresa = (chave, titulo, subtitulo, documentos = []) => ({
         chave,
@@ -781,6 +866,11 @@ export function Dashboard({
             setEnviandoEmail(true);
         }
 
+        const tipoAlertaAuditoria =
+            item.status?.chave === "vencendo"
+                ? "Documento a vencer em 30 dias"
+                : "Pendência crítica";
+
         try {
             const payload = montarPayloadEmailPendencia(item);
 
@@ -804,7 +894,7 @@ export function Dashboard({
                     documentoId: item.realizado?.id || null,
                     destinatario: payload.para,
                     assunto: payload.assunto,
-                    tipoAlerta: "Pendência crítica",
+                    tipoAlerta: tipoAlertaAuditoria,
                     documento: item.treinamento?.nome || "Documento não informado",
                     statusEnvio: "Erro",
                     erro: error?.message || data?.erro || "Falha na função de e-mail.",
@@ -824,7 +914,7 @@ export function Dashboard({
                 documentoId: item.realizado?.id || null,
                 destinatario: payload.para,
                 assunto: payload.assunto,
-                tipoAlerta: "Pendência crítica",
+                tipoAlerta: tipoAlertaAuditoria,
                 documento: item.treinamento?.nome || "Documento não informado",
                 statusEnvio: "Sucesso",
                 erro: "",
@@ -844,7 +934,7 @@ export function Dashboard({
                 documentoId: item.realizado?.id || null,
                 destinatario: payloadErro.para,
                 assunto: payloadErro.assunto,
-                tipoAlerta: "Pendência crítica",
+                tipoAlerta: tipoAlertaAuditoria,
                 documento: item.treinamento?.nome || "Documento não informado",
                 statusEnvio: "Erro",
                 erro: erro?.message || String(erro),
@@ -852,6 +942,233 @@ export function Dashboard({
 
             if (mostrarMensagem) {
                 alert("Falha inesperada ao enviar e-mail.");
+            }
+
+            return false;
+        } finally {
+            if (mostrarMensagem) {
+                setEnviandoEmail(false);
+            }
+        }
+    };
+
+    const montarPayloadEmailDocumentoEmpresa = (documento = {}) => {
+        const empresa =
+            obterRegistroEmpresaDocumentoDashboard(documento);
+
+        const empresaPai =
+            empresasBanco.find(
+                (item) =>
+                    String(item.id) ===
+                    String(
+                        empresa?.empresa_pai_id ||
+                        empresa?.empresaPaiId ||
+                        ""
+                    )
+            ) || null;
+
+        const empresaContato =
+            emailTstDoCadastroEmpresa(empresa)
+                ? empresa
+                : empresaPai || empresa;
+
+        const para =
+            emailTstDoCadastroEmpresa(empresaContato);
+
+        const dias =
+            documento.status?.dias ??
+            diasParaVencer(
+                documento.data_vencimento ||
+                documento.dataVencimento
+            );
+
+        const nomeEmpresa =
+            empresa?.nome ||
+            "Empresa não informada";
+
+        const nomeDocumento =
+            documento.tipo_documento ||
+            documento.tipoDocumento ||
+            "Documento empresarial";
+
+        return {
+            para,
+            assunto:
+                `Aviso SST - A VENCER - ${nomeEmpresa} - ${nomeDocumento}`,
+            sistema: "SafeScan Brasil",
+            remetenteNome: "SafeScan Brasil - Controle de SST",
+            urlSistema: "https://www.safescanbrasil.com.br",
+            empresa: nomeEmpresa,
+            tstResponsavel:
+                empresaContato?.tst_responsavel ||
+                empresaContato?.tstResponsavel ||
+                "",
+            tstEmail: para,
+            itens: [
+                {
+                    colaborador: "Documento empresarial",
+                    codigo: "-",
+                    funcao: "-",
+                    situacaoObra:
+                        normalizarStatusEmpresa(
+                            empresa?.status
+                        ),
+                    statusColaborador: "Documento empresarial",
+                    treinamento: nomeDocumento,
+                    realizacao:
+                        documento.data_emissao ||
+                        documento.dataEmissao
+                            ? formatDate(
+                                documento.data_emissao ||
+                                documento.dataEmissao
+                            )
+                            : "Não informada",
+                    vencimento:
+                        documento.data_vencimento ||
+                        documento.dataVencimento
+                            ? formatDate(
+                                documento.data_vencimento ||
+                                documento.dataVencimento
+                            )
+                            : "Não informada",
+                    dias: dias ?? 0,
+                    arquivo:
+                        documento.arquivo_nome ||
+                        documento.nome_do_arquivo ||
+                        documento.arquivoNome ||
+                        "Não informado",
+                },
+            ],
+        };
+    };
+
+    const enviarAlertaEmailDocumentoEmpresa = async (
+        documento,
+        mostrarMensagem = true
+    ) => {
+        if (!documento) return false;
+
+        if (mostrarMensagem) {
+            setEnviandoEmail(true);
+        }
+
+        const payload =
+            montarPayloadEmailDocumentoEmpresa(documento);
+
+        const empresa =
+            obterRegistroEmpresaDocumentoDashboard(documento);
+
+        try {
+            if (!payload.para) {
+                if (mostrarMensagem) {
+                    alert(
+                        `Cadastre o e-mail do TST responsável da empresa ${payload.empresa} antes de enviar.`
+                    );
+                }
+
+                return false;
+            }
+
+            const { data, error } =
+                await supabase.functions.invoke(
+                    FUNCAO_EMAIL_ALERTA_TST,
+                    {
+                        body: payload,
+                    }
+                );
+
+            if (error || data?.ok === false) {
+                console.error(
+                    "Erro ao enviar alerta de documento empresarial:",
+                    error || data
+                );
+
+                await onRegistrarEmailEnviado?.({
+                    empresaId:
+                        documento.empresa_id ||
+                        documento.empresaId ||
+                        empresa?.id ||
+                        null,
+                    colaboradorId: null,
+                    documentoId: documento.id || null,
+                    destinatario: payload.para,
+                    assunto: payload.assunto,
+                    tipoAlerta: "Documento empresarial a vencer em 30 dias",
+                    documento:
+                        documento.tipo_documento ||
+                        documento.tipoDocumento ||
+                        "Documento empresarial",
+                    statusEnvio: "Erro",
+                    erro:
+                        error?.message ||
+                        data?.erro ||
+                        "Falha na função de e-mail.",
+                });
+
+                if (mostrarMensagem) {
+                    alert(
+                        `Erro ao enviar alerta por e-mail: ${error?.message || data?.erro || "Falha na função de e-mail."}`
+                    );
+                }
+
+                return false;
+            }
+
+            await onRegistrarEmailEnviado?.({
+                empresaId:
+                    documento.empresa_id ||
+                    documento.empresaId ||
+                    empresa?.id ||
+                    null,
+                colaboradorId: null,
+                documentoId: documento.id || null,
+                destinatario: payload.para,
+                assunto: payload.assunto,
+                tipoAlerta: "Documento empresarial a vencer em 30 dias",
+                documento:
+                    documento.tipo_documento ||
+                    documento.tipoDocumento ||
+                    "Documento empresarial",
+                statusEnvio: "Sucesso",
+                erro: "",
+            });
+
+            if (mostrarMensagem) {
+                alert(
+                    `Alerta enviado para ${payload.para}.`
+                );
+            }
+
+            return true;
+        } catch (erro) {
+            console.error(
+                "Falha inesperada ao enviar documento empresarial:",
+                erro
+            );
+
+            await onRegistrarEmailEnviado?.({
+                empresaId:
+                    documento.empresa_id ||
+                    documento.empresaId ||
+                    empresa?.id ||
+                    null,
+                colaboradorId: null,
+                documentoId: documento.id || null,
+                destinatario: payload.para,
+                assunto: payload.assunto,
+                tipoAlerta: "Documento empresarial a vencer em 30 dias",
+                documento:
+                    documento.tipo_documento ||
+                    documento.tipoDocumento ||
+                    "Documento empresarial",
+                statusEnvio: "Erro",
+                erro: erro?.message || String(erro),
+            });
+
+            if (mostrarMensagem) {
+                alert(
+                    `Falha inesperada ao enviar e-mail: ${erro?.message || String(erro)}`
+                );
             }
 
             return false;
@@ -892,6 +1209,67 @@ export function Dashboard({
             }
 
             alert(`Envio finalizado. Enviados: ${enviados}. Falhas: ${falhas}.`);
+        } finally {
+            setEnviandoEmail(false);
+        }
+    };
+
+    const enviarAlertasDocumentosAVencer30Dias = async () => {
+        if (!documentosAVencer30Dias.length) {
+            alert(
+                "Não existem documentos com vencimento nos próximos 30 dias."
+            );
+            return;
+        }
+
+        const semEmailTst =
+            documentosAVencer30Dias.filter((registro) => {
+                if (registro.origem === "empresa") {
+                    return !montarPayloadEmailDocumentoEmpresa(
+                        registro.documento
+                    ).para;
+                }
+
+                return !emailTstDaEmpresa(
+                    registro.colaborador
+                );
+            }).length;
+
+        const confirmar =
+            window.confirm(
+                `Deseja enviar ${documentosAVencer30Dias.length} alerta(s) de vencimento por e-mail?${semEmailTst ? `\n\nAtenção: ${semEmailTst} item(ns) estão sem e-mail de TST cadastrado e não serão enviados.` : ""}`
+            );
+
+        if (!confirmar) return;
+
+        setEnviandoEmail(true);
+
+        let enviados = 0;
+        let falhas = 0;
+
+        try {
+            for (const registro of documentosAVencer30Dias) {
+                const sucesso =
+                    registro.origem === "empresa"
+                        ? await enviarAlertaEmailDocumentoEmpresa(
+                            registro.documento,
+                            false
+                        )
+                        : await enviarAlertaEmailPendencia(
+                            registro.item,
+                            false
+                        );
+
+                if (sucesso) {
+                    enviados += 1;
+                } else {
+                    falhas += 1;
+                }
+            }
+
+            alert(
+                `Envio finalizado. Enviados: ${enviados}. Falhas: ${falhas}.`
+            );
         } finally {
             setEnviandoEmail(false);
         }
@@ -1077,9 +1455,14 @@ export function Dashboard({
                 alternarBlocoRecolhidoDashboard={alternarBlocoRecolhidoDashboard}
                 topDesviosCampo={topDesviosCampo}
                 pendencias={pendencias}
+                documentosAVencer30Dias={documentosAVencer30Dias}
                 enviarAlertaEmailPendencia={enviarAlertaEmailPendencia}
+                enviarAlertaEmailDocumentoEmpresa={enviarAlertaEmailDocumentoEmpresa}
+                enviarAlertasDocumentosAVencer30Dias={enviarAlertasDocumentosAVencer30Dias}
                 enviandoEmail={enviandoEmail}
                 onSelectColab={onSelectColab}
+                onVisualizarDocumentoEmpresa={onVisualizarDocumentoEmpresa}
+                onVisualizarCertificado={onVisualizarCertificado}
                 resumoConformidade={resumoConformidade}
                 rankingPendenciasEmpresa={rankingPendenciasEmpresa}
                 colaboradoresPorFuncao={colaboradoresPorFuncao}
