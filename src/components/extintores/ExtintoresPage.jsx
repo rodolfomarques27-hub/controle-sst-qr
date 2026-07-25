@@ -101,11 +101,27 @@ export function ExtintoresPage() {
         [mapaSelecionado],
     );
 
+    // extintores_ponto_persistido_prioritario_v1:
+    // O ponto persistido no cadastro é a fonte principal.
+    // O snapshot do mapa é usado apenas quando o registro ainda não possui pontoId.
     const extintoresPorPonto = useMemo(() => {
         const idAtualPorReferencia = new Map();
+        const pontoPersistidoPorExtintor = new Map();
 
         itens.forEach((item) => {
             const idAtual = String(item?.id || "");
+            const pontoPersistidoId = String(
+                item?.pontoId ||
+                item?.ponto_id ||
+                "",
+            );
+
+            if (idAtual && pontoPersistidoId) {
+                pontoPersistidoPorExtintor.set(
+                    idAtual,
+                    pontoPersistidoId,
+                );
+            }
 
             [
                 item?.id,
@@ -126,6 +142,9 @@ export function ExtintoresPage() {
 
         return new Map(
             pontosDisponiveis.map((ponto) => {
+                const pontoId =
+                    String(ponto?.id || "");
+
                 const referenciasMapa = [
                     ...(Array.isArray(ponto.extintores)
                         ? ponto.extintores
@@ -147,14 +166,31 @@ export function ExtintoresPage() {
                                 String(referencia || ""),
                             ),
                         )
-                        .filter(Boolean),
+                        .filter((idAtual) => {
+                            if (!idAtual) {
+                                return false;
+                            }
+
+                            const pontoPersistidoId =
+                                pontoPersistidoPorExtintor.get(
+                                    idAtual,
+                                );
+
+                            return (
+                                !pontoPersistidoId ||
+                                pontoPersistidoId === pontoId
+                            );
+                        }),
                 );
 
                 itens
                     .filter(
                         (item) =>
-                            String(item?.pontoId || "") ===
-                            String(ponto?.id || ""),
+                            String(
+                                item?.pontoId ||
+                                item?.ponto_id ||
+                                "",
+                            ) === pontoId,
                     )
                     .forEach((item) => {
                         if (item?.id) {
@@ -163,7 +199,7 @@ export function ExtintoresPage() {
                     });
 
                 return [
-                    String(ponto.id),
+                    pontoId,
                     ids,
                 ];
             }),
@@ -331,9 +367,21 @@ export function ExtintoresPage() {
 
     useEffect(() => {
         if (!filtro.startsWith("ponto:")) return;
-        const pontoId = filtro.slice(6);
-        if (!extintoresPorPonto.has(pontoId)) setFiltro("Todos");
-    }, [extintoresPorPonto, filtro]);
+
+        const pontoId =
+            filtro.slice(6);
+
+        const pontoAindaDisponivel =
+            pontosComEquipamentos.some(
+                (ponto) =>
+                    String(ponto?.id || "") ===
+                    pontoId,
+            );
+
+        if (!pontoAindaDisponivel) {
+            setFiltro("Todos");
+        }
+    }, [filtro, pontosComEquipamentos]);
 
     const filtradosTotais = useMemo(() => itens.filter((item) => {
         const correspondeBusca = `${item.codigo} ${item.localizacao} ${item.tipo}`.toLowerCase().includes(busca.toLowerCase());
@@ -360,17 +408,24 @@ export function ExtintoresPage() {
     const editar = (item) => {
         const opcoes = capacidadesPorTipo(item.tipo);
 
+        const pontoPersistidoId =
+            String(
+                item?.pontoId ||
+                item?.ponto_id ||
+                "",
+            );
+
         const pontoVinculado =
+            pontosDisponiveis.find(
+                (ponto) =>
+                    String(ponto.id) ===
+                    pontoPersistidoId,
+            ) ||
             pontosDisponiveis.find(
                 (ponto) =>
                     extintoresPorPonto.get(
                         String(ponto.id),
                     )?.has(String(item.id)),
-            ) ||
-            pontosDisponiveis.find(
-                (ponto) =>
-                    String(ponto.id) ===
-                    String(item.pontoId || ""),
             );
 
         setForm({
@@ -1110,7 +1165,7 @@ export function ExtintoresPage() {
                                 </div>)}
                             </div>
                         </div>
-                        <div className="flex shrink-0 items-center border-t border-slate-100 px-4 py-2.5"><p className="text-xs text-slate-500">Exibindo {filtrados.length} de {filtradosTotais.length}</p></div>
+                        <div className="flex shrink-0 items-center border-t border-slate-100 px-4 py-2.5"><p className="text-xs text-slate-500">Exibindo {filtrados.length} de {itens.length}</p></div>
                     </div>
                 </div>
             </div>
