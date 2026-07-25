@@ -14,6 +14,13 @@ export const UPLOAD_MENSAGEM_IMAGEM_OTIMIZAVEL =
 export const UPLOAD_MENSAGEM_ARQUIVO_GRANDE = UPLOAD_MENSAGEM_PDF_GRANDE;
 
 export const perfisUpload = {
+    documentoLtcat: {
+        rotulo: "LTCAT",
+        limiteIdealBytes: 30 * 1024 * 1024,
+        limiteForteBytes: 30 * 1024 * 1024,
+        limiteForteMb: 30,
+        recomendacao: "até 30 MB",
+    },
     documentoSimples: {
         rotulo: "Documento simples",
         limiteIdealBytes: 2 * 1024 * 1024,

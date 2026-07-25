@@ -48,6 +48,7 @@ export async function salvarDocumentoEmpresaCrud({
     validarArquivoAntesUpload,
     sanitizarNomeArquivo,
     normalizarDocumentoEmpresa,
+    statusValidacaoInicial = "Validado",
 }) {
     const {
         data: documentoAnterior,
@@ -85,7 +86,9 @@ export async function salvarDocumentoEmpresaCrud({
         if (
             !validarArquivoAntesUpload(
                 arquivoFinal,
-                "documentoExtenso"
+                String(novoDoc.tipo || novoDoc.tipo_documento || "").trim().toUpperCase() === "LTCAT"
+                    ? "documentoLtcat"
+                    : "documentoExtenso"
             )
         ) {
             throw new Error(
@@ -139,7 +142,12 @@ export async function salvarDocumentoEmpresaCrud({
                     nome_do_arquivo: arquivoNome,
                     observacao:
                         novoDoc.observacao || null,
-                    status_validacao: "Validado",
+                    // documentos_empresa_status_inicial_crud_v1:
+                    // Respeita o status solicitado pelo fluxo chamador.
+                    // Validado permanece como fallback para chamadas antigas.
+                    status_validacao:
+                        String(statusValidacaoInicial || "").trim() ||
+                        "Validado",
                 },
                 {
                     onConflict:

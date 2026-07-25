@@ -21,7 +21,6 @@ import ResultadoVerificacaoDocumento from "../documentos/ResultadoVerificacaoDoc
 import { supabase } from "../../lib/supabaseClient";
 import { abrirArquivoStorage, obterUrlLogoEmpresa } from "../../services/supabaseServices";
 import {
-    calcularVencimentoDocumento,
     statusEmpresaDocumento,
     calcularSituacaoDocumentalEmpresa,
     normalizarStatusEmpresa,
@@ -48,7 +47,7 @@ import {
     usuarioPodeExcluirSistema,
 } from "../../services/usuariosPermissoesSistemaService";
 
-const hoje = new Date();
+// documentos_empresa_sem_data_upload_v1: nenhuma data documental usa a data do upload.
 
 const CHAVE_CADASTRO_EMPRESAS_RECOLHIDO = "controleSstEmpresasCadastroRecolhido";
 const CHAVE_INFO_EMPRESAS_RECOLHIDA = "controleSstEmpresasInformacoesRecolhidas";
@@ -193,6 +192,45 @@ function dataIsoValidaPainelDocumento(valor = "") {
     );
 }
 
+// documentos_empresa_pcmso_validade_12_meses_painel_v1:
+// PCMSO recebe validade exatamente 12 meses após a emissão ou última revisão.
+// Exemplo: 2025-05-01 resulta em 2026-05-01.
+function calcularVencimentoPcmsoPainel(tipo = "", dataEmissao = "") {
+    const tipoNormalizado = String(tipo || "").trim().toUpperCase();
+    const iso = String(dataEmissao || "").slice(0, 10);
+
+    if (
+        tipoNormalizado !== "PCMSO" ||
+        !dataIsoValidaPainelDocumento(iso)
+    ) {
+        return "";
+    }
+
+    const [ano, mes, dia] = iso.split("-").map(Number);
+    const anoDestino = ano + 1;
+
+    const ultimoDiaMesDestino =
+        new Date(
+            anoDestino,
+            mes,
+            0,
+            12,
+            0,
+            0
+        ).getDate();
+
+    return [
+        anoDestino,
+        String(mes).padStart(2, "0"),
+        String(
+            Math.min(
+                dia,
+                ultimoDiaMesDestino
+            )
+        ).padStart(2, "0"),
+    ].join("-");
+}
+
 function obterLeituraVerificacaoPainel(verificacao = {}) {
     return verificacao?.retornoIa?.leitura_documental_local ||
         verificacao?.retorno_ia?.leitura_documental_local ||
@@ -207,45 +245,139 @@ function obterCamposExtraidosVerificacaoPainel(verificacao = {}) {
 }
 
 function obterDatasOcrParaDocumentoPainel({ verificacao = {}, documento = {} } = {}) {
+    // documentos_empresa_datas_painel_parciais_v1:
+    // A tela preserva cada data localizada sem fabricar a data ausente.
     const campos = obterCamposExtraidosVerificacaoPainel(verificacao);
-    const tipoDocumento = documento?.tipo_documento || documento?.tipo || "";
 
-    if (dataIsoValidaPainelDocumento(campos?.vigencia_inicio) && dataIsoValidaPainelDocumento(campos?.vigencia_fim)) {
+    const dataEmissaoCampos =
+        dataIsoValidaPainelDocumento(campos?.vigencia_inicio)
+            ? campos.vigencia_inicio
+            : "";
+
+    const dataVencimentoCampos =
+        dataIsoValidaPainelDocumento(campos?.vigencia_fim)
+            ? campos.vigencia_fim
+            : "";
+
+    if (
+        dataEmissaoCampos ||
+        dataVencimentoCampos
+    ) {
         return {
-            dataEmissao: campos.vigencia_inicio,
-            dataVencimento: campos.vigencia_fim,
+            dataEmissao:
+                dataEmissaoCampos,
+            dataVencimento:
+                dataVencimentoCampos,
         };
     }
 
-    const leitura = obterLeituraVerificacaoPainel(verificacao);
-    const classificadas = leitura?.datas_classificadas || leitura?.datasClassificadas || {};
-    const vigencia = Array.isArray(classificadas?.vigencia) ? classificadas.vigencia : [];
-    const inicio = vigencia.find((data) => data?.tipo === "inicio_vigencia") || vigencia[0] || null;
-    const fim = vigencia.find((data) => data?.tipo === "fim_vigencia") || vigencia[1] || null;
+    const leitura =
+        obterLeituraVerificacaoPainel(
+            verificacao
+        );
 
-    if (dataIsoValidaPainelDocumento(inicio?.iso) && dataIsoValidaPainelDocumento(fim?.iso)) {
+    const classificadas =
+        leitura?.datas_classificadas ||
+        leitura?.datasClassificadas ||
+        {};
+
+    const vigencia =
+        Array.isArray(
+            classificadas?.vigencia
+        )
+            ? classificadas.vigencia
+            : [];
+
+    const inicio =
+        vigencia.find(
+            (data) =>
+                data?.tipo ===
+                "inicio_vigencia"
+        ) ||
+        vigencia[0] ||
+        null;
+
+    const fim =
+        vigencia.find(
+            (data) =>
+                data?.tipo ===
+                "fim_vigencia"
+        ) ||
+        vigencia[1] ||
+        null;
+
+    const dataEmissaoVigencia =
+        dataIsoValidaPainelDocumento(
+            inicio?.iso
+        )
+            ? inicio.iso
+            : "";
+
+    const dataVencimentoVigencia =
+        dataIsoValidaPainelDocumento(
+            fim?.iso
+        )
+            ? fim.iso
+            : "";
+
+    if (
+        dataEmissaoVigencia ||
+        dataVencimentoVigencia
+    ) {
         return {
-            dataEmissao: inicio.iso,
-            dataVencimento: fim.iso,
+            dataEmissao:
+                dataEmissaoVigencia,
+            dataVencimento:
+                dataVencimentoVigencia,
         };
     }
 
-    const encerramento = campos?.data_encerramento || campos?.assinatura_data || "";
+    const encerramento =
+        campos?.data_encerramento ||
+        campos?.assinatura_data ||
+        "";
 
-    if (dataIsoValidaPainelDocumento(encerramento)) {
+    if (
+        dataIsoValidaPainelDocumento(
+            encerramento
+        )
+    ) {
         return {
-            dataEmissao: encerramento,
-            dataVencimento: calcularVencimentoDocumento(tipoDocumento, encerramento),
+            dataEmissao:
+                encerramento,
+            dataVencimento:
+                "",
         };
     }
 
-    const outrasRelevantes = Array.isArray(classificadas?.outrasRelevantes) ? classificadas.outrasRelevantes : [];
-    const dataEncerramentoClassificada = outrasRelevantes.find((data) => String(data?.tipo || "") === "encerramento_documento") || null;
+    const outrasRelevantes =
+        Array.isArray(
+            classificadas?.outrasRelevantes
+        )
+            ? classificadas.outrasRelevantes
+            : [];
 
-    if (dataIsoValidaPainelDocumento(dataEncerramentoClassificada?.iso)) {
+    const dataEncerramentoClassificada =
+        outrasRelevantes.find(
+            (data) =>
+                String(
+                    data?.tipo ||
+                    ""
+                ) ===
+                "encerramento_documento"
+        ) ||
+        null;
+
+    if (
+        dataIsoValidaPainelDocumento(
+            dataEncerramentoClassificada?.iso
+        )
+    ) {
         return {
-            dataEmissao: dataEncerramentoClassificada.iso,
-            dataVencimento: calcularVencimentoDocumento(tipoDocumento, dataEncerramentoClassificada.iso),
+            dataEmissao:
+                dataEncerramentoClassificada.iso,
+            dataVencimento:
+                "",
         };
     }
 
@@ -286,6 +418,7 @@ export function Empresas({
     onAtualizarEmpresa,
     onExcluirEmpresa,
     onAdicionarDocumentoEmpresa,
+    onAtualizarDocumentoEmpresa,
     onExcluirDocumentoEmpresa,
     onVisualizarDocumentoEmpresa,
 }) {
@@ -317,8 +450,8 @@ export function Empresas({
     const [novoDoc, setNovoDoc] = useState({
         empresaId: "",
         tipo: "PGR",
-        dataEmissao: hoje.toISOString().slice(0, 10),
-        dataVencimento: calcularVencimentoDocumento("PGR", hoje.toISOString().slice(0, 10)),
+        dataEmissao: "",
+        dataVencimento: "",
         arquivo: null,
         observacao: "",
     });
@@ -343,6 +476,15 @@ export function Empresas({
     );
     const [uploadRevisao, setUploadRevisao] = useState({});
     const [salvandoUploadRevisao, setSalvandoUploadRevisao] = useState("");
+    // documentos_empresa_edicao_datas_interface_v1:
+    // Mantém somente uma edição documental ativa por vez.
+    const [edicaoDatasDocumento, setEdicaoDatasDocumento] = useState(null);
+    const [salvandoDatasDocumento, setSalvandoDatasDocumento] = useState("");
+    // documentos_empresa_confirmacao_datas_popup_v1:
+    // Aguarda a conclusão do OCR e solicita somente as datas que não foram localizadas.
+    const [monitoramentoConfirmacaoDatasDocumento, setMonitoramentoConfirmacaoDatasDocumento] = useState(null);
+    const [confirmacaoDatasDocumento, setConfirmacaoDatasDocumento] = useState(null);
+    const [salvandoConfirmacaoDatasDocumento, setSalvandoConfirmacaoDatasDocumento] = useState(false);
     const [escoposAbertos, setEscoposAbertos] = useState({});
     const [empresasAbertas, setEmpresasAbertas] = useState({});
     const [cadastroEmpresasRecolhido, setCadastroEmpresasRecolhido] = useState(() => carregarPreferenciaPainelBoolean(CHAVE_CADASTRO_EMPRESAS_RECOLHIDO, false));
@@ -439,6 +581,155 @@ export function Empresas({
         return documentoId ? verificacoesDocumentais[documentoId] || null : null;
     };
 
+    // documentos_empresa_monitoramento_confirmacao_datas_v1:
+    // O popup só é aberto para o documento recém-enviado quando o OCR concluir com datas ausentes.
+    useEffect(() => {
+        if (!monitoramentoConfirmacaoDatasDocumento) {
+            return;
+        }
+
+        const empresaIdMonitorada =
+            String(
+                monitoramentoConfirmacaoDatasDocumento.empresaId ||
+                ""
+            );
+
+        const tipoMonitorado =
+            String(
+                monitoramentoConfirmacaoDatasDocumento.tipoDocumento ||
+                ""
+            );
+
+        const documentoAnalisado =
+            (documentosEmpresas || []).find(
+                (item) =>
+                    String(
+                        item?.empresa_id ||
+                        item?.empresaId ||
+                        ""
+                    ) ===
+                        empresaIdMonitorada &&
+                    String(
+                        item?.tipo_documento ||
+                        item?.tipoDocumento ||
+                        ""
+                    ) ===
+                        tipoMonitorado
+            );
+
+        if (!documentoAnalisado?.id) {
+            return;
+        }
+
+        const statusValidacao =
+            String(
+                documentoAnalisado.status_validacao ||
+                documentoAnalisado.statusValidacao ||
+                ""
+            ).trim();
+
+        const chaveStatus =
+            normalizarChaveStatusDocumento(
+                statusValidacao
+            );
+
+        const exigeConfirmacao =
+            [
+                "pendente_de_data",
+                "aguardando_confirmacao",
+            ].includes(
+                chaveStatus
+            );
+
+        if (exigeConfirmacao) {
+            const dataEmissao =
+                documentoAnalisado.data_emissao ||
+                documentoAnalisado.dataEmissao ||
+                "";
+
+            const dataVencimento =
+                documentoAnalisado.data_vencimento ||
+                documentoAnalisado.dataVencimento ||
+                "";
+
+            const dataVencimentoCalculada =
+                !dataVencimento
+                    ? calcularVencimentoPcmsoPainel(
+                          tipoMonitorado,
+                          dataEmissao
+                      )
+                    : "";
+
+            const empresaDocumento =
+                (empresasBanco || []).find(
+                    (empresa) =>
+                        String(
+                            empresa?.id ||
+                            ""
+                        ) ===
+                            empresaIdMonitorada
+                );
+
+            setConfirmacaoDatasDocumento({
+                documentoId:
+                    String(
+                        documentoAnalisado.id
+                    ),
+                documento:
+                    documentoAnalisado,
+                empresaId:
+                    empresaIdMonitorada,
+                empresaNome:
+                    empresaDocumento?.nome ||
+                    "Empresa não identificada",
+                tipoDocumento:
+                    tipoMonitorado,
+                statusValidacao,
+                dataEmissao,
+                dataVencimento:
+                    dataVencimento ||
+                    dataVencimentoCalculada,
+                observacao:
+                    documentoAnalisado.observacao ||
+                    "",
+                dataEmissaoExtraida:
+                    Boolean(
+                        dataEmissao
+                    ),
+                dataVencimentoExtraida:
+                    Boolean(
+                        dataVencimento
+                    ),
+                dataVencimentoCalculadaAutomaticamente:
+                    Boolean(
+                        dataVencimentoCalculada
+                    ),
+                dataVencimentoEditadaManualmente:
+                    false,
+            });
+
+            setMonitoramentoConfirmacaoDatasDocumento(
+                null
+            );
+
+            return;
+        }
+
+        if (
+            chaveStatus &&
+            chaveStatus !==
+                "pendente_de_verificacao"
+        ) {
+            setMonitoramentoConfirmacaoDatasDocumento(
+                null
+            );
+        }
+    }, [
+        documentosEmpresas,
+        empresasBanco,
+        monitoramentoConfirmacaoDatasDocumento,
+    ]);
+
     const aprovarVerificacaoDocumentoManual = async ({ verificacao, documento, observacaoManual = "" } = {}) => {
         if (!verificacao?.id) {
             throw new Error("Verificação documental não localizada para aprovação manual.");
@@ -446,6 +737,47 @@ export function Empresas({
 
         if (!documento?.id) {
             throw new Error("Documento da empresa não localizado para aprovação manual.");
+        }
+
+        // documentos_empresa_aprovacao_manual_bloqueio_divergencia_empresa_v1:
+        // Divergências positivas de vínculo, nome empresarial ou CNPJ não podem
+        // ser apagadas por uma aprovação manual. Ausência de confirmação automática
+        // continua disponível para conferência humana.
+        const codigosDivergenciaEmpresaExplicita = new Set([
+            "divergencia_empresa_documento",
+            "documento_diverge_empresa",
+            "empresa_documento_diverge",
+            "cnpj_empresa_nao_confere_documento",
+            "cnpj_documento_diverge_empresa_selecionada",
+            "nome_empresa_documento_diverge_empresa_selecionada",
+        ]);
+
+        const divergenciasEmpresaExplicitas = (
+            Array.isArray(verificacao?.indicios)
+                ? verificacao.indicios
+                : []
+        ).filter((indicio = {}) =>
+            codigosDivergenciaEmpresaExplicita.has(
+                String(indicio?.codigo || "")
+                    .trim()
+                    .toLowerCase()
+            )
+        );
+
+        if (divergenciasEmpresaExplicitas.length > 0) {
+            const codigosLocalizados = divergenciasEmpresaExplicitas
+                .map((indicio = {}) =>
+                    String(indicio?.codigo || "").trim()
+                )
+                .filter(Boolean)
+                .join(", ");
+
+            throw new Error(
+                "Não é possível aprovar manualmente este documento porque foi identificada " +
+                "uma divergência explícita de empresa ou CNPJ. Corrija o vínculo ou substitua " +
+                "o arquivo antes da aprovação. Código(s): " +
+                codigosLocalizados
+            );
         }
 
         const observacao = String(observacaoManual || "").trim();
@@ -467,6 +799,64 @@ export function Empresas({
             },
         ];
 
+        // documentos_empresa_aprovacao_manual_validacao_antes_persistencia_v1:
+        // Nenhuma aprovação é gravada antes da validação completa das datas.
+        // documentos_empresa_aprovacao_manual_datas_validas_v1:
+        // A aprovação manual exige datas completas, válidas e não vencidas.
+        // documentos_empresa_aprovacao_manual_datas_documento_autoritativas_v1:
+        // A aprovação usa exclusivamente as datas confirmadas e persistidas no documento.
+        // Leituras OCR anteriores não podem sobrescrever uma correção humana posterior.
+        const dataEmissaoFinal =
+            documento?.data_emissao ||
+            documento?.dataEmissao ||
+            "";
+
+        const dataVencimentoFinal =
+            documento?.data_vencimento ||
+            documento?.dataVencimento ||
+            "";
+
+        if (
+            !dataEmissaoFinal ||
+            !dataVencimentoFinal
+        ) {
+            throw new Error(
+                "Não é possível aprovar manualmente este documento enquanto a emissão e o vencimento/revisão não estiverem confirmados e salvos."
+            );
+        }
+
+        const statusTemporal =
+            statusEmpresaDocumento(
+                dataVencimentoFinal
+            );
+
+        if (
+            statusTemporal.chave ===
+            "pendente"
+        ) {
+            throw new Error(
+                "A data de vencimento/revisão informada é inválida. Corrija e salve as datas antes da aprovação manual."
+            );
+        }
+
+        if (
+            statusTemporal.chave ===
+            "vencido"
+        ) {
+            throw new Error(
+                "Documento vencido não pode receber aprovação manual. Atualize ou substitua o documento antes de aprová-lo."
+            );
+        }
+
+        const atualizacaoDocumento = {
+            status_validacao:
+                "Aprovado",
+            data_emissao:
+                dataEmissaoFinal,
+            data_vencimento:
+                dataVencimentoFinal,
+        };
+
         const { data, error } = await supabase
             .from("verificacoes_documentais")
             .update({
@@ -484,19 +874,6 @@ export function Empresas({
 
         if (error) {
             throw new Error(`Erro ao aprovar manualmente a verificação documental: ${error.message}`);
-        }
-
-        const datasOcr = obterDatasOcrParaDocumentoPainel({ verificacao, documento });
-        const atualizacaoDocumento = {
-            status_validacao: "Aprovado",
-        };
-
-        if (datasOcr.dataEmissao) {
-            atualizacaoDocumento.data_emissao = datasOcr.dataEmissao;
-        }
-
-        if (datasOcr.dataVencimento) {
-            atualizacaoDocumento.data_vencimento = datasOcr.dataVencimento;
         }
 
         const { error: erroDocumento } = await supabase
@@ -612,11 +989,12 @@ export function Empresas({
         }
     };
 
+    // documentos_empresa_datas_formulario_sem_calculo_v1:
+    // Tipo e emissão podem ser alterados sem calcular automaticamente o vencimento.
     const alterarTipoDocumento = (tipo) => {
         setNovoDoc((atual) => ({
             ...atual,
             tipo,
-            dataVencimento: calcularVencimentoDocumento(tipo, atual.dataEmissao),
         }));
     };
 
@@ -624,7 +1002,6 @@ export function Empresas({
         setNovoDoc((atual) => ({
             ...atual,
             dataEmissao,
-            dataVencimento: calcularVencimentoDocumento(atual.tipo, dataEmissao),
         }));
     };
 
@@ -733,6 +1110,13 @@ export function Empresas({
         [permissaoSistemaAtual]
     );
 
+    // documentos_empresa_confirmacao_datas_permissao_v1:
+    // Quem pode enviar o documento também pode concluir as datas do próprio fluxo.
+    // A edição posterior das datas continua restrita à permissão EDITAR.
+    const podeConfirmarDatasDocumentoSistema =
+        podeUploadEmpresasSistema ||
+        podeEditarEmpresasSistema;
+
     const podeExportarEmpresasSistema = useMemo(
         () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.EMPRESAS, ACOES_PERMISSAO_SISTEMA.EXPORTAR),
         [permissaoSistemaAtual]
@@ -796,12 +1180,12 @@ export function Empresas({
         }
     };
 
+    // documentos_empresa_upload_revisao_sem_data_v1:
+    // A substituicao inicia sem datas artificiais.
     const obterUploadRevisao = (tipo) => {
-        const dataEmissao = hoje.toISOString().slice(0, 10);
-
         return {
-            dataEmissao,
-            dataVencimento: calcularVencimentoDocumento(tipo, dataEmissao),
+            dataEmissao: "",
+            dataVencimento: "",
             observacao: "",
             ...(uploadRevisao[tipo] || {}),
         };
@@ -815,15 +1199,385 @@ export function Empresas({
                 [campo]: valor,
             };
 
-            if (campo === "dataEmissao") {
-                atualizados.dataVencimento = calcularVencimentoDocumento(tipo, valor);
-            }
+            // documentos_empresa_datas_substituicao_sem_calculo_v1:
+            // A emissão informada não cria automaticamente uma próxima revisão.
 
             return {
                 ...atual,
                 [tipo]: atualizados,
             };
         });
+    };
+
+    const iniciarEdicaoDatasDocumento = (documento) => {
+        if (!documento?.id) {
+            return;
+        }
+
+        if (!podeEditarEmpresasSistema) {
+            if (typeof window !== "undefined") {
+                window.alert(mensagemBloqueioEdicaoEmpresas);
+            }
+
+            return;
+        }
+
+        if (typeof onAtualizarDocumentoEmpresa !== "function") {
+            if (typeof window !== "undefined") {
+                window.alert(
+                    "A atualização das datas não está disponível neste momento."
+                );
+            }
+
+            return;
+        }
+
+        setEdicaoDatasDocumento({
+            documentoId:
+                String(
+                    documento.id
+                ),
+            dataEmissao:
+                documento.data_emissao ||
+                documento.dataEmissao ||
+                "",
+            dataVencimento:
+                documento.data_vencimento ||
+                documento.dataVencimento ||
+                "",
+        });
+    };
+
+    const atualizarCampoEdicaoDatasDocumento = (
+        campo,
+        valor
+    ) => {
+        setEdicaoDatasDocumento(
+            (atual) => {
+                if (!atual) {
+                    return atual;
+                }
+
+                return {
+                    ...atual,
+                    [campo]:
+                        valor,
+                };
+            }
+        );
+    };
+
+    const cancelarEdicaoDatasDocumento = () => {
+        if (salvandoDatasDocumento) {
+            return;
+        }
+
+        setEdicaoDatasDocumento(
+            null
+        );
+    };
+
+    const salvarEdicaoDatasDocumento = async (
+        documento
+    ) => {
+        if (
+            !documento?.id ||
+            typeof onAtualizarDocumentoEmpresa !==
+                "function"
+        ) {
+            return;
+        }
+
+        if (!podeEditarEmpresasSistema) {
+            if (typeof window !== "undefined") {
+                window.alert(mensagemBloqueioEdicaoEmpresas);
+            }
+
+            return;
+        }
+
+        const documentoId =
+            String(
+                documento.id
+            );
+
+        if (
+            !edicaoDatasDocumento ||
+            edicaoDatasDocumento.documentoId !==
+                documentoId
+        ) {
+            return;
+        }
+
+        const dataEmissao =
+            String(
+                edicaoDatasDocumento.dataEmissao ||
+                ""
+            ).trim();
+
+        const dataVencimento =
+            String(
+                edicaoDatasDocumento.dataVencimento ||
+                ""
+            ).trim();
+
+        if (
+            !dataEmissao ||
+            !dataVencimento
+        ) {
+            if (typeof window !== "undefined") {
+                window.alert(
+                    "Informe a data de emissão e a data de vencimento ou próxima revisão."
+                );
+            }
+
+            return;
+        }
+
+        setSalvandoDatasDocumento(
+            documentoId
+        );
+
+        try {
+            const documentoAtualizado =
+                await onAtualizarDocumentoEmpresa({
+                    documento,
+                    dataEmissao,
+                    dataVencimento,
+                });
+
+            if (!documentoAtualizado) {
+                if (typeof window !== "undefined") {
+                    window.alert(
+                        "Não foi possível salvar as datas do documento."
+                    );
+                }
+
+                return;
+            }
+
+            setEdicaoDatasDocumento(
+                null
+            );
+
+            if (typeof window !== "undefined") {
+                window.alert(
+                    "Datas do documento atualizadas com sucesso."
+                );
+            }
+        } finally {
+            setSalvandoDatasDocumento(
+                ""
+            );
+        }
+    };
+
+    const atualizarCampoConfirmacaoDatasDocumento = (
+        campo,
+        valor
+    ) => {
+        setConfirmacaoDatasDocumento(
+            (atual) => {
+                if (!atual) {
+                    return atual;
+                }
+
+                const proximoEstado = {
+                    ...atual,
+                    [campo]:
+                        valor,
+                };
+
+                if (
+                    campo === "dataEmissao" &&
+                    !atual.dataVencimentoExtraida &&
+                    !atual.dataVencimentoEditadaManualmente
+                ) {
+                    const dataVencimentoCalculada =
+                        calcularVencimentoPcmsoPainel(
+                            atual.tipoDocumento,
+                            valor
+                        );
+
+                    proximoEstado.dataVencimento =
+                        dataVencimentoCalculada;
+
+                    proximoEstado.dataVencimentoCalculadaAutomaticamente =
+                        Boolean(
+                            dataVencimentoCalculada
+                        );
+                }
+
+                if (campo === "dataVencimento") {
+                    const dataVencimentoCalculada =
+                        calcularVencimentoPcmsoPainel(
+                            atual.tipoDocumento,
+                            atual.dataEmissao
+                        );
+
+                    if (!valor && dataVencimentoCalculada) {
+                        proximoEstado.dataVencimento =
+                            dataVencimentoCalculada;
+
+                        proximoEstado.dataVencimentoCalculadaAutomaticamente =
+                            true;
+
+                        proximoEstado.dataVencimentoEditadaManualmente =
+                            false;
+                    } else {
+                        proximoEstado.dataVencimentoCalculadaAutomaticamente =
+                            Boolean(
+                                valor &&
+                                dataVencimentoCalculada &&
+                                valor === dataVencimentoCalculada
+                            );
+
+                        proximoEstado.dataVencimentoEditadaManualmente =
+                            Boolean(
+                                valor &&
+                                valor !== dataVencimentoCalculada
+                            );
+                    }
+                }
+
+                return proximoEstado;
+            }
+        );
+    };
+
+    const cancelarConfirmacaoDatasDocumento = () => {
+        if (salvandoConfirmacaoDatasDocumento) {
+            return;
+        }
+
+        setConfirmacaoDatasDocumento(
+            null
+        );
+    };
+
+    const salvarConfirmacaoDatasDocumento = async () => {
+        if (
+            !confirmacaoDatasDocumento ||
+            typeof onAtualizarDocumentoEmpresa !==
+                "function"
+        ) {
+            return;
+        }
+
+        if (!podeConfirmarDatasDocumentoSistema) {
+            if (typeof window !== "undefined") {
+                window.alert(
+                    "Sem permissão para enviar documentos ou confirmar datas documentais."
+                );
+            }
+
+            return;
+        }
+
+        const dataEmissao =
+            String(
+                confirmacaoDatasDocumento.dataEmissao ||
+                ""
+            ).trim();
+
+        const dataVencimento =
+            String(
+                confirmacaoDatasDocumento.dataVencimento ||
+                ""
+            ).trim();
+
+        if (
+            !dataEmissao ||
+            !dataVencimento
+        ) {
+            if (typeof window !== "undefined") {
+                window.alert(
+                    "Informe a emissão ou última revisão e o vencimento ou próxima revisão para concluir a confirmação."
+                );
+            }
+
+            return;
+        }
+
+        if (
+            dataVencimento <
+            dataEmissao
+        ) {
+            if (typeof window !== "undefined") {
+                window.alert(
+                    "O vencimento ou próxima revisão não pode ser anterior à emissão ou última revisão."
+                );
+            }
+
+            return;
+        }
+
+        const documentoAtual =
+            (documentosEmpresas || []).find(
+                (item) =>
+                    String(
+                        item?.id ||
+                        ""
+                    ) ===
+                        String(
+                            confirmacaoDatasDocumento.documentoId ||
+                            ""
+                        )
+            ) ||
+            confirmacaoDatasDocumento.documento;
+
+        if (!documentoAtual?.id) {
+            if (typeof window !== "undefined") {
+                window.alert(
+                    "O documento não está mais disponível para confirmação das datas."
+                );
+            }
+
+            return;
+        }
+
+        setSalvandoConfirmacaoDatasDocumento(
+            true
+        );
+
+        try {
+            const documentoAtualizado =
+                await onAtualizarDocumentoEmpresa({
+                    documento:
+                        documentoAtual,
+                    dataEmissao,
+                    dataVencimento,
+                    observacao:
+                        String(
+                            confirmacaoDatasDocumento.observacao ||
+                            ""
+                        ).trim(),
+                });
+
+            if (!documentoAtualizado) {
+                if (typeof window !== "undefined") {
+                    window.alert(
+                        "Não foi possível salvar as datas confirmadas."
+                    );
+                }
+
+                return;
+            }
+
+            setConfirmacaoDatasDocumento(
+                null
+            );
+
+            if (typeof window !== "undefined") {
+                window.alert(
+                    "Datas confirmadas e salvas com sucesso."
+                );
+            }
+        } finally {
+            setSalvandoConfirmacaoDatasDocumento(
+                false
+            );
+        }
     };
 
     const enviarDocumentoPelaRevisao = async (empresa, tipo, arquivo) => {
@@ -834,7 +1588,10 @@ export function Empresas({
             return;
         }
 
-        if (!validarArquivoAntesUpload(arquivo, "documentoExtenso")) return;
+        const perfilUpload = String(tipo || "").trim().toUpperCase() === "LTCAT"
+            ? "documentoLtcat"
+            : "documentoExtenso";
+        if (!validarArquivoAntesUpload(arquivo, perfilUpload)) return;
 
         const dados = obterUploadRevisao(tipo);
         const chave = `${empresa.id}-${tipo}`;
@@ -844,7 +1601,9 @@ export function Empresas({
         const ok = await onAdicionarDocumentoEmpresa({
             empresaId: empresa.id,
             tipo,
-            dataEmissao: dados.dataEmissao,
+            // documentos_empresa_cadastro_datas_ausentes_como_null_v1:
+            // Datas documentais ausentes são enviadas como null, nunca como string vazia.
+            dataEmissao: dados.dataEmissao || null,
             dataVencimento: dados.dataVencimento || null,
             arquivo,
             observacao: dados.observacao || "",
@@ -856,11 +1615,22 @@ export function Empresas({
             setUploadRevisao((atual) => ({
                 ...atual,
                 [tipo]: {
-                    dataEmissao: hoje.toISOString().slice(0, 10),
-                    dataVencimento: calcularVencimentoDocumento(tipo, hoje.toISOString().slice(0, 10)),
+                    dataEmissao: "",
+                    dataVencimento: "",
                     observacao: "",
                 },
             }));
+
+            setMonitoramentoConfirmacaoDatasDocumento({
+                empresaId:
+                    String(
+                        empresa.id
+                    ),
+                tipoDocumento:
+                    String(
+                        tipo
+                    ),
+            });
         }
     };
 
@@ -880,17 +1650,14 @@ export function Empresas({
             return;
         }
 
-        if (!novoDoc.dataEmissao) {
-            alert("Informe a data de emissão.");
-            return;
-        }
+        // A data de emissao sera extraida do arquivo ou confirmada manualmente apos a leitura.
 
         setSalvandoDocumento(true);
 
         const ok = await onAdicionarDocumentoEmpresa({
             empresaId: novoDoc.empresaId,
             tipo: novoDoc.tipo,
-            dataEmissao: novoDoc.dataEmissao,
+            dataEmissao: novoDoc.dataEmissao || null,
             dataVencimento: novoDoc.dataVencimento || null,
             arquivo: novoDoc.arquivo,
             observacao: novoDoc.observacao.trim(),
@@ -899,11 +1666,22 @@ export function Empresas({
         setSalvandoDocumento(false);
 
         if (ok) {
+            setMonitoramentoConfirmacaoDatasDocumento({
+                empresaId:
+                    String(
+                        novoDoc.empresaId
+                    ),
+                tipoDocumento:
+                    String(
+                        novoDoc.tipo
+                    ),
+            });
+
             setNovoDoc({
                 empresaId: novoDoc.empresaId,
                 tipo: "PGR",
-                dataEmissao: hoje.toISOString().slice(0, 10),
-                dataVencimento: calcularVencimentoDocumento("PGR", hoje.toISOString().slice(0, 10)),
+                dataEmissao: "",
+                dataVencimento: "",
                 arquivo: null,
                 observacao: "",
             });
@@ -1197,6 +1975,8 @@ export function Empresas({
 
                                                 <ResultadoVerificacaoDocumento
                                                     verificacao={verificacao}
+                                                    empresaCnpj={empresa.cnpj}
+                                                    dataVencimentoDocumento={doc?.data_vencimento || ""}
                                                     titulo="Verificação documental"
                                                     compacto
                                                     className="mt-3"
@@ -2212,7 +2992,9 @@ export function Empresas({
                                                             arquivo &&
                                                             !validarArquivoAntesUpload(
                                                                 arquivo,
-                                                                "documentoExtenso"
+                                                                String(novoDoc.tipo || "").trim().toUpperCase() === "LTCAT"
+                                                                    ? "documentoLtcat"
+                                                                    : "documentoExtenso"
                                                             )
                                                         ) {
                                                             e.target.value = "";
@@ -2229,7 +3011,7 @@ export function Empresas({
 
                                             <FileUploadAviso
                                                 arquivo={novoDoc.arquivo}
-                                                tipo="documentoExtenso"
+                                                tipo={String(novoDoc.tipo || "").trim().toUpperCase() === "LTCAT" ? "documentoLtcat" : "documentoExtenso"}
                                             />
 
                                             <button
@@ -2781,6 +3563,199 @@ export function Empresas({
                 </div>
             )}
 
+            {confirmacaoDatasDocumento && (
+                <div
+                    className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-slate-950/75 p-4"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="confirmacao-datas-documento-titulo"
+                >
+                    <div className="w-full max-w-xl overflow-hidden rounded-[2rem] bg-white shadow-2xl">
+                        <div className="border-b border-amber-200 bg-amber-50 px-6 py-5">
+                            <div className="flex items-start gap-3">
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                                    <AlertTriangle className="h-5 w-5" />
+                                </div>
+
+                                <div className="min-w-0">
+                                    <p className="text-xs font-bold uppercase tracking-wide text-amber-700">
+                                        Confirmação necessária
+                                    </p>
+
+                                    <h2
+                                        id="confirmacao-datas-documento-titulo"
+                                        className="mt-1 text-xl font-bold text-slate-950"
+                                    >
+                                        Confirmar datas do documento
+                                    </h2>
+
+                                    <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                                        {confirmacaoDatasDocumento.dataEmissaoExtraida ||
+                                        confirmacaoDatasDocumento.dataVencimentoExtraida
+                                            ? "A análise localizou somente parte das datas necessárias. Confira a informação encontrada e preencha o campo restante."
+                                            : "A análise não localizou as datas necessárias no documento. Informe-as manualmente para concluir o controle documental."}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-5 px-6 py-5">
+                            <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                                <div className="flex items-start gap-3">
+                                    <FileText className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" />
+
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-slate-900">
+                                            {confirmacaoDatasDocumento.tipoDocumento}
+                                        </p>
+
+                                        <p className="mt-1 text-sm text-slate-600">
+                                            {confirmacaoDatasDocumento.empresaNome}
+                                        </p>
+
+                                        <p className="mt-2 text-xs font-semibold text-amber-700">
+                                            {confirmacaoDatasDocumento.statusValidacao}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-600">
+                                        Emissão ou última revisão
+                                    </label>
+
+                                    <input
+                                        type="date"
+                                        value={confirmacaoDatasDocumento.dataEmissao || ""}
+                                        disabled={salvandoConfirmacaoDatasDocumento}
+                                        onChange={(evento) =>
+                                            atualizarCampoConfirmacaoDatasDocumento(
+                                                "dataEmissao",
+                                                evento.target.value
+                                            )
+                                        }
+                                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                                    />
+
+                                    <p
+                                        className={
+                                            confirmacaoDatasDocumento.dataEmissaoExtraida
+                                                ? "mt-1.5 text-xs font-medium text-emerald-700"
+                                                : "mt-1.5 text-xs font-medium text-amber-700"
+                                        }
+                                    >
+                                        {confirmacaoDatasDocumento.dataEmissaoExtraida
+                                            ? "Data localizada na análise do documento."
+                                            : "Data não localizada no documento."}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-600">
+                                        Vencimento ou próxima revisão
+                                    </label>
+
+                                    <input
+                                        type="date"
+                                        value={confirmacaoDatasDocumento.dataVencimento || ""}
+                                        disabled={salvandoConfirmacaoDatasDocumento}
+                                        onChange={(evento) =>
+                                            atualizarCampoConfirmacaoDatasDocumento(
+                                                "dataVencimento",
+                                                evento.target.value
+                                            )
+                                        }
+                                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                                    />
+
+                                    <p
+                                        className={
+                                            confirmacaoDatasDocumento.dataVencimentoExtraida ||
+                                            confirmacaoDatasDocumento.dataVencimentoCalculadaAutomaticamente ||
+                                            confirmacaoDatasDocumento.dataVencimentoEditadaManualmente
+                                                ? "mt-1.5 text-xs font-medium text-emerald-700"
+                                                : "mt-1.5 text-xs font-medium text-amber-700"
+                                        }
+                                    >
+                                        {confirmacaoDatasDocumento.dataVencimentoExtraida
+                                            ? "Data localizada na análise do documento."
+                                            : confirmacaoDatasDocumento.dataVencimentoCalculadaAutomaticamente
+                                              ? "Data calculada automaticamente: 12 meses após a emissão ou última revisão."
+                                              : confirmacaoDatasDocumento.dataVencimentoEditadaManualmente
+                                                ? "Data informada manualmente."
+                                                : "Data não localizada no documento."}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-600">
+                                    Observação opcional
+                                </label>
+
+                                <textarea
+                                    rows={3}
+                                    value={confirmacaoDatasDocumento.observacao || ""}
+                                    disabled={salvandoConfirmacaoDatasDocumento}
+                                    onChange={(evento) =>
+                                        atualizarCampoConfirmacaoDatasDocumento(
+                                            "observacao",
+                                            evento.target.value
+                                        )
+                                    }
+                                    placeholder="Registre informações relevantes sobre a confirmação das datas."
+                                    className="w-full resize-y rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                                />
+                            </div>
+
+                            <div className="rounded-2xl bg-blue-50 p-3 text-xs leading-relaxed text-blue-900 ring-1 ring-blue-200">
+                                A data do envio do arquivo não será utilizada como emissão, revisão ou vencimento do documento.
+                            </div>
+
+                            {!podeConfirmarDatasDocumentoSistema && (
+                                <div className="rounded-2xl bg-red-50 p-3 text-sm font-semibold text-red-700 ring-1 ring-red-200">
+                                    Seu perfil não possui permissão para enviar documentos ou confirmar e salvar as datas.
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <button
+                                    type="button"
+                                    onClick={cancelarConfirmacaoDatasDocumento}
+                                    disabled={salvandoConfirmacaoDatasDocumento}
+                                    className="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    Cancelar
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={salvarConfirmacaoDatasDocumento}
+                                    disabled={
+                                        salvandoConfirmacaoDatasDocumento ||
+                                        !podeConfirmarDatasDocumentoSistema ||
+                                        typeof onAtualizarDocumentoEmpresa !== "function" ||
+                                        !dataIsoValidaPainelDocumento(
+                                            confirmacaoDatasDocumento.dataEmissao
+                                        ) ||
+                                        !dataIsoValidaPainelDocumento(
+                                            confirmacaoDatasDocumento.dataVencimento
+                                        )
+                                    }
+                                    className="inline-flex items-center justify-center rounded-2xl bg-blue-950 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-900 disabled:cursor-not-allowed disabled:bg-slate-300"
+                                >
+                                    {salvandoConfirmacaoDatasDocumento
+                                        ? "Salvando confirmação..."
+                                        : "Salvar datas e concluir"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {empresaRevisao && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-slate-950/70 p-4">
                     <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
@@ -2815,6 +3790,13 @@ export function Empresas({
                                     const verificacao = obterVerificacaoDocumentoEmpresa(doc);
                                     const dadosUpload = obterUploadRevisao(tipoDoc.tipo);
                                     const chaveUpload = `${empresaRevisao.empresa.id}-${tipoDoc.tipo}`;
+                                    const chaveEdicaoDatas = String(doc?.id || "");
+                                    const editandoDatas = Boolean(
+                                        doc &&
+                                        edicaoDatasDocumento?.documentoId === chaveEdicaoDatas
+                                    );
+                                    const salvandoDatas =
+                                        salvandoDatasDocumento === chaveEdicaoDatas;
 
                                     return (
                                         <div key={tipoDoc.tipo} className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
@@ -2831,7 +3813,116 @@ export function Empresas({
                                             <div className="px-5 py-4 text-sm text-slate-600">
                                                 <div className="space-y-3">
                                                     <p className="leading-relaxed"><strong>Regra:</strong> {tipoDoc.regra}</p>
-                                                    <ResumoDocumentoInline documento={doc} />
+
+                                                    {editandoDatas ? (
+                                                        <div className="rounded-2xl border border-blue-200 bg-blue-50/60 p-3">
+                                                            <p className="mb-3 text-xs font-bold uppercase tracking-wide text-blue-900">
+                                                                Editar datas do documento
+                                                            </p>
+
+                                                            <div className="grid gap-3 sm:grid-cols-2">
+                                                                <div>
+                                                                    <label className="mb-1 block text-[11px] font-semibold text-slate-600">
+                                                                        Emissão
+                                                                    </label>
+
+                                                                    <input
+                                                                        type="date"
+                                                                        value={edicaoDatasDocumento?.dataEmissao || ""}
+                                                                        disabled={salvandoDatas}
+                                                                        onChange={(evento) =>
+                                                                            atualizarCampoEdicaoDatasDocumento(
+                                                                                "dataEmissao",
+                                                                                evento.target.value
+                                                                            )
+                                                                        }
+                                                                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                                                                    />
+                                                                </div>
+
+                                                                <div>
+                                                                    <label className="mb-1 block text-[11px] font-semibold text-slate-600">
+                                                                        Vencimento ou próxima revisão
+                                                                    </label>
+
+                                                                    <input
+                                                                        type="date"
+                                                                        value={edicaoDatasDocumento?.dataVencimento || ""}
+                                                                        disabled={salvandoDatas}
+                                                                        onChange={(evento) =>
+                                                                            atualizarCampoEdicaoDatasDocumento(
+                                                                                "dataVencimento",
+                                                                                evento.target.value
+                                                                            )
+                                                                        }
+                                                                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                                                                    />
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={cancelarEdicaoDatasDocumento}
+                                                                    disabled={salvandoDatas}
+                                                                    className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                                                >
+                                                                    Cancelar
+                                                                </button>
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        salvarEdicaoDatasDocumento(
+                                                                            doc
+                                                                        )
+                                                                    }
+                                                                    disabled={
+                                                                        salvandoDatas ||
+                                                                        !podeEditarEmpresasSistema ||
+                                                                        typeof onAtualizarDocumentoEmpresa !== "function"
+                                                                    }
+                                                                    title={
+                                                                        podeEditarEmpresasSistema
+                                                                            ? "Salvar as datas informadas"
+                                                                            : mensagemBloqueioEdicaoEmpresas
+                                                                    }
+                                                                    className="inline-flex items-center justify-center rounded-xl bg-blue-950 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-900 disabled:cursor-not-allowed disabled:bg-slate-300"
+                                                                >
+                                                                    {salvandoDatas
+                                                                        ? "Salvando datas..."
+                                                                        : "Salvar datas"}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="space-y-2">
+                                                            <ResumoDocumentoInline documento={doc} />
+
+                                                            {doc && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        iniciarEdicaoDatasDocumento(
+                                                                            doc
+                                                                        )
+                                                                    }
+                                                                    disabled={
+                                                                        !podeEditarEmpresasSistema ||
+                                                                        typeof onAtualizarDocumentoEmpresa !== "function"
+                                                                    }
+                                                                    title={
+                                                                        podeEditarEmpresasSistema
+                                                                            ? "Editar emissão e vencimento ou próxima revisão"
+                                                                            : mensagemBloqueioEdicaoEmpresas
+                                                                    }
+                                                                    className="inline-flex items-center justify-center rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-900 hover:bg-blue-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                                                                >
+                                                                    Editar datas
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 {doc?.observacao && (
@@ -2844,6 +3935,8 @@ export function Empresas({
                                             {doc && (
                                                 <ResultadoVerificacaoDocumento
                                                     verificacao={verificacao}
+                                                    empresaCnpj={empresaRevisao?.empresa?.cnpj || ""}
+                                                    dataVencimentoDocumento={doc?.data_vencimento || ""}
                                                     titulo={`Verificação documental ${tipoDoc.tipo}`}
                                                     mostrarDetalhesInicial={false}
                                                     className="mx-5 mt-1"

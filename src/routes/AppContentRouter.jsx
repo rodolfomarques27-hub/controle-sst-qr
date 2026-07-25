@@ -387,6 +387,9 @@ export function AppContentRouter({
     onAtualizarEmpresa,
     onExcluirEmpresa,
     onAdicionarDocumentoEmpresa,
+    // documentos_empresa_router_atualizacao_datas_v1:
+    // Propaga a função de persistência das datas até EmpresasPage.
+    onAtualizarDocumentoEmpresa,
     onExcluirDocumentoEmpresa,
     onVisualizarDocumentoEmpresa,
     onAdicionarColaborador,
@@ -715,6 +718,7 @@ export function AppContentRouter({
                     onAtualizarEmpresa={onAtualizarEmpresa}
                     onExcluirEmpresa={onExcluirEmpresa}
                     onAdicionarDocumentoEmpresa={onAdicionarDocumentoEmpresa}
+                    onAtualizarDocumentoEmpresa={onAtualizarDocumentoEmpresa}
                     onExcluirDocumentoEmpresa={onExcluirDocumentoEmpresa}
                     onVisualizarDocumentoEmpresa={onVisualizarDocumentoEmpresa}
                 />

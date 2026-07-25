@@ -534,6 +534,44 @@ export default function App() {
         });
     }
 
+    async function atualizarDatasDocumentoEmpresa({
+        documento,
+        dataEmissao,
+        dataVencimento,
+        observacao,
+    }) {
+        // documentos_empresa_app_atualizacao_datas_v1:
+        // Liga a interface ao serviço responsável pela persistência das datas.
+        // documentos_empresa_app_atualizacao_observacao_v1:
+        // Encaminha a observação opcional sem alterar registros quando ela for omitida.
+        const [
+            empresasHandlers,
+            documentosHandlers,
+        ] = await Promise.all([
+            carregarEmpresasHandlers(),
+            carregarEmpresaDocumentosHandlers(),
+        ]);
+
+        const {
+            atualizarDatasDocumentoEmpresaAppService,
+        } = empresasHandlers;
+
+        const {
+            normalizarDocumentoEmpresa,
+        } = documentosHandlers;
+
+        return atualizarDatasDocumentoEmpresaAppService({
+            supabase,
+            documento,
+            dataEmissao,
+            dataVencimento,
+            observacao,
+            normalizarDocumentoEmpresa,
+            setErroBanco,
+            setDocumentosEmpresas,
+        });
+    }
+
     async function excluirDocumentoEmpresa(documento) {
         const { excluirDocumentoEmpresaAppService } = await carregarEmpresasHandlers();
 
@@ -1357,6 +1395,7 @@ export default function App() {
                         onAtualizarEmpresa={atualizarEmpresa}
                         onExcluirEmpresa={excluirEmpresa}
                         onAdicionarDocumentoEmpresa={adicionarDocumentoEmpresa}
+                        onAtualizarDocumentoEmpresa={atualizarDatasDocumentoEmpresa}
                         onExcluirDocumentoEmpresa={excluirDocumentoEmpresa}
                         onVisualizarDocumentoEmpresa={visualizarDocumentoEmpresa}
                         onAdicionarColaborador={adicionarColaborador}

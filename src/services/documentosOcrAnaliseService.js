@@ -392,6 +392,39 @@ export function criarAnaliseDocumental() {
 
     function extrairVigenciaPrincipalTexto(texto = "") {
         const conteudo = limparTextoPossivelDocumento(texto);
+        const padroesElaboracaoVencimento = [
+            /data\s+da\s+elabora[cç][aã]o\s+data\s+(?:do\s+)?vencimento[^0-9]{0,160}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})\s+([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i,
+            /(?:elaborado|elabora[cç][aã]o|emitido|emiss[aã]o)[^0-9]{0,120}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})[\s\S]{0,220}?(?:validade|vencimento)[^0-9]{0,120}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i,
+        ];
+
+        // Datas completas e explicitamente rotuladas sempre têm prioridade.
+        for (const padrao of padroesElaboracaoVencimento) {
+            const match = conteudo.match(padrao);
+            if (!match) continue;
+
+            const inicioIso = dataIsoDeTextoDataBr(match[1]);
+            const fimIso = dataIsoDeTextoDataBr(match[2]);
+
+            if (inicioIso && fimIso) {
+                return {
+                    inicio: {
+                        iso: inicioIso,
+                        br: formatarDataBr(inicioIso),
+                        contexto: obterContextoTexto(conteudo, match.index || 0, 220),
+                        origem: "texto_rotulado",
+                        precisao: "dia",
+                    },
+                    fim: {
+                        iso: fimIso,
+                        br: formatarDataBr(fimIso),
+                        contexto: obterContextoTexto(conteudo, match.index || 0, 220),
+                        origem: "texto_rotulado",
+                        precisao: "dia",
+                    },
+                };
+            }
+        }
+
         const padroes = [
             /Vig[êe]ncia:[^0-9]{0,220}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})\s+a\s+([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i,
             /(?:validade|per[ií]odo|vig[êe]ncia)[^0-9]{0,220}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})\s+(?:a|até|ate)\s+([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i,
@@ -426,6 +459,99 @@ export function criarAnaliseDocumental() {
                         contexto: obterContextoTexto(conteudo, match.index || 0, 160),
                         origem: "texto",
                     },
+                };
+            }
+        }
+
+        // Vigência expressa somente com mês/ano, comum em cabeçalhos de
+        // PCMSO e PGR: "VIGÊNCIA: FEVEREIRO/2026 A FEVEREIRO/2028".
+        const matchVigenciaMesAno = conteudo.match(
+            /(?:validade|vencimento|vig[êe]ncia)[^a-zA-ZÀ-ÿ0-9]{0,30}([a-zA-ZÀ-ÿçÇ]+)\s*[\/-]\s*((?:19|20)\d{2})\s+(?:a|at[eé])\s+([a-zA-ZÀ-ÿçÇ]+)\s*[\/-]\s*((?:19|20)\d{2})/i
+        );
+
+        if (matchVigenciaMesAno) {
+            const mesInicio = MESES_PT_BR[normalizarTextoVerificacao(matchVigenciaMesAno[1])];
+            const mesFim = MESES_PT_BR[normalizarTextoVerificacao(matchVigenciaMesAno[3])];
+            const anoInicio = Number(matchVigenciaMesAno[2]);
+            const anoFim = Number(matchVigenciaMesAno[4]);
+            const ultimoDiaFim = mesFim ? new Date(anoFim, mesFim, 0).getDate() : null;
+            const inicioIso = mesInicio ? montarDataIso(1, mesInicio, anoInicio) : null;
+            const fimIso = mesFim && ultimoDiaFim ? montarDataIso(ultimoDiaFim, mesFim, anoFim) : null;
+
+            if (inicioIso && fimIso) {
+                return {
+                    inicio: {
+                        iso: inicioIso,
+                        br: formatarDataBr(inicioIso),
+                        contexto: obterContextoTexto(conteudo, matchVigenciaMesAno.index || 0, 220),
+                        origem: "vigencia_mes_ano_rotulada",
+                        precisao: "mes",
+                    },
+                    fim: {
+                        iso: fimIso,
+                        br: formatarDataBr(fimIso),
+                        contexto: obterContextoTexto(conteudo, matchVigenciaMesAno.index || 0, 220),
+                        origem: "vigencia_mes_ano_rotulada",
+                        precisao: "mes",
+                    },
+                };
+            }
+        }
+
+        // Fallback para capas que informam somente mês/ano. Não inventar um
+        // dia intermediário: emissão usa o início do mês e validade o fim.
+        const matchMesAno = conteudo.match(
+            /(?:elaborado|elabora[cç][aã]o|emitido|emiss[aã]o)\s+(?:em\s+)?([a-zA-ZÀ-ÿçÇ]+)\s+(?:de\s+)?((?:19|20)\d{2})[\s\S]{0,220}?(?:validade|vencimento|vig[êe]ncia)\s+(?:em\s+)?([a-zA-ZÀ-ÿçÇ]+)\s+(?:de\s+)?((?:19|20)\d{2})/i
+        );
+
+        if (matchMesAno) {
+            const mesInicio = MESES_PT_BR[normalizarTextoVerificacao(matchMesAno[1])];
+            const mesFim = MESES_PT_BR[normalizarTextoVerificacao(matchMesAno[3])];
+            const anoInicio = Number(matchMesAno[2]);
+            const anoFim = Number(matchMesAno[4]);
+            const ultimoDiaFim = mesFim ? new Date(anoFim, mesFim, 0).getDate() : null;
+            const inicioIso = mesInicio ? montarDataIso(1, mesInicio, anoInicio) : null;
+            const fimIso = mesFim && ultimoDiaFim ? montarDataIso(ultimoDiaFim, mesFim, anoFim) : null;
+
+            if (inicioIso && fimIso) {
+                return {
+                    inicio: {
+                        iso: inicioIso,
+                        br: formatarDataBr(inicioIso),
+                        contexto: obterContextoTexto(conteudo, matchMesAno.index || 0, 220),
+                        origem: "mes_ano_rotulado",
+                        precisao: "mes",
+                    },
+                    fim: {
+                        iso: fimIso,
+                        br: formatarDataBr(fimIso),
+                        contexto: obterContextoTexto(conteudo, matchMesAno.index || 0, 220),
+                        origem: "mes_ano_rotulado",
+                        precisao: "mes",
+                    },
+                };
+            }
+        }
+
+        // Quando não existe validade explícita, preservar a emissão forte
+        // para que a regra do tipo documental calcule a próxima revisão.
+        const matchEmissaoRotulada = conteudo.match(
+            /(?:emiss[aã]o\s+inicial|data\s+da\s+elabora[cç][aã]o|data\s+de\s+elabora[cç][aã]o|elaborado\s+em|emitido\s+em)[^0-9]{0,100}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i
+        );
+
+        if (matchEmissaoRotulada) {
+            const inicioIso = dataIsoDeTextoDataBr(matchEmissaoRotulada[1]);
+
+            if (inicioIso) {
+                return {
+                    inicio: {
+                        iso: inicioIso,
+                        br: formatarDataBr(inicioIso),
+                        contexto: obterContextoTexto(conteudo, matchEmissaoRotulada.index || 0, 220),
+                        origem: "emissao_rotulada",
+                        precisao: "dia",
+                    },
+                    fim: null,
                 };
             }
         }
@@ -746,8 +872,15 @@ export function criarAnaliseDocumental() {
         return "";
     }
 
+    function obterCnpjsResumo(texto = "") {
+        const conteudo = String(texto || "");
+        const candidatos = conteudo.match(/(?<!\d)(?:\d{2}[.\s]?\d{3}[.\s]?\d{3}[\/\s]?\d{4}[-\s]?\d{2})(?!\d)/g) || [];
+
+        return Array.from(new Set(candidatos.map((valor) => String(valor || "").trim()).filter(Boolean)));
+    }
+
     function obterCnpjResumo(texto = "") {
-        return encontrarPrimeiroGrupo(texto, /\b(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\b/);
+        return obterCnpjsResumo(texto)[0] || "";
     }
 
     function obterVigenciaResumo(texto = "") {
@@ -952,7 +1085,8 @@ export function criarAnaliseDocumental() {
         const texto = limparTextoPossivelDocumento(textoExtraido);
         const tipoDocumento = obterTipoDocumentoResumo(texto, arquivoNome);
         const empresaNome = obterEmpresaResumo(texto);
-        const cnpj = obterCnpjResumo(texto);
+        const cnpjs = obterCnpjsResumo(texto);
+        const cnpj = cnpjs[0] || "";
         const codigoVerificacao = obterCodigoVerificacaoResumo(texto);
         const totalFuncionarios = obterTotalFuncionariosResumo(texto);
         const dataAssinaturaTexto = obterDataAssinaturaResumo(texto);
@@ -978,6 +1112,7 @@ export function criarAnaliseDocumental() {
             funcao_documento_confianca: funcaoDocumentoAso.confianca || "",
             funcao_documento_origem: funcaoDocumentoAso.origem || "",
             cnpj: cnpj || "",
+            cnpjs,
             vigencia_inicio: inicioVigencia?.iso || "",
             vigencia_inicio_br: inicioVigencia?.br || "",
             vigencia_fim: fimVigencia?.iso || "",
@@ -1025,7 +1160,7 @@ export function criarAnaliseDocumental() {
         if (empresa) {
             resumo.push(`Empresa identificada: ${empresa}${cnpj ? `, CNPJ ${cnpj}` : ""}.`);
         } else if (cnpj) {
-            resumo.push(`CNPJ identificado no documento: ${cnpj}.`);
+            resumo.push(`CNPJ encontrado no texto do documento: ${cnpj}. A compatibilidade deve ser confirmada com o cadastro da empresa.`);
         }
 
         if (vigencia) {

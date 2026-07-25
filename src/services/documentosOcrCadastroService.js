@@ -173,11 +173,227 @@ function obterCamposExtraidosDaLeitura(leitura = {}) {
     return leitura?.camposExtraidos || leitura?.campos_extraidos || {};
 }
 
+// documentos_empresa_cnpj_multiplos_validos_v1:
+// Considera todos os CNPJs válidos encontrados na leitura.
+// O CNPJ cadastrado só é priorizado quando aparece efetivamente no documento.
+function calcularDigitoCnpjDocumento(base = "", pesos = []) {
+    const soma =
+        String(base || "")
+            .split("")
+            .reduce(
+                (total, digito, indice) =>
+                    total +
+                    Number(digito) *
+                        Number(
+                            pesos[indice] ||
+                            0
+                        ),
+                0
+            );
+
+    const resto =
+        soma % 11;
+
+    return resto < 2
+        ? 0
+        : 11 - resto;
+}
+
+function cnpjValidoDocumento(valor = "") {
+    const digitos =
+        apenasDigitosDocumento(
+            valor
+        );
+
+    if (
+        !/^\d{14}$/.test(
+            digitos
+        ) ||
+        /^(\d)\1{13}$/.test(
+            digitos
+        )
+    ) {
+        return false;
+    }
+
+    const primeiroDigito =
+        calcularDigitoCnpjDocumento(
+            digitos.slice(
+                0,
+                12
+            ),
+            [
+                5,
+                4,
+                3,
+                2,
+                9,
+                8,
+                7,
+                6,
+                5,
+                4,
+                3,
+                2,
+            ]
+        );
+
+    const segundoDigito =
+        calcularDigitoCnpjDocumento(
+            digitos.slice(
+                0,
+                12
+            ) +
+                String(
+                    primeiroDigito
+                ),
+            [
+                6,
+                5,
+                4,
+                3,
+                2,
+                9,
+                8,
+                7,
+                6,
+                5,
+                4,
+                3,
+                2,
+            ]
+        );
+
+    return (
+        digitos.slice(
+            12
+        ) ===
+        `${primeiroDigito}${segundoDigito}`
+    );
+}
+
+function extrairCnpjsValidosLeituraDocumento(leitura = {}) {
+    const campos =
+        obterCamposExtraidosDaLeitura(
+            leitura
+        );
+
+    let textoSerializado = "";
+
+    try {
+        textoSerializado =
+            JSON.stringify(
+                leitura ||
+                {}
+            );
+    } catch {
+        textoSerializado =
+            [
+                campos?.cnpj,
+                leitura?.textoExtraido,
+                leitura?.texto_extraido,
+                leitura?.texto,
+            ]
+                .filter(
+                    Boolean
+                )
+                .join(
+                    " "
+                );
+    }
+
+    const texto =
+        String(
+            textoSerializado ||
+            ""
+        );
+
+    const candidatosFormatados =
+        Array.from(
+            texto.matchAll(
+                /\b\d{2}[.\s]?\d{3}[.\s]?\d{3}[\/\s]?\d{4}[-\s]?\d{2}\b/g
+            )
+        ).map(
+            (match) =>
+                match?.[0] ||
+                ""
+        );
+
+    const candidatosSemMascara =
+        Array.from(
+            texto.matchAll(
+                /\b\d{14}\b/g
+            )
+        ).map(
+            (match) =>
+                match?.[0] ||
+                ""
+        );
+
+    const candidatosCampos =
+        [
+            campos?.cnpj,
+            ...(
+                Array.isArray(
+                    campos?.cnpjs
+                )
+                    ? campos.cnpjs
+                    : []
+            ),
+        ];
+
+    return Array.from(
+        new Set(
+            [
+                ...candidatosCampos,
+                ...candidatosFormatados,
+                ...candidatosSemMascara,
+            ]
+                .map(
+                    apenasDigitosDocumento
+                )
+                .filter(
+                    cnpjValidoDocumento
+                )
+        )
+    );
+}
+
 function avaliarEmpresaExtraidaDocumento({ leitura, empresa = {} } = {}) {
     const indicios = [];
     const campos = obterCamposExtraidosDaLeitura(leitura);
-    const cnpjDocumento = apenasDigitosDocumento(campos?.cnpj);
-    const cnpjEmpresa = apenasDigitosDocumento(empresa?.cnpj || empresa?.cpf_cnpj || empresa?.documento || "");
+
+    const cnpjEmpresa =
+        apenasDigitosDocumento(
+            empresa?.cnpj ||
+            empresa?.cpf_cnpj ||
+            empresa?.documento ||
+            ""
+        );
+
+    const cnpjsDocumento =
+        extrairCnpjsValidosLeituraDocumento(
+            leitura
+        );
+
+    const cnpjDocumentoCampos =
+        apenasDigitosDocumento(
+            campos?.cnpj
+        );
+
+    const cnpjDocumento =
+        cnpjEmpresa &&
+        cnpjsDocumento.includes(
+            cnpjEmpresa
+        )
+            ? cnpjEmpresa
+            : cnpjValidoDocumento(
+                  cnpjDocumentoCampos
+              )
+              ? cnpjDocumentoCampos
+              : cnpjsDocumento[0] ||
+                "";
+
     const nomeDocumentoExtraido = limparTextoPossivelDocumento(campos?.empresa_nome || "");
     const nomeDocumento = valorPareceSomenteDocumentoFiscal(nomeDocumentoExtraido) ? "" : nomeDocumentoExtraido;
     const nomeEmpresa = limparTextoPossivelDocumento(empresa?.nome || empresa?.razao_social || empresa?.razaoSocial || "");
@@ -201,6 +417,24 @@ function avaliarEmpresaExtraidaDocumento({ leitura, empresa = {} } = {}) {
                 cnpjDocumento: formatarCnpjDocumento(cnpjDocumento),
                 cnpjEmpresaSelecionada: formatarCnpjDocumento(cnpjEmpresa),
                 empresaDocumento: nomeDocumento,
+                empresaSelecionada: nomeEmpresa,
+            },
+        }));
+
+        return indicios;
+    }
+
+    if (cnpjEmpresa && !cnpjDocumento) {
+        indicios.push(criarIndicioVerificacao({
+            codigo: "cnpj_empresa_nao_localizado_documento",
+            tipo: DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.CADASTRO,
+            titulo: "CNPJ da empresa não localizado no documento",
+            detalhe: `O leitor não encontrou no PDF o CNPJ ${formatarCnpjDocumento(cnpjEmpresa)}${nomeEmpresa ? ` da empresa ${nomeEmpresa}` : ""}.`,
+            peso: DOCUMENTOS_VERIFICACAO_PESOS.DIVERGENCIA_EMPRESA,
+            bloqueia: true,
+            recomendacao: "Não aprovar automaticamente. Conferir o PDF original e confirmar manualmente se o documento pertence à empresa cadastrada.",
+            dados: {
+                cnpjEmpresaSelecionada: formatarCnpjDocumento(cnpjEmpresa),
                 empresaSelecionada: nomeEmpresa,
             },
         }));

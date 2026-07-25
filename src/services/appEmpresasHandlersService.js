@@ -104,60 +104,182 @@ function calcularVencimentoDocumentoPorTipoOcr(tipo = "", dataEmissao = "") {
     const [ano, mes, dia] = iso.split("-").map(Number);
     const data = new Date(ano, mes - 1, dia, 12, 0, 0);
 
-    if (tipoNormalizado === "LTCAT") {
-        data.setFullYear(data.getFullYear() + 3);
-    } else {
-        data.setFullYear(data.getFullYear() + 1);
+    // documentos_empresa_pcmso_validade_12_meses_ocr_v1:
+    // A validade explícita encontrada no documento continua prioritária.
+    // Sem validade explícita, o PCMSO recebe exatamente 12 meses.
+    if (tipoNormalizado === "PCMSO") {
+        const anoDestino =
+            ano + 1;
+
+        const ultimoDiaMesDestino =
+            new Date(
+                anoDestino,
+                mes,
+                0,
+                12,
+                0,
+                0
+            ).getDate();
+
+        const dataPcmso =
+            new Date(
+                anoDestino,
+                mes - 1,
+                Math.min(
+                    dia,
+                    ultimoDiaMesDestino
+                ),
+                12,
+                0,
+                0
+            );
+
+        return formatarIsoDocumentoEmpresa(
+            dataPcmso
+        );
     }
+
+    // LTCAT e PGR mantêm as regras anteriormente aprovadas.
+    const anosValidade =
+        tipoNormalizado === "LTCAT"
+            ? 3
+            : tipoNormalizado === "PGR"
+                ? 1
+                : 0;
+
+    if (!anosValidade) return "";
+
+    data.setFullYear(
+        data.getFullYear() +
+            anosValidade
+    );
 
     data.setDate(data.getDate() - 1);
     return formatarIsoDocumentoEmpresa(data);
 }
 
 function obterDatasVigenciaOcrVerificacao(verificacao = {}, documento = {}) {
+    // documentos_empresa_datas_ocr_parciais_v1:
+    // Cada data é preservada separadamente e nenhuma data ausente é calculada.
     const campos = obterCamposExtraidosVerificacao(verificacao);
-    const tipoDocumento = documento?.tipo_documento || documento?.tipo || "";
 
-    if (dataIsoValidaDocumentoEmpresa(campos?.vigencia_inicio) && dataIsoValidaDocumentoEmpresa(campos?.vigencia_fim)) {
+    const dataEmissaoCampos =
+        dataIsoValidaDocumentoEmpresa(campos?.vigencia_inicio)
+            ? campos.vigencia_inicio
+            : "";
+
+    const dataVencimentoCampos =
+        dataIsoValidaDocumentoEmpresa(campos?.vigencia_fim)
+            ? campos.vigencia_fim
+            : "";
+
+    if (dataEmissaoCampos || dataVencimentoCampos) {
         return {
-            dataEmissao: campos.vigencia_inicio,
-            dataVencimento: campos.vigencia_fim,
-            origem: "vigencia_ocr",
+            dataEmissao: dataEmissaoCampos,
+            dataVencimento: dataVencimentoCampos,
+            origem:
+                dataEmissaoCampos && dataVencimentoCampos
+                    ? "vigencia_ocr"
+                    : "vigencia_ocr_parcial",
         };
     }
 
     const leitura = obterLeituraLocalVerificacao(verificacao);
-    const classificadas = leitura?.datas_classificadas || leitura?.datasClassificadas || {};
-    const vigencia = Array.isArray(classificadas?.vigencia) ? classificadas.vigencia : [];
-    const inicio = vigencia.find((data) => data?.tipo === "inicio_vigencia") || vigencia[0] || null;
-    const fim = vigencia.find((data) => data?.tipo === "fim_vigencia") || vigencia[1] || null;
+    const classificadas =
+        leitura?.datas_classificadas ||
+        leitura?.datasClassificadas ||
+        {};
 
-    if (dataIsoValidaDocumentoEmpresa(inicio?.iso) && dataIsoValidaDocumentoEmpresa(fim?.iso)) {
+    const vigencia =
+        Array.isArray(classificadas?.vigencia)
+            ? classificadas.vigencia
+            : [];
+
+    const inicio =
+        vigencia.find(
+            (data) =>
+                data?.tipo === "inicio_vigencia"
+        ) ||
+        vigencia[0] ||
+        null;
+
+    const fim =
+        vigencia.find(
+            (data) =>
+                data?.tipo === "fim_vigencia"
+        ) ||
+        vigencia[1] ||
+        null;
+
+    const dataEmissaoVigencia =
+        dataIsoValidaDocumentoEmpresa(inicio?.iso)
+            ? inicio.iso
+            : "";
+
+    const dataVencimentoVigencia =
+        dataIsoValidaDocumentoEmpresa(fim?.iso)
+            ? fim.iso
+            : "";
+
+    if (
+        dataEmissaoVigencia ||
+        dataVencimentoVigencia
+    ) {
         return {
-            dataEmissao: inicio.iso,
-            dataVencimento: fim.iso,
-            origem: "vigencia_ocr",
+            dataEmissao: dataEmissaoVigencia,
+            dataVencimento: dataVencimentoVigencia,
+            origem:
+                dataEmissaoVigencia &&
+                dataVencimentoVigencia
+                    ? "vigencia_ocr"
+                    : "vigencia_ocr_parcial",
         };
     }
 
-    const encerramento = campos?.data_encerramento || campos?.assinatura_data || "";
+    const encerramento =
+        campos?.data_encerramento ||
+        campos?.assinatura_data ||
+        "";
 
-    if (dataIsoValidaDocumentoEmpresa(encerramento)) {
+    if (
+        dataIsoValidaDocumentoEmpresa(
+            encerramento
+        )
+    ) {
         return {
             dataEmissao: encerramento,
-            dataVencimento: calcularVencimentoDocumentoPorTipoOcr(tipoDocumento, encerramento),
-            origem: "encerramento_ou_assinatura_ocr",
+            dataVencimento: "",
+            origem: "encerramento_ou_assinatura_ocr_parcial",
         };
     }
 
-    const outrasRelevantes = Array.isArray(classificadas?.outrasRelevantes) ? classificadas.outrasRelevantes : [];
-    const dataEncerramentoClassificada = outrasRelevantes.find((data) => String(data?.tipo || "") === "encerramento_documento") || null;
+    const outrasRelevantes =
+        Array.isArray(
+            classificadas?.outrasRelevantes
+        )
+            ? classificadas.outrasRelevantes
+            : [];
 
-    if (dataIsoValidaDocumentoEmpresa(dataEncerramentoClassificada?.iso)) {
+    const dataEncerramentoClassificada =
+        outrasRelevantes.find(
+            (data) =>
+                String(
+                    data?.tipo ||
+                    ""
+                ) === "encerramento_documento"
+        ) ||
+        null;
+
+    if (
+        dataIsoValidaDocumentoEmpresa(
+            dataEncerramentoClassificada?.iso
+        )
+    ) {
         return {
-            dataEmissao: dataEncerramentoClassificada.iso,
-            dataVencimento: calcularVencimentoDocumentoPorTipoOcr(tipoDocumento, dataEncerramentoClassificada.iso),
-            origem: "encerramento_ou_assinatura_ocr",
+            dataEmissao:
+                dataEncerramentoClassificada.iso,
+            dataVencimento: "",
+            origem: "encerramento_ou_assinatura_ocr_parcial",
         };
     }
 
@@ -183,29 +305,132 @@ async function executarVerificacaoDocumentoEmpresaSemBloquearFluxo({
             empresaId: documentoNormalizado.empresa_id || novoDoc.empresaId || null,
         });
 
-        const verificacao = await verificarDocumentoEmpresa({
+        // documentos_empresa_reanalise_datas_ocr_v1:
+        // A primeira leitura localiza as datas sem persistir uma conclusão prematura.
+        const verificacaoInicial = await verificarDocumentoEmpresa({
             supabase,
             documento: documentoNormalizado,
             empresa: empresaParaVerificacao,
             arquivo: novoDoc.arquivo || null,
             registrosExistentes: [],
             usuario: null,
-            salvarResultado: true,
+            salvarResultado: false,
         });
 
-        const statusValidacao = converterStatusVerificacaoParaStatusDocumento(verificacao?.statusVerificacao);
-        const datasOcr = obterDatasVigenciaOcrVerificacao(verificacao, documentoNormalizado);
-        const atualizacaoDocumento = {
-            status_validacao: statusValidacao,
+        const datasOcr =
+            obterDatasVigenciaOcrVerificacao(
+                verificacaoInicial,
+                documentoNormalizado
+            );
+
+        const tipoDocumento =
+            documentoNormalizado.tipo_documento ||
+            documentoNormalizado.tipoDocumento ||
+            novoDoc.tipo ||
+            "";
+
+        const dataEmissaoFinal =
+            datasOcr.dataEmissao ||
+            documentoNormalizado.data_emissao ||
+            documentoNormalizado.dataEmissao ||
+            "";
+
+        const dataVencimentoPersistida =
+            documentoNormalizado.data_vencimento ||
+            documentoNormalizado.dataVencimento ||
+            "";
+
+        // documentos_empresa_persistencia_validade_calculada_v1:
+        // A validade explícita localizada no documento sempre prevalece.
+        // Na ausência dela, LTCAT, PGR e PCMSO usam suas regras derivadas.
+        const dataVencimentoCalculada =
+            !datasOcr.dataVencimento &&
+            !dataVencimentoPersistida &&
+            dataEmissaoFinal
+                ? calcularVencimentoDocumentoPorTipoOcr(
+                      tipoDocumento,
+                      dataEmissaoFinal
+                  )
+                : "";
+
+        const dataVencimentoFinal =
+            datasOcr.dataVencimento ||
+            dataVencimentoPersistida ||
+            dataVencimentoCalculada ||
+            "";
+
+        const documentoParaVerificacao = {
+            ...documentoNormalizado,
+            data_emissao:
+                dataEmissaoFinal ||
+                null,
+            dataEmissao:
+                dataEmissaoFinal,
+            data_vencimento:
+                dataVencimentoFinal ||
+                null,
+            dataVencimento:
+                dataVencimentoFinal,
         };
 
-        // Se a leitura PDF.js localizar vigência confiável, atualiza as datas do cadastro
-        // para refletir o documento enviado. Mesmo quando houver divergência de empresa,
-        // o documento continua bloqueado pelo status_validacao, mas as datas exibidas
-        // passam a corresponder ao conteúdo real do arquivo.
-        if (datasOcr.dataEmissao && datasOcr.dataVencimento) {
-            atualizacaoDocumento.data_emissao = datasOcr.dataEmissao;
-            atualizacaoDocumento.data_vencimento = datasOcr.dataVencimento;
+        const verificacao =
+            await verificarDocumentoEmpresa({
+                supabase,
+                documento: documentoParaVerificacao,
+                empresa: empresaParaVerificacao,
+                arquivo: novoDoc.arquivo || null,
+                registrosExistentes: [],
+                usuario: null,
+                salvarResultado: true,
+            });
+
+        // documentos_empresa_datas_parciais_aguardando_confirmacao_v1:
+        // Nenhuma data fica pendente; uma única data aguarda confirmação.
+        const possuiDataEmissao =
+            Boolean(
+                dataEmissaoFinal
+            );
+
+        const possuiDataVencimento =
+            Boolean(
+                dataVencimentoFinal
+            );
+
+        const possuiDatasDocumentaisCompletas =
+            possuiDataEmissao &&
+            possuiDataVencimento;
+
+        const possuiAlgumaDataDocumental =
+            possuiDataEmissao ||
+            possuiDataVencimento;
+
+        const statusValidacaoCalculado =
+            converterStatusVerificacaoParaStatusDocumento(
+                verificacao?.statusVerificacao
+            );
+
+        const statusValidacao =
+            possuiDatasDocumentaisCompletas
+                ? statusValidacaoCalculado
+                : possuiAlgumaDataDocumental
+                    ? "Aguardando confirmação"
+                    : "Pendente de data";
+
+        const atualizacaoDocumento = {
+            status_validacao:
+                statusValidacao,
+        };
+
+        // Datas explícitas prevalecem. LTCAT, PGR e PCMSO podem receber
+        // vencimento derivado conforme a regra específica de cada tipo.
+        if (dataEmissaoFinal) {
+            atualizacaoDocumento.data_emissao =
+                dataEmissaoFinal;
+        }
+
+        if (dataVencimentoFinal) {
+            atualizacaoDocumento.data_vencimento =
+                dataVencimentoFinal;
         }
 
         const { data, error } = await supabase
@@ -456,6 +681,158 @@ export async function adicionarDocumentoEmpresaAppService({
         return true;
     } catch (error) {
         setErroBanco(error.message || "Erro ao salvar documento da empresa.");
+        return false;
+    }
+}
+
+export async function atualizarDatasDocumentoEmpresaAppService({
+    supabase,
+    documento,
+    dataEmissao,
+    dataVencimento,
+    observacao,
+    normalizarDocumentoEmpresa,
+    setErroBanco,
+    setDocumentosEmpresas,
+}) {
+    // documentos_empresa_atualizacao_datas_v1:
+    // Persiste somente datas confirmadas e atualiza imediatamente o estado local.
+    setErroBanco("");
+
+    try {
+        if (!documento?.id) {
+            throw new Error(
+                "Documento da empresa não localizado para atualização das datas."
+            );
+        }
+
+        const dataEmissaoFinal =
+            String(
+                dataEmissao ||
+                ""
+            ).trim();
+
+        const dataVencimentoFinal =
+            String(
+                dataVencimento ||
+                ""
+            ).trim();
+
+        // documentos_empresa_atualizacao_datas_observacao_v1:
+        // A observação só é alterada quando enviada explicitamente pela interface.
+        const observacaoFoiInformada =
+            observacao !==
+            undefined;
+
+        const observacaoFinal =
+            observacaoFoiInformada
+                ? String(
+                      observacao ||
+                      ""
+                  ).trim()
+                : String(
+                      documento.observacao ||
+                      ""
+                  ).trim();
+
+        if (
+            !dataIsoValidaDocumentoEmpresa(
+                dataEmissaoFinal
+            ) ||
+            !dataIsoValidaDocumentoEmpresa(
+                dataVencimentoFinal
+            )
+        ) {
+            throw new Error(
+                "Informe uma data de emissão e uma data de vencimento/revisão válidas."
+            );
+        }
+
+        if (
+            dataVencimentoFinal <
+            dataEmissaoFinal
+        ) {
+            throw new Error(
+                "A data de vencimento/revisão não pode ser anterior à data de emissão."
+            );
+        }
+
+        const statusAtual =
+            String(
+                documento.status_validacao ||
+                documento.statusValidacao ||
+                ""
+            ).trim();
+
+        const statusNormalizado =
+            statusAtual.toLowerCase();
+
+        const statusValidacao =
+            !statusAtual ||
+            [
+                "pendente de data",
+                "aguardando confirmação",
+            ].includes(
+                statusNormalizado
+            )
+                ? "Pendente de verificação"
+                : statusAtual;
+
+        const {
+            data,
+            error,
+        } = await supabase
+            .from(
+                "documentos_empresas"
+            )
+            .update({
+                data_emissao:
+                    dataEmissaoFinal,
+                data_vencimento:
+                    dataVencimentoFinal,
+                observacao:
+                    observacaoFinal,
+                status_validacao:
+                    statusValidacao,
+            })
+            .eq(
+                "id",
+                documento.id
+            )
+            .select(
+                "*"
+            )
+            .single();
+
+        if (error) {
+            throw new Error(
+                `Erro ao atualizar as datas do documento: ${error.message}`
+            );
+        }
+
+        const documentoAtualizado =
+            normalizarDocumentoEmpresa(
+                data
+            );
+
+        setDocumentosEmpresas(
+            (atual) =>
+                atual.map(
+                    (item) =>
+                        item.id ===
+                        documentoAtualizado.id
+                            ? documentoAtualizado
+                            : item
+                )
+        );
+
+        return documentoAtualizado;
+    } catch (error) {
+        setErroBanco(
+            error.message ||
+            "Erro ao atualizar as datas do documento."
+        );
+
         return false;
     }
 }

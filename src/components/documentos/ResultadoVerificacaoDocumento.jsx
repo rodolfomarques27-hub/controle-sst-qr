@@ -181,7 +181,7 @@ function obterEmpresaResumoPainel(texto = "") {
     return limitarTextoResumoPainel(
         obterPrimeiroGrupoPainel(
             texto,
-            /Empresa:\s*([\s\S]{3,180}?)(?:\s+CPF\s*\/\s*CNPJ|\s+CNPJ|\s+Endere[cÃ§]o|\s+Unidade:|\s+CPF\b|$)/i
+            /Empresa:\s*([\s\S]{3,180}?)(?:\s+CPF\s*\/\s*CNPJ|\s+CNPJ|\s+Endere[cç]o|\s+Unidade:|\s+CPF\b|$)/i
         ),
         120
     );
@@ -192,7 +192,7 @@ function obterCnpjResumoPainel(texto = "") {
 }
 
 function obterVigenciaResumoPainel(texto = "") {
-    const match = String(texto || "").match(/Vig[Ãªe]ncia:[^0-9]{0,180}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})\s+a\s+([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i);
+    const match = String(texto || "").match(/Vig[êe]ncia:[^0-9]{0,180}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})\s+a\s+([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i);
 
     if (!match) return "";
 
@@ -204,11 +204,11 @@ function obterDataAssinaturaResumoPainel(texto = "") {
 }
 
 function obterCodigoVerificacaoResumoPainel(texto = "") {
-    return obterPrimeiroGrupoPainel(texto, /C[oÃ³]digo de verifica[cÃ§][aÃ£]o de autenticidade:\s*([A-Z0-9._-]{6,80})/i);
+    return obterPrimeiroGrupoPainel(texto, /C[oó]digo de verifica[cç][aã]o de autenticidade:\s*([A-Z0-9._-]{6,80})/i);
 }
 
 function obterTotalFuncionariosResumoPainel(texto = "") {
-    return obterPrimeiroGrupoPainel(texto, /Total de funcion[aÃ¡]rios:\s*(\d{1,6})\b/i);
+    return obterPrimeiroGrupoPainel(texto, /Total de funcion[aá]rios:\s*(\d{1,6})\b/i);
 }
 
 function normalizarResumoTextualPainel(valor) {
@@ -230,10 +230,41 @@ function normalizarResumoTextualPainel(valor) {
     return [];
 }
 
-function montarResumoTextoOcrPainel({ texto = "", arquivoNome = "", leitura = null } = {}) {
-    const resumoSalvo = normalizarResumoTextualPainel(leitura?.resumo_textual || leitura?.resumoTextual);
+function normalizarCnpjPainel(valor = "") {
+    return String(valor || "").replace(/\D/g, "");
+}
 
-    if (resumoSalvo.length) return resumoSalvo;
+function formatarCnpjPainel(valor = "") {
+    const digitos = normalizarCnpjPainel(valor);
+    return digitos.length === 14
+        ? digitos.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5")
+        : String(valor || "");
+}
+
+function montarResumoTextoOcrPainel({ texto = "", arquivoNome = "", leitura = null, empresaCnpj = "" } = {}) {
+    const resumoSalvo = normalizarResumoTextualPainel(leitura?.resumo_textual || leitura?.resumoTextual);
+    const cnpjCadastro = normalizarCnpjPainel(empresaCnpj);
+    const campos = leitura?.campos_extraidos || leitura?.camposExtraidos || {};
+    const textoPesquisa = [
+        texto,
+        campos?.cnpj,
+        ...(Array.isArray(campos?.cnpjs) ? campos.cnpjs : []),
+    ].join(" ");
+    const cnpjCadastroEncontrado = Boolean(
+        cnpjCadastro && normalizarCnpjPainel(textoPesquisa).includes(cnpjCadastro)
+    );
+
+    if (resumoSalvo.length) {
+        if (!cnpjCadastroEncontrado) return resumoSalvo;
+
+        const resumoSemCnpjGenerico = resumoSalvo.filter((item) => !/\bCNPJ\b/i.test(String(item || "")));
+        resumoSemCnpjGenerico.splice(
+            Math.min(1, resumoSemCnpjGenerico.length),
+            0,
+            `CNPJ da empresa confirmado no documento: ${formatarCnpjPainel(cnpjCadastro)}.`
+        );
+        return resumoSemCnpjGenerico;
+    }
 
     const conteudo = normalizarTexto(texto).replace(/\s+/g, " ").trim();
     const resumo = [];
@@ -250,7 +281,7 @@ function montarResumoTextoOcrPainel({ texto = "", arquivoNome = "", leitura = nu
 
     if (tipoDocumento) resumo.push(`Documento identificado: ${tipoDocumento}.`);
     if (empresa) resumo.push(`Empresa identificada: ${empresa}${cnpj ? `, CNPJ ${cnpj}` : ""}.`);
-    else if (cnpj) resumo.push(`CNPJ identificado no documento: ${cnpj}.`);
+    else if (cnpj) resumo.push(`CNPJ encontrado no texto do documento: ${cnpj}. A compatibilidade deve ser confirmada com o cadastro da empresa.`);
     if (vigencia) resumo.push(`Vigência localizada no texto: ${vigencia}.`);
     if (dataAssinatura) resumo.push(`Data de assinatura digital localizada: ${dataAssinatura}.`);
     if (codigoVerificacao) resumo.push(`Código de verificação de autenticidade localizado: ${codigoVerificacao}.`);
@@ -416,8 +447,8 @@ function renderizarListaDatasClassificadas(titulo, datas = [], classe = "") {
                 {datas.map((data, indice) => (
                     <li key={`${titulo}-${data.iso || data.br}-${indice}`}>
                         <span className="font-semibold">{data.br}</span>
-                        {data.rotulo ? ` â€” ${corrigirTextoMojibake(data.rotulo)}` : ""}
-                        {data.motivo ? ` â€” ${corrigirTextoMojibake(data.motivo)}` : ""}
+                        {data.rotulo ? ` — ${corrigirTextoMojibake(data.rotulo)}` : ""}
+                        {data.motivo ? ` — ${corrigirTextoMojibake(data.motivo)}` : ""}
                     </li>
                 ))}
             </ul>
@@ -492,7 +523,7 @@ function formatarData(data) {
 
 function obterResumoCurto(resumo, statusTexto, riscoTexto, scoreRisco, conformidade) {
     if (resumo) return resumo;
-    return `Status ${statusTexto.toLowerCase()}, risco ${riscoTexto.toLowerCase()}, risco tÃ©cnico ${scoreRisco}/100 e conformidade ${conformidade}/100.`;
+    return `Status ${statusTexto.toLowerCase()}, risco ${riscoTexto.toLowerCase()}, risco técnico ${scoreRisco}/100 e conformidade ${conformidade}/100.`;
 }
 
 function PainelAnaliseManual({
@@ -518,9 +549,9 @@ function PainelAnaliseManual({
             </p>
             <ul className="mt-3 grid gap-2 text-xs text-orange-900 sm:grid-cols-2">
                 <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">1. Abrir o PDF original e conferir empresa/CNPJ.</li>
-                <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">2. Conferir emissão, vigência, revisÃ£o ou assinatura tÃ©cnica.</li>
+                <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">2. Conferir emissão, vigência, revisão ou assinatura técnica.</li>
                 <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">3. Validar assinatura digital, QR Code ou código de autenticidade, quando houver.</li>
-                <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">4. Registrar a decisão no campo de observaÃ§Ã£o antes de substituir/aprovar o documento.</li>
+                <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">4. Registrar a decisão no campo de observação antes de substituir/aprovar o documento.</li>
             </ul>
 
             {onAprovarManual && (
@@ -529,7 +560,7 @@ function PainelAnaliseManual({
                         <div className="min-w-0 text-xs leading-relaxed text-orange-950">
                             <p className="font-bold text-orange-800">Aprovação manual definitiva</p>
                             <p className="mt-1">
-                                ApÃ³s a conferência humana, esta aÃ§Ã£o altera o documento para aprovado, com conformidade 100/100 e risco tÃ©cnico 0/100.
+                                Após a conferência humana, esta ação altera o documento para aprovado, com conformidade 100/100 e risco técnico 0/100.
                             </p>
                         </div>
                         <div className="flex shrink-0 flex-wrap gap-2 text-[11px] font-bold">
@@ -620,11 +651,11 @@ function DetalhesVerificacao({
                             <strong className="block text-blue-700">Busca ampliada no PDF</strong>
                             {dados.buscaAmpliadaOcr.encontrouDataPrincipal ? (
                                 <span>
-                                    Foram analisadas {dados.buscaAmpliadaOcr.paginasLidas} página(s) de {dados.buscaAmpliadaOcr.totalPaginas}. Data documental provável localizada na pÃ¡gina {dados.buscaAmpliadaOcr.paginaDataPrincipal}.
+                                    Foram analisadas {dados.buscaAmpliadaOcr.paginasLidas} página(s) de {dados.buscaAmpliadaOcr.totalPaginas}. Data documental provável localizada na página {dados.buscaAmpliadaOcr.paginaDataPrincipal}.
                                 </span>
                             ) : (
                                 <span>
-                                    Foram analisadas {dados.buscaAmpliadaOcr.paginasLidas} página(s) de {dados.buscaAmpliadaOcr.totalPaginas}, sem localizar vigência, emissão, revisÃ£o ou assinatura confiÃ¡vel.
+                                    Foram analisadas {dados.buscaAmpliadaOcr.paginasLidas} página(s) de {dados.buscaAmpliadaOcr.totalPaginas}, sem localizar vigência, emissão, revisão ou assinatura confiável.
                                 </span>
                             )}
                         </div>
@@ -747,6 +778,8 @@ function DetalhesVerificacao({
 
 export default function ResultadoVerificacaoDocumento({
     verificacao = null,
+    empresaCnpj = "",
+    dataVencimentoDocumento = "",
     titulo = "Verificação documental",
     compacto = false,
     mostrarDetalhesInicial = false,
@@ -773,12 +806,12 @@ export default function ResultadoVerificacaoDocumento({
     }
 
     const dados = useMemo(() => {
-        const status = verificacao?.status_verificacao || verificacao?.statusVerificacao || "pendente";
-        const nivelRisco = verificacao?.nivel_risco || verificacao?.nivelRisco || "nao_avaliado";
-        const score = Number(verificacao?.score_risco ?? verificacao?.scoreRisco ?? 0);
+        let status = verificacao?.status_verificacao || verificacao?.statusVerificacao || "pendente";
+        let nivelRisco = verificacao?.nivel_risco || verificacao?.nivelRisco || "nao_avaliado";
+        let score = Number(verificacao?.score_risco ?? verificacao?.scoreRisco ?? 0);
         const indicios = normalizarLista(verificacao?.indicios);
         const recomendacoes = normalizarLista(verificacao?.recomendacoes);
-        const resumo = normalizarTexto(verificacao?.resumo);
+        let resumo = normalizarTexto(verificacao?.resumo);
         const arquivoNome = normalizarTexto(verificacao?.arquivo_nome || verificacao?.arquivoNome || verificacao?.nome_do_arquivo);
         const tipoDocumento = normalizarTexto(verificacao?.tipo_documento || verificacao?.tipoDocumento || verificacao?.nome_documento || verificacao?.nomeDocumento);
         const createdAt = verificacao?.created_at || verificacao?.createdAt || "";
@@ -790,11 +823,38 @@ export default function ResultadoVerificacaoDocumento({
             texto: ocrTexto,
             arquivoNome,
             leitura: leituraDocumentalLocal,
+            empresaCnpj,
         });
         const datasClassificadasOcr = obterDatasClassificadasPainel(leituraDocumentalLocal);
         const datasRelevantesOcr = obterDatasRelevantesPainel(datasClassificadasOcr);
         const datasLidasOcr = obterDatasLidasPainel(leituraDocumentalLocal);
         const buscaAmpliadaOcr = obterBuscaAmpliadaPainel(leituraDocumentalLocal);
+
+        const hoje = new Date();
+        const hojeIso = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
+        const vencimentoIso = String(dataVencimentoDocumento || "").slice(0, 10);
+        const documentoVencido = /^\d{4}-\d{2}-\d{2}$/.test(vencimentoIso) && vencimentoIso < hojeIso;
+
+        // A validade cadastrada é autoritativa na interface, mesmo quando uma
+        // verificação antiga ainda não foi recalculada após a edição das datas.
+        if (documentoVencido) {
+            status = "bloqueado";
+            nivelRisco = "critico";
+            score = 100;
+            resumo = "Indícios identificados: Documento vencido. Status: bloqueado. Risco técnico: 100/100. Conformidade: 0/100. Risco: crítico.";
+
+            if (!indicios.some((indicio) => String(indicio?.codigo || "") === "documento_vencido")) {
+                indicios.unshift({
+                    codigo: "documento_vencido",
+                    tipo: "data",
+                    titulo: "Documento vencido",
+                    detalhe: "A data de vencimento/revisão está anterior à data atual.",
+                    peso: 100,
+                    bloqueia: true,
+                    recomendacao: "Solicitar documento atualizado antes da liberação.",
+                });
+            }
+        }
 
         const scoreRisco = Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : 0;
         const conformidade = Math.max(0, Math.min(100, 100 - scoreRisco));
@@ -820,7 +880,7 @@ export default function ResultadoVerificacaoDocumento({
             datasLidasOcr,
             buscaAmpliadaOcr,
         };
-    }, [verificacao]);
+    }, [verificacao, empresaCnpj, dataVencimentoDocumento]);
 
     const statusConfig = formatarStatus(dados.status);
     const StatusIcon = statusConfig.icone || ShieldCheck;

@@ -40,6 +40,7 @@ export function analisarTamanhoArquivoUpload(arquivo, tipo = "documentoSimples")
     }
 
     const perfil = obterPerfilUpload(tipo);
+    const limiteForteMb = Number(perfil.limiteForteMb || UPLOAD_LIMITE_FORTE_MB);
     const tamanho = Number(arquivo.size || 0);
     const imagem = arquivoEhImagem(arquivo);
     const acimaForte = tamanho > perfil.limiteForteBytes;
@@ -51,7 +52,7 @@ export function analisarTamanhoArquivoUpload(arquivo, tipo = "documentoSimples")
             return {
                 ok: true,
                 nivel: "otimizavel",
-                texto: `${perfil.rotulo}: ${formatarBytes(tamanho)}. Acima de ${UPLOAD_LIMITE_FORTE_MB} MB, mas será tentada redução automática antes do upload. ${mensagemGrande}`,
+                texto: `${perfil.rotulo}: ${formatarBytes(tamanho)}. Acima de ${limiteForteMb} MB, mas será tentada redução automática antes do upload. ${mensagemGrande}`,
                 classe: "bg-blue-50 text-blue-700 ring-blue-200",
             };
         }
@@ -59,7 +60,7 @@ export function analisarTamanhoArquivoUpload(arquivo, tipo = "documentoSimples")
         return {
             ok: !UPLOAD_BLOQUEAR_ACIMA_5MB,
             nivel: UPLOAD_BLOQUEAR_ACIMA_5MB ? "bloqueado" : "critico",
-            texto: `${perfil.rotulo}: ${formatarBytes(tamanho)}. Acima de ${UPLOAD_LIMITE_FORTE_MB} MB. ${mensagemGrande}`,
+            texto: `${perfil.rotulo}: ${formatarBytes(tamanho)}. Acima de ${limiteForteMb} MB. ${mensagemGrande}`,
             classe: "bg-red-50 text-red-700 ring-red-200",
         };
     }
