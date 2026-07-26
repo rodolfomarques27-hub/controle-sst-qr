@@ -24,6 +24,7 @@ import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import { Header, Card } from "../commonComponents";
 import { ArquivosStorageConfiguracoes } from "./ArquivosStorageConfiguracoes";
 import { EmergenciaQrPinCard } from "./EmergenciaQrPinCard";
+import { ModelosEmailSstConfiguracoes } from "./ModelosEmailSstConfiguracoes";
 import {
     carregarConfiguracaoEventosAuditoriaSistemaSupabase,
     configuracaoPadraoEventosAuditoriaSistema,
@@ -187,6 +188,7 @@ const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
     "config-limites-carregamento",
     "config-auditoria-publica",
     "config-emergencia-qr",
+    "config-modelos-email-sst",
     "config-arquivos-storage",
     "config-obras",
     "config-relatorios-evidencias",
@@ -197,7 +199,7 @@ const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
     "config-supabase-geral",
 ];
 
-const VERSAO_LAYOUT_CONFIGURACOES_SISTEMA = "roteiro15b-configuracoes-sem-senha-secundaria";
+const VERSAO_LAYOUT_CONFIGURACOES_SISTEMA = "roteiro16-modelos-email-sst";
 const CHAVE_LAYOUT_CONFIGURACOES_SISTEMA = "configuracoesSistemaVersaoLayout";
 const CHAVE_BLOCOS_VISIVEIS_CONFIGURACOES = "configuracoesSistemaBlocosVisiveis";
 const CHAVE_BLOCOS_RECOLHIDOS_CONFIGURACOES = "configuracoesSistemaBlocosRecolhidos";
@@ -335,6 +337,7 @@ const BLOCOS_CONFIGURACOES_ABERTOS_PADRAO = new Set([
 const CHAVES_BLOCOS_CONFIGURACOES_CRITICOS = new Set([
     "config-auditoria-publica",
     "config-emergencia-qr",
+    "config-modelos-email-sst",
     "config-arquivos-storage",
     "config-login-visual",
     "config-eventos-auditoria",
@@ -362,6 +365,8 @@ const BLOCOS_CONFIGURACOES_TAMANHOS_PADRAO = CHAVES_BLOCOS_CONFIGURACOES_PADRAO.
     acc[chave] = "padrao";
     return acc;
 }, {});
+
+BLOCOS_CONFIGURACOES_TAMANHOS_PADRAO["config-modelos-email-sst"] = "destaque";
 
 const BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO = CHAVES_BLOCOS_CONFIGURACOES_PADRAO.reduce((acc, chave) => {
     acc[chave] = !BLOCOS_CONFIGURACOES_ABERTOS_PADRAO.has(chave);
@@ -2094,6 +2099,7 @@ export function ConfiguracoesSistema({
         { chave: "config-limites-carregamento", titulo: "Limites e armazenamento", descricao: "Registros por carga e limite administrativo do Storage.", icon: SlidersHorizontal },
         { chave: "config-auditoria-publica", titulo: "Auditoria pública, tokens e QR", descricao: "Token ativo, QR colaborador e QR de campo.", icon: KeyRound },
         { chave: "config-emergencia-qr", titulo: "Senha/PIN de emergência QR", descricao: "Proteção do contato de emergência por empresa.", icon: KeyRound },
+        { chave: "config-modelos-email-sst", titulo: "Modelos de e-mail SST", descricao: "Assunto, conteúdo, remetente, variáveis e ativação dos alertas.", icon: Settings },
         { chave: "config-arquivos-storage", titulo: "Arquivos salvos no Storage", descricao: "Capacidade, vínculos, filtros e limpeza protegida.", icon: Database },
         { chave: "config-obras", titulo: "Obras", descricao: "Cadastro mestre de obras e vinculos com empresas.", icon: Database },
         { chave: "config-relatorios-evidencias", titulo: "Relatórios e evidências", descricao: "Resumo copiável e TXT das configurações atuais.", icon: FileText },
@@ -3454,6 +3460,47 @@ export function ConfiguracoesSistema({
             );
 
 
+
+        case "config-modelos-email-sst":
+            if (!blocoConfiguracaoVisivel("config-modelos-email-sst")) return null;
+
+            if (blocoConfiguracaoRecolhido("config-modelos-email-sst")) {
+                return renderBlocoConfiguracaoComControle(
+                    "config-modelos-email-sst",
+                    "Modelos de e-mail SST",
+                    "Assunto, conteúdo, remetente, variáveis e ativação dos alertas.",
+                    null
+                );
+            }
+
+            return (
+                <div
+                    id="config-modelos-email-sst"
+                    className="h-full scroll-mt-24"
+                >
+                    <ModelosEmailSstConfiguracoes
+                        supabase={supabase}
+                        podeAlterar={
+                            podeAlterarConfiguracoesCriticasSistema
+                        }
+                        mensagemBloqueio={
+                            mensagemBloqueioConfiguracoesCriticasSistema
+                        }
+                        onRegistrarAuditoria={
+                            registrarLogConfiguracoesSistema
+                        }
+                        controleCard={botaoRecolherBlocoConfiguracao(
+                            "config-modelos-email-sst",
+                            "shrink-0 whitespace-nowrap"
+                        )}
+                        onRecolherCard={() => {
+                            alternarRecolhidoBlocoConfiguracao(
+                                "config-modelos-email-sst"
+                            );
+                        }}
+                    />
+                </div>
+            );
 
         case "config-arquivos-storage":
             if (!blocoConfiguracaoVisivel("config-arquivos-storage")) return null;

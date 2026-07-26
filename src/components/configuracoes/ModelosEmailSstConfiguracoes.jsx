@@ -112,6 +112,8 @@ export function ModelosEmailSstConfiguracoes({
     mensagemBloqueio =
         "Sem permissão para alterar configurações críticas do sistema.",
     onRegistrarAuditoria = null,
+    controleCard = null,
+    onRecolherCard = null,
 }) {
     const [modelos, setModelos] =
         useState([]);
@@ -745,14 +747,19 @@ export function ModelosEmailSstConfiguracoes({
     return (
         <Card className="overflow-hidden">
             <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                    <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                    <button
+                        type="button"
+                        onClick={onRecolherCard}
+                        aria-label="Recolher Modelos de e-mail SST"
+                        className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-transparent p-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                    >
                         <Mail className="h-5 w-5 text-slate-500" />
 
-                        <h2 className="text-lg font-black text-slate-950">
+                        <span className="text-lg font-black text-slate-950">
                             Modelos de e-mail SST
-                        </h2>
-                    </div>
+                        </span>
+                    </button>
 
                     <p className="mt-1 max-w-3xl text-sm leading-relaxed text-slate-500">
                         Edite assunto, conteúdo, remetente e estado dos alertas enviados pelo SafeScan.
@@ -799,6 +806,8 @@ export function ModelosEmailSstConfiguracoes({
 
                         Atualizar
                     </button>
+
+                    {controleCard}
                 </div>
             </div>
 
