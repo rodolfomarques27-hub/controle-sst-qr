@@ -34,6 +34,7 @@ import {
     atualizarDataArquivoLote,
 } from "../../services/treinamentosService";
 import { FUNCAO_EMAIL_ALERTA_TST } from "../../constants/sistemaConstants";
+import { TIPOS_MODELO_EMAIL_SST } from "../../constants/modelosEmailSstConstants";
 import { treinamentosBase } from "../../constants/treinamentosConstants";
 import treinamentosHeroBackground from "../../assets/dashboard-hero-sst.png";
 import {
@@ -1464,6 +1465,7 @@ export function Treinamentos({
             const { data, error } = await supabase.functions.invoke(FUNCAO_EMAIL_ALERTA_TST, {
                 body: {
                     para: destinatario,
+                    tipoModelo: TIPOS_MODELO_EMAIL_SST.TREINAMENTOS,
                     assunto,
                     empresa: grupo.empresa,
                     tstResponsavel: grupo.tstResponsavel,

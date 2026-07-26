@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { CheckCircle2, Eye, EyeOff, Lock, Mail, MessageCircle, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { FUNCAO_EMAIL_ALERTA_TST, statusDesvioAuditoriaCampo } from "../../constants/sstConstants";
+import { TIPOS_MODELO_EMAIL_SST } from "../../constants/modelosEmailSstConstants";
 import { FotoAuditoriaPreview } from "../commonComponents";
 import { PreviaNotificacaoAuditoriaCampo } from "./PreviaNotificacaoAuditoriaCampo";
 import {
@@ -73,6 +74,7 @@ export function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualiza
             const { data, error } = await supabase.functions.invoke(FUNCAO_EMAIL_ALERTA_TST, {
                 body: {
                     para: emailResponsavelAuditoria,
+                    tipoModelo: TIPOS_MODELO_EMAIL_SST.AUDITORIA,
                     assunto: notificacao.titulo || `Auditoria ${auditoria.numeroAuditoria || "de campo"}`,
                     empresa: auditoria.empresaNome || auditoria.empresaResponsavel || "Empresa não informada",
                     tstResponsavel: auditoria.responsavelTratativa || auditoria.auditorNome || "Responsável pela tratativa",

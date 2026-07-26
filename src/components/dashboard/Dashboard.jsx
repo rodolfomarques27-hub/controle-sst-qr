@@ -51,6 +51,7 @@ import {
     FUNCAO_EMAIL_ALERTA_TST,
     LIMITE_STORAGE_MB,
 } from "../../constants/sistemaConstants";
+import { TIPOS_MODELO_EMAIL_SST } from "../../constants/modelosEmailSstConstants";
 import { baixarRelatorioDashboardSstPDF } from "../../services/exportacaoService";
 import {
     painelPadraoDashboard,
@@ -836,6 +837,7 @@ export function Dashboard({
 
         return {
             para,
+            tipoModelo: TIPOS_MODELO_EMAIL_SST.DOCUMENTO_COLABORADOR,
             assunto: `Aviso SST - ${statusEmail} - ${item.colaborador?.nome || "Colaborador"}`,
             sistema: "SafeScan Brasil",
             remetenteNome: "SafeScan Brasil - Controle de SST",
@@ -993,6 +995,7 @@ export function Dashboard({
 
         return {
             para,
+            tipoModelo: TIPOS_MODELO_EMAIL_SST.DOCUMENTO_EMPRESA,
             assunto:
                 `Aviso SST - A VENCER - ${nomeEmpresa} - ${nomeDocumento}`,
             sistema: "SafeScan Brasil",
