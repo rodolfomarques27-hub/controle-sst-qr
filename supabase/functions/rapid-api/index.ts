@@ -2,6 +2,7 @@
 // Função usada pelo App para envio automático de alertas SST por Gmail.
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import nodemailer from "npm:nodemailer";
 
 const corsHeaders = {
@@ -23,6 +24,31 @@ const VARIAVEIS_MODELO_EMAIL = new Set([
   "url_sistema",
   "data_envio",
 ]);
+
+const TIPOS_MODELO_EMAIL_SST = new Set([
+  "alerta_documento_colaborador",
+  "alerta_documento_empresa",
+  "alerta_documentos_lote",
+  "alerta_treinamentos",
+  "alerta_auditoria",
+]);
+
+class ErroHttp extends Error {
+  status: number;
+  publico: boolean;
+
+  constructor(
+    status: number,
+    mensagem: string,
+    publico = status < 500,
+  ) {
+    super(mensagem);
+
+    this.name = "ErroHttp";
+    this.status = status;
+    this.publico = publico;
+  }
+}
 
 function textoSeguro(valor: unknown, limite = 1000) {
   if (
@@ -87,12 +113,14 @@ function obterVariaveisDesconhecidas(conteudo: string) {
 function validarVariaveisModelo(
   conteudo: string,
   campo: string,
+  status: number,
 ) {
   const desconhecidas =
     obterVariaveisDesconhecidas(conteudo);
 
   if (desconhecidas.length > 0) {
-    throw new Error(
+    throw new ErroHttp(
+      status,
       `O campo ${campo} contém variáveis não permitidas: ${desconhecidas
         .map((item) => `{{${item}}}`)
         .join(", ")}.`,
@@ -149,8 +177,17 @@ serve(async (req) => {
   }
 
   try {
-    const dadosRecebidos =
-      obterObjetoSeguro(await req.json());
+    let dadosRecebidos: Record<string, unknown>;
+
+    try {
+      dadosRecebidos =
+        obterObjetoSeguro(await req.json());
+    } catch {
+      throw new ErroHttp(
+        400,
+        "Corpo JSON inválido.",
+      );
+    }
 
     const para =
       dadosRecebidos.para;
@@ -167,8 +204,16 @@ serve(async (req) => {
     const itens =
       dadosRecebidos.itens;
 
-    const modelo =
-      dadosRecebidos.modelo;
+    if (
+      Object.prototype.hasOwnProperty.call(
+        dadosRecebidos,
+        "modelo",
+      )
+    ) {
+      throw new ErroHttp(400,
+        "O campo modelo não é aceito. Informe apenas tipoModelo.",
+      );
+    }
 
     const tipoModelo =
       dadosRecebidos.tipoModelo;
@@ -187,7 +232,7 @@ serve(async (req) => {
         .join(",");
 
     if (!destinatario) {
-      throw new Error(
+      throw new ErroHttp(400,
         "E-mail do destinatário/TST não informado.",
       );
     }
@@ -196,7 +241,7 @@ serve(async (req) => {
       !Array.isArray(itens) ||
       itens.length === 0
     ) {
-      throw new Error(
+      throw new ErroHttp(400,
         "Nenhum documento/treinamento foi informado para o alerta.",
       );
     }
@@ -207,14 +252,41 @@ serve(async (req) => {
     const gmailAppPassword =
       Deno.env.get("GMAIL_APP_PASSWORD");
 
+    const supabaseUrl =
+      Deno.env.get("SUPABASE_URL");
+
+    const supabaseServiceRoleKey =
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
     if (
       !gmailUser ||
       !gmailAppPassword
     ) {
-      throw new Error(
+      throw new ErroHttp(500,
         "Credenciais GMAIL_USER e GMAIL_APP_PASSWORD não configuradas no Supabase.",
       );
     }
+
+    if (
+      !supabaseUrl ||
+      !supabaseServiceRoleKey
+    ) {
+      throw new ErroHttp(500,
+        "Credenciais SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY não configuradas.",
+      );
+    }
+
+    const supabaseAdmin =
+      createClient(
+        supabaseUrl,
+        supabaseServiceRoleKey,
+        {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+          },
+        },
+      );
 
     const transporter =
       nodemailer.createTransport({
@@ -318,8 +390,49 @@ serve(async (req) => {
       "https://www.safescanbrasil.com.br";
 
     const tipoModeloTratado =
-      textoSeguro(tipoModelo, 100) ||
-      "padrao";
+      textoSeguro(tipoModelo, 100)
+        .toLowerCase();
+
+    if (
+      !TIPOS_MODELO_EMAIL_SST.has(
+        tipoModeloTratado,
+      )
+    ) {
+      throw new ErroHttp(400,
+        "tipoModelo ausente ou inválido para o envio SST.",
+      );
+    }
+
+    const {
+      data: modeloPersistido,
+      error: erroModeloPersistido,
+    } =
+      await supabaseAdmin.rpc(
+        "obter_modelo_email_sst_para_envio",
+        {
+          p_tipo: tipoModeloTratado,
+        },
+      );
+
+    if (erroModeloPersistido) {
+      console.error(
+        "Falha ao consultar modelo privado de e-mail SST:",
+        erroModeloPersistido,
+      );
+
+      throw new ErroHttp(500,
+        "Não foi possível carregar o modelo privado de e-mail SST.",
+      );
+    }
+
+    const modeloAtivo =
+      modeloPersistido !== null &&
+      modeloPersistido !== undefined;
+
+    const modeloPersistidoSeguro =
+      obterObjetoSeguro(
+        modeloPersistido,
+      );
 
     const saudacao =
       `Olá${tstResponsavelTratado
@@ -352,33 +465,74 @@ serve(async (req) => {
       "Sistema de Controle SST QR",
     ].join("\n");
 
-    const modeloRecebido =
-      obterObjetoSeguro(modelo);
+    const tipoModeloPersistido =
+      textoSeguro(
+        modeloPersistidoSeguro.tipo,
+        100,
+      ).toLowerCase();
 
     const assuntoModelo =
       textoCabecalho(
-        modeloRecebido.assunto,
+        modeloPersistidoSeguro.assunto,
         220,
       );
 
     const corpoModelo =
       textoSeguro(
-        modeloRecebido.corpo,
+        modeloPersistidoSeguro.corpo,
         12000,
       );
 
     const remetenteModelo =
       textoCabecalho(
-        modeloRecebido.remetenteNome,
+        modeloPersistidoSeguro.remetenteNome,
         120,
       );
 
+    const versaoModelo =
+      Number(
+        modeloPersistidoSeguro.versao,
+      );
+
     if (
-      corpoModelo &&
+      modeloAtivo &&
+      tipoModeloPersistido !== tipoModeloTratado
+    ) {
+      throw new ErroHttp(500,
+        "A RPC retornou um modelo com tipo incompatível.",
+      );
+    }
+
+    if (
+      modeloAtivo &&
+      (
+        !assuntoModelo ||
+        !corpoModelo
+      )
+    ) {
+      throw new ErroHttp(500,
+        "O modelo ativo possui assunto ou corpo inválido.",
+      );
+    }
+
+    if (
+      modeloAtivo &&
+      (
+        !Number.isInteger(versaoModelo) ||
+        versaoModelo < 1
+      )
+    ) {
+      throw new ErroHttp(500,
+        "O modelo ativo possui versão inválida.",
+      );
+    }
+
+    if (
+      modeloAtivo &&
       !/\{\{\s*itens\s*\}\}/i.test(corpoModelo)
     ) {
-      throw new Error(
-        "O modelo personalizado deve conter a variável {{itens}}.",
+      throw new ErroHttp(500,
+        "O modelo ativo deve conter a variável {{itens}}.",
       );
     }
 
@@ -408,11 +562,15 @@ serve(async (req) => {
     validarVariaveisModelo(
       assuntoBase,
       "assunto",
+      modeloAtivo
+        ? 500
+        : 400,
     );
 
     validarVariaveisModelo(
       corpoBase,
       "corpo",
+      500,
     );
 
     const assuntoFinal =
@@ -431,13 +589,13 @@ serve(async (req) => {
       ).trim();
 
     if (!assuntoFinal) {
-      throw new Error(
+      throw new ErroHttp(500,
         "O assunto final do e-mail ficou vazio.",
       );
     }
 
     if (!texto) {
-      throw new Error(
+      throw new ErroHttp(500,
         "O corpo final do e-mail ficou vazio.",
       );
     }
@@ -464,11 +622,11 @@ serve(async (req) => {
         ok: true,
         mensagem: "E-mail enviado com sucesso.",
         tipoModelo: tipoModeloTratado,
-        modeloPersonalizado: Boolean(
-          assuntoModelo ||
-          corpoModelo ||
-          remetenteModelo,
-        ),
+        modeloPersonalizado: modeloAtivo,
+        versaoModelo:
+          modeloAtivo
+            ? versaoModelo
+            : null,
       }),
       {
         headers: {
@@ -478,16 +636,31 @@ serve(async (req) => {
       },
     );
   } catch (error) {
+    const erroHttp =
+      error instanceof ErroHttp
+        ? error
+        : new ErroHttp(
+          500,
+          "Falha interna ao enviar o e-mail SST.",
+        );
+
+    if (erroHttp.status >= 500) {
+      console.error(
+        "Falha interna no envio de e-mail SST:",
+        error,
+      );
+    }
+
     return new Response(
       JSON.stringify({
         ok: false,
         erro:
-          error instanceof Error
-            ? error.message
-            : String(error),
+          erroHttp.publico
+            ? erroHttp.message
+            : "Não foi possível concluir o envio do e-mail SST.",
       }),
       {
-        status: 400,
+        status: erroHttp.status,
         headers: {
           ...corsHeaders,
           "Content-Type": "application/json",
