@@ -32,6 +32,9 @@ import {
     restaurarModeloEmailSstService,
     salvarModeloEmailSstService,
 } from "../../services/modelosEmailSstService";
+import {
+    AssinaturaModeloEmailSstConfiguracoes,
+} from "./AssinaturaModeloEmailSstConfiguracoes";
 import { classNames } from "../../utils/sstUtils";
 
 const FORMULARIO_MODELO_EMAIL_VAZIO = Object.freeze({
@@ -1139,6 +1142,25 @@ export function ModelosEmailSstConfiguracoes({
                                             className="h-5 w-5 rounded border-slate-300 text-slate-950 focus:ring-slate-400 disabled:cursor-not-allowed"
                                         />
                                     </label>
+
+                                    <AssinaturaModeloEmailSstConfiguracoes
+                                        supabase={supabase}
+                                        tipo={
+                                            modeloSelecionado.tipo
+                                        }
+                                        modelo={
+                                            modeloSelecionado
+                                        }
+                                        podeAlterar={
+                                            podeAlterar
+                                        }
+                                        mensagemBloqueio={
+                                            mensagemBloqueio
+                                        }
+                                        onRegistrarAuditoria={
+                                            registrarAuditoriaSegura
+                                        }
+                                    />
 
                                     <div className="flex flex-col gap-3 sm:flex-row">
                                         <button

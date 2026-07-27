@@ -3,6 +3,7 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { Buffer } from "node:buffer";
 import nodemailer from "npm:nodemailer";
 
 const corsHeaders = {
@@ -32,6 +33,49 @@ const TIPOS_MODELO_EMAIL_SST = new Set([
   "alerta_treinamentos",
   "alerta_auditoria",
 ]);
+
+type TipoMimeAssinaturaEmailSst =
+  | "image/png"
+  | "image/jpeg";
+
+type AssinaturaEmailSst = {
+  filename: string;
+  content: Buffer;
+  contentType: TipoMimeAssinaturaEmailSst;
+  contentDisposition: "inline";
+  cid: string;
+};
+
+const BUCKET_ASSINATURAS_EMAIL_SST =
+  "assinaturas-email-sst";
+
+const TAMANHO_MAXIMO_ASSINATURA_EMAIL_SST =
+  2 * 1024 * 1024;
+
+const TIPOS_MIME_ASSINATURA_EMAIL_SST =
+  new Set<TipoMimeAssinaturaEmailSst>([
+    "image/png",
+    "image/jpeg",
+  ]);
+
+const CAMINHOS_ASSINATURA_EMAIL_SST:
+  Readonly<Record<string, string>> =
+    Object.freeze({
+      alerta_documento_colaborador:
+        "modelos/alerta_documento_colaborador/assinatura",
+
+      alerta_documento_empresa:
+        "modelos/alerta_documento_empresa/assinatura",
+
+      alerta_documentos_lote:
+        "modelos/alerta_documentos_lote/assinatura",
+
+      alerta_treinamentos:
+        "modelos/alerta_treinamentos/assinatura",
+
+      alerta_auditoria:
+        "modelos/alerta_auditoria/assinatura",
+    });
 
 class ErroHttp extends Error {
   status: number;
@@ -80,6 +124,270 @@ function obterObjetoSeguro(valor: unknown): Record<string, unknown> {
   }
 
   return valor as Record<string, unknown>;
+}
+
+function obterMensagemErroStorage(error: unknown) {
+  const registro =
+    obterObjetoSeguro(error);
+
+  return textoSeguro(
+    registro.message ??
+      registro.error,
+    500,
+  ) || "erro não identificado";
+}
+
+function erroStorageIndicaArquivoAusente(
+  error: unknown,
+) {
+  const registro =
+    obterObjetoSeguro(error);
+
+  const status =
+    Number(
+      registro.statusCode ??
+        registro.status ??
+        0,
+    );
+
+  const codigo =
+    textoSeguro(
+      registro.code,
+      100,
+    ).toLowerCase();
+
+  const mensagem =
+    obterMensagemErroStorage(
+      error,
+    ).toLowerCase();
+
+  return (
+    status === 404 ||
+    codigo === "404" ||
+    codigo === "not_found" ||
+    codigo === "object_not_found" ||
+    mensagem.includes("not found") ||
+    mensagem.includes("object not found")
+  );
+}
+
+function detectarTipoMimeAssinaturaEmailSst(
+  bytes: Uint8Array,
+): TipoMimeAssinaturaEmailSst | "" {
+  const assinaturaPng =
+    bytes.length >= 8 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47 &&
+    bytes[4] === 0x0d &&
+    bytes[5] === 0x0a &&
+    bytes[6] === 0x1a &&
+    bytes[7] === 0x0a;
+
+  if (assinaturaPng) {
+    return "image/png";
+  }
+
+  const assinaturaJpeg =
+    bytes.length >= 3 &&
+    bytes[0] === 0xff &&
+    bytes[1] === 0xd8 &&
+    bytes[2] === 0xff;
+
+  if (assinaturaJpeg) {
+    return "image/jpeg";
+  }
+
+  return "";
+}
+
+type ClienteStorageAssinaturaEmailSst = {
+  storage: {
+    from(bucket: string): {
+      download(path: string): Promise<{
+        data: Blob | null;
+        error: unknown;
+      }>;
+    };
+  };
+};
+
+async function carregarAssinaturaEmailSst(
+  supabaseAdmin: ClienteStorageAssinaturaEmailSst,
+  tipoModelo: string,
+): Promise<AssinaturaEmailSst | null> {
+  const caminho =
+    CAMINHOS_ASSINATURA_EMAIL_SST[
+      tipoModelo
+    ];
+
+  if (!caminho) {
+    return null;
+  }
+
+  try {
+    const {
+      data,
+      error,
+    } =
+      await supabaseAdmin.storage
+        .from(
+          BUCKET_ASSINATURAS_EMAIL_SST,
+        )
+        .download(caminho);
+
+    if (error) {
+      if (
+        !erroStorageIndicaArquivoAusente(
+          error,
+        )
+      ) {
+        console.warn(
+          "Assinatura privada não aplicada ao e-mail SST:",
+          {
+            tipoModelo,
+            motivo:
+              obterMensagemErroStorage(
+                error,
+              ),
+          },
+        );
+      }
+
+      return null;
+    }
+
+    if (!data) {
+      return null;
+    }
+
+    const tipoMimeDeclarado =
+      textoSeguro(
+        data.type,
+        100,
+      ).toLowerCase();
+
+    const tamanhoBytes =
+      Number(data.size);
+
+    if (
+      !TIPOS_MIME_ASSINATURA_EMAIL_SST.has(
+        tipoMimeDeclarado as
+          TipoMimeAssinaturaEmailSst,
+      )
+    ) {
+      console.warn(
+        "Assinatura privada ignorada por MIME inválido:",
+        {
+          tipoModelo,
+          tipoMime:
+            tipoMimeDeclarado ||
+            "não informado",
+        },
+      );
+
+      return null;
+    }
+
+    if (
+      !Number.isFinite(tamanhoBytes) ||
+      tamanhoBytes < 1 ||
+      tamanhoBytes >
+        TAMANHO_MAXIMO_ASSINATURA_EMAIL_SST
+    ) {
+      console.warn(
+        "Assinatura privada ignorada por tamanho inválido:",
+        {
+          tipoModelo,
+          tamanhoBytes,
+        },
+      );
+
+      return null;
+    }
+
+    const bytes =
+      new Uint8Array(
+        await data.arrayBuffer(),
+      );
+
+    if (
+      bytes.byteLength !== tamanhoBytes ||
+      bytes.byteLength >
+        TAMANHO_MAXIMO_ASSINATURA_EMAIL_SST
+    ) {
+      console.warn(
+        "Assinatura privada ignorada por divergência de tamanho:",
+        {
+          tipoModelo,
+          tamanhoBlob:
+            tamanhoBytes,
+          tamanhoLido:
+            bytes.byteLength,
+        },
+      );
+
+      return null;
+    }
+
+    const tipoMimeDetectado =
+      detectarTipoMimeAssinaturaEmailSst(
+        bytes,
+      );
+
+    if (
+      !tipoMimeDetectado ||
+      tipoMimeDetectado !==
+        tipoMimeDeclarado
+    ) {
+      console.warn(
+        "Assinatura privada ignorada por conteúdo incompatível com o MIME:",
+        {
+          tipoModelo,
+          tipoMimeDeclarado,
+          tipoMimeDetectado:
+            tipoMimeDetectado ||
+            "desconhecido",
+        },
+      );
+
+      return null;
+    }
+
+    return {
+      filename:
+        tipoMimeDetectado ===
+          "image/png"
+          ? "assinatura.png"
+          : "assinatura.jpg",
+
+      content:
+        Buffer.from(bytes),
+
+      contentType:
+        tipoMimeDetectado,
+
+      contentDisposition:
+        "inline",
+
+      cid:
+        `assinatura-${tipoModelo}@safescanbrasil`,
+    };
+  } catch (error) {
+    console.warn(
+      "Assinatura privada não aplicada ao e-mail SST:",
+      {
+        tipoModelo,
+        motivo:
+          obterMensagemErroStorage(
+            error,
+          ),
+      },
+    );
+
+    return null;
+  }
 }
 
 function normalizarDias(valor: unknown) {
@@ -606,8 +914,23 @@ serve(async (req) => {
         "Sistema Controle SST QR"
       ).replace(/"/g, "'");
 
-    const html =
+    const assinaturaEmail =
+      await carregarAssinaturaEmailSst(
+        supabaseAdmin,
+        tipoModeloTratado,
+      );
+
+    const htmlBase =
       montarHtmlEmail(texto);
+
+    const html =
+      assinaturaEmail
+        ? [
+            htmlBase,
+            "<br><br>",
+            `<img src="cid:${assinaturaEmail.cid}" alt="Assinatura" style="display:block;max-width:100%;height:auto;border:0;">`,
+          ].join("")
+        : htmlBase;
 
     await transporter.sendMail({
       from: `"${nomeRemetente}" <${gmailUser}>`,
@@ -615,6 +938,14 @@ serve(async (req) => {
       subject: assuntoFinal,
       text: texto,
       html,
+
+      ...(assinaturaEmail
+        ? {
+            attachments: [
+              assinaturaEmail,
+            ],
+          }
+        : {}),
     });
 
     return new Response(
