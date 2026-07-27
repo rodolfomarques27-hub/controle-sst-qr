@@ -371,19 +371,30 @@ export function Treinamentos({
         filtroEmpresaCertificados,
     ]);
 
+    const colaboradoresDisponiveis = useMemo(
+        () =>
+            colaboradores.filter(
+                (colaborador) =>
+                    !colaboradorForaControleDocumentalOperacional(
+                        colaborador
+                    )
+            ),
+        [colaboradores]
+    );
+
     const colaboradoresFiltradosEmpresa = useMemo(() => {
         if (filtroEmpresaCertificados === "Todas") {
-            return colaboradores;
+            return colaboradoresDisponiveis;
         }
 
-        return colaboradores.filter(
+        return colaboradoresDisponiveis.filter(
             (colaborador) =>
                 obterChaveEmpresaFiltroCertificados(
                     colaborador
                 ) === filtroEmpresaCertificados
         );
     }, [
-        colaboradores,
+        colaboradoresDisponiveis,
         filtroEmpresaCertificados,
     ]);
 
@@ -1127,7 +1138,14 @@ export function Treinamentos({
         (c.treinamentos || []).map((t) => ({ ...t, colaborador: c, treinamento: obterTreinamento(t.treinamentoId) }))
     );
 
-    const documentosFiltrados = documentos.filter((documento) => {
+    const documentosOperacionais = documentos.filter(
+        (documento) =>
+            !colaboradorForaControleDocumentalOperacional(
+                documento.colaborador
+            )
+    );
+
+    const documentosFiltrados = documentosOperacionais.filter((documento) => {
         const vencimentoFiltro = datasRevisao[documento.id]?.vencimento ?? documento.vencimento ?? "";
         const status = statusDocumento(vencimentoFiltro, treinamentoSemValidade(documento.treinamentoId));
         const foraControleOperacional = colaboradorForaControleDocumentalOperacional(documento.colaborador);
@@ -1157,7 +1175,7 @@ export function Treinamentos({
         return bateBusca && bateEmpresa && bateStatus;
     });
 
-    const documentosPorColaborador = colaboradores
+    const documentosPorColaborador = colaboradoresDisponiveis
         .map((colaborador) => {
             const avaliacao = avaliarTreinamentosColaborador(colaborador);
             const termo = normalizarTextoBusca(buscaCertificados);
@@ -1261,7 +1279,7 @@ export function Treinamentos({
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
-    const totalPorStatusCertificados = documentos.reduce(
+    const totalPorStatusCertificados = documentosOperacionais.reduce(
         (acc, documento) => {
             if (colaboradorForaControleDocumentalOperacional(documento.colaborador)) {
                 return acc;
@@ -1279,7 +1297,7 @@ export function Treinamentos({
             emDia: 0,
             aVencer: 0,
             vencidos: 0,
-            pendentes: colaboradores.reduce(
+            pendentes: colaboradoresDisponiveis.reduce(
                 (total, colaborador) => total + avaliarTreinamentosColaborador(colaborador).pendentes.length,
                 0
             ),
@@ -1958,7 +1976,7 @@ export function Treinamentos({
                 onClick={(evento) => alternarCardTreinamentoPorArea(chave, cardsTreinamentosRecolhidos.base, evento)}
             >
                                 <BaseCertificadosTreinamentos
-                                    documentos={documentos}
+                                    documentos={documentosOperacionais}
                                     documentosFiltrados={documentosFiltrados}
                                     documentosPorColaborador={documentosPorColaborador}
                                     totalPorStatusCertificados={totalPorStatusCertificados}
