@@ -480,7 +480,7 @@ export function obterFuncaoBaseColaborador(colaborador) {
 export function colaboradorContaComoMobilizado(colaborador) {
     const classificacao = statusGeral(colaborador).texto;
 
-    return classificacao === "Liberado" || classificacao === "Com pendência" || classificacao === "A vencer";
+    return classificacao === "Liberado" || classificacao === "Com pendência";
 }
 
 
@@ -1481,7 +1481,9 @@ export function statusGeral(colaborador) {
     }
 
     const documentosCriticosFaltantes = avaliacao.pendentes.filter(itemDocumentoCriticoColaborador);
-    const bloqueadoPorStatus = textoSituacao.includes("bloqueado") || textoSituacao.includes("bloqueada") || textoSituacao.includes("impedido") || textoSituacao.includes("impedida");
+    const documentacaoCompleta = avaliacao.total === 0 || avaliacao.concluidos.length === avaliacao.total;
+    const bloqueioManualInformado = textoSituacao.includes("bloqueado") || textoSituacao.includes("bloqueada") || textoSituacao.includes("impedido") || textoSituacao.includes("impedida");
+    const bloqueadoPorStatus = bloqueioManualInformado && !documentacaoCompleta;
 
     if (bloqueadoPorStatus || avaliacao.vencidos.length > 0 || documentosCriticosFaltantes.length > 0) {
         const motivos = [];
@@ -1525,9 +1527,9 @@ export function statusGeral(colaborador) {
 
     if (avaliacao.vencendo.length > 0) {
         return {
-            texto: "A vencer",
-            classe: classeClassificacaoColaborador("A vencer"),
-            detalhe: `${avaliacao.vencendo.length} item(ns) válido(s), porém a vencer em até 30 dias.`,
+            texto: "Liberado",
+            classe: classeClassificacaoColaborador("Liberado"),
+            detalhe: `Documentação válida e colaborador liberado. Alerta preventivo: ${avaliacao.vencendo.length} item(ns) a vencer em até 30 dias.`,
             avaliacao,
         };
     }

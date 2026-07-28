@@ -747,22 +747,41 @@ export function ModelosEmailSstConfiguracoes({
         salvando ||
         restaurando;
 
+    const alternarCardPeloCabecalho = (evento) => {
+        const controleInterativo = evento.target.closest(
+            "button, a, input, select, textarea"
+        );
+
+        if (controleInterativo) return;
+        onRecolherCard?.();
+    };
+
+    const alternarCardPeloTeclado = (evento) => {
+        if (evento.target !== evento.currentTarget) return;
+        if (evento.key !== "Enter" && evento.key !== " ") return;
+
+        evento.preventDefault();
+        onRecolherCard?.();
+    };
+
     return (
         <Card className="overflow-hidden">
-            <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 lg:flex-row lg:items-start lg:justify-between">
+            <div
+                role="button"
+                tabIndex={0}
+                aria-label="Recolher Modelos de e-mail SST"
+                onClick={alternarCardPeloCabecalho}
+                onKeyDown={alternarCardPeloTeclado}
+                className="flex flex-col gap-4 rounded-xl border-b border-slate-100 pb-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 lg:flex-row lg:items-start lg:justify-between"
+            >
                 <div className="min-w-0 flex-1">
-                    <button
-                        type="button"
-                        onClick={onRecolherCard}
-                        aria-label="Recolher Modelos de e-mail SST"
-                        className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-transparent p-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-                    >
+                    <div className="inline-flex items-center gap-2">
                         <Mail className="h-5 w-5 text-slate-500" />
 
                         <span className="text-lg font-black text-slate-950">
                             Modelos de e-mail SST
                         </span>
-                    </button>
+                    </div>
 
                     <p className="mt-1 max-w-3xl text-sm leading-relaxed text-slate-500">
                         Edite assunto, conteúdo, remetente e estado dos alertas enviados pelo SafeScan.

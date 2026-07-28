@@ -117,7 +117,12 @@ const ICONES_CABECALHO_RELATORIO_COLABORADORES = {
     sistema: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.7-4"/></svg>`,
 };
 
-export function montarCabecalhoEmpresaTreinamentosRelatorio(empresa = {}, dataEmissao = "", titulo = "Relatório de colaboradores e treinamentos") {
+export function montarCabecalhoEmpresaTreinamentosRelatorio(
+    empresa = {},
+    dataEmissao = "",
+    titulo = "Relatório de colaboradores e treinamentos",
+    { exibirDadosEmpresa = true } = {}
+) {
     return `
         <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado cabecalho-relatorio--padrao-institucional">
             <div class="marca-pdf-padrao">
@@ -135,13 +140,13 @@ export function montarCabecalhoEmpresaTreinamentosRelatorio(empresa = {}, dataEm
                 <p>Relatório visual por empresa, colaboradores e treinamentos.</p>
             </div>
 
-            <div class="dados-empresa dados-empresa--padrao-pdf">
-                <div class="dados-empresa__item dados-empresa__item--empresa"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.empresa}</span><strong>Empresa:</strong><em>${escaparHTML(empresa.nome || "-")}</em></div>
+            ${exibirDadosEmpresa ? `<div class="dados-empresa dados-empresa--padrao-pdf">
+                <div class="dados-empresa__item dados-empresa__item--empresa"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.empresa}</span><strong>${escaparHTML(empresa.rotulo || "Empresa")}:</strong><em>${escaparHTML(empresa.nome || "-")}</em></div>
                 <div class="dados-empresa__item dados-empresa__item--cnpj"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.cnpj}</span><strong>CNPJ:</strong><em>${escaparHTML(empresa.cnpj || "-")}</em></div>
                 <div class="dados-empresa__item dados-empresa__item--responsavel"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.responsavel}</span><strong>Responsável:</strong><em>${escaparHTML(empresa.responsavel || "-")}</em></div>
                 <div class="dados-empresa__item dados-empresa__item--data"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.data}</span><strong>Data de emissão:</strong><em>${escaparHTML(dataEmissao)}</em></div>
                 <div class="dados-empresa__item dados-empresa__item--sistema"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.sistema}</span><strong>Sistema:</strong><em>SafeScan Brasil</em></div>
-            </div>
+            </div>` : ""}
         </header>
     `;
 }

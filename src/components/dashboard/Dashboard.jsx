@@ -72,6 +72,8 @@ import {
     estiloCartaDashboard,
 } from "../../services/dashboardService";
 import { calcularResumoDashboardSst } from "../../services/dashboardResumoService";
+import { carregarHorasTrabalhadasDdsMes } from "../../services/dashboardHorasDdsService";
+import { carregarHistoricoStorageDashboard } from "../../services/storageHistoricoDashboardService";
 import {
     normalizarTextoBusca,
     diasParaVencer,
@@ -84,11 +86,20 @@ import {
 const CACHE_USO_STORAGE_DASHBOARD = "dashboardSstUsoStorageResumo";
 
 const CHAVES_CARTAS_COM_RESUMO = new Set([
+    "colaboradoresMobilizados",
+    "colaboradoresLiberados",
+    "comPendencia",
+    "emAnalise",
+    "empresasAtivas",
     "documentosVencidos",
     "documentosAVencer",
     "treinamentosVencidos",
     "documentosFuncionariosAVencer",
+    "horasTrabalhadasMes",
+    "colaboradoresBloqueados",
+    "desviosAbertos",
     "aniversariantesMes",
+    "armazenamentoUtilizado",
 ]);
 
 function obterDataHeroDashboard(data = new Date()) {
@@ -202,6 +213,16 @@ export function Dashboard({
         return { totalBytes: 0, arquivos: 0, buckets: [], atualizadoEm: "" };
     });
     const [carregandoStorageDashboard, setCarregandoStorageDashboard] = useState(false);
+    const [historicoStorageDashboard, setHistoricoStorageDashboard] = useState([]);
+    const [horasDdsMes, setHorasDdsMes] = useState({
+        totalMinutos: 0,
+        totalHorasFormatado: "0",
+        totalPresencas: 0,
+        totalDias: 0,
+        itens: [],
+        carregando: true,
+        erro: "",
+    });
     const storageAutoCarregadoDashboardRef = useRef(false);
     const [mostrarFiltroPainel, setMostrarFiltroPainel] = useState(false);
     const [resumoCartaDashboard, setResumoCartaDashboard] = useState(null);
@@ -390,6 +411,11 @@ export function Dashboard({
             const resumoStorage = await calcularUsoStorageRealSistema({ supabase });
 
             setUsoStorageDashboard(resumoStorage);
+            const historicoStorage = await carregarHistoricoStorageDashboard({
+                supabase,
+                resumoStorage,
+            });
+            setHistoricoStorageDashboard(historicoStorage);
 
             if (typeof window !== "undefined") {
                 window.localStorage.setItem(CACHE_USO_STORAGE_DASHBOARD, JSON.stringify(resumoStorage));
@@ -420,8 +446,34 @@ export function Dashboard({
         return () => window.clearTimeout(timer);
     }, [carregarUsoStorageDashboard, usoStorageDashboard?.arquivos, usoStorageDashboard?.origem, usoStorageDashboard?.totalBytes]);
 
+    const carregarHorasDdsDashboard = useCallback(async () => {
+        setHorasDdsMes((atual) => ({ ...atual, carregando: true, erro: "" }));
+
+        try {
+            const resumo = await carregarHorasTrabalhadasDdsMes({
+                supabase,
+                dataReferencia: new Date(),
+            });
+            setHorasDdsMes({ ...resumo, carregando: false, erro: "" });
+        } catch (error) {
+            console.warn("Erro ao carregar horas trabalhadas do DDS:", error?.message || error);
+            setHorasDdsMes((atual) => ({
+                ...atual,
+                carregando: false,
+                erro: error?.message || "Não foi possível carregar as horas do DDS.",
+            }));
+        }
+    }, []);
+
+    useEffect(() => {
+        carregarHorasDdsDashboard();
+    }, [carregarHorasDdsDashboard]);
+
     const atualizandoDashboardSstCompleto = Boolean(
-        atualizandoInformacoes || atualizandoInformacoesLocais || carregandoStorageDashboard
+        atualizandoInformacoes
+        || atualizandoInformacoesLocais
+        || carregandoStorageDashboard
+        || horasDdsMes.carregando
     );
 
     const atualizarInformacoesDashboard = useCallback(async () => {
@@ -431,11 +483,19 @@ export function Dashboard({
 
         try {
             await onAtualizarInformacoes?.();
-            await carregarUsoStorageDashboard();
+            await Promise.all([
+                carregarUsoStorageDashboard(),
+                carregarHorasDdsDashboard(),
+            ]);
         } finally {
             setAtualizandoInformacoesLocais(false);
         }
-    }, [atualizandoDashboardSstCompleto, carregarUsoStorageDashboard, onAtualizarInformacoes]);
+    }, [
+        atualizandoDashboardSstCompleto,
+        carregarHorasDdsDashboard,
+        carregarUsoStorageDashboard,
+        onAtualizarInformacoes,
+    ]);
 
     const resumoDashboardSst = useMemo(() => calcularResumoDashboardSst({
         colaboradores,
@@ -495,9 +555,15 @@ export function Dashboard({
         ...resumoDashboardSst.storageStatusDashboard,
         statusIcon: resumoDashboardSst.storageStatusDashboard?.statusIconKey === "normal" ? CheckCircle2 : AlertTriangle,
     };
+    const storageLimiteBytesDashboard = Math.max(1, LIMITE_STORAGE_MB * 1024 * 1024);
+    const storageDisponivelBytesDashboard = Math.max(
+        0,
+        storageLimiteBytesDashboard - Number(usoStorageDashboard?.totalBytes || 0)
+    );
+    const storageDisponivelLabelDashboard = formatarBytes(storageDisponivelBytesDashboard).replace(".00", "");
 
     const cards = [
-        { chave: "colaboradoresMobilizados", label: "Colaboradores mobilizados", valor: colaboradoresMobilizados.length, icon: HardHat, detalhe: "Liberados, com pendência ou a vencer" },
+        { chave: "colaboradoresMobilizados", label: "Colaboradores mobilizados", valor: colaboradoresMobilizados.length, icon: HardHat, detalhe: "Liberados ou com pendência não bloqueante" },
         { chave: "colaboradoresLiberados", label: "Colaboradores liberados", valor: colaboradoresLiberados, icon: BadgeCheck, detalhe: "Documentos em dia" },
         { chave: "comPendencia", label: "Com pendência", valor: colaboradoresComPendencia, icon: AlertTriangle, detalhe: "Sem bloqueio" },
         { chave: "emAnalise", label: "Em análise", valor: colaboradoresEmAnalise, icon: Eye, detalhe: "Aguardando conferência" },
@@ -506,7 +572,15 @@ export function Dashboard({
         { chave: "documentosAVencer", label: "Documentos de empresas a vencer", valor: documentosAVencer.length, icon: CalendarClock, detalhe: "Próximos 30 dias" },
         { chave: "treinamentosVencidos", label: "Documentos de funcionários vencidos", valor: documentosFuncionariosVencidos.length, icon: XCircle, detalhe: "Certificados e documentos" },
         { chave: "documentosFuncionariosAVencer", label: "Documentos de funcionários a vencer", valor: documentosFuncionariosAVencer30Dias.length, icon: CalendarClock, detalhe: "Próximos 30 dias" },
-        { chave: "horasTrabalhadasMes", label: "Total de horas trabalhadas no mês", valor: "—", icon: Timer, detalhe: "Integração futura com DDS" },
+        {
+            chave: "horasTrabalhadasMes",
+            label: "Total de horas trabalhadas no mês",
+            valor: horasDdsMes.carregando ? "—" : `${horasDdsMes.totalHorasFormatado} h`,
+            icon: Timer,
+            detalhe: horasDdsMes.erro
+                ? "Falha ao consultar o DDS"
+                : `${horasDdsMes.totalDias} dia(s) validado(s) no DDS`,
+        },
         { chave: "colaboradoresBloqueados", label: "Colaboradores bloqueados", valor: colaboradoresBloqueados, icon: Lock, detalhe: "Pendência bloqueante" },
         { chave: "desviosAbertos", label: "Desvios abertos", valor: desviosAbertos, icon: AlertTriangle, detalhe: "Registros não concluídos" },
         { chave: "aniversariantesMes", label: "Aniversariantes do mês", valor: aniversariantesMes.length, icon: UserRound, detalhe: aniversariantesMes.length > 0 ? `${aniversariantesMes.length} no mês atual` : "Nenhum no mês atual" },
@@ -531,6 +605,28 @@ export function Dashboard({
     const obterEmpresaDocumentoDashboard = (documento = {}) => {
         const empresa = obterRegistroEmpresaDocumentoDashboard(documento);
         return empresa?.nome || "Empresa não informada";
+    };
+
+    const obterEmpresaCompletaColaboradorDashboard = (colaborador = {}) => {
+        const empresaExibicao = String(
+            colaborador.empresaExibicao || colaborador.empresa_exibicao || ""
+        ).trim();
+        const empresaDireta = String(
+            colaborador.empresa || colaborador.empresaNome || ""
+        ).trim();
+        const empresaPai = String(
+            colaborador.empresaPaiNome || colaborador.empresa_pai_nome || ""
+        ).trim();
+
+        if (/subcontratada\s*:/i.test(empresaExibicao)) {
+            return empresaExibicao;
+        }
+
+        if (empresaPai && empresaDireta && empresaPai !== empresaDireta) {
+            return `${empresaPai} / Subcontratada: ${empresaDireta}`;
+        }
+
+        return empresaExibicao || empresaDireta || empresaPai || "Empresa não informada";
     };
 
     const documentosAVencer30Dias = [
@@ -572,9 +668,7 @@ export function Dashboard({
             item,
             principal: item.colaborador?.nome || "Colaborador não informado",
             apoio:
-                item.colaborador?.empresaExibicao ||
-                item.colaborador?.empresa ||
-                "Empresa não informada",
+                obterEmpresaCompletaColaboradorDashboard(item.colaborador),
             nomeDocumento:
                 item.treinamento?.nome ||
                 "Documento não informado",
@@ -632,7 +726,7 @@ export function Dashboard({
                 id: item.realizado?.id || `${item.colaborador?.id || "colaborador"}-${item.treinamento?.id || "documento"}`,
                 principal: item.colaborador?.nome || "Colaborador não informado",
                 titulo: item.treinamento?.nome || "Documento não informado",
-                apoio: item.colaborador?.empresaExibicao || item.colaborador?.empresa || "",
+                apoio: obterEmpresaCompletaColaboradorDashboard(item.colaborador),
                 dataRotulo: "Vencimento",
                 dataValor: formatDate(item.vencimento),
                 status: item.status?.texto || "Documento",
@@ -646,8 +740,110 @@ export function Dashboard({
         }),
     });
 
+    const montarResumoColaboradores = (chave, titulo, subtitulo, lista = [], status = "") => ({
+        chave,
+        titulo,
+        subtitulo,
+        itens: lista.map((colaborador) => {
+            const classificacao = statusGeral(colaborador || {}).texto;
+
+            return {
+                id: colaborador.id,
+                principal: colaborador.nome || "Colaborador não informado",
+                titulo: colaborador.funcao || colaborador.cargo || "Função não informada",
+                apoio: obterEmpresaCompletaColaboradorDashboard(colaborador),
+                status: classificacao || status,
+                alerta: statusGeral(colaborador || {}).avaliacao?.vencendo?.length > 0
+                    ? "A vencer"
+                    : "",
+                detalhe: `Situação geral: ${classificacao}`,
+            };
+        }),
+    });
+
     const abrirResumoCartaDashboard = (chave) => {
+        const colaboradoresLiberadosLista = colaboradores.filter(
+            (colaborador) => statusGeral(colaborador).texto === "Liberado"
+        );
+        const colaboradoresComPendenciaLista = colaboradores.filter(
+            (colaborador) => statusGeral(colaborador).texto === "Com pendência"
+        );
+        const colaboradoresEmAnaliseLista = colaboradores.filter(
+            (colaborador) => statusGeral(colaborador).texto === "Em análise"
+        );
+        const colaboradoresBloqueadosLista = colaboradores.filter(
+            (colaborador) => statusGeral(colaborador).texto === "Bloqueado"
+        );
+        const composicaoMobilizados = colaboradoresMobilizados.reduce(
+            (acumulador, colaborador) => {
+                const classificacao = statusGeral(colaborador).texto;
+                acumulador[classificacao] = (acumulador[classificacao] || 0) + 1;
+                return acumulador;
+            },
+            {}
+        );
+        const colaboradoresComAlertaAVencer = colaboradoresMobilizados.filter(
+            (colaborador) => statusGeral(colaborador).avaliacao?.vencendo?.length > 0
+        ).length;
+        const detalheComposicaoMobilizados = [
+            `${composicaoMobilizados.Liberado || 0} liberado(s)`,
+            `${composicaoMobilizados["Com pendência"] || 0} com pendência`,
+            `${colaboradoresComAlertaAVencer} com alerta preventivo de vencimento`,
+        ].join(" · ");
+        const desviosAbertosLista = auditoria.filter((item) => {
+            const texto = normalizarTextoBusca(
+                `${item.acao || ""} ${item.tabela || ""} ${item.descricao || ""}`
+            );
+
+            return texto.includes("desvio") &&
+                !texto.includes("fechado") &&
+                !texto.includes("concluido") &&
+                !texto.includes("concluído");
+        });
         const resumos = {
+            colaboradoresMobilizados: montarResumoColaboradores(
+                "colaboradoresMobilizados",
+                "Colaboradores mobilizados",
+                `Colaboradores ativos no controle operacional: ${detalheComposicaoMobilizados}.`,
+                colaboradoresMobilizados,
+                "Mobilizado"
+            ),
+            colaboradoresLiberados: montarResumoColaboradores(
+                "colaboradoresLiberados",
+                "Colaboradores liberados",
+                "Colaboradores com documentação e situação geral liberadas.",
+                colaboradoresLiberadosLista,
+                "Liberado"
+            ),
+            comPendencia: montarResumoColaboradores(
+                "comPendencia",
+                "Colaboradores com pendência",
+                "Pendências documentais que ainda não resultaram em bloqueio.",
+                colaboradoresComPendenciaLista,
+                "Com pendência"
+            ),
+            emAnalise: montarResumoColaboradores(
+                "emAnalise",
+                "Colaboradores em análise",
+                "Cadastros ou documentos aguardando conferência.",
+                colaboradoresEmAnaliseLista,
+                "Em análise"
+            ),
+            empresasAtivas: {
+                chave: "empresasAtivas",
+                titulo: "Empresas ativas",
+                subtitulo: "Empresas classificadas como ativas no cadastro.",
+                itens: empresasAtivas.map((empresa) => ({
+                    id: empresa.id,
+                    principal: empresa.nome || "Empresa não informada",
+                    titulo: empresa.cnpj || empresa.cpf || "Documento não informado",
+                    apoio: empresa.tst_responsavel || empresa.tstResponsavel
+                        ? `Responsável SST: ${empresa.tst_responsavel || empresa.tstResponsavel}`
+                        : "Responsável SST não informado",
+                    status: "Ativa",
+                    detalhe: normalizarStatusEmpresa(empresa.status),
+                })),
+            },
             documentosVencidos: montarResumoDocumentoEmpresa(
                 "documentosVencidos",
                 "Documentos de empresas vencidos",
@@ -672,6 +868,41 @@ export function Dashboard({
                 "Certificados e documentos com vencimento nos próximos 30 dias.",
                 documentosFuncionariosAVencer30Dias
             ),
+            horasTrabalhadasMes: {
+                chave: "horasTrabalhadasMes",
+                titulo: "Horas trabalhadas no mês",
+                subtitulo: "Homem-hora calculado pelas jornadas válidas e presenças das conferências DDS concluídas no mês.",
+                permiteOrdenacao: false,
+                itens: horasDdsMes.erro ? [{
+                    id: "erro-horas-dds",
+                    principal: "Não foi possível consultar o DDS",
+                    titulo: horasDdsMes.erro,
+                    status: "Atenção",
+                    detalhe: "Atualize o Dashboard para tentar novamente.",
+                }] : horasDdsMes.itens,
+            },
+            colaboradoresBloqueados: montarResumoColaboradores(
+                "colaboradoresBloqueados",
+                "Colaboradores bloqueados",
+                "Colaboradores com situação geral bloqueada por regra operacional ou documental.",
+                colaboradoresBloqueadosLista,
+                "Bloqueado"
+            ),
+            desviosAbertos: {
+                chave: "desviosAbertos",
+                titulo: "Desvios abertos",
+                subtitulo: "Registros de desvio ainda sem fechamento ou conclusão.",
+                itens: desviosAbertosLista.map((item, indice) => ({
+                    id: item.id || `desvio-${indice}`,
+                    principal: item.acao || "Desvio registrado",
+                    titulo: item.descricao || item.tabela || "Descrição não informada",
+                    apoio: item.usuario_nome || item.usuario || "Responsável não informado",
+                    dataRotulo: "Registro",
+                    dataValor: item.created_at ? formatDate(item.created_at) : "",
+                    status: "Aberto",
+                    detalhe: item.tabela || "",
+                })),
+            },
             aniversariantesMes: {
                 chave: "aniversariantesMes",
                 titulo: "Aniversariantes do mês",
@@ -680,7 +911,7 @@ export function Dashboard({
                     id: colaborador.id,
                     principal: colaborador.nome || "Colaborador não informado",
                     titulo: colaborador.funcao || colaborador.cargo || "Função não informada",
-                    apoio: colaborador.empresaExibicao || colaborador.empresa || "",
+                    apoio: obterEmpresaCompletaColaboradorDashboard(colaborador),
                     dataRotulo: "Nascimento",
                     dataValor: formatDate(
                         colaborador.dataNascimentoOriginal ||
@@ -690,6 +921,50 @@ export function Dashboard({
                     status: "Aniversariante",
                     detalhe: "",
                 })),
+            },
+            armazenamentoUtilizado: {
+                chave: "armazenamentoUtilizado",
+                titulo: "Armazenamento do sistema",
+                subtitulo: "Visão geral da capacidade, disponibilidade e arquivos armazenados.",
+                permiteOrdenacao: false,
+                totalStorageLabel,
+                limiteStorageLabel: storageLimiteLabelDashboard,
+                percentualStorage: storagePercentual,
+                statusStorage: storageStatusDashboard.texto,
+                historico: historicoStorageDashboard,
+                metricas: [
+                    { id: "storage-usado", valor: `${storagePercentual}%`, rotulo: "usado" },
+                    { id: "storage-livre", valor: `${Math.max(0, 100 - storagePercentual)}%`, rotulo: "livre" },
+                    { id: "storage-arquivos", valor: new Intl.NumberFormat("pt-BR").format(Number(usoStorageDashboard?.arquivos || 0)), rotulo: "arquivos" },
+                    { id: "storage-areas", valor: Array.isArray(usoStorageDashboard?.buckets) ? usoStorageDashboard.buckets.length : 0, rotulo: "áreas" },
+                ],
+                itens: [
+                    {
+                        id: "storage-capacidade",
+                        principal: storageLimiteLabelDashboard,
+                        titulo: "Capacidade total",
+                        status: storageStatusDashboard.texto,
+                        detalhe: "Limite configurado no sistema",
+                    },
+                    {
+                        id: "storage-utilizado",
+                        principal: totalStorageLabel,
+                        titulo: "Espaço usado",
+                        detalhe: `${storagePercentual}% da capacidade`,
+                    },
+                    {
+                        id: "storage-disponivel",
+                        principal: storageDisponivelLabelDashboard,
+                        titulo: "Espaço livre",
+                        detalhe: `${Math.max(0, 100 - storagePercentual)}% livre`,
+                    },
+                    {
+                        id: "storage-arquivos",
+                        principal: new Intl.NumberFormat("pt-BR").format(Number(usoStorageDashboard?.arquivos || 0)),
+                        titulo: "Arquivos",
+                        detalhe: `${Array.isArray(usoStorageDashboard?.buckets) ? usoStorageDashboard.buckets.length : 0} áreas de armazenamento`,
+                    },
+                ],
             },
         };
 
@@ -804,7 +1079,7 @@ export function Dashboard({
 
     const obterDetalheCompactoCartaDashboard = (item) => {
         const mapa = {
-            colaboradoresMobilizados: "Liberados, com pendência ou a vencer",
+            colaboradoresMobilizados: "Liberados ou com pendência não bloqueante",
             colaboradoresLiberados: "Em dia",
             comPendencia: "Sem bloqueio",
             emAnalise: "Aguardando conferência",
@@ -813,7 +1088,7 @@ export function Dashboard({
             documentosAVencer: "Próximos 30 dias",
             treinamentosVencidos: "Certificados",
             documentosFuncionariosAVencer: "Próximos 30 dias",
-            horasTrabalhadasMes: "Integração futura com DDS",
+            horasTrabalhadasMes: item.detalhe,
             colaboradoresBloqueados: "Pendência bloqueante",
             desviosAbertos: "Registros não concluídos",
             aniversariantesMes: item.detalhe,
@@ -832,7 +1107,7 @@ export function Dashboard({
                     : "VENCIDO";
 
         const dias = item.vencimento ? diasParaVencer(item.vencimento) : null;
-        const empresa = item.colaborador?.empresaExibicao || item.colaborador?.empresa || "Empresa não informada";
+        const empresa = obterEmpresaCompletaColaboradorDashboard(item.colaborador);
         const para = emailTstDaEmpresa(item.colaborador);
 
         return {
@@ -1182,36 +1457,176 @@ export function Dashboard({
         }
     };
 
+    const agruparDocumentosParaEnvioEmLote = (registros = []) => {
+        const grupos = new Map();
+
+        registros.forEach((registroOriginal) => {
+            const registro = registroOriginal?.origem
+                ? registroOriginal
+                : { origem: "colaborador", item: registroOriginal };
+
+            const ehDocumentoEmpresa = registro.origem === "empresa";
+            const payloadItem = ehDocumentoEmpresa
+                ? montarPayloadEmailDocumentoEmpresa(registro.documento)
+                : montarPayloadEmailPendencia(registro.item);
+
+            const empresaRegistro = ehDocumentoEmpresa
+                ? obterRegistroEmpresaDocumentoDashboard(registro.documento)
+                : null;
+
+            const colaborador = registro.item?.colaborador || null;
+            const identificadorResponsavel = ehDocumentoEmpresa
+                ? empresaRegistro?.id || payloadItem.empresa
+                : colaborador?.id || colaborador?.codigoFuncionario || colaborador?.nome;
+
+            const chaveGrupo = [
+                ehDocumentoEmpresa ? "empresa" : "colaborador",
+                identificadorResponsavel || "sem-identificador",
+                payloadItem.para || "sem-email",
+            ].join(":");
+
+            if (!grupos.has(chaveGrupo)) {
+                grupos.set(chaveGrupo, {
+                    chave: chaveGrupo,
+                    origem: ehDocumentoEmpresa ? "empresa" : "colaborador",
+                    empresa: payloadItem.empresa,
+                    para: payloadItem.para,
+                    tstResponsavel: payloadItem.tstResponsavel,
+                    nomeResponsavel: ehDocumentoEmpresa
+                        ? payloadItem.empresa
+                        : colaborador?.nome || "Colaborador",
+                    registros: [],
+                    itens: [],
+                });
+            }
+
+            const grupo = grupos.get(chaveGrupo);
+            grupo.registros.push(registro);
+            grupo.itens.push(...payloadItem.itens);
+        });
+
+        return Array.from(grupos.values());
+    };
+
+    const registrarResultadoGrupoEmail = async (
+        grupo,
+        payload,
+        statusEnvio,
+        erro = ""
+    ) => {
+        for (const registro of grupo.registros) {
+            const ehDocumentoEmpresa = registro.origem === "empresa";
+            const documento = ehDocumentoEmpresa
+                ? registro.documento
+                : registro.item?.realizado;
+            const colaborador = ehDocumentoEmpresa
+                ? null
+                : registro.item?.colaborador;
+            const empresa = ehDocumentoEmpresa
+                ? obterRegistroEmpresaDocumentoDashboard(documento)
+                : null;
+            const nomeDocumento = ehDocumentoEmpresa
+                ? documento?.tipo_documento || documento?.tipoDocumento || "Documento empresarial"
+                : registro.item?.treinamento?.nome || "Documento não informado";
+
+            await onRegistrarEmailEnviado?.({
+                empresaId: ehDocumentoEmpresa
+                    ? documento?.empresa_id || documento?.empresaId || empresa?.id || null
+                    : colaborador?.empresaId || null,
+                colaboradorId: colaborador?.id || null,
+                documentoId: documento?.id || null,
+                destinatario: payload.para,
+                assunto: payload.assunto,
+                tipoAlerta: "Resumo de documentos vencidos e a vencer",
+                documento: nomeDocumento,
+                statusEnvio,
+                erro,
+            });
+        }
+    };
+
+    const enviarGrupoDocumentosEmLote = async (grupo) => {
+        const quantidade = grupo.itens.length;
+        const payload = {
+            para: grupo.para,
+            tipoModelo: TIPOS_MODELO_EMAIL_SST.DOCUMENTOS_LOTE,
+            assunto: `Aviso SST - ${grupo.empresa} - ${grupo.nomeResponsavel} - ${quantidade} documento(s)`,
+            sistema: "SafeScan Brasil",
+            remetenteNome: "SafeScan Brasil - Controle de SST",
+            urlSistema: "https://www.safescanbrasil.com.br",
+            empresa: grupo.empresa,
+            tstResponsavel: grupo.tstResponsavel,
+            itens: grupo.itens,
+        };
+
+        if (!payload.para) return false;
+
+        try {
+            const { data, error } = await supabase.functions.invoke(
+                FUNCAO_EMAIL_ALERTA_TST,
+                { body: payload }
+            );
+
+            if (error || data?.ok === false) {
+                const mensagemErro = error?.message || data?.erro || "Falha na função de e-mail.";
+                console.error("Erro ao enviar resumo de documentos em lote:", error || data);
+                await registrarResultadoGrupoEmail(grupo, payload, "Erro", mensagemErro);
+                return false;
+            }
+
+            await registrarResultadoGrupoEmail(grupo, payload, "Sucesso");
+            return true;
+        } catch (erro) {
+            const mensagemErro = erro?.message || String(erro);
+            console.error("Falha inesperada no envio agrupado de documentos:", erro);
+            await registrarResultadoGrupoEmail(grupo, payload, "Erro", mensagemErro);
+            return false;
+        }
+    };
+
+    const enviarGruposDocumentosEmLote = async (grupos) => {
+        let emailsEnviados = 0;
+        let emailsComFalha = 0;
+        let documentosEnviados = 0;
+
+        for (const grupo of grupos) {
+            if (!grupo.para) {
+                emailsComFalha += 1;
+                continue;
+            }
+
+            const sucesso = await enviarGrupoDocumentosEmLote(grupo);
+
+            if (sucesso) {
+                emailsEnviados += 1;
+                documentosEnviados += grupo.itens.length;
+            } else {
+                emailsComFalha += 1;
+            }
+        }
+
+        return { emailsEnviados, emailsComFalha, documentosEnviados };
+    };
+
     const enviarAlertasPendenciasCriticas = async () => {
         if (!pendencias.length) {
             alert("Não existem pendências críticas para enviar por e-mail.");
             return;
         }
 
-        const semEmailTst = pendencias.filter((item) => !emailTstDaEmpresa(item.colaborador)).length;
+        const grupos = agruparDocumentosParaEnvioEmLote(pendencias);
+        const gruposSemEmail = grupos.filter((grupo) => !grupo.para).length;
         const confirmar = window.confirm(
-            `Deseja enviar ${pendencias.length} alerta(s) por e-mail para o TST responsável de cada empresa?${semEmailTst ? `\n\nAtenção: ${semEmailTst} item(ns) estão sem e-mail de TST cadastrado e não serão enviados.` : ""}`
+            `Deseja enviar ${grupos.length} e-mail(s) agrupado(s), contendo ${pendencias.length} documento(s)?${gruposSemEmail ? `\n\nAtenção: ${gruposSemEmail} colaborador(es) estão sem e-mail de TST cadastrado e não serão enviados.` : ""}`
         );
 
         if (!confirmar) return;
 
         setEnviandoEmail(true);
 
-        let enviados = 0;
-        let falhas = 0;
-
         try {
-            for (const item of pendencias) {
-                const sucesso = await enviarAlertaEmailPendencia(item, false);
-
-                if (sucesso) {
-                    enviados += 1;
-                } else {
-                    falhas += 1;
-                }
-            }
-
-            alert(`Envio finalizado. Enviados: ${enviados}. Falhas: ${falhas}.`);
+            const resultado = await enviarGruposDocumentosEmLote(grupos);
+            alert(`Envio finalizado. E-mails enviados: ${resultado.emailsEnviados}. Documentos incluídos: ${resultado.documentosEnviados}. Falhas: ${resultado.emailsComFalha}.`);
         } finally {
             setEnviandoEmail(false);
         }
@@ -1225,53 +1640,26 @@ export function Dashboard({
             return;
         }
 
-        const semEmailTst =
-            documentosAVencer30Dias.filter((registro) => {
-                if (registro.origem === "empresa") {
-                    return !montarPayloadEmailDocumentoEmpresa(
-                        registro.documento
-                    ).para;
-                }
-
-                return !emailTstDaEmpresa(
-                    registro.colaborador
-                );
-            }).length;
+        const grupos = agruparDocumentosParaEnvioEmLote(
+            documentosAVencer30Dias
+        );
+        const gruposSemEmail = grupos.filter(
+            (grupo) => !grupo.para
+        ).length;
 
         const confirmar =
             window.confirm(
-                `Deseja enviar ${documentosAVencer30Dias.length} alerta(s) de vencimento por e-mail?${semEmailTst ? `\n\nAtenção: ${semEmailTst} item(ns) estão sem e-mail de TST cadastrado e não serão enviados.` : ""}`
+                `Deseja enviar ${grupos.length} e-mail(s) agrupado(s), contendo ${documentosAVencer30Dias.length} documento(s)?${gruposSemEmail ? `\n\nAtenção: ${gruposSemEmail} colaborador(es) ou empresa(s) estão sem e-mail de TST cadastrado e não serão enviados.` : ""}`
             );
 
         if (!confirmar) return;
 
         setEnviandoEmail(true);
 
-        let enviados = 0;
-        let falhas = 0;
-
         try {
-            for (const registro of documentosAVencer30Dias) {
-                const sucesso =
-                    registro.origem === "empresa"
-                        ? await enviarAlertaEmailDocumentoEmpresa(
-                            registro.documento,
-                            false
-                        )
-                        : await enviarAlertaEmailPendencia(
-                            registro.item,
-                            false
-                        );
-
-                if (sucesso) {
-                    enviados += 1;
-                } else {
-                    falhas += 1;
-                }
-            }
-
+            const resultado = await enviarGruposDocumentosEmLote(grupos);
             alert(
-                `Envio finalizado. Enviados: ${enviados}. Falhas: ${falhas}.`
+                `Envio finalizado. E-mails enviados: ${resultado.emailsEnviados}. Documentos incluídos: ${resultado.documentosEnviados}. Falhas: ${resultado.emailsComFalha}.`
             );
         } finally {
             setEnviandoEmail(false);
@@ -1378,6 +1766,7 @@ export function Dashboard({
                         detalhe: detalheCompacto,
                         percentual: storagePercentualValor,
                         classeTamanho: obterClasseTamanhoCartaDashboard(item.chave),
+                        onClick: () => abrirResumoCartaDashboard(item.chave),
                     };
 
                     return (

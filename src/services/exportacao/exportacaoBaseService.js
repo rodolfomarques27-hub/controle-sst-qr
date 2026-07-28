@@ -160,8 +160,11 @@ export function baixarPDF(nomeArquivo, titulo, linhas) {
     link.download = nomeArquivo;
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+
+    window.setTimeout(() => {
+        link.remove();
+        URL.revokeObjectURL(url);
+    }, 1000);
 }
 
 async function aguardarImagesRelatorio(documento, tempoMaximo = 6000) {
@@ -192,157 +195,180 @@ async function aguardarImagensRelatorio(documento, tempoMaximo = 6000) {
 }
 
 
-function canvasTemConteudoVisivelRelatorio(canvas, origemYPx, alturaPx) {
-    const largura = canvas.width;
-    const altura = Math.max(1, Math.min(alturaPx, canvas.height - origemYPx));
-    const contexto = canvas.getContext("2d", { willReadFrequently: true });
-
-    if (!contexto || altura <= 0) return false;
-
-    const passoX = Math.max(8, Math.floor(largura / 70));
-    const passoY = Math.max(8, Math.floor(altura / 80));
-    let pixelsComConteudo = 0;
-
-    for (let y = 0; y < altura; y += passoY) {
-        const linhaY = Math.min(canvas.height - 1, origemYPx + y);
-        const dados = contexto.getImageData(0, linhaY, largura, 1).data;
-
-        for (let x = 0; x < largura; x += passoX) {
-            const indice = x * 4;
-            const r = dados[indice];
-            const g = dados[indice + 1];
-            const b = dados[indice + 2];
-            const a = dados[indice + 3];
-
-            if (a > 0 && (r < 245 || g < 245 || b < 245)) {
-                pixelsComConteudo += 1;
-
-                if (pixelsComConteudo >= 12) {
-                    return true;
-                }
-            }
-        }
-    }
-
-    return false;
-}
-
 export async function baixarRelatorioHtmlComoPdf({ html, nomeArquivo }) {
     const iframe = document.createElement("iframe");
 
     iframe.style.position = "fixed";
-    iframe.style.left = "0";
+    iframe.style.left = "-10000px";
     iframe.style.top = "0";
     iframe.style.width = "900px";
     iframe.style.height = "1400px";
     iframe.style.border = "0";
     iframe.style.background = "#ffffff";
-    iframe.style.opacity = "0";
+    iframe.style.opacity = "1";
     iframe.style.pointerEvents = "none";
     iframe.style.zIndex = "-1";
     iframe.setAttribute("aria-hidden", "true");
 
     document.body.appendChild(iframe);
 
-    const documento = iframe.contentWindow?.document;
-    if (!documento) {
-        document.body.removeChild(iframe);
-        alert("Não foi possível preparar o relatório para download em PDF.");
-        return;
-    }
-
-    documento.open();
-    documento.write(html);
-    documento.close();
-
-    await new Promise((resolve) => setTimeout(resolve, 450));
-
     try {
-        await documento.fonts?.ready;
-    } catch {
-        // segue normalmente se o navegador não expuser document.fonts
-    }
-
-    await aguardarImagensRelatorio(documento, 6000);
-
-    const paginasHtml = Array.from(documento.querySelectorAll(".pagina-relatorio"));
-
-    if (!paginasHtml.length) {
-        document.body.removeChild(iframe);
-        alert("Não foi possível encontrar o conteúdo do relatório para gerar o PDF.");
-        return;
-    }
-
-    const pdf = new jsPDF("p", "mm", "a4");
-    let primeiraPagina = true;
-
-    for (const paginaHtml of paginasHtml) {
-        const larguraCapturaPx = Math.ceil(paginaHtml.scrollWidth || paginaHtml.getBoundingClientRect().width || 794);
-        const alturaCapturaPx = Math.ceil(paginaHtml.scrollHeight || paginaHtml.getBoundingClientRect().height || 1123);
-
-        const canvas = await html2canvas(paginaHtml, {
-            scale: 2,
-            useCORS: true,
-            allowTaint: false,
-            backgroundColor: "#ffffff",
-            logging: false,
-            width: larguraCapturaPx,
-            height: alturaCapturaPx,
-            windowWidth: Math.max(larguraCapturaPx, 900),
-            windowHeight: Math.max(alturaCapturaPx, 1400),
-            scrollX: 0,
-            scrollY: 0,
-            x: 0,
-            y: 0,
-        });
-
-        const larguraPdfMm = 210;
-        const alturaPaginaPdfMm = 297;
-        const alturaFatiaPx = Math.floor((canvas.width * alturaPaginaPdfMm) / larguraPdfMm);
-
-        let origemYPx = 0;
-
-        while (origemYPx < canvas.height) {
-            const alturaAtualPx = Math.min(alturaFatiaPx, canvas.height - origemYPx);
-
-            if (!canvasTemConteudoVisivelRelatorio(canvas, origemYPx, alturaAtualPx)) {
-                break;
-            }
-
-            const canvasFatia = document.createElement("canvas");
-
-            canvasFatia.width = canvas.width;
-            canvasFatia.height = alturaAtualPx;
-
-            const contexto = canvasFatia.getContext("2d");
-            contexto.fillStyle = "#ffffff";
-            contexto.fillRect(0, 0, canvasFatia.width, canvasFatia.height);
-            contexto.drawImage(
-                canvas,
-                0,
-                origemYPx,
-                canvas.width,
-                alturaAtualPx,
-                0,
-                0,
-                canvas.width,
-                alturaAtualPx
-            );
-
-            const imagem = canvasFatia.toDataURL("image/jpeg", 0.96);
-            const alturaImagemMm = (alturaAtualPx * larguraPdfMm) / canvas.width;
-
-            if (!primeiraPagina) {
-                pdf.addPage();
-            }
-
-            pdf.addImage(imagem, "JPEG", 0, 0, larguraPdfMm, alturaImagemMm, undefined, "FAST");
-
-            primeiraPagina = false;
-            origemYPx += alturaAtualPx;
+        const documento = iframe.contentWindow?.document;
+        if (!documento) {
+            throw new Error("Documento temporário do relatório indisponível.");
         }
+
+        documento.open();
+        documento.write(html);
+        documento.close();
+
+        await new Promise((resolve) => setTimeout(resolve, 450));
+
+        try {
+            await documento.fonts?.ready;
+        } catch {
+            // segue normalmente se o navegador não expuser document.fonts
+        }
+
+        await aguardarImagensRelatorio(documento, 6000);
+
+        const paginasHtml = Array.from(documento.querySelectorAll(".pagina-relatorio"));
+        if (!paginasHtml.length) {
+            throw new Error("Conteúdo do relatório não encontrado.");
+        }
+
+        const pdf = new jsPDF("p", "mm", "a4");
+        let paginasGeradas = 0;
+        const tamanhoLote = 6;
+        const escalaRenderizacao = 1.5;
+
+        for (let indiceLote = 0; indiceLote < paginasHtml.length; indiceLote += tamanhoLote) {
+            const paginasLote = paginasHtml.slice(indiceLote, indiceLote + tamanhoLote);
+            const contenedorLote = documento.createElement("div");
+
+            contenedorLote.style.width = "900px";
+            contenedorLote.style.margin = "0";
+            contenedorLote.style.padding = "0";
+            contenedorLote.style.background = "#ffffff";
+
+            const copiasPaginas = paginasLote.map((paginaHtml) => {
+                const copia = paginaHtml.cloneNode(true);
+                copia.style.margin = "0 auto";
+                copia.style.boxShadow = "none";
+                contenedorLote.appendChild(copia);
+                return copia;
+            });
+
+            documento.body.appendChild(contenedorLote);
+
+            try {
+                const retanguloLote = contenedorLote.getBoundingClientRect();
+                const medidasPaginas = copiasPaginas.map((pagina) => {
+                    const retanguloPagina = pagina.getBoundingClientRect();
+
+                    return {
+                        x: Math.max(0, retanguloPagina.left - retanguloLote.left),
+                        y: Math.max(0, retanguloPagina.top - retanguloLote.top),
+                        largura: Math.ceil(pagina.scrollWidth || retanguloPagina.width || 794),
+                        altura: Math.ceil(pagina.scrollHeight || retanguloPagina.height || 1123),
+                    };
+                });
+                const larguraLotePx = Math.ceil(contenedorLote.scrollWidth || 900);
+                const alturaLotePx = Math.ceil(contenedorLote.scrollHeight || 1400);
+                const canvasLote = await html2canvas(contenedorLote, {
+                    scale: escalaRenderizacao,
+                    useCORS: true,
+                    allowTaint: false,
+                    backgroundColor: "#ffffff",
+                    logging: false,
+                    width: larguraLotePx,
+                    height: alturaLotePx,
+                    windowWidth: Math.max(larguraLotePx, 900),
+                    windowHeight: Math.max(alturaLotePx, 1400),
+                    scrollX: 0,
+                    scrollY: 0,
+                });
+
+                for (const medida of medidasPaginas) {
+                    const canvasPagina = document.createElement("canvas");
+                    canvasPagina.width = Math.round(medida.largura * escalaRenderizacao);
+                    canvasPagina.height = Math.round(medida.altura * escalaRenderizacao);
+
+                    const contextoPagina = canvasPagina.getContext("2d");
+                    if (!contextoPagina) {
+                        throw new Error("Navegador sem suporte para separar as páginas do relatório.");
+                    }
+
+                    contextoPagina.fillStyle = "#ffffff";
+                    contextoPagina.fillRect(0, 0, canvasPagina.width, canvasPagina.height);
+                    contextoPagina.drawImage(
+                        canvasLote,
+                        Math.round(medida.x * escalaRenderizacao),
+                        Math.round(medida.y * escalaRenderizacao),
+                        canvasPagina.width,
+                        canvasPagina.height,
+                        0,
+                        0,
+                        canvasPagina.width,
+                        canvasPagina.height
+                    );
+
+                    const larguraPdfMm = 210;
+                    const alturaPaginaPdfMm = 297;
+                    const alturaFatiaPx = Math.floor((canvasPagina.width * alturaPaginaPdfMm) / larguraPdfMm);
+                    let origemYPx = 0;
+
+                    while (origemYPx < canvasPagina.height) {
+                        const alturaAtualPx = Math.min(alturaFatiaPx, canvasPagina.height - origemYPx);
+                        const canvasFatia = document.createElement("canvas");
+                        canvasFatia.width = canvasPagina.width;
+                        canvasFatia.height = alturaAtualPx;
+
+                        const contextoFatia = canvasFatia.getContext("2d");
+                        if (!contextoFatia) {
+                            throw new Error("Navegador sem suporte para montar as páginas do PDF.");
+                        }
+
+                        contextoFatia.fillStyle = "#ffffff";
+                        contextoFatia.fillRect(0, 0, canvasFatia.width, canvasFatia.height);
+                        contextoFatia.drawImage(
+                            canvasPagina,
+                            0,
+                            origemYPx,
+                            canvasPagina.width,
+                            alturaAtualPx,
+                            0,
+                            0,
+                            canvasPagina.width,
+                            alturaAtualPx
+                        );
+
+                        const imagem = canvasFatia.toDataURL("image/jpeg", 0.9);
+                        const alturaImagemMm = (alturaAtualPx * larguraPdfMm) / canvasPagina.width;
+
+                        if (paginasGeradas > 0) pdf.addPage();
+                        pdf.addImage(imagem, "JPEG", 0, 0, larguraPdfMm, alturaImagemMm, undefined, "FAST");
+                        paginasGeradas += 1;
+                        origemYPx += alturaAtualPx;
+                    }
+                }
+            } finally {
+                contenedorLote.remove();
+            }
+        }
+
+        if (!paginasGeradas) {
+            throw new Error("As páginas do relatório foram renderizadas sem conteúdo.");
+        }
+
+        pdf.save(nomeArquivo.endsWith(".pdf") ? nomeArquivo : `${nomeArquivo}.pdf`);
+    } catch (error) {
+        console.error("Erro ao gerar relatório em PDF:", error);
+        alert("Não foi possível gerar o PDF. Recarregue a página e tente novamente.");
+        return false;
+    } finally {
+        iframe.remove();
     }
 
-    document.body.removeChild(iframe);
-    pdf.save(nomeArquivo.endsWith(".pdf") ? nomeArquivo : `${nomeArquivo}.pdf`);
+    return true;
 }

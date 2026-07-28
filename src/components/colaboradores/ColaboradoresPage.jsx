@@ -380,7 +380,10 @@ export function Colaboradores({
             return;
         }
 
-        const colaboradoresRelatorio = filtrados.map((c) => {
+        const colaboradoresFiltradosRelatorio = filtroClassificacao === "Todos"
+            ? filtrados.filter((colaborador) => !["Desmobilizado", "Inativo"].includes(statusGeral(colaborador).texto))
+            : filtrados;
+        const colaboradoresRelatorio = colaboradoresFiltradosRelatorio.map((c) => {
             const avaliacao = avaliarTreinamentosColaborador(c);
             const geral = statusGeral(c);
             const empresaBase = obterEmpresaRelatorio(c);
@@ -417,7 +420,7 @@ export function Colaboradores({
             busca: busca.trim() || "-",
             empresa,
             classificacao: filtroClassificacao,
-            colaboradoresFiltrados: `${filtrados.length} colaborador(es)`,
+            colaboradoresFiltrados: `${colaboradoresFiltradosRelatorio.length} colaborador(es)`,
         };
 
         await baixarRelatorioColaboradoresTreinamentosPDF({
@@ -435,8 +438,11 @@ export function Colaboradores({
         }
 
         const pendencias = [];
+        const colaboradoresFiltradosRelatorio = filtroClassificacao === "Todos"
+            ? filtrados.filter((colaborador) => !["Desmobilizado", "Inativo"].includes(statusGeral(colaborador).texto))
+            : filtrados;
 
-        filtrados.forEach((c) => {
+        colaboradoresFiltradosRelatorio.forEach((c) => {
             const avaliacao = avaliarTreinamentosColaborador(c);
             const empresaBase = obterEmpresaRelatorio(c);
             const logoRaw = c.empresaLogoUrl || c.empresa_logo_url || empresaBase.logo_url || empresaBase.logoUrl || "";
@@ -473,7 +479,7 @@ export function Colaboradores({
                 busca: busca.trim() || "-",
                 empresa,
                 classificacao: filtroClassificacao,
-                colaboradoresFiltrados: `${filtrados.length} colaborador(es)`,
+                colaboradoresFiltrados: `${colaboradoresFiltradosRelatorio.length} colaborador(es)`,
                 pendenciasEncontradas: `${pendencias.length} pendência(s)`,
             },
         });
@@ -1325,16 +1331,9 @@ ${erros.slice(0, 8).join("\n")}`
                                 className="w-full appearance-none rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                             >
                                 <option value="Todos">Todos os status</option>
-                                {STATUS_CLASSIFICACAO_COLABORADOR
-                                    .flatMap((status) =>
-                                        status === "Bloqueado" &&
-                                        !STATUS_CLASSIFICACAO_COLABORADOR.includes("A vencer")
-                                            ? ["A vencer", status]
-                                            : [status]
-                                    )
-                                    .map((status) => (
+                                {STATUS_CLASSIFICACAO_COLABORADOR.map((status) => (
                                         <option key={status} value={status}>{status}</option>
-                                    ))}
+                                ))}
                             </select>
                         </div>
 

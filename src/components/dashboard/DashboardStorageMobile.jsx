@@ -13,6 +13,7 @@ export function DashboardStorageMobile({
     detalhe = "",
     percentual = 0,
     classeTamanho = "",
+    onClick,
 }) {
     const percentualNormalizado = normalizarPercentualStorage(percentual);
     const percentualDisponivel = Math.max(0, 100 - percentualNormalizado);
@@ -29,7 +30,17 @@ export function DashboardStorageMobile({
     return (
         <article
             data-safescan-storage="mobile"
-            className={`safescan-storage-mobile-card relative flex h-[4.45rem] min-h-[4.45rem] w-full overflow-hidden rounded-[22px] border px-[0.55rem] py-[0.42rem] transition duration-200 lg:hidden ${classeTamanho}`}
+            role="button"
+            tabIndex={0}
+            onClick={onClick}
+            onKeyDown={(evento) => {
+                if (evento.key === "Enter" || evento.key === " ") {
+                    evento.preventDefault();
+                    onClick?.();
+                }
+            }}
+            title="Toque para ver o resumo do armazenamento"
+            className={`safescan-storage-mobile-card relative flex h-[4.45rem] min-h-[4.45rem] w-full cursor-pointer overflow-hidden rounded-[22px] border px-[0.55rem] py-[0.42rem] outline-none transition duration-200 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 lg:hidden ${classeTamanho}`}
             style={{
                 borderColor: "#99f6e4",
                 background: "linear-gradient(135deg, #f0fdfa 0%, #ffffff 78%)",

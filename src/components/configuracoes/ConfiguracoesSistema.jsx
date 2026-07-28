@@ -185,6 +185,7 @@ function formatarPerfilPermissaoSistema(perfil = "") {
 }
 
 const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
+    "config-versao-sistema",
     "config-limites-carregamento",
     "config-auditoria-publica",
     "config-emergencia-qr",
@@ -326,6 +327,7 @@ function carregarVersaoFundoLoginConfiguracoes() {
 
 
 const BLOCOS_CONFIGURACOES_ABERTOS_PADRAO = new Set([
+    "config-versao-sistema",
     "config-limites-carregamento",
     "config-auditoria-publica",
     "config-emergencia-qr",
@@ -2096,6 +2098,7 @@ export function ConfiguracoesSistema({
     ];
 
     const secoesConfiguracoes = [
+        { chave: "config-versao-sistema", titulo: "Versão do sistema", descricao: "Versões atuais do site e do APK e data do último build.", icon: Settings },
         { chave: "config-limites-carregamento", titulo: "Limites e armazenamento", descricao: "Registros por carga e limite administrativo do Storage.", icon: SlidersHorizontal },
         { chave: "config-auditoria-publica", titulo: "Auditoria pública, tokens e QR", descricao: "Token ativo, QR colaborador e QR de campo.", icon: KeyRound },
         { chave: "config-emergencia-qr", titulo: "Senha/PIN de emergência QR", descricao: "Proteção do contato de emergência por empresa.", icon: KeyRound },
@@ -2146,6 +2149,51 @@ export function ConfiguracoesSistema({
 
     const renderBlocoConfiguracao = (chave) => {
         switch (chave) {
+        case "config-versao-sistema": {
+            const dataBuild = new Date(import.meta.env.VITE_APP_BUILD_DATE);
+            const ultimaAtualizacao = Number.isNaN(dataBuild.getTime())
+                ? "Data não disponível"
+                : new Intl.DateTimeFormat("pt-BR", {
+                    dateStyle: "long",
+                    timeStyle: "short",
+                    timeZone: "America/Sao_Paulo",
+                }).format(dataBuild);
+
+            return renderBlocoConfiguracaoComControle(
+                "config-versao-sistema",
+                "Versão do sistema",
+                "Identificação da versão publicada e do APK em desenvolvimento.",
+                (
+                    <Card>
+                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <Settings className="h-5 w-5 text-blue-600" />
+                                    <h2 id="config-versao-sistema" className="scroll-mt-24 text-lg font-black text-slate-950">Versão do sistema</h2>
+                                </div>
+                                <p className="mt-1 text-sm text-slate-500">Referência para confirmar qual site e qual APK estão em uso.</p>
+                            </div>
+                            <span className="w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-black uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-200">Versão atual</span>
+                        </div>
+
+                        <div className="mt-5 grid gap-3 md:grid-cols-3">
+                            <div className="rounded-2xl bg-blue-50 p-4 ring-1 ring-blue-100">
+                                <p className="text-[11px] font-black uppercase tracking-wide text-blue-600">Site</p>
+                                <p className="mt-2 text-2xl font-black text-slate-950">v{import.meta.env.VITE_APP_VERSION}</p>
+                            </div>
+                            <div className="rounded-2xl bg-violet-50 p-4 ring-1 ring-violet-100">
+                                <p className="text-[11px] font-black uppercase tracking-wide text-violet-600">APK SafeScan Campo</p>
+                                <p className="mt-2 text-2xl font-black text-slate-950">v{import.meta.env.VITE_APK_VERSION}</p>
+                            </div>
+                            <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                                <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">Última atualização</p>
+                                <p className="mt-2 text-sm font-black leading-5 text-slate-900">{ultimaAtualizacao}</p>
+                            </div>
+                        </div>
+                    </Card>
+                )
+            );
+        }
         case "config-eventos-auditoria":
             return renderBlocoConfiguracaoComControle(
                 "config-eventos-auditoria",

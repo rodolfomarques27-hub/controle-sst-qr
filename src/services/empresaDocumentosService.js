@@ -297,10 +297,10 @@ export function calcularSituacaoDocumentalEmpresa(documentos = []) {
 
     if (vencendo.length) {
         return {
-            chave: "vencendo",
-            texto: "A vencer",
-            classe: "bg-orange-50 text-orange-700 ring-orange-200",
-            detalhe: `Documento(s) próximo(s) do vencimento: ${vencendo.join(", ")}.`,
+            chave: "em_dia",
+            texto: "Sem pendência",
+            classe: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+            detalhe: `Empresa liberada. Alerta preventivo de documento(s) próximo(s) do vencimento: ${vencendo.join(", ")}.`,
             pendentes,
             bloqueados,
             vencidos,

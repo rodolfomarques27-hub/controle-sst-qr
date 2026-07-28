@@ -13,6 +13,7 @@ export function DashboardStorageDesktop({
     detalhe = "",
     percentual = 0,
     classeTamanho = "",
+    onClick,
 }) {
     const percentualNormalizado = normalizarPercentualStorage(percentual);
     const angulo = Math.round((percentualNormalizado / 100) * 360);
@@ -28,7 +29,17 @@ export function DashboardStorageDesktop({
     return (
         <article
             data-safescan-storage="desktop"
-            className={`safescan-storage-desktop-card relative hidden h-[5.5rem] min-h-[5.5rem] w-full overflow-hidden rounded-[22px] border px-3 py-2 transition duration-200 hover:-translate-y-0.5 lg:flex ${classeTamanho}`}
+            role="button"
+            tabIndex={0}
+            onClick={onClick}
+            onKeyDown={(evento) => {
+                if (evento.key === "Enter" || evento.key === " ") {
+                    evento.preventDefault();
+                    onClick?.();
+                }
+            }}
+            title="Clique para ver o resumo do armazenamento"
+            className={`safescan-storage-desktop-card relative hidden h-[5.5rem] min-h-[5.5rem] w-full cursor-pointer overflow-hidden rounded-[22px] border px-3 py-2 outline-none transition duration-200 hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 lg:flex ${classeTamanho}`}
             style={{
                 borderColor: "#99f6e4",
                 background: "linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(246,249,252,0.97) 100%)",

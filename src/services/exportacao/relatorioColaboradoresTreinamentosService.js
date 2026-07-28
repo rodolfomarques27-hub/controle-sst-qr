@@ -53,6 +53,37 @@ function obterIniciaisEmpresa(nome = "") {
         .toUpperCase();
 }
 
+function obterEmpresaCompactaRelatorio(colaborador = {}, empresaPadrao = "") {
+    const empresaExibicao = String(colaborador.empresaExibicao || "").trim();
+    const correspondenciaSubcontratada = empresaExibicao.match(/subcontratada\s*:\s*([^/]+)/i);
+    const prefixoSubcontratada = correspondenciaSubcontratada ? "Sub.: " : "";
+    const nomeCompleto = String(
+        correspondenciaSubcontratada?.[1] ||
+        colaborador.empresaNome ||
+        colaborador.empresa ||
+        empresaPadrao ||
+        "-"
+    ).trim() || "-";
+
+    if (nomeCompleto.length <= 20) {
+        return { rotulo: "Empresa", nome: `${prefixoSubcontratada}${nomeCompleto}` };
+    }
+
+    const palavras = nomeCompleto.split(/\s+/).filter(Boolean);
+    let nomeCurto = "";
+
+    for (const palavra of palavras) {
+        const candidato = nomeCurto ? `${nomeCurto} ${palavra}` : palavra;
+        if (candidato.length > 18) break;
+        nomeCurto = candidato;
+    }
+
+    return {
+        rotulo: "Empresa",
+        nome: `${prefixoSubcontratada}${nomeCurto || palavras[0] || nomeCompleto}`,
+    };
+}
+
 function agruparPorEmpresaRelatorio(colaboradores = []) {
     const mapa = new Map();
 
@@ -61,9 +92,11 @@ function agruparPorEmpresaRelatorio(colaboradores = []) {
         const chave = String(colaborador.empresaId || empresaNome).trim().toLowerCase();
 
         if (!mapa.has(chave)) {
+            const empresaCompacta = obterEmpresaCompactaRelatorio(colaborador, empresaNome);
             mapa.set(chave, {
                 id: colaborador.empresaId || chave,
-                nome: empresaNome,
+                nome: empresaCompacta.nome,
+                rotulo: empresaCompacta.rotulo,
                 cnpj: colaborador.empresaCnpj || "",
                 responsavel: colaborador.empresaResponsavel || "",
                 logoUrl: colaborador.empresaLogoUrl || "",
@@ -172,9 +205,59 @@ function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissa
             <td>${Number(colaborador.vencidos?.length || colaborador.vencidosTotal || 0) || 0}</td>
             <td>${Number(colaborador.vencendo?.length || colaborador.vencendoTotal || 0) || 0}</td>
         </tr>
-    `).join("");
+    `);
 
-    const detalhes = colaboradoresEmpresa.map((colaborador, indice) => {
+    const montarTabelaResumo = (linhas = []) => `
+        <table class="tabela-resumo-colaboradores">
+            <colgroup>
+                <col class="col-numero" />
+                <col class="col-colaborador" />
+                <col class="col-funcao" />
+                <col class="col-situacao" />
+                <col class="col-status" />
+                <col class="col-pendentes" />
+                <col class="col-vencidos" />
+                <col class="col-vencer" />
+            </colgroup>
+            <thead>
+                <tr>
+                    <th><div class="th-conteudo">#</div></th>
+                    <th><div class="th-conteudo">Colaborador</div></th>
+                    <th><div class="th-conteudo">Função</div></th>
+                    <th><div class="th-conteudo">Situação na<br />obra</div></th>
+                    <th><div class="th-conteudo">Status geral</div></th>
+                    <th><div class="th-conteudo">Pendentes</div></th>
+                    <th><div class="th-conteudo">Vencidos</div></th>
+                    <th><div class="th-conteudo">A<br />vencer</div></th>
+                </tr>
+            </thead>
+            <tbody>
+                ${linhas.join("") || `<tr><td colspan="8">Nenhum colaborador encontrado.</td></tr>`}
+            </tbody>
+        </table>
+    `;
+
+    const limitePrimeiraPaginaResumo = 14;
+    const limiteContinuacaoResumo = 26;
+    const linhasPrimeiraPagina = linhasTabela.slice(0, limitePrimeiraPaginaResumo);
+    const paginasContinuacaoResumo = [];
+    for (
+        let indice = limitePrimeiraPaginaResumo;
+        indice < linhasTabela.length;
+        indice += limiteContinuacaoResumo
+    ) {
+        paginasContinuacaoResumo.push(`
+            <section class="pagina-relatorio quebra-pagina pagina-relatorio--resumo-continuacao">
+                <section class="bloco bloco--resumo-continuacao">
+                    <h2>Resumo por colaborador - continuação</h2>
+                    ${montarTabelaResumo(linhasTabela.slice(indice, indice + limiteContinuacaoResumo))}
+                </section>
+                ${montarRodapeTreinamentosRelatorio("Relatório visual por empresa")}
+            </section>
+        `);
+    }
+
+    const cartoesDetalhes = colaboradoresEmpresa.map((colaborador, indice) => {
         const validos = limparListaRelatorio(colaborador.validos);
         const pendentes = limparListaRelatorio(colaborador.pendentes);
         const vencidos = limparListaRelatorio(colaborador.vencidos);
@@ -183,13 +266,10 @@ function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissa
         const fotoColaborador = colaborador.fotoUrl
             ? `<img src="${escaparHTML(colaborador.fotoUrl)}" alt="Foto ${escaparHTML(colaborador.nome || "colaborador")}" />`
             : escaparHTML(obterIniciaisEmpresa(colaborador.nome || "C"));
+        const empresaCompacta = obterEmpresaCompactaRelatorio(colaborador, empresa.nome);
 
         return `
-            <section class="pagina-relatorio quebra-pagina pagina-relatorio--detalhe-colaborador">
-                ${montarCabecalhoEmpresaTreinamentosRelatorio(empresa, dataEmissao, "Detalhamento de colaborador e treinamentos")}
-                <section class="bloco bloco-detalhamento bloco-detalhamento--pagina-unica">
-                    <h2>Detalhamento</h2>
-                    <section class="detalhe-colaborador detalhe-colaborador--pagina-unica">
+                    <section class="detalhe-colaborador detalhe-colaborador--compacto">
                         <div class="detalhe-topo">
                             <div class="numero-colaborador">
                                 <svg viewBox="0 0 26 26" aria-hidden="true" focusable="false">
@@ -206,8 +286,8 @@ function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissa
                             </div>
                             <div class="detalhe-status">
                                 <div class="detalhe-status-linha detalhe-status-linha--empresa">
-                                    <strong>Empresa:</strong>
-                                    <span>${escaparHTML(colaborador.empresaExibicao || colaborador.empresaNome || empresa.nome || "-")}</span>
+                                    <strong>${escaparHTML(empresaCompacta.rotulo)}:</strong>
+                                    <span>${escaparHTML(empresaCompacta.nome)}</span>
                                 </div>
                                 <div class="detalhe-status-linha">
                                     <strong>Situação na obra:</strong>
@@ -238,11 +318,24 @@ function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissa
                             </div>
                         </div>
                     </section>
+        `;
+    });
+
+    const detalhes = [];
+    for (let indice = 0; indice < cartoesDetalhes.length; indice += 3) {
+        detalhes.push(`
+            <section class="pagina-relatorio quebra-pagina pagina-relatorio--detalhe-colaborador">
+                ${montarCabecalhoEmpresaTreinamentosRelatorio(empresa, dataEmissao, "Detalhamento de colaborador e treinamentos", { exibirDadosEmpresa: false })}
+                <section class="bloco bloco-detalhamento bloco-detalhamento--pagina-dupla">
+                    <h2>Detalhamento</h2>
+                    <div class="detalhes-duplos">
+                        ${cartoesDetalhes.slice(indice, indice + 3).join("")}
+                    </div>
                 </section>
                 ${montarRodapeTreinamentosRelatorio("Relatório visual por empresa")}
             </section>
-        `;
-    }).join("");
+        `);
+    }
 
     return `
         <section class="pagina-relatorio ${indiceEmpresa > 0 ? "quebra-pagina" : ""}">
@@ -264,40 +357,15 @@ function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissa
 
             <section class="bloco">
                 <h2>Resumo por colaborador</h2>
-                <table class="tabela-resumo-colaboradores">
-                    <colgroup>
-                        <col class="col-numero" />
-                        <col class="col-colaborador" />
-                        <col class="col-funcao" />
-                        <col class="col-situacao" />
-                        <col class="col-status" />
-                        <col class="col-pendentes" />
-                        <col class="col-vencidos" />
-                        <col class="col-vencer" />
-                    </colgroup>
-                    <thead>
-                        <tr>
-                            <th><div class="th-conteudo">#</div></th>
-                            <th><div class="th-conteudo">Colaborador</div></th>
-                            <th><div class="th-conteudo">Função</div></th>
-                            <th><div class="th-conteudo">Situação na<br />obra</div></th>
-                            <th><div class="th-conteudo">Status geral</div></th>
-                            <th><div class="th-conteudo">Pendentes</div></th>
-                            <th><div class="th-conteudo">Vencidos</div></th>
-                            <th><div class="th-conteudo">A<br />vencer</div></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${linhasTabela || `<tr><td colspan="8">Nenhum colaborador encontrado.</td></tr>`}
-                    </tbody>
-                </table>
+                ${montarTabelaResumo(linhasPrimeiraPagina)}
             </section>
 
             ${montarRodapeTreinamentosRelatorio("Relatório visual por empresa")}
         </section>
-        ${detalhes || `
+        ${paginasContinuacaoResumo.join("")}
+        ${detalhes.join("") || `
             <section class="pagina-relatorio quebra-pagina">
-                ${montarCabecalhoEmpresaTreinamentosRelatorio(empresa, dataEmissao, "Detalhamento de colaborador e treinamentos")}
+                ${montarCabecalhoEmpresaTreinamentosRelatorio(empresa, dataEmissao, "Detalhamento de colaborador e treinamentos", { exibirDadosEmpresa: false })}
                 <section class="bloco bloco-detalhamento"><h2>Detalhamento</h2><p class="lista-vazia">Nenhum colaborador para detalhar.</p></section>
                 ${montarRodapeTreinamentosRelatorio("Relatório visual por empresa")}
             </section>
@@ -959,9 +1027,89 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
         margin-top: 10px;
     }
 
+    .bloco-detalhamento--pagina-dupla {
+        margin-top: 8px;
+    }
+
+    .detalhes-duplos {
+        display: grid;
+        grid-template-rows: repeat(3, minmax(0, auto));
+        gap: 8px;
+    }
+
+    .pagina-relatorio--resumo-continuacao {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .bloco--resumo-continuacao {
+        margin-top: 0;
+    }
+
+    .pagina-relatorio--resumo-continuacao .rodape-relatorio {
+        margin-top: auto;
+    }
+
+    .pagina-relatorio--resumo-continuacao .tabela-resumo-colaboradores tbody td {
+        height: 34px;
+        padding-top: 5px;
+        padding-bottom: 5px;
+    }
+
     .detalhe-colaborador--pagina-unica {
         margin-top: 0;
         page-break-inside: avoid;
+    }
+
+    .detalhe-colaborador--compacto {
+        margin-top: 0;
+    }
+
+    .detalhe-colaborador--compacto .detalhe-topo {
+        grid-template-columns: 30px 48px minmax(215px, 0.92fr) minmax(330px, 1.45fr);
+        gap: 8px;
+        padding: 8px 10px;
+    }
+
+    .detalhe-colaborador--compacto .avatar-colaborador {
+        width: 48px;
+        height: 48px;
+    }
+
+    .detalhe-colaborador--compacto .detalhe-identificacao h3 {
+        margin-bottom: 3px;
+        font-size: 14px;
+    }
+
+    .detalhe-colaborador--compacto .detalhe-identificacao p,
+    .detalhe-colaborador--compacto .detalhe-status-linha {
+        font-size: 9px;
+        line-height: 1.18;
+    }
+
+    .detalhe-colaborador--compacto .detalhe-grids {
+        gap: 8px;
+        padding: 8px 10px;
+    }
+
+    .detalhe-colaborador--compacto .lista-card {
+        min-height: 104px;
+        padding: 8px;
+    }
+
+    .detalhe-colaborador--compacto .lista-card h4 {
+        margin-bottom: 5px;
+        font-size: 9px;
+    }
+
+    .detalhe-colaborador--compacto .lista-card li {
+        margin-bottom: 3px;
+        font-size: 7.5px;
+        line-height: 1.22;
+    }
+
+    .detalhe-colaborador--compacto .lista-vazia {
+        font-size: 8px;
     }
     .detalhe-colaborador {
         border: 1px solid var(--linha);
