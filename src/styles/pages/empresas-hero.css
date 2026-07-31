@@ -1,0 +1,540 @@
+/* MICROETAPA HERO EMPRESAS - PADRAO DASHBOARD SST - INICIO */
+/*
+ * Hero de Empresas
+ *
+ * Replica o padrão aprovado no Dashboard SST e na Auditoria:
+ * - mesma altura responsiva compacta;
+ * - mesma faixa inferior;
+ * - mesma escala de título e subtítulo;
+ * - indicadores e ação em pílulas compactas;
+ * - espaço superior reduzido;
+ * - linha verde de identidade visual.
+ *
+ * Aplicação exclusiva em desktop.
+ */
+@media (min-width: 1024px) {
+  .hero-header--empresas {
+    margin-top: -0.6rem !important;
+    padding-top: 0 !important;
+  }
+
+  .empresas-hero-banner {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    height: clamp(154px, 9.8vw, 178px) !important;
+    min-height: clamp(154px, 9.8vw, 178px) !important;
+    max-height: clamp(154px, 9.8vw, 178px) !important;
+    margin-bottom: 0.75rem !important;
+    overflow: hidden !important;
+    border-radius: clamp(18px, 1.2vw, 28px) !important;
+    box-shadow:
+      0 14px 30px rgba(15, 23, 42, 0.16),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.12) !important;
+  }
+
+  .empresas-hero-banner__bg {
+    z-index: 1 !important;
+    background-position: center 48% !important;
+  }
+
+  .empresas-hero-banner__overlay {
+    z-index: 2 !important;
+  }
+
+  .empresas-hero-banner::after {
+    display: block !important;
+    height: clamp(42px, 3vw, 52px) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.20) !important;
+    background:
+      linear-gradient(
+        90deg,
+        rgba(8, 13, 24, 0.92) 0%,
+        rgba(17, 24, 39, 0.84) 52%,
+        rgba(56, 34, 18, 0.82) 100%
+      ) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 -8px 20px rgba(0, 0, 0, 0.08) !important;
+    backdrop-filter: blur(12px) saturate(130%) !important;
+  }
+
+  .empresas-hero-banner__content {
+    box-sizing: border-box !important;
+    z-index: 10 !important;
+    width: 100% !important;
+    height: clamp(154px, 9.8vw, 178px) !important;
+    min-height: clamp(154px, 9.8vw, 178px) !important;
+    max-height: clamp(154px, 9.8vw, 178px) !important;
+    padding:
+      clamp(15px, 1vw, 22px)
+      clamp(22px, 1.55vw, 32px)
+      clamp(52px, 3.8vw, 66px) !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    overflow: hidden !important;
+  }
+
+  .empresas-hero-banner__content > .min-w-0 {
+    position: relative !important;
+    display: block !important;
+    width: min(100%, 48rem) !important;
+    max-width: 48rem !important;
+    text-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.86),
+      0 6px 18px rgba(0, 0, 0, 0.34) !important;
+  }
+
+  .empresas-hero-banner__eyebrow {
+    margin: 0 !important;
+    font-size: clamp(0.68rem, 0.70vw, 0.84rem) !important;
+    line-height: 1.08 !important;
+    letter-spacing: 0.24em !important;
+  }
+
+  .empresas-hero-banner__title {
+    margin: clamp(5px, 0.35vw, 8px) 0 0 !important;
+    max-width: 48rem !important;
+    font-size: clamp(1.24rem, 1.35vw, 1.72rem) !important;
+    line-height: 1.03 !important;
+    letter-spacing: -0.03em !important;
+  }
+
+  .empresas-hero-banner__text {
+    margin-top: clamp(5px, 0.35vw, 8px) !important;
+    max-width: 48rem !important;
+    font-size: clamp(0.86rem, 0.9vw, 1.06rem) !important;
+    line-height: 1.14 !important;
+    font-weight: 700 !important;
+  }
+
+  .empresas-hero-banner__content > .min-w-0::after {
+    content: "" !important;
+    display: block !important;
+    width: clamp(46px, 3vw, 64px) !important;
+    height: clamp(3px, 0.2vw, 4px) !important;
+    margin-top: clamp(8px, 0.55vw, 11px) !important;
+    border-radius: 999px !important;
+    background: #1e7c3a !important;
+    box-shadow:
+      0 0 12px rgba(16, 185, 129, 0.32),
+      0 0 24px rgba(16, 185, 129, 0.14) !important;
+  }
+
+  .empresas-hero-banner__stats {
+    position: absolute !important;
+    z-index: 12 !important;
+    bottom: clamp(8px, 0.58vw, 12px) !important;
+    left: clamp(16px, 1.1vw, 24px) !important;
+    right: auto !important;
+    display: flex !important;
+    width: auto !important;
+    height: clamp(31px, 2vw, 36px) !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    flex-wrap: nowrap !important;
+    gap: clamp(6px, 0.42vw, 9px) !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .empresas-hero-banner__stat {
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    min-width: max-content !important;
+    min-height: clamp(31px, 2vw, 36px) !important;
+    height: clamp(31px, 2vw, 36px) !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: clamp(0.34rem, 0.4vw, 0.5rem) !important;
+    padding:
+      0
+      clamp(0.76rem, 0.84vw, 1rem) !important;
+    border-radius: 999px !important;
+    color: #ffffff !important;
+    font-size: clamp(0.66rem, 0.72vw, 0.86rem) !important;
+    line-height: 1 !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 6px 14px rgba(0, 0, 0, 0.20) !important;
+    backdrop-filter: blur(10px) saturate(130%) !important;
+  }
+
+  .empresas-hero-banner__stat:nth-child(1) {
+    border: 1px solid rgba(45, 212, 191, 0.46) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(3, 48, 57, 0.92) 0%,
+        rgba(7, 84, 95, 0.72) 100%
+      ) !important;
+  }
+
+  .empresas-hero-banner__stat:nth-child(2) {
+    border: 1px solid rgba(56, 189, 248, 0.42) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(10, 37, 64, 0.92) 0%,
+        rgba(8, 80, 120, 0.72) 100%
+      ) !important;
+  }
+
+  .empresas-hero-banner__stat svg {
+    width: clamp(0.84rem, 0.9vw, 1rem) !important;
+    height: clamp(0.84rem, 0.9vw, 1rem) !important;
+    min-width: clamp(0.84rem, 0.9vw, 1rem) !important;
+  }
+
+  .empresas-hero-banner__stat:nth-child(1) svg {
+    color: #5eead4 !important;
+  }
+
+  .empresas-hero-banner__stat:nth-child(2) svg {
+    color: #7dd3fc !important;
+  }
+
+  .hero-header--empresas .page-actions {
+    top: calc(
+      clamp(154px, 9.8vw, 178px) -
+      clamp(31px, 2vw, 36px) -
+      clamp(8px, 0.58vw, 12px)
+    ) !important;
+    right: clamp(14px, 1vw, 22px) !important;
+    z-index: 50 !important;
+    width: auto !important;
+    max-width: 40% !important;
+    height: clamp(31px, 2vw, 36px) !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+  }
+
+  .hero-header--empresas .page-actions > div {
+    display: flex !important;
+    width: auto !important;
+    height: clamp(31px, 2vw, 36px) !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    flex-wrap: nowrap !important;
+    gap: clamp(6px, 0.42vw, 9px) !important;
+    margin: 0 !important;
+  }
+
+  .hero-header--empresas .page-actions button,
+  .hero-header--empresas .empresas-cadastro-header__acao {
+    box-sizing: border-box !important;
+    min-width: max-content !important;
+    min-height: clamp(31px, 2vw, 36px) !important;
+    height: clamp(31px, 2vw, 36px) !important;
+    padding:
+      0
+      clamp(0.76rem, 0.84vw, 1rem) !important;
+    border-radius: 999px !important;
+    font-size: clamp(0.66rem, 0.72vw, 0.86rem) !important;
+    line-height: 1 !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 6px 14px rgba(0, 0, 0, 0.20) !important;
+    backdrop-filter: blur(10px) saturate(130%) !important;
+  }
+
+  .hero-header--empresas .page-actions button svg,
+  .hero-header--empresas .empresas-cadastro-header__acao svg {
+    width: clamp(0.84rem, 0.9vw, 1rem) !important;
+    height: clamp(0.84rem, 0.9vw, 1rem) !important;
+    min-width: clamp(0.84rem, 0.9vw, 1rem) !important;
+  }
+}
+/* MICROETAPA HERO EMPRESAS - PADRAO DASHBOARD SST - FIM */
+
+/* MICROETAPA EMPRESAS - ATUALIZAR BANCO AZUL - INICIO */
+/*
+ * Ajuste exclusivo do botão Atualizar banco no Hero de Empresas.
+ *
+ * Mantém:
+ * - dimensões;
+ * - posição;
+ * - tipografia;
+ * - ícone;
+ * - evento e funcionalidade.
+ *
+ * A seleção contextual impede alteração do botão Abrir/Recolher,
+ * que utiliza a mesma classe base em outra região da página.
+ */
+@media (min-width: 1024px) {
+  .hero-header--empresas
+    .page-actions
+    .empresas-cadastro-header__acao {
+    border-color: rgba(56, 189, 248, 0.42) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(10, 37, 64, 0.92) 0%,
+        rgba(8, 80, 120, 0.72) 100%
+      ) !important;
+    color: #ffffff !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.10),
+      0 0 16px rgba(34, 211, 238, 0.14),
+      0 6px 14px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  .hero-header--empresas
+    .page-actions
+    .empresas-cadastro-header__acao:hover {
+    border-color: rgba(125, 211, 252, 0.62) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(12, 48, 82, 0.96) 0%,
+        rgba(3, 105, 161, 0.80) 100%
+      ) !important;
+  }
+}
+/* MICROETAPA EMPRESAS - ATUALIZAR BANCO AZUL - FIM */
+
+
+/* MICROETAPA HERO EMPRESAS - DATA E GRUPO DIREITO - INICIO */
+/*
+ * Faixa operacional padronizada:
+ * - data completa, dia da semana e hora à esquerda;
+ * - Atualizar banco, empresas ativas e documentos SST à direita;
+ * - controles centralizados verticalmente na faixa inferior;
+ * - responsividade e funcionalidades preservadas.
+ */
+.empresas-hero-banner__date {
+  display: none;
+}
+
+.empresas-hero-banner__atualizar {
+  box-sizing: border-box;
+  display: inline-flex;
+  min-width: max-content;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0 0.9rem;
+  border: 1px solid rgba(56, 189, 248, 0.52);
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(10, 37, 64, 0.96) 0%,
+      rgba(8, 80, 120, 0.82) 100%
+    );
+  color: #ffffff;
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 16px rgba(34, 211, 238, 0.14),
+    0 6px 14px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(10px) saturate(130%);
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    transform 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.empresas-hero-banner__atualizar:hover {
+  border-color: rgba(125, 211, 252, 0.72);
+  background:
+    linear-gradient(
+      135deg,
+      rgba(12, 48, 82, 0.99) 0%,
+      rgba(3, 105, 161, 0.88) 100%
+    );
+  transform: translateY(-1px);
+}
+
+.empresas-hero-banner__atualizar:active {
+  transform: translateY(0);
+}
+
+@media (min-width: 1024px) {
+  .empresas-hero-banner__date {
+    box-sizing: border-box !important;
+    position: absolute !important;
+    z-index: 16 !important;
+    left: clamp(12px, 0.9vw, 16px) !important;
+    bottom:
+      calc(
+        (
+          clamp(42px, 3vw, 52px) -
+          clamp(31px, 2vw, 36px)
+        ) / 2
+      ) !important;
+    display: inline-flex !important;
+    min-width: 0 !important;
+    min-height: clamp(31px, 2vw, 36px) !important;
+    height: clamp(31px, 2vw, 36px) !important;
+    max-height: clamp(31px, 2vw, 36px) !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: clamp(5px, 0.4vw, 7px) !important;
+    margin: 0 !important;
+    padding: 0 clamp(11px, 0.85vw, 15px) !important;
+    border: 1px solid rgba(45, 212, 191, 0.5) !important;
+    border-radius: 999px !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(3, 48, 57, 0.94) 0%,
+        rgba(7, 84, 95, 0.76) 100%
+      ) !important;
+    color: #ffffff !important;
+    font-size: clamp(0.66rem, 0.58vw, 0.76rem) !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 0 16px rgba(45, 212, 191, 0.13),
+      0 6px 14px rgba(0, 0, 0, 0.18) !important;
+    backdrop-filter: blur(10px) saturate(135%) !important;
+  }
+
+  .empresas-hero-banner__date svg {
+    width: clamp(0.88rem, 0.9vw, 1rem) !important;
+    height: clamp(0.88rem, 0.9vw, 1rem) !important;
+    min-width: clamp(0.88rem, 0.9vw, 1rem) !important;
+    color: #5eead4 !important;
+  }
+
+  .empresas-hero-banner__stats {
+    position: absolute !important;
+    z-index: 16 !important;
+    top: auto !important;
+    right: clamp(12px, 0.9vw, 16px) !important;
+    bottom:
+      calc(
+        (
+          clamp(42px, 3vw, 52px) -
+          clamp(31px, 2vw, 36px)
+        ) / 2
+      ) !important;
+    left: auto !important;
+    display: flex !important;
+    width: auto !important;
+    max-width: calc(100% - clamp(310px, 26vw, 390px)) !important;
+    min-height: clamp(31px, 2vw, 36px) !important;
+    height: clamp(31px, 2vw, 36px) !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    flex-wrap: nowrap !important;
+    gap: clamp(6px, 0.42vw, 9px) !important;
+    margin: 0 !important;
+    transform: none !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .empresas-hero-banner__atualizar,
+  .empresas-hero-banner__stat {
+    box-sizing: border-box !important;
+    min-width: max-content !important;
+    min-height: clamp(31px, 2vw, 36px) !important;
+    height: clamp(31px, 2vw, 36px) !important;
+    max-height: clamp(31px, 2vw, 36px) !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: clamp(0.34rem, 0.4vw, 0.5rem) !important;
+    padding: 0 clamp(0.76rem, 0.84vw, 1rem) !important;
+    border-radius: 999px !important;
+    color: #ffffff !important;
+    font-size: clamp(0.66rem, 0.72vw, 0.86rem) !important;
+    line-height: 1 !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 6px 14px rgba(0, 0, 0, 0.2) !important;
+    backdrop-filter: blur(10px) saturate(130%) !important;
+  }
+
+  .empresas-hero-banner__atualizar {
+    border: 1px solid rgba(56, 189, 248, 0.52) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(10, 37, 64, 0.96) 0%,
+        rgba(8, 80, 120, 0.82) 100%
+      ) !important;
+  }
+
+  .empresas-hero-banner__atualizar svg {
+    color: #7dd3fc !important;
+  }
+
+  .empresas-hero-banner__stats
+    > .empresas-hero-banner__stat:nth-child(2) {
+    border: 1px solid rgba(45, 212, 191, 0.46) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(3, 48, 57, 0.92) 0%,
+        rgba(7, 84, 95, 0.72) 100%
+      ) !important;
+  }
+
+  .empresas-hero-banner__stats
+    > .empresas-hero-banner__stat:nth-child(2) svg {
+    color: #5eead4 !important;
+  }
+
+  .empresas-hero-banner__stats
+    > .empresas-hero-banner__stat:nth-child(3) {
+    border: 1px solid rgba(56, 189, 248, 0.42) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(10, 37, 64, 0.92) 0%,
+        rgba(8, 80, 120, 0.72) 100%
+      ) !important;
+  }
+
+  .empresas-hero-banner__stats
+    > .empresas-hero-banner__stat:nth-child(3) svg {
+    color: #7dd3fc !important;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1180px) {
+  .empresas-hero-banner__date {
+    gap: 4px !important;
+    padding-right: 8px !important;
+    padding-left: 8px !important;
+    font-size: 0.6rem !important;
+  }
+
+  .empresas-hero-banner__stats {
+    max-width: calc(100% - 245px) !important;
+    gap: 4px !important;
+  }
+
+  .empresas-hero-banner__atualizar,
+  .empresas-hero-banner__stat {
+    gap: 4px !important;
+    padding-right: 7px !important;
+    padding-left: 7px !important;
+    font-size: 0.6rem !important;
+  }
+
+  .empresas-hero-banner__stat svg {
+    display: none !important;
+  }
+}
+/* MICROETAPA HERO EMPRESAS - DATA E GRUPO DIREITO - FIM */

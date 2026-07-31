@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { normalizarFuncaoMaoDeObraDds } from "./DdsPageMaoDeObraSupport";
 
 export default function useDdsReciboHistoricoDerivados({
     codigoConferenciaDds,
@@ -49,7 +50,7 @@ export default function useDdsReciboHistoricoDerivados({
 
             participantes.forEach((participante) => {
                 const funcao = String(participante?.funcao || participante?.cargo || "").trim();
-                if (funcao) funcoes.add(funcao);
+                if (funcao) funcoes.add(normalizarFuncaoMaoDeObraDds(funcao));
             });
         });
 

@@ -1,3 +1,4 @@
+import "../../styles/pages/auditoria-hero.css";
 /* eslint-disable no-unused-vars */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -3536,13 +3537,10 @@ const logoHtml = logoQr
     return (
             <div>
                 <Header
+                    className="hero-integrated-page-header hero-header--auditoria-campo"
                     titulo="Dashboard Auditoria de Campo"
                     acao={(
                     <div className="flex flex-wrap items-center gap-2">
-                        <button type="button" onClick={imprimirRelatorioDashboardAuditoriaCampo} className={classeBotaoCabecalhoDashboardAuditoriaCampo}>
-                            <Download className="h-4 w-4" />
-                            Imprimir relatório
-                        </button>
                         <button type="button" onClick={atualizarDadosDashboardAuditoriaCampo} disabled={atualizacaoDadosEmAndamento} className={classeBotaoCabecalhoDashboardAuditoriaCampo}>
                             <RefreshCw className={classNames("h-4 w-4", atualizacaoDadosEmAndamento ? "animate-spin" : "")} />
                             Atualizar dados
@@ -3550,6 +3548,10 @@ const logoHtml = logoQr
                         <button type="button" onClick={() => setMostrarPersonalizacao((valor) => !valor)} className={classeBotaoCabecalhoDashboardAuditoriaCampo}>
                             <Filter className="h-4 w-4" />
                             Personalizar painel
+                        </button>
+                        <button type="button" onClick={imprimirRelatorioDashboardAuditoriaCampo} className={classeBotaoCabecalhoDashboardAuditoriaCampo}>
+                            <Download className="h-4 w-4" />
+                            Imprimir relatório
                         </button>
                     </div>
                 )}
@@ -3569,7 +3571,7 @@ const logoHtml = logoQr
                 />
                 <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(17,24,39,0.36)_0%,rgba(17,24,39,0.24)_34%,rgba(17,24,39,0.10)_68%,rgba(17,24,39,0.08)_100%)]" />
 
-                <div className="relative flex min-h-[155px] flex-col justify-between gap-5 px-6 py-6 text-white lg:flex-row lg:items-center">
+                <div className="relative flex min-h-[132px] flex-col justify-between gap-3 px-6 py-5 text-white lg:flex-row lg:items-end">
                     <div className="min-w-0" style={{ textShadow: "0 2px 10px rgba(0,0,0,0.65)" }}>
                         <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-300">
                             SafeScan Brasil
@@ -3583,7 +3585,7 @@ const logoHtml = logoQr
                         <div className="mt-5 h-1 w-14 rounded-full bg-[#1E7C3A]" />
                     </div>
 
-                    <div className="rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm font-black text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] backdrop-blur">
+                    <div className="dashboard-hero-sst__date rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm font-black text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] backdrop-blur">
                         <div className="flex flex-wrap items-center gap-2">
                             <CalendarClock className="h-4 w-4 text-emerald-300" />
                             <span>{dataHeroDashboardAuditoriaCampo}</span>

@@ -104,6 +104,7 @@ export function QrCodeComLogo({
     fgColor = "#0f172a",
     logoSrc = "",
     logoRatio = 0.24,
+    showLogo = true,
     className = "",
 }) {
     const logoGlobal = useLogoQrCodeGlobal();
@@ -133,7 +134,7 @@ export function QrCodeComLogo({
                 fgColor={fgColor}
             />
 
-            {logoRenderizado && (
+            {showLogo && logoRenderizado && (
                 <span
                     aria-hidden="true"
                     className="pointer-events-none absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-white"

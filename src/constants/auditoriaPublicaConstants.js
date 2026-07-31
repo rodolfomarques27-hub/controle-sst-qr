@@ -1,3 +1,5 @@
+import { obterOrigemPublicaSistema } from "../utils/urlPublicaUtils.js";
+
 export const CHAVE_STORAGE_CONFIG_AUDITORIA_PUBLICA = "sstAuditoriaPublicaConfig";
 
 export const SENHA_REFERENCIA_AUDITORIA_CAMPO_PUBLICA_PADRAO = "2026";
@@ -166,7 +168,7 @@ export function montarUrlConsultaQrColaboradorPublica({
     tokenQrColaborador = "",
     tokenAuditoriaPublica = "",
 } = {}) {
-    const origemFinal = origem || (typeof window !== "undefined" ? window.location.origin : "");
+    const origemFinal = obterOrigemPublicaSistema(origem);
     const tokenQrFinal = textoSeguro(tokenQrColaborador);
     const tokenAuditoriaFinal = normalizarTokenPublicoOperacional(tokenAuditoriaPublica);
     const params = new URLSearchParams();
@@ -184,7 +186,7 @@ export function montarUrlConsultaQrColaboradorPublica({
 }
 
 export function montarLinkAuditoriaPublicaSistema({ origem = "", tokenPublico = "" } = {}) {
-    const origemFinal = origem || (typeof window !== "undefined" ? window.location.origin : "");
+    const origemFinal = obterOrigemPublicaSistema(origem);
     const tokenFinal = normalizarTokenPublicoOperacional(tokenPublico);
     const params = new URLSearchParams();
 

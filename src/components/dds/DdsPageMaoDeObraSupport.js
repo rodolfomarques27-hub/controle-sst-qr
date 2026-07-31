@@ -39,7 +39,27 @@ export function normalizarNomeEmpresaMaoDeObraDds(valor = "") {
 }
 
 export function normalizarFuncaoMaoDeObraDds(valor = "") {
-    return String(valor || "Sem função").trim().toUpperCase() || "SEM FUNÇÃO";
+    const funcao = String(valor || "Sem função")
+        .trim()
+        .replace(/\s+/g, " ")
+        .toUpperCase() || "SEM FUNÇÃO";
+
+    const chave = funcao
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^A-Z0-9]+/g, " ")
+        .trim();
+
+    const funcoesCanonicas = {
+        "AJUDANTE": "AJUDANTE GERAL",
+        "AJUDANTE GERAL I": "AJUDANTE GERAL",
+        "OP DE MAQUINA": "OPERADOR DE MÁQUINAS",
+        "OP DE MAQUINAS": "OPERADOR DE MÁQUINAS",
+        "OPERADOR DE MAQUINA": "OPERADOR DE MÁQUINAS",
+        "OPERADOR DE MAQUINAS": "OPERADOR DE MÁQUINAS",
+    };
+
+    return funcoesCanonicas[chave] || funcao;
 }
 
 export function formatarNumeroMaoDeObraDds(valor = 0) {

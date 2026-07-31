@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { AlertCircle, CalendarOff, Clock3, CloudRain, FileText, FolderOpen, Timer, UserRound, Zap } from "lucide-react";
 import { obterChaveSugestaoFrequenciaDds } from "../../utils/ddsSugestaoFrequenciaUtils";
 
 export default function DdsConferenciaAssistidaSection({
@@ -5,6 +7,7 @@ export default function DdsConferenciaAssistidaSection({
     QUANTIDADE_LINHAS_COMPLEMENTARES_DDS,
     alternarCardDds,
     alternarSemAtividadeConferenciaAssistidaDds,
+    alternarChuvaConferenciaAssistidaDds,
     atualizarParticipanteAdicionalConferenciaDds,
     colaboradoresCadastradosConferenciaDds,
     empresasCadastradasConferenciaDds,
@@ -29,6 +32,8 @@ export default function DdsConferenciaAssistidaSection({
     limparParticipanteConferenciaAssistidaDds,
     marcarSemanaCompletaAssistidaDds,
     marcarSemanaAusenteAssistidaDds,
+    marcarSemanaFeriasAssistidaDds,
+    marcarSemanaAtestadoAssistidaDds,
     obterStatusFrequenciaAssistidaDds,
     participantesAdicionaisAtivosConferenciaDds,
     participantesAdicionaisConferenciaDds,
@@ -41,6 +46,11 @@ export default function DdsConferenciaAssistidaSection({
     sugestoesTemaResponsavelDds,
     usarPlanejamentoTemaConferenciaAssistidaDds,
 }) {
+    const [indiceDiaDetalhadoDds, setIndiceDiaDetalhadoDds] = useState(0);
+    const indiceDiaSelecionadoDds = Math.min(
+        Math.max(0, indiceDiaDetalhadoDds),
+        Math.max(0, diasConferenciaAssistidaDds.length - 1)
+    );
     const resumoLeituraHibridaDds = participantesConferenciaAssistidaDds.reduce((resumo, participante) => {
         const numero = Number(participante?.numero || 0);
 
@@ -67,7 +77,7 @@ export default function DdsConferenciaAssistidaSection({
 
     return (
         participantesConferenciaAssistidaDds.length > 0 && diasConferenciaAssistidaDds.length > 0 && (
-        <div className="min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-cyan-500 bg-white p-4 shadow-sm lg:col-span-2">
+        <div className="order-[40] min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-cyan-500 bg-white p-4 shadow-sm lg:col-span-2">
             <div
                 onClick={() => alternarCardDds("conferenciaFrequencia")}
                 role="button"
@@ -87,7 +97,7 @@ export default function DdsConferenciaAssistidaSection({
                         Apuração oficial para estatísticas
                     </h4>
                     <p className="mt-1 max-w-4xl text-xs font-semibold leading-5 text-slate-500">
-                        Use P para confirmar presença, X para registrar ausência e ? para deixar o campo pendente de revisão.
+                        Use P para presença, X para falta, F para férias, A para atestado e ? para revisão manual.
                         <br />
                         Em Semana completa, o sistema preenche P em todos os dias ativos. Em Ausente semana toda, preenche X.
                     </p>
@@ -207,7 +217,7 @@ export default function DdsConferenciaAssistidaSection({
                             </div>
 
                             <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
-                                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                <div className="hidden">
                                     <div className="min-w-[74px] rounded-xl bg-violet-50 px-3 py-2 text-center ring-1 ring-violet-100">
                                         <p className="text-[8px] font-black uppercase text-violet-700">
                                             Temas
@@ -280,74 +290,92 @@ export default function DdsConferenciaAssistidaSection({
 
                         {cardDdsAberto("transcricao") && (
                             <div className="border-t border-violet-100 bg-violet-50/10 p-4">
-                                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                                    <div className="flex min-h-[76px] flex-col items-center justify-center rounded-xl border border-sky-200 bg-sky-50 p-3 text-center">
-                                        <p className="text-[9px] font-black uppercase tracking-wide text-sky-700">
-                                            Horas trabalhadas
-                                        </p>
-                                        <p className="mt-2 text-xl font-black leading-none text-sky-950">
-                                            {Number(estatisticasTemasConferenciaAssistidaDds.horasTrabalhadas || 0).toLocaleString("pt-BR", {
-                                                minimumFractionDigits: 2,
-                                                maximumFractionDigits: 2,
-                                            })} h
-                                        </p>
-                                    </div>
-
-                                    <div className="flex min-h-[76px] flex-col items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-center">
-                                        <p className="text-[9px] font-black uppercase tracking-wide text-emerald-700">
-                                            Horas regulares
-                                        </p>
-                                        <p className="mt-2 text-xl font-black leading-none text-emerald-950">
-                                            {Number(estatisticasTemasConferenciaAssistidaDds.horasRegulares || 0).toLocaleString("pt-BR", {
-                                                minimumFractionDigits: 2,
-                                                maximumFractionDigits: 2,
-                                            })} h
-                                        </p>
-                                    </div>
-
-                                    <div className="flex min-h-[76px] flex-col items-center justify-center rounded-xl border border-orange-200 bg-orange-50 p-3 text-center">
-                                        <p className="text-[9px] font-black uppercase tracking-wide text-orange-700">
-                                            Horas extras
-                                        </p>
-                                        <p className="mt-2 text-xl font-black leading-none text-orange-950">
-                                            {Number(estatisticasTemasConferenciaAssistidaDds.horasExtras || 0).toLocaleString("pt-BR", {
-                                                minimumFractionDigits: 2,
-                                                maximumFractionDigits: 2,
-                                            })} h
-                                        </p>
-                                    </div>
-
-                                    <div className={`flex min-h-[76px] flex-col items-center justify-center rounded-xl border p-3 text-center ${
-                                        estatisticasTemasConferenciaAssistidaDds.jornadasPendentes > 0
-                                            ? "border-red-200 bg-red-50"
-                                            : "border-violet-200 bg-violet-50"
-                                    }`}>
-                                        <p className={`text-[9px] font-black uppercase tracking-wide ${
-                                            estatisticasTemasConferenciaAssistidaDds.jornadasPendentes > 0
-                                                ? "text-red-700"
-                                                : "text-violet-700"
-                                        }`}>
-                                            Jornadas pendentes
-                                        </p>
-                                        <p className={`mt-2 text-xl font-black leading-none ${
-                                            estatisticasTemasConferenciaAssistidaDds.jornadasPendentes > 0
-                                                ? "text-red-950"
-                                                : "text-violet-950"
-                                        }`}>
-                                            {estatisticasTemasConferenciaAssistidaDds.jornadasPendentes}
-                                        </p>
+                                <div className="overflow-x-auto pb-1">
+                                    <div className="grid min-w-[1180px] grid-cols-8 gap-2">
+                                        <div className="flex h-[58px] items-center justify-center gap-2 rounded-xl border border-violet-200 bg-white px-3 text-center">
+                                            <FolderOpen className="h-7 w-7 shrink-0 text-violet-600" />
+                                            <div><p className="text-[8px] font-black uppercase text-violet-700">Temas</p><p className="text-base font-black text-slate-950">{estatisticasTemasConferenciaAssistidaDds.temasConfirmados}</p></div>
+                                        </div>
+                                        <div className="flex h-[58px] items-center justify-center gap-2 rounded-xl border border-cyan-200 bg-white px-3 text-center">
+                                            <UserRound className="h-7 w-7 shrink-0 text-cyan-600" />
+                                            <div><p className="text-[8px] font-black uppercase text-cyan-700">Responsáveis</p><p className="text-base font-black text-slate-950">{estatisticasTemasConferenciaAssistidaDds.responsaveisIdentificados}</p></div>
+                                        </div>
+                                        <div className="flex h-[58px] items-center justify-center gap-2 rounded-xl border border-amber-200 bg-white px-3 text-center">
+                                            <CalendarOff className="h-7 w-7 shrink-0 text-amber-600" />
+                                            <div><p className="text-[8px] font-black uppercase text-amber-700">Sem atividade</p><p className="text-base font-black text-slate-950">{estatisticasTemasConferenciaAssistidaDds.diasSemAtividade}</p></div>
+                                        </div>
+                                        <div className={`flex h-[58px] items-center justify-center gap-2 rounded-xl border bg-white px-3 text-center ${estatisticasTemasConferenciaAssistidaDds.pendencias > 0 ? "border-red-200" : "border-emerald-200"}`}>
+                                            <AlertCircle className={`h-7 w-7 shrink-0 ${estatisticasTemasConferenciaAssistidaDds.pendencias > 0 ? "text-red-600" : "text-emerald-600"}`} />
+                                            <div><p className={`text-[8px] font-black uppercase ${estatisticasTemasConferenciaAssistidaDds.pendencias > 0 ? "text-red-700" : "text-emerald-700"}`}>Pendências</p><p className="text-base font-black text-slate-950">{estatisticasTemasConferenciaAssistidaDds.pendencias}</p></div>
+                                        </div>
+                                        <div className="flex h-[58px] items-center justify-center gap-2 rounded-xl border border-sky-200 bg-white px-3 text-center">
+                                            <Clock3 className="h-7 w-7 shrink-0 text-sky-600" />
+                                            <div><p className="text-[8px] font-black uppercase text-sky-700">Trabalhadas</p><p className="text-base font-black text-slate-950">{Number(estatisticasTemasConferenciaAssistidaDds.horasTrabalhadas || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} h</p></div>
+                                        </div>
+                                        <div className="flex h-[58px] items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-3 text-center">
+                                            <Timer className="h-7 w-7 shrink-0 text-emerald-600" />
+                                            <div><p className="text-[8px] font-black uppercase text-emerald-700">Regulares</p><p className="text-base font-black text-slate-950">{Number(estatisticasTemasConferenciaAssistidaDds.horasRegulares || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} h</p></div>
+                                        </div>
+                                        <div className="flex h-[58px] items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white px-3 text-center">
+                                            <Zap className="h-7 w-7 shrink-0 text-orange-600" />
+                                            <div><p className="text-[8px] font-black uppercase text-orange-700">Horas extras</p><p className="text-base font-black text-slate-950">{Number(estatisticasTemasConferenciaAssistidaDds.horasExtras || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} h</p></div>
+                                        </div>
+                                        <div className="flex h-[58px] items-center justify-center gap-2 rounded-xl border border-blue-200 bg-white px-3 text-center">
+                                            <CloudRain className="h-7 w-7 shrink-0 text-blue-600" />
+                                            <div><p className="text-[8px] font-black uppercase text-blue-700">Dias com chuva</p><p className="text-base font-black text-slate-950">{estatisticasTemasConferenciaAssistidaDds.diasComChuva || 0}</p></div>
+                                        </div>
                                     </div>
                                 </div>
 
-                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                            {diasConferenciaAssistidaDds.map((dia, indiceDia) => {
+                <div className="mt-3 overflow-x-auto pb-1">
+                    <div className="grid min-w-[840px] grid-cols-7 gap-2">
+                        {diasConferenciaAssistidaDds.map((dia, indiceDia) => {
+                            const selecionado = indiceDia === indiceDiaSelecionadoDds;
+                            const semAtividade = dia.semAtividadeConfirmada;
+                            const chuva = dia.chuvaConfirmada;
+                            const confirmado = dia.statusTranscricao === "confirmado";
+
+                            return (
+                                <button
+                                    key={`seletor-dia-transcricao-${dia.chaveAssistida}`}
+                                    type="button"
+                                    onClick={() => setIndiceDiaDetalhadoDds(indiceDia)}
+                                    className={`min-h-[82px] rounded-xl border px-3 py-2 text-left transition ${
+                                        selecionado
+                                            ? "border-emerald-400 bg-emerald-50 shadow-sm ring-2 ring-emerald-100"
+                                            : "border-slate-200 bg-white hover:border-violet-300 hover:bg-violet-50/40"
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="text-xs font-black text-slate-950">{dia.data || dia.curto}</span>
+                                        <span className={`h-2 w-2 shrink-0 rounded-full ${semAtividade ? "bg-amber-500" : confirmado ? "bg-emerald-500" : "bg-red-500"}`} />
+                                    </div>
+                                    <p className="mt-2 truncate text-[10px] font-black uppercase text-slate-700">
+                                        {chuva ? "Dia com chuva" : semAtividade ? "Sem atividade" : dia.temaConfirmado || dia.temaPlanejado || "Tema pendente"}
+                                    </p>
+                                    <div className="mt-2 flex items-center justify-between gap-2 text-[9px] font-bold text-slate-500">
+                                        <span className="truncate">{semAtividade ? "—" : dia.responsavelConfirmado || "Sem responsável"}</span>
+                                        <span className="shrink-0">{Number(dia.horasTrabalhadas || 0).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} h</span>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                <div className="mt-3">
+                             {diasConferenciaAssistidaDds.map((dia, indiceDia) => {
+                                if (indiceDia !== indiceDiaSelecionadoDds) return null;
                                 const semAtividade =
                                     dia.semAtividadeConfirmada;
+                                const chuva = dia.chuvaConfirmada;
 
                                 const confirmado =
                                     dia.statusTranscricao === "confirmado";
 
-                                    const statusTexto = semAtividade
+                                    const statusTexto = chuva
+                                    ? "Dia com chuva"
+                                    : semAtividade
                                     ? "Sem atividade"
                                     : confirmado
                                         ? "Confirmado"
@@ -360,7 +388,7 @@ export default function DdsConferenciaAssistidaSection({
                                 return (
                                     <article
                                         key={`tema-confirmado-${dia.chaveAssistida}`}
-                                        className={`rounded-xl border p-3 ${semAtividade
+                                        className={`rounded-xl border p-4 ${semAtividade
                                             ? "border-amber-200 bg-amber-50/70"
                                             : confirmado
                                                 ? "border-emerald-200 bg-emerald-50/40"
@@ -387,7 +415,7 @@ export default function DdsConferenciaAssistidaSection({
                                             </span>
                                         </div>
 
-                                        <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
+                                        <div className="hidden">
                                             <p className="text-[8px] font-black uppercase tracking-wide text-slate-400">
                                                 Tema planejado / impresso
                                             </p>
@@ -409,6 +437,8 @@ export default function DdsConferenciaAssistidaSection({
                                             </p>
                                         </div>
 
+                                        <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(440px,1fr)]">
+                                             <div className="min-w-0 rounded-xl border border-slate-200 bg-white p-2.5">
                                         {possuiSugestaoOcrTema && !semAtividade && (
                                             <div className="mt-3 rounded-lg border border-cyan-200 bg-cyan-50 p-3">
                                                 <p className="text-[8px] font-black uppercase tracking-wide text-cyan-700">
@@ -441,8 +471,8 @@ export default function DdsConferenciaAssistidaSection({
                                         )}
 
                                         <label className="mt-3 block">
-                                            <span className="text-[9px] font-black uppercase tracking-wide text-slate-500">
-                                                Tema escrito à mão
+                                            <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wide text-slate-500">
+                                                <FileText className="h-4 w-4 text-violet-500" /> Tema escrito à mão
                                             </span>
                                             <textarea
                                                 value={dia.temaConfirmado}
@@ -453,7 +483,7 @@ export default function DdsConferenciaAssistidaSection({
                                                         evento.target.value
                                                     )
                                                 }
-                                                rows={2}
+                                                 rows={1}
                                                 disabled={
                                                     conferenciaOficialConcluidaDds ||
                                                     semAtividade
@@ -463,14 +493,14 @@ export default function DdsConferenciaAssistidaSection({
                                                         ? "Dia sem atividade"
                                                         : "Transcreva o tema registrado na folha"
                                                 }
-                                                className="mt-1 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold leading-5 text-slate-800 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                                                 className="mt-1 h-10 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold leading-5 text-slate-800 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                                             />
                                         </label>
 
                                         {!semAtividade && (
                                             <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                                                <p className="text-[9px] font-black uppercase tracking-wide text-slate-500">
-                                                    Origem documental do tema
+                                                <p className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wide text-slate-500">
+                                                    <FolderOpen className="h-4 w-4 text-sky-500" /> Origem documental do tema
                                                 </p>
 
                                                 <p className="mt-1 text-[10px] font-semibold leading-4 text-slate-500">
@@ -556,8 +586,8 @@ export default function DdsConferenciaAssistidaSection({
                                         )}
 
                                         <label className="mt-2 block">
-                                            <span className="text-[9px] font-black uppercase tracking-wide text-slate-500">
-                                                Responsável / aplicador
+                                            <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wide text-slate-500">
+                                                <UserRound className="h-4 w-4 text-cyan-500" /> Responsável / aplicador
                                             </span>
                                             <input
                                                 type="text"
@@ -582,11 +612,13 @@ export default function DdsConferenciaAssistidaSection({
                                             />
                                         </label>
 
-                                        <div className="mt-3 rounded-xl border border-sky-200 bg-sky-50/70 p-3">
+                                            </div>
+
+                                        <div className="rounded-xl border border-sky-200 bg-sky-50/70 p-3">
                                             <div className="flex flex-wrap items-center justify-between gap-2">
                                                 <div>
-                                                    <p className="text-[9px] font-black uppercase tracking-wide text-sky-700">
-                                                        Jornada do dia
+                                                    <p className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wide text-sky-700">
+                                                        <Clock3 className="h-4 w-4" /> Jornada do dia
                                                     </p>
                                                     <p className="mt-0.5 text-[10px] font-bold text-sky-950">
                                                         {dia.jornadaRotulo}
@@ -746,8 +778,8 @@ export default function DdsConferenciaAssistidaSection({
                                                 </label>
                                             </div>
 
-                                            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                                                <div className="rounded-lg border border-sky-100 bg-white px-2 py-2">
+                                            <div className="mt-3 grid grid-cols-3 divide-x divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white text-center">
+                                                <div className="px-2 py-2">
                                                     <p className="text-[7px] font-black uppercase tracking-wide text-sky-600">
                                                         Trabalhadas
                                                     </p>
@@ -759,7 +791,7 @@ export default function DdsConferenciaAssistidaSection({
                                                     </p>
                                                 </div>
 
-                                                <div className="rounded-lg border border-emerald-100 bg-white px-2 py-2">
+                                                <div className="px-2 py-2">
                                                     <p className="text-[7px] font-black uppercase tracking-wide text-emerald-600">
                                                         Regulares
                                                     </p>
@@ -771,7 +803,7 @@ export default function DdsConferenciaAssistidaSection({
                                                     </p>
                                                 </div>
 
-                                                <div className="rounded-lg border border-orange-100 bg-white px-2 py-2">
+                                                <div className="px-2 py-2">
                                                     <p className="text-[7px] font-black uppercase tracking-wide text-orange-600">
                                                         Extras
                                                     </p>
@@ -788,8 +820,9 @@ export default function DdsConferenciaAssistidaSection({
                                                 O intervalo de almoço é descontado. O período do DDS permanece dentro da jornada trabalhada.
                                             </p>
                                         </div>
+                                        </div>
 
-                                        <div className="mt-3 grid grid-cols-2 gap-2">
+                                        <div className="mt-3 grid grid-cols-3 gap-2">
                                             <button
                                                 type="button"
                                                 onClick={() =>
@@ -803,6 +836,15 @@ export default function DdsConferenciaAssistidaSection({
                                                 className="rounded-lg border border-violet-200 bg-white px-2 py-2 text-[9px] font-black uppercase tracking-wide text-violet-700 transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
                                             >
                                                 Usar planejamento
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => alternarChuvaConferenciaAssistidaDds(indiceDia)}
+                                                disabled={conferenciaOficialConcluidaDds}
+                                                className={`rounded-lg border px-2 py-2 text-[9px] font-black uppercase tracking-wide transition disabled:cursor-not-allowed disabled:opacity-50 ${chuva ? "border-blue-400 bg-blue-100 text-blue-900" : "border-blue-200 bg-blue-50 text-blue-800 hover:bg-blue-100"}`}
+                                            >
+                                                {chuva ? "Retomar após chuva" : "Dia com chuva"}
                                             </button>
 
                                             <button
@@ -993,9 +1035,9 @@ export default function DdsConferenciaAssistidaSection({
                         O sistema apenas sugere. Os botões P, X e ? continuam definindo o resultado oficial após sua conferência.
                     </p>
 
-                    <div className="mt-4 overflow-x-auto rounded-xl border border-cyan-100 bg-white">
+                    <div className="mt-4 max-h-[72vh] overflow-auto rounded-xl border border-cyan-100 bg-white">
                         <table className="min-w-full divide-y divide-slate-100 text-left text-xs">
-                            <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-wide text-slate-500">
+                            <thead className="sticky top-0 z-30 bg-slate-50 text-[10px] font-black uppercase tracking-wide text-slate-500 shadow-[0_2px_8px_rgba(15,23,42,0.12)]">
                                 <tr>
                                     <th className="px-3 py-2">Nº</th>
                                     <th className="px-3 py-2">Funcionário</th>
@@ -1037,38 +1079,29 @@ export default function DdsConferenciaAssistidaSection({
                                                 const temSugestaoObjetiva = statusSugerido === "presente" || statusSugerido === "ausente";
                                                 const manualDiverge = status !== "manual" && temSugestaoObjetiva && status !== statusSugerido;
                                                 const percentualConfianca = Math.round(Number(sugestaoSistema?.confianca || 0) * 100);
+                                                const classeStatus = {
+                                                    presente: "border-emerald-300 bg-emerald-50 text-emerald-900",
+                                                    ausente: "border-red-300 bg-red-50 text-red-900",
+                                                    ferias: "border-sky-300 bg-sky-50 text-sky-900",
+                                                    atestado: "border-yellow-300 bg-yellow-50 text-yellow-900",
+                                                    manual: "border-amber-300 bg-amber-50 text-amber-900",
+                                                }[status] || "border-slate-200 bg-white text-slate-700";
 
                                                 return (
                                                     <td key={`assistido-${numero}-${dia.chaveAssistida}`} className="px-3 py-2">
-                                                        <div className="flex justify-center gap-1">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => definirStatusFrequenciaAssistidaDds(numero, dia, "presente")}
-                                                                                            disabled={conferenciaOficialConcluidaDds}
-                                                                className={`h-8 w-8 rounded-lg border text-xs font-black transition ${status === "presente" ? "border-emerald-400 bg-emerald-100 text-emerald-900" : "border-slate-200 bg-white text-slate-400 hover:border-emerald-300"}`}
-                                                                title="Presente"
-                                                            >
-                                                                P
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => definirStatusFrequenciaAssistidaDds(numero, dia, "ausente")}
-                                                                                            disabled={conferenciaOficialConcluidaDds}
-                                                                className={`h-8 w-8 rounded-lg border text-xs font-black transition ${status === "ausente" ? "border-red-400 bg-red-100 text-red-900" : "border-slate-200 bg-white text-slate-400 hover:border-red-300"}`}
-                                                                title="Ausente / falta"
-                                                            >
-                                                                X
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => definirStatusFrequenciaAssistidaDds(numero, dia, "manual")}
-                                                                                            disabled={conferenciaOficialConcluidaDds}
-                                                                className={`h-8 w-8 rounded-lg border text-xs font-black transition ${status === "manual" ? "border-amber-400 bg-amber-100 text-amber-900" : "border-slate-200 bg-white text-slate-400 hover:border-amber-300"}`}
-                                                                title="Manual / vazio"
-                                                            >
-                                                                ?
-                                                            </button>
-                                                        </div>
+                                                        <select
+                                                            value={status || "manual"}
+                                                            onChange={(evento) => definirStatusFrequenciaAssistidaDds(numero, dia, evento.target.value)}
+                                                            disabled={conferenciaOficialConcluidaDds}
+                                                            className={`mx-auto block h-9 w-[104px] cursor-pointer rounded-lg border px-2 text-[10px] font-black outline-none transition focus:ring-2 focus:ring-violet-200 disabled:cursor-not-allowed disabled:opacity-60 ${classeStatus}`}
+                                                            aria-label={`Status de ${dia.rotulo || dia.chaveAssistida}`}
+                                                        >
+                                                            <option value="presente">P · Presente</option>
+                                                            <option value="ausente">X · Ausente</option>
+                                                            <option value="ferias">F · Férias</option>
+                                                            <option value="atestado">A · Atestado</option>
+                                                            <option value="manual">? · Revisar</option>
+                                                        </select>
                                                         <div
                                                             className={`mx-auto mt-1 w-fit max-w-[112px] rounded-md px-1.5 py-1 text-center text-[8px] font-black leading-tight ${
                                                                 manualDiverge || sugestaoSistema?.prioridade === "alta"
@@ -1092,33 +1125,41 @@ export default function DdsConferenciaAssistidaSection({
                                             })}
 
                                             <td className="px-3 py-2">
-                                                <div className="flex flex-col gap-1">
+                                                <div className="grid w-[230px] grid-cols-2 gap-1.5">
                                                     <button
                                                         type="button"
                                                         onClick={() => marcarSemanaCompletaAssistidaDds(numero)}
                                                         disabled={conferenciaOficialConcluidaDds}
-                                                        className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-[10px] font-black text-violet-800 transition hover:border-violet-300 disabled:cursor-not-allowed disabled:opacity-50"
+                                                        className="h-8 rounded-lg border border-emerald-200 bg-emerald-50 px-2 text-[9px] font-black text-emerald-800 transition hover:border-emerald-400 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
                                                     >
-                                                        Semana completa
+                                                        Trabalhou a semana
                                                     </button>
-
                                                     <button
                                                         type="button"
                                                         onClick={() => marcarSemanaAusenteAssistidaDds(numero)}
                                                         disabled={conferenciaOficialConcluidaDds}
-                                                        className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[10px] font-black text-red-700 transition hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                        className="h-8 rounded-lg border border-red-200 bg-red-50 px-2 text-[9px] font-black text-red-700 transition hover:border-red-400 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
                                                     >
-                                                        Ausente semana toda
+                                                        Faltou a semana
                                                     </button>
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => limparParticipanteConferenciaAssistidaDds(numero)}
+                                                    <select
+                                                        defaultValue=""
                                                         disabled={conferenciaOficialConcluidaDds}
-                                                        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black text-slate-500 transition hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
+                                                        onChange={(evento) => {
+                                                            const acao = evento.target.value;
+                                                            if (acao === "ferias") marcarSemanaFeriasAssistidaDds(numero);
+                                                            if (acao === "atestado") marcarSemanaAtestadoAssistidaDds(numero);
+                                                            if (acao === "limpar") limparParticipanteConferenciaAssistidaDds(numero);
+                                                            evento.target.value = "";
+                                                        }}
+                                                        className="col-span-2 h-8 cursor-pointer rounded-lg border border-violet-200 bg-violet-50 px-2 text-[10px] font-black text-violet-900 outline-none transition focus:ring-2 focus:ring-violet-200 disabled:cursor-not-allowed disabled:opacity-50"
+                                                        aria-label={`Outras ações da semana de ${participante.nome || numero}`}
                                                     >
-                                                        Limpar linha
-                                                    </button>
+                                                        <option value="">Outras situações…</option>
+                                                        <option value="ferias">Férias na semana</option>
+                                                        <option value="atestado">Atestado na semana</option>
+                                                        <option value="limpar">Limpar semana</option>
+                                                    </select>
                                                 </div>
                                             </td>
                                         </tr>

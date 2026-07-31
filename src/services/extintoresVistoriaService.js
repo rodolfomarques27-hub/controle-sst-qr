@@ -1,3 +1,5 @@
+import { montarUrlPublicaSistema } from "../utils/urlPublicaUtils.js";
+
 const CHAVE_EXTINTORES_VISTORIA = "safescan:vistoria:extintores:v1";
 const CHAVE_INSPECOES_EXTINTORES = "safescan:vistoria:inspecoes:v1";
 const CHAVE_MANUTENCOES_EXTINTORES = "safescan:vistoria:manutencoes:v1";
@@ -103,7 +105,27 @@ export function listarExtintoresVistoria() {
         if (normalizados.some((item, indice) => item.codigo !== salvo[indice]?.codigo)) {
             salvarJson(CHAVE_EXTINTORES_VISTORIA, normalizados);
         }
-        return normalizados;
+        const registrosOficiais = normalizados.filter((item) =>
+            identificadorEhUuidExtintor(item.id),
+        );
+
+        if (
+            registrosOficiais.length &&
+            registrosOficiais.length !== normalizados.length
+        ) {
+            salvarJson(
+                CHAVE_EXTINTORES_VISTORIA,
+                registrosOficiais,
+            );
+        }
+
+        // O cache público também conserva registros locais legados para
+        // compatibilidade. Quando a carga oficial remota está disponível,
+        // os equipamentos legados são removidos do armazenamento local para
+        // não voltarem a aparecer como duplicados em futuras conferências.
+        return registrosOficiais.length
+            ? registrosOficiais
+            : normalizados;
     }
     const iniciais = criarExtintoresIniciais();
     salvarJson(CHAVE_EXTINTORES_VISTORIA, iniciais);
@@ -184,8 +206,30 @@ export function obterManutencaoAbertaExtintor(extintorId) {
 }
 
 export function gerarUrlQrExtintor(extintor) {
-    if (typeof window === "undefined") return extintor?.tokenQr || "";
-    return `${window.location.origin}/?vistoriaQr=${encodeURIComponent(extintor?.tokenQr || "")}`;
+    return montarUrlPublicaSistema(`/?vistoriaQr=${encodeURIComponent(extintor?.tokenQr || "")}`);
+}
+
+export async function consultarFichaPublicaAnualExtintor(token = "") {
+    const tokenPublico = String(token || "").trim();
+    if (!tokenPublico) return null;
+
+    const { data, error } = await (await obterSupabaseExtintores())
+        .rpc("consultar_ficha_publica_extintor", {
+            p_token: tokenPublico,
+        });
+
+    if (error) throw error;
+    if (!data?.extintor) return null;
+
+    return {
+        extintor: normalizarExtintorRemoto({
+            ...data.extintor,
+            token_publico: tokenPublico,
+        }),
+        inspecoes: Array.isArray(data.inspecoes)
+            ? data.inspecoes.map(normalizarInspecaoExtintorRemota)
+            : [],
+    };
 }
 
 let clienteSupabaseExtintoresPromise = null;

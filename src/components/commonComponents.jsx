@@ -4,6 +4,7 @@ import { supabase, SUPABASE_ANON_KEY, SUPABASE_URL } from "../lib/supabaseClient
 import { useStorageUrl } from "../hooks/useStorageUrl";
 import { classNames } from "../utils/sstUtils";
 import { QrCodeComLogo } from "./qr/QrCodeComLogo";
+import { montarUrlPublicaSistema } from "../utils/urlPublicaUtils.js";
 
 export function obterFotoColaboradorSrc(colaboradorOuSrc = {}) {
     if (!colaboradorOuSrc) return "";
@@ -90,7 +91,7 @@ function escolherArquivoFotoMaisRecente(arquivos = []) {
     return imagens[0] || (arquivos || []).find((arquivo) => arquivo?.name && !arquivo.name.endsWith("/")) || null;
 }
 
-export function FotoColaborador({ src, colaborador = null, colaboradorId = "", nome, className = "h-12 w-12", iconClassName = "h-5 w-5", imageStyle = null }) {
+export function FotoColaborador({ src, colaborador = null, colaboradorId = "", nome, className = "h-12 w-12", iconClassName = "h-5 w-5", imageStyle = null, loading = "lazy" }) {
     const origem = colaborador || src;
     const idParaBusca = obterIdColaboradorFoto(origem, colaboradorId);
     const [erroImagem, setErroImagem] = useState(false);
@@ -102,6 +103,12 @@ export function FotoColaborador({ src, colaborador = null, colaboradorId = "", n
     const fonteExterna = /^(https?:|data:|blob:)/i.test(caminhoPreferencial);
     const urlAssinada = useStorageUrl("fotos-colaboradores", fonteExterna ? "" : caminhoPreferencial, 600);
     const url = fonteExterna ? caminhoPreferencial : urlAssinada;
+
+    useEffect(() => {
+        setErroImagem(false);
+        setCaminhoFallback("");
+        setTentouFallback(false);
+    }, [idParaBusca, srcNormalizada]);
 
     useEffect(() => {
         setErroImagem(false);
@@ -156,7 +163,7 @@ export function FotoColaborador({ src, colaborador = null, colaboradorId = "", n
             alt={`Foto ${nome || "colaborador"}`}
             className={classNames("shrink-0 bg-white object-cover", className)}
             style={imageStyle || undefined}
-            loading="lazy"
+            loading={loading}
             onError={() => setErroImagem(true)}
         />
     );
@@ -266,7 +273,7 @@ export function StatusPill({ status, small = false }) {
 }
 
 export function QRCodeReal({ token, size = 150 }) {
-    const urlConsulta = `${window.location.origin}/?qr=${encodeURIComponent(token)}`;
+    const urlConsulta = montarUrlPublicaSistema(`/?qr=${encodeURIComponent(token)}`);
 
     return (
         <div className="flex max-w-full items-center justify-center overflow-hidden rounded-3xl bg-white p-3 shadow-inner ring-1 ring-slate-200">
@@ -283,7 +290,7 @@ export function QRCodeReal({ token, size = 150 }) {
     );
 }
 export function LinkPublicoQR({ token }) {
-    const urlConsulta = `${window.location.origin}/?qr=${encodeURIComponent(token)}`;
+    const urlConsulta = montarUrlPublicaSistema(`/?qr=${encodeURIComponent(token)}`);
 
     return (
         <div className="mt-2 inline-flex max-w-full items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5 ring-1 ring-slate-200">
@@ -311,9 +318,12 @@ export function CardRecolhivel({
     defaultOpen = true,
     compacto = false,
     persistKey = "",
+    open,
+    onOpenChange,
 }) {
     const chavePersistencia = persistKey || `cardRecolhivel:${titulo || "sem-titulo"}:${subtitulo || ""}`;
-    const [aberto, setAberto] = useState(() => {
+    const controlado = typeof open === "boolean";
+    const [abertoInterno, setAbertoInterno] = useState(() => {
         if (typeof window === "undefined") return defaultOpen;
         try {
             const salvo = window.localStorage.getItem(chavePersistencia);
@@ -322,6 +332,8 @@ export function CardRecolhivel({
             return defaultOpen;
         }
     });
+
+    const aberto = controlado ? open : abertoInterno;
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -332,12 +344,24 @@ export function CardRecolhivel({
         }
     }, [aberto, chavePersistencia]);
 
+    const alternarAberto = () => {
+        const proximoEstado = !aberto;
+
+        if (!controlado) {
+            setAbertoInterno(proximoEstado);
+        }
+
+        if (typeof onOpenChange === "function") {
+            onOpenChange(proximoEstado);
+        }
+    };
+
     return (
         <Card className={classNames("transition-all", className)}>
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                 <button
                     type="button"
-                    onClick={() => setAberto((atual) => !atual)}
+                    onClick={alternarAberto}
                     className="flex min-w-0 flex-1 items-start justify-between gap-3 rounded-2xl text-left transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-100"
                 >
                     <div className="min-w-0 p-1">
@@ -480,5 +504,3 @@ export function PasswordInput({
         </div>
     );
 }
-
-

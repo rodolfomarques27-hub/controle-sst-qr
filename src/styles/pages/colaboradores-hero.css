@@ -1,0 +1,476 @@
+/* MICROETAPA HERO COLABORADORES - PADRAO DASHBOARD SST - INICIO */
+/*
+ * Gestão de colaboradores e treinamentos
+ *
+ * Replica o padrão compacto aprovado:
+ * - altura do Hero igual ao Dashboard SST;
+ * - faixa operacional inferior compacta;
+ * - indicadores à esquerda;
+ * - ações à direita;
+ * - Nova função em verde;
+ * - Ajustar funções em roxo;
+ * - Atualizar banco em azul.
+ *
+ * Não altera JSX, ordem dos botões, permissões ou funcionalidades.
+ * Aplicação exclusiva em desktop.
+ */
+@media (min-width: 1024px) {
+  .hero-header--colaboradores {
+    margin-top: -0.6rem !important;
+    padding-top: 0 !important;
+  }
+
+  .colaboradores-hero-banner {
+    box-sizing: border-box !important;
+    isolation: isolate !important;
+    width: 100% !important;
+    height: clamp(154px, 9.8vw, 178px) !important;
+    min-height: clamp(154px, 9.8vw, 178px) !important;
+    max-height: clamp(154px, 9.8vw, 178px) !important;
+    margin: 0 0 0.75rem !important;
+    overflow: hidden !important;
+    border-radius: clamp(18px, 1.2vw, 28px) !important;
+    box-shadow:
+      0 14px 30px rgba(15, 23, 42, 0.16),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.12) !important;
+  }
+
+  .colaboradores-hero-banner::after {
+    display: block !important;
+    height: clamp(42px, 3vw, 52px) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.20) !important;
+    background:
+      linear-gradient(
+        90deg,
+        rgba(8, 13, 24, 0.92) 0%,
+        rgba(17, 24, 39, 0.84) 52%,
+        rgba(56, 34, 18, 0.82) 100%
+      ) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 -8px 20px rgba(0, 0, 0, 0.08) !important;
+    backdrop-filter: blur(12px) saturate(130%) !important;
+  }
+
+  .colaboradores-hero-banner__bg {
+    background-position: center 48% !important;
+    background-size: cover !important;
+    transform: scale(1.01) !important;
+  }
+
+  .colaboradores-hero-banner__content {
+    box-sizing: border-box !important;
+    display: flex !important;
+    width: 100% !important;
+    height: clamp(154px, 9.8vw, 178px) !important;
+    min-height: clamp(154px, 9.8vw, 178px) !important;
+    max-height: clamp(154px, 9.8vw, 178px) !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    gap: 0 !important;
+    padding:
+      clamp(15px, 1vw, 22px)
+      clamp(22px, 1.55vw, 32px)
+      clamp(52px, 3.8vw, 66px) !important;
+    overflow: hidden !important;
+  }
+
+  .colaboradores-hero-banner__content > .min-w-0 {
+    display: block !important;
+    width: min(100%, 48rem) !important;
+    max-width: 48rem !important;
+    text-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.86),
+      0 6px 18px rgba(0, 0, 0, 0.34) !important;
+  }
+
+  .colaboradores-hero-banner__eyebrow {
+    margin: 0 !important;
+    font-size: clamp(0.68rem, 0.70vw, 0.84rem) !important;
+    line-height: 1.08 !important;
+    letter-spacing: 0.24em !important;
+  }
+
+  .colaboradores-hero-banner__title {
+    margin: clamp(5px, 0.35vw, 8px) 0 0 !important;
+    max-width: 48rem !important;
+    font-size: clamp(1.24rem, 1.35vw, 1.72rem) !important;
+    line-height: 1.03 !important;
+    letter-spacing: -0.03em !important;
+    white-space: nowrap !important;
+  }
+
+  .colaboradores-hero-banner__text {
+    margin-top: clamp(5px, 0.35vw, 8px) !important;
+    max-width: 48rem !important;
+    font-size: clamp(0.86rem, 0.9vw, 1.06rem) !important;
+    line-height: 1.14 !important;
+  }
+
+  .colaboradores-hero-banner__stats {
+    position: absolute !important;
+    z-index: 12 !important;
+    bottom: clamp(8px, 0.58vw, 12px) !important;
+    left: clamp(16px, 1.1vw, 24px) !important;
+    right: auto !important;
+    display: flex !important;
+    width: auto !important;
+    min-width: 0 !important;
+    height: clamp(31px, 2vw, 36px) !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    flex-wrap: nowrap !important;
+    gap: clamp(10px, 0.85vw, 16px) !important;
+    margin: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .colaboradores-hero-banner__stat {
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    min-width: max-content !important;
+    min-height: clamp(31px, 2vw, 36px) !important;
+    height: clamp(31px, 2vw, 36px) !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: clamp(0.34rem, 0.4vw, 0.5rem) !important;
+    padding: 0 clamp(0.34rem, 0.4vw, 0.52rem) !important;
+    border: 0 !important;
+    background: transparent !important;
+    color: #ffffff !important;
+    font-size: clamp(0.68rem, 0.74vw, 0.86rem) !important;
+    line-height: 1 !important;
+    font-weight: 850 !important;
+    white-space: nowrap !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .colaboradores-hero-banner__stat svg {
+    width: clamp(0.86rem, 0.92vw, 1.02rem) !important;
+    height: clamp(0.86rem, 0.92vw, 1.02rem) !important;
+    min-width: clamp(0.86rem, 0.92vw, 1.02rem) !important;
+  }
+
+  .hero-header--colaboradores .page-actions {
+    top: calc(
+      clamp(154px, 9.8vw, 178px) -
+      clamp(31px, 2vw, 36px) -
+      clamp(8px, 0.58vw, 12px)
+    ) !important;
+    right: clamp(14px, 1vw, 22px) !important;
+    z-index: 50 !important;
+    width: auto !important;
+    max-width: 62% !important;
+    height: clamp(31px, 2vw, 36px) !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+  }
+
+  .hero-header--colaboradores .page-actions > div,
+  .hero-header--colaboradores .colaboradores-header-acoes {
+    display: flex !important;
+    width: auto !important;
+    height: clamp(31px, 2vw, 36px) !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    flex-wrap: nowrap !important;
+    gap: clamp(6px, 0.42vw, 9px) !important;
+    margin: 0 !important;
+  }
+
+  .hero-header--colaboradores .page-actions button {
+    box-sizing: border-box !important;
+    min-width: max-content !important;
+    min-height: clamp(31px, 2vw, 36px) !important;
+    height: clamp(31px, 2vw, 36px) !important;
+    padding:
+      0
+      clamp(0.76rem, 0.84vw, 1rem) !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    border-radius: 999px !important;
+    color: #ffffff !important;
+    font-size: clamp(0.66rem, 0.72vw, 0.86rem) !important;
+    line-height: 1 !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 6px 14px rgba(0, 0, 0, 0.20) !important;
+    backdrop-filter: blur(10px) saturate(130%) !important;
+  }
+
+  .hero-header--colaboradores .page-actions button svg {
+    width: clamp(0.84rem, 0.9vw, 1rem) !important;
+    height: clamp(0.84rem, 0.9vw, 1rem) !important;
+    min-width: clamp(0.84rem, 0.9vw, 1rem) !important;
+  }
+
+  .hero-header--colaboradores
+    .page-actions
+    button:nth-child(1) {
+    border-color: rgba(74, 222, 128, 0.42) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(17, 66, 40, 0.94) 0%,
+        rgba(26, 111, 61, 0.74) 100%
+      ) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.10),
+      0 0 16px rgba(74, 222, 128, 0.14),
+      0 6px 14px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  .hero-header--colaboradores
+    .page-actions
+    button:nth-child(2) {
+    border-color: rgba(167, 139, 250, 0.42) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(43, 24, 79, 0.94) 0%,
+        rgba(79, 42, 164, 0.74) 100%
+      ) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.10),
+      0 0 16px rgba(167, 139, 250, 0.14),
+      0 6px 14px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  .hero-header--colaboradores
+    .page-actions
+    button:nth-child(3) {
+    border-color: rgba(56, 189, 248, 0.42) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(10, 37, 64, 0.94) 0%,
+        rgba(8, 80, 120, 0.74) 100%
+      ) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.10),
+      0 0 16px rgba(34, 211, 238, 0.14),
+      0 6px 14px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  .hero-header--colaboradores
+    .page-actions
+    button:hover {
+    filter: brightness(1.08) !important;
+  }
+}
+/* MICROETAPA HERO COLABORADORES - PADRAO DASHBOARD SST - FIM */
+
+/* MICROETAPA HERO COLABORADORES - ORDEM E TRACO VERDE - INICIO */
+/*
+ * Padrão visual:
+ * 1. Atualizar banco = azul
+ * 2. Nova função = verde
+ * 3. Ajustar funções = roxo
+ * Inclui o traço verde curto abaixo do subtítulo.
+ */
+@media (min-width: 1024px) {
+  .colaboradores-hero-banner__line {
+    width: clamp(46px, 3vw, 64px) !important;
+    height: clamp(3px, 0.2vw, 4px) !important;
+    margin-top: clamp(8px, 0.55vw, 11px) !important;
+    border-radius: 999px !important;
+    background: #1e7c3a !important;
+    box-shadow:
+      0 0 12px rgba(16, 185, 129, 0.32),
+      0 0 24px rgba(16, 185, 129, 0.14) !important;
+  }
+
+  .hero-header--colaboradores
+    .page-actions
+    button:nth-child(1) {
+    border-color: rgba(56, 189, 248, 0.42) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(10, 37, 64, 0.94) 0%,
+        rgba(8, 80, 120, 0.74) 100%
+      ) !important;
+    color: #ffffff !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.10),
+      0 0 16px rgba(34, 211, 238, 0.14),
+      0 6px 14px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  .hero-header--colaboradores
+    .page-actions
+    button:nth-child(2) {
+    border-color: rgba(74, 222, 128, 0.42) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(17, 66, 40, 0.94) 0%,
+        rgba(26, 111, 61, 0.74) 100%
+      ) !important;
+    color: #ffffff !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.10),
+      0 0 16px rgba(74, 222, 128, 0.14),
+      0 6px 14px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  .hero-header--colaboradores
+    .page-actions
+    button:nth-child(3) {
+    border-color: rgba(167, 139, 250, 0.42) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(43, 24, 79, 0.94) 0%,
+        rgba(79, 42, 164, 0.74) 100%
+      ) !important;
+    color: #ffffff !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.10),
+      0 0 16px rgba(167, 139, 250, 0.14),
+      0 6px 14px rgba(0, 0, 0, 0.18) !important;
+  }
+}
+/* MICROETAPA HERO COLABORADORES - ORDEM E TRACO VERDE - FIM */
+
+/* MICROETAPA HERO COLABORADORES - INDICADORES EM PILULAS - INICIO */
+/*
+ * Padronização dos indicadores inferiores:
+ * - colaboradores em azul;
+ * - liberados em verde;
+ * - pendências em amarelo;
+ * - mesma geometria compacta das ações;
+ * - preservação dos dados e ícones existentes.
+ */
+@media (min-width: 1024px) {
+  .colaboradores-hero-banner__stats {
+    display: flex !important;
+    position: absolute !important;
+    z-index: 12 !important;
+    bottom: clamp(8px, 0.58vw, 12px) !important;
+    left: clamp(16px, 1.1vw, 24px) !important;
+    right: auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: 54% !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: clamp(6px, 0.42vw, 9px) !important;
+    margin: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .colaboradores-hero-banner__stat {
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    min-width: max-content !important;
+    min-height: clamp(31px, 2vw, 36px) !important;
+    height: clamp(31px, 2vw, 36px) !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: clamp(0.34rem, 0.4vw, 0.5rem) !important;
+    padding:
+      0
+      clamp(0.76rem, 0.84vw, 1rem) !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    border-radius: 999px !important;
+    color: #ffffff !important;
+    font-size: clamp(0.66rem, 0.72vw, 0.86rem) !important;
+    line-height: 1 !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.10),
+      0 6px 14px rgba(0, 0, 0, 0.18) !important;
+    backdrop-filter: blur(10px) saturate(130%) !important;
+  }
+
+  .colaboradores-hero-banner__stat svg {
+    width: clamp(0.84rem, 0.9vw, 1rem) !important;
+    height: clamp(0.84rem, 0.9vw, 1rem) !important;
+    min-width: clamp(0.84rem, 0.9vw, 1rem) !important;
+  }
+
+  .colaboradores-hero-banner__stat:nth-child(1) {
+    border-color: rgba(56, 189, 248, 0.42) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(10, 37, 64, 0.94) 0%,
+        rgba(8, 80, 120, 0.74) 100%
+      ) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.10),
+      0 0 16px rgba(34, 211, 238, 0.14),
+      0 6px 14px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  .colaboradores-hero-banner__stat:nth-child(1) svg {
+    color: #67e8f9 !important;
+  }
+
+  .colaboradores-hero-banner__stat:nth-child(2) {
+    border-color: rgba(74, 222, 128, 0.42) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(17, 66, 40, 0.94) 0%,
+        rgba(26, 111, 61, 0.74) 100%
+      ) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.10),
+      0 0 16px rgba(74, 222, 128, 0.14),
+      0 6px 14px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  .colaboradores-hero-banner__stat:nth-child(2) svg {
+    color: #6ee7b7 !important;
+  }
+
+  .colaboradores-hero-banner__stat:nth-child(3) {
+    border-color: rgba(251, 191, 36, 0.46) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(84, 50, 10, 0.94) 0%,
+        rgba(145, 102, 17, 0.74) 100%
+      ) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.10),
+      0 0 16px rgba(251, 191, 36, 0.14),
+      0 6px 14px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  .colaboradores-hero-banner__stat:nth-child(3) svg {
+    color: #fde047 !important;
+  }
+}
+/* MICROETAPA HERO COLABORADORES - INDICADORES EM PILULAS - FIM */
+
+/* MICROETAPA HERO COLABORADORES - CENTRALIZACAO INDICADORES - INICIO */
+/*
+ * Centraliza verticalmente o conjunto dentro da faixa inferior.
+ * A posição horizontal à esquerda e toda a identidade visual são preservadas.
+ */
+@media (min-width: 1024px) {
+  .colaboradores-hero-banner__stats {
+    top: auto !important;
+    bottom: calc(
+      (
+        clamp(42px, 3vw, 52px) -
+        clamp(31px, 2vw, 36px)
+      ) / 2
+    ) !important;
+    transform: none !important;
+  }
+}
+/* MICROETAPA HERO COLABORADORES - CENTRALIZACAO INDICADORES - FIM */

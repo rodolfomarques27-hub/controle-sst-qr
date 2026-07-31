@@ -1019,6 +1019,89 @@ export async function criarUrlTemporariaDocumentoDds({
     return data?.signedUrl || "";
 }
 
+export async function listarDocumentosDdsPorRegistros({
+    supabase,
+    registroIds = [],
+} = {}) {
+    if (!supabase) {
+        throw new Error("Cliente Supabase não informado.");
+    }
+
+    const ids = Array.from(new Set(
+        (Array.isArray(registroIds) ? registroIds : [])
+            .map((id) => textoSeguroDdsDocumento(id))
+            .filter(Boolean)
+    ));
+
+    if (!ids.length) return [];
+
+    const documentos = [];
+
+    for (let indice = 0; indice < ids.length; indice += 100) {
+        const lote = ids.slice(indice, indice + 100);
+        const { data, error } = await supabase
+            .from("dds_documentos")
+            .select("*")
+            .in("registro_id", lote)
+            .order("created_at", { ascending: false });
+
+        if (error) {
+            throw new Error(
+                error.message || "Não foi possível consultar o histórico de PDFs DDS."
+            );
+        }
+
+        if (Array.isArray(data)) documentos.push(...data);
+    }
+
+    return documentos;
+}
+
+export async function excluirDocumentoDdsHistorico({ supabase, documento } = {}) {
+    if (!supabase) throw new Error("Cliente Supabase não informado.");
+
+    const documentoId = textoSeguroDdsDocumento(documento?.id);
+    const registroId = textoSeguroDdsDocumento(documento?.registro_id || documento?.registroId);
+    const bucketId = textoSeguroDdsDocumento(documento?.bucket_id || documento?.bucketId) || BUCKET_DDS_ASSINADOS;
+    const caminho = textoSeguroDdsDocumento(documento?.caminho_storage || documento?.caminhoStorage);
+
+    if (!documentoId || !registroId || !caminho) {
+        throw new Error("Dados do PDF DDS incompletos para exclusão.");
+    }
+
+    const { data: arquivoBackup, error: erroDownload } = await supabase.storage
+        .from(bucketId)
+        .download(caminho);
+
+    if (erroDownload && !/not found|does not exist|404/i.test(String(erroDownload.message || ""))) {
+        throw new Error(erroDownload.message || "Não foi possível proteger o arquivo antes da exclusão.");
+    }
+
+    const { error: erroStorage } = await supabase.storage.from(bucketId).remove([caminho]);
+    if (erroStorage && !/not found|does not exist|404/i.test(String(erroStorage.message || ""))) {
+        throw new Error(erroStorage.message || "Não foi possível excluir o PDF do armazenamento.");
+    }
+
+    const { error: erroBanco } = await supabase
+        .from("dds_documentos")
+        .delete()
+        .eq("id", documentoId)
+        .eq("registro_id", registroId);
+
+    if (erroBanco) {
+        if (arquivoBackup) {
+            await supabase.storage.from(bucketId).upload(caminho, arquivoBackup, {
+                contentType: documento?.mime_type || "application/pdf",
+                cacheControl: "3600",
+                upsert: true,
+            }).catch(() => null);
+        }
+        throw new Error(erroBanco.message || "Não foi possível excluir o registro do PDF DDS.");
+    }
+
+    return true;
+}
+
 export {
     BUCKET_DDS_ASSINADOS,
     LIMITE_ARQUIVO_DDS_BYTES,

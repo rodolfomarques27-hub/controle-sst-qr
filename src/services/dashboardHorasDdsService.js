@@ -1,7 +1,13 @@
-import { listarRegistrosDds } from "./ddsRegistrosService";
-
 function dataIsoLocal(valor = "") {
-    const correspondencia = String(valor || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+    const texto = String(valor || "").trim();
+    const correspondenciaIso = texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    const correspondenciaBr = texto.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    const correspondencia = correspondenciaIso
+        ? [correspondenciaIso[0], correspondenciaIso[1], correspondenciaIso[2], correspondenciaIso[3]]
+        : correspondenciaBr
+            ? [correspondenciaBr[0], correspondenciaBr[3], correspondenciaBr[2], correspondenciaBr[1]]
+            : null;
+
     if (!correspondencia) return null;
 
     const data = new Date(
@@ -109,6 +115,10 @@ export function calcularHorasTrabalhadasDdsMes(registros = [], dataReferencia = 
 }
 
 export async function carregarHorasTrabalhadasDdsMes({ supabase, dataReferencia = new Date() } = {}) {
+    if (!supabase) {
+        throw new Error("Cliente Supabase não informado para carregar horas trabalhadas do DDS.");
+    }
+
     const primeiroDia = new Date(dataReferencia.getFullYear(), dataReferencia.getMonth(), 1);
     const ultimoDia = new Date(dataReferencia.getFullYear(), dataReferencia.getMonth() + 1, 0);
     const isoLocal = (data) => [
@@ -117,12 +127,44 @@ export async function carregarHorasTrabalhadasDdsMes({ supabase, dataReferencia 
         String(data.getDate()).padStart(2, "0"),
     ].join("-");
 
-    const registros = await listarRegistrosDds({
-        supabase,
-        periodoInicio: isoLocal(primeiroDia),
-        periodoFim: isoLocal(ultimoDia),
-        limite: 500,
-    });
+    const periodoInicio = isoLocal(primeiroDia);
+    const periodoFim = isoLocal(ultimoDia);
+
+    const { data, error } = await supabase
+        .from("dds_registros")
+        .select(`
+            id,
+            codigo,
+            empresa_nome,
+            obra_nome,
+            dados,
+            periodo_inicio,
+            periodo_fim,
+            created_at
+        `)
+        .gte("periodo_fim", periodoInicio)
+        .lte("periodo_inicio", periodoFim)
+        .order("periodo_inicio", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(500);
+
+    if (error) {
+        throw new Error(error.message || "Não foi possível carregar as horas trabalhadas do DDS.");
+    }
+
+    const registros = Array.isArray(data)
+        ? data.map((registro) => ({
+            id: registro?.id || "",
+            codigo: String(registro?.codigo || "").trim(),
+            empresaNome: String(registro?.empresa_nome || "").trim(),
+            obraNome: String(registro?.obra_nome || "").trim(),
+            dados: registro?.dados
+                && typeof registro.dados === "object"
+                && !Array.isArray(registro.dados)
+                ? registro.dados
+                : {},
+        }))
+        : [];
 
     return calcularHorasTrabalhadasDdsMes(registros, dataReferencia);
 }

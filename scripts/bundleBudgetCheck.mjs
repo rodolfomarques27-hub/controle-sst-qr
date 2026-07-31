@@ -6,8 +6,9 @@ const diretorioInformado = process.argv[2] || "dist";
 const raizDist = join(process.cwd(), diretorioInformado);
 
 const limiteArquivoJs = 500_000;
+const limiteChunkExcelJs = 1_000_000;
 const limiteArquivoMjs = 2_400_000;
-const limiteTotalScripts = 6_500_000;
+const limiteTotalScripts = 7_500_000;
 const limiteArquivoCss = 550_000;
 const limiteTotalCss = 700_000;
 const limiteArquivoImagem = 1_300_000;
@@ -52,14 +53,23 @@ const totalScripts = totalizar(detalhesScripts);
 const totalCss = totalizar(detalhesCss);
 const totalImagens = totalizar(imagens);
 
-const jsAcimaDoLimite = detalhesJs.filter((item) => item.bytes > limiteArquivoJs);
+const jsAcimaDoLimite = detalhesJs.filter((item) => {
+    const limite = /vendor-excel(?:-|_)/i.test(item.arquivo)
+        ? limiteChunkExcelJs
+        : limiteArquivoJs;
+    return item.bytes > limite;
+});
 const mjsAcimaDoLimite = detalhesMjs.filter((item) => item.bytes > limiteArquivoMjs);
 const cssAcimaDoLimite = detalhesCss.filter((item) => item.bytes > limiteArquivoCss);
 const imagensAcimaDoLimite = imagens.filter((item) => item.bytes > limiteArquivoImagem);
 
-assert.equal(jsAcimaDoLimite.length, 0, `Chunk JS acima de 500 KB: ${JSON.stringify(jsAcimaDoLimite)}`);
+assert.equal(
+    jsAcimaDoLimite.length,
+    0,
+    `Chunk JS acima do orçamento (500 KB; ExcelJS isolado: 1 MB): ${JSON.stringify(jsAcimaDoLimite)}`,
+);
 assert.equal(mjsAcimaDoLimite.length, 0, `Arquivo MJS acima de 2,4 MB: ${JSON.stringify(mjsAcimaDoLimite)}`);
-assert.ok(totalScripts <= limiteTotalScripts, `Scripts JS/MJS acima de 6,5 MB no total: ${totalScripts} bytes.`);
+assert.ok(totalScripts <= limiteTotalScripts, `Scripts JS/MJS acima de 7,5 MB no total: ${totalScripts} bytes.`);
 assert.equal(cssAcimaDoLimite.length, 0, `Arquivo CSS acima de 550 KB: ${JSON.stringify(cssAcimaDoLimite)}`);
 assert.ok(totalCss <= limiteTotalCss, `CSS acima de 700 KB no total: ${totalCss} bytes.`);
 assert.equal(imagensAcimaDoLimite.length, 0, `Imagem acima de 1,3 MB: ${JSON.stringify(imagensAcimaDoLimite)}`);

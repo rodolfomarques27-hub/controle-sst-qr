@@ -1,7 +1,7 @@
 {
   "name": "controle-sst-qr",
   "private": true,
-  "version": "1.0.6",
+  "version": "1.0.8",
   "type": "module",
   "engines": {
     "node": "24.x"
@@ -11,7 +11,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "lint:quiet": "eslint . --quiet",
-    "test:smoke": "node scripts/qualitySmokeTest.mjs && node scripts/ddsPersistenceSmokeTest.mjs",
+    "test:smoke": "node scripts/qualitySmokeTest.mjs && node scripts/ddsPersistenceSmokeTest.mjs && node scripts/ddsAvaliacaoMensalSmokeTest.mjs",
     "check:security": "node scripts/securityBaselineCheck.mjs",
     "check:database": "node scripts/databaseSecurityCheck.mjs",
     "check:bundle": "node scripts/bundleBudgetCheck.mjs .verify-dist",

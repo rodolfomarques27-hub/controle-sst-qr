@@ -1,7 +1,10 @@
+import "../../styles/pages/colaboradores-hero.css";
+import "../../styles/pages/heroes-aniversariantes-colaboradores-data.css";
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useState } from "react";
 import {
     AlertTriangle,
+    CalendarClock,
     ChevronDown,
     ChevronUp,
     Download,
@@ -176,6 +179,24 @@ export function Colaboradores({
     const [empresa, setEmpresa] = useState("Todas");
     const [filtroClassificacao, setFiltroClassificacao] = useState("Todos");
     const [ordenacaoFuncionarios, setOrdenacaoFuncionarios] = useState("nome_az");
+    const [agoraHeroColaboradores, setAgoraHeroColaboradores] = useState(() => new Date());
+
+    useEffect(() => {
+        const atualizarRelogioHeroColaboradores = () => {
+            setAgoraHeroColaboradores(new Date());
+        };
+
+        atualizarRelogioHeroColaboradores();
+
+        const intervaloRelogioHeroColaboradores = window.setInterval(
+            atualizarRelogioHeroColaboradores,
+            30000
+        );
+
+        return () => {
+            window.clearInterval(intervaloRelogioHeroColaboradores);
+        };
+    }, []);
     const [versaoFiltroSalvoPendenciasTreinamentos, setVersaoFiltroSalvoPendenciasTreinamentos] = useState(0);
 
     const filtrosSalvosPendenciasTreinamentosDisponiveis = useMemo(
@@ -249,9 +270,13 @@ export function Colaboradores({
             const texto = normalizarTextoBusca(`${c.nome} ${c.empresa} ${c.empresaExibicao} ${c.empresaPaiNome} ${c.funcao} ${c.matricula} ${c.codigoFuncionario} ${c.statusMobilizacao} ${geral.texto} ${avaliacao.matriz.rotulo}`);
             const bateBusca = texto.includes(normalizarTextoBusca(busca));
             const bateEmpresa = empresa === "Todas" || c.empresa === empresa;
+            const statusOcultoNaVisualizacaoPadrao =
+                filtroClassificacao === "Todos" &&
+                ["Desmobilizado", "Inativo"].includes(geral.texto);
+
             const bateClassificacao = filtroClassificacao === "Todos" || geral.texto === filtroClassificacao;
 
-            return bateBusca && bateEmpresa && bateClassificacao;
+            return !statusOcultoNaVisualizacaoPadrao && bateBusca && bateEmpresa && bateClassificacao;
         })
         .sort((a, b) => {
             const comparacao = String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR", { sensitivity: "base" });
@@ -346,6 +371,39 @@ export function Colaboradores({
         setVersaoFiltroSalvoColaboradoresTreinamentos((valor) => valor + 1);
         alert("Filtros salvos do relat\u00f3rio de colaboradores e treinamentos removidos.");
     };
+    const dataHoraHeroColaboradores = useMemo(() => {
+        const formatarDiaSemana = (valor = "") =>
+            String(valor)
+                .split("-")
+                .map((trecho) =>
+                    trecho
+                        ? trecho.charAt(0).toLocaleUpperCase("pt-BR") +
+                          trecho.slice(1).toLocaleLowerCase("pt-BR")
+                        : trecho
+                )
+                .join("-");
+
+        return {
+            data: new Intl.DateTimeFormat("pt-BR", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+            }).format(agoraHeroColaboradores),
+
+            diaSemana: formatarDiaSemana(
+                new Intl.DateTimeFormat("pt-BR", {
+                    weekday: "long",
+                }).format(agoraHeroColaboradores)
+            ),
+
+            hora: new Intl.DateTimeFormat("pt-BR", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hourCycle: "h23",
+            }).format(agoraHeroColaboradores),
+        };
+    }, [agoraHeroColaboradores]);
+
     const resumoTreinamentos = useMemo(() => {
         const avaliacoes = colaboradores.map(avaliarTreinamentosColaborador);
         const classificacoes = colaboradores.map((c) => statusGeral(c).texto);
@@ -977,10 +1035,19 @@ ${erros.slice(0, 8).join("\n")}`
     return (
         <div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header
+                className="hero-integrated-page-header hero-header--colaboradores"
                 titulo="Colaboradores"
                 subtitulo={null}
                 acao={
                     <div className="colaboradores-header-acoes flex flex-wrap gap-2">
+                        <button
+                            onClick={onAtualizarBanco}
+                            className="colaboradores-header-acao colaboradores-header-acao--secundaria inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
+                        >
+                            <RefreshCw className={classNames("h-4 w-4", carregandoBanco && "animate-spin")} />
+                            Atualizar banco
+                        </button>
+
                         <button
                             onClick={() => {
                                 if (!podeEditarColaboradoresSistema) {
@@ -1014,14 +1081,6 @@ ${erros.slice(0, 8).join("\n")}`
                             <Settings2 className="h-4 w-4" />
                             Ajustar funções
                         </button>
-
-                        <button
-                            onClick={onAtualizarBanco}
-                            className="colaboradores-header-acao colaboradores-header-acao--secundaria inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
-                        >
-                            <RefreshCw className={classNames("h-4 w-4", carregandoBanco && "animate-spin")} />
-                            Atualizar banco
-                        </button>
                     </div>
                 }
             />
@@ -1038,6 +1097,19 @@ ${erros.slice(0, 8).join("\n")}`
                         <p className="colaboradores-hero-banner__text">
                             Controle colaboradores, treinamentos, vencimentos e QR Code em uma visão única.
                         </p>
+                        <div className="colaboradores-hero-banner__line" />
+                    </div>
+
+                    <div
+                        className="colaboradores-hero-banner__date"
+                        aria-label={`Data e hora atuais: ${dataHoraHeroColaboradores.data}, ${dataHoraHeroColaboradores.diaSemana}, ${dataHoraHeroColaboradores.hora}`}
+                    >
+                        <CalendarClock className="h-4 w-4" />
+                        <span>{dataHoraHeroColaboradores.data}</span>
+                        <span aria-hidden="true">•</span>
+                        <span>{dataHoraHeroColaboradores.diaSemana}</span>
+                        <span aria-hidden="true">•</span>
+                        <span>{dataHoraHeroColaboradores.hora}</span>
                     </div>
 
                     <div className="colaboradores-hero-banner__stats">

@@ -15,7 +15,7 @@ export default function DdsReciboFinalSection({
 }) {
     return (
         reciboConferenciaFinalDds && (
-        <div ref={reciboConferenciaFinalRef} className="min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-emerald-500 bg-white p-4 shadow-sm lg:col-span-2">
+        <div ref={reciboConferenciaFinalRef} className="order-[50] min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-emerald-500 bg-white p-4 shadow-sm lg:col-span-2">
             <div
             onClick={() => alternarCardDds("recibo")}
             role="button"

@@ -1,6 +1,7 @@
+import "../../styles/pages/treinamentos-hero.css";
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Eye, EyeOff, GripVertical, RotateCcw, Search, SlidersHorizontal, Upload } from "lucide-react";
+import { CalendarClock, CheckCircle2, Clock3, Eye, EyeOff, GripVertical, RotateCcw, Search, SlidersHorizontal, TriangleAlert, Upload } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import {
     ACOES_PERMISSAO_SISTEMA,
@@ -305,6 +306,27 @@ export function Treinamentos({
     const [cardsTreinamentosRecolhidos, setCardsTreinamentosRecolhidos] = useState(carregarCardsTreinamentosRecolhidos);
     const [layoutCardsTreinamentos, setLayoutCardsTreinamentos] = useState(carregarCardsTreinamentosLayout);
     const [mostrarPersonalizarTreinamentos, setMostrarPersonalizarTreinamentos] = useState(false);
+    const [agoraHeroTreinamentos, setAgoraHeroTreinamentos] = useState(() => new Date());
+
+    useEffect(() => {
+        const atualizarRelogioHeroTreinamentos = () => {
+            setAgoraHeroTreinamentos(new Date());
+        };
+
+        atualizarRelogioHeroTreinamentos();
+
+        const intervaloRelogioHeroTreinamentos =
+            window.setInterval(
+                atualizarRelogioHeroTreinamentos,
+                30000
+            );
+
+        return () => {
+            window.clearInterval(
+                intervaloRelogioHeroTreinamentos
+            );
+        };
+    }, []);
     const [cardArrastandoTreinamento, setCardArrastandoTreinamento] = useState("");
     const [cardDestinoTreinamento, setCardDestinoTreinamento] = useState("");
     const permissaoSistemaAtual = permissaoSistemaUsuario;
@@ -1305,6 +1327,40 @@ export function Treinamentos({
     );
 
 
+    const dataHoraHeroTreinamentos = useMemo(() => {
+        const formatarDiaSemana = (valor = "") =>
+            String(valor)
+                .split("-")
+                .map((trecho) =>
+                    trecho
+                        ? trecho.charAt(0).toLocaleUpperCase("pt-BR") +
+                          trecho.slice(1).toLocaleLowerCase("pt-BR")
+                        : trecho
+                )
+                .join("-");
+
+        return {
+            data: new Intl.DateTimeFormat("pt-BR", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+            }).format(agoraHeroTreinamentos),
+
+            diaSemana: formatarDiaSemana(
+                new Intl.DateTimeFormat("pt-BR", {
+                    weekday: "long",
+                }).format(agoraHeroTreinamentos)
+            ),
+
+            hora: new Intl.DateTimeFormat("pt-BR", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hourCycle: "h23",
+            }).format(agoraHeroTreinamentos),
+        };
+    }, [agoraHeroTreinamentos]);
+
+
     const alertasTstPorEmpresa = useMemo(() => {
         const grupos = {};
 
@@ -1626,6 +1682,7 @@ export function Treinamentos({
     return (
         <div>
             <Header
+                className="hero-integrated-page-header hero-header--treinamentos"
                 titulo="Treinamentos e certificados"
                 subtitulo={null}
                 acao={
@@ -1659,6 +1716,52 @@ export function Treinamentos({
                         <p className="treinamentos-hero-banner__text">
                             Controle certificados, validade, pendências e envios em uma visão única.
                         </p>
+                    </div>
+                </div>
+
+                <div className="treinamentos-hero-banner__footer">
+                    <div
+                        className="treinamentos-hero-banner__date"
+                        aria-label={`Data e hora atuais: ${dataHoraHeroTreinamentos.data}, ${dataHoraHeroTreinamentos.diaSemana}, ${dataHoraHeroTreinamentos.hora}`}
+                    >
+                        <CalendarClock className="h-4 w-4" />
+                        <span>{dataHoraHeroTreinamentos.data}</span>
+                        <span aria-hidden="true">•</span>
+                        <span>{dataHoraHeroTreinamentos.diaSemana}</span>
+                        <span aria-hidden="true">•</span>
+                        <span>{dataHoraHeroTreinamentos.hora}</span>
+                    </div>
+
+                    <div className="treinamentos-hero-banner__stats">
+                        <div className="treinamentos-hero-banner__stat treinamentos-hero-banner__stat--em-dia">
+                            <CheckCircle2 className="h-4 w-4" />
+                            <span>{totalPorStatusCertificados.emDia} certificados em dia</span>
+                        </div>
+
+                        <div className="treinamentos-hero-banner__stat treinamentos-hero-banner__stat--a-vencer">
+                            <Clock3 className="h-4 w-4" />
+                            <span>{totalPorStatusCertificados.aVencer} a vencer</span>
+                        </div>
+
+                        <div className="treinamentos-hero-banner__stat treinamentos-hero-banner__stat--vencidos">
+                            <TriangleAlert className="h-4 w-4" />
+                            <span>{totalPorStatusCertificados.vencidos} vencidos</span>
+                        </div>
+
+                        <div className="treinamentos-hero-banner__stat treinamentos-hero-banner__stat--pendentes">
+                            <Upload className="h-4 w-4" />
+                            <span>{totalPorStatusCertificados.pendentes} pendentes</span>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setMostrarPersonalizarTreinamentos((valor) => !valor)}
+                            aria-pressed={mostrarPersonalizarTreinamentos}
+                            className="treinamentos-hero-banner__personalizar"
+                        >
+                            <SlidersHorizontal className="h-4 w-4" />
+                            Personalizar painel
+                        </button>
                     </div>
                 </div>
             </section>

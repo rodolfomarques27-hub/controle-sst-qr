@@ -1,4 +1,5 @@
 import { obterUrlLogoEmpresa } from "./supabaseServices";
+import { obterOrigemPublicaSistema } from "../utils/urlPublicaUtils.js";
 const textoSeguroDds = (valor = "") => String(valor ?? "").trim();
 
 const somenteDataIsoDds = (valor = "") => {
@@ -22,8 +23,9 @@ const normalizarObjetoDds = (valor = {}) => {
 
 export function montarUrlConferenciaDds({ token = "", origem = "" } = {}) {
     const tokenSeguro = textoSeguroDds(token);
-    const origemFinal = textoSeguroDds(origem) ||
-        (typeof window !== "undefined" ? window.location.origin : "");
+    const origemFinal = obterOrigemPublicaSistema(
+        origem || (typeof window !== "undefined" ? window.location.origin : "")
+    );
 
     const params = new URLSearchParams();
 

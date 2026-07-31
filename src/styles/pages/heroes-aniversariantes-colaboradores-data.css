@@ -1,0 +1,145 @@
+/* MICROETAPA HEROS ANIVERSARIANTES E COLABORADORES - DATA DIA E HORA - INICIO */
+/*
+ * Data completa, dia da semana e hora no canto esquerdo.
+ * Indicadores e ações atuais permanecem preservados.
+ * Aplicação exclusiva no layout desktop.
+ */
+.aniversariantes-hero-banner__date,
+.colaboradores-hero-banner__date {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .aniversariantes-hero-banner__date,
+  .colaboradores-hero-banner__date {
+    box-sizing: border-box !important;
+    position: absolute !important;
+    z-index: 16 !important;
+    left: clamp(12px, 0.9vw, 16px) !important;
+    display: inline-flex !important;
+    min-width: 0 !important;
+    min-height: clamp(31px, 2vw, 34px) !important;
+    height: clamp(31px, 2vw, 34px) !important;
+    max-height: clamp(31px, 2vw, 34px) !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: clamp(5px, 0.4vw, 7px) !important;
+    margin: 0 !important;
+    padding: 0 clamp(11px, 0.85vw, 15px) !important;
+    border: 1px solid rgba(45, 212, 191, 0.5) !important;
+    border-radius: 999px !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(3, 48, 57, 0.94) 0%,
+        rgba(7, 84, 95, 0.76) 100%
+      ) !important;
+    color: #ffffff !important;
+    font-size: clamp(0.66rem, 0.58vw, 0.76rem) !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 0 16px rgba(45, 212, 191, 0.13),
+      0 6px 14px rgba(0, 0, 0, 0.18) !important;
+    backdrop-filter: blur(10px) saturate(135%) !important;
+  }
+
+  .aniversariantes-hero-banner__date svg,
+  .colaboradores-hero-banner__date svg {
+    width: clamp(0.88rem, 0.9vw, 1rem) !important;
+    height: clamp(0.88rem, 0.9vw, 1rem) !important;
+    min-width: clamp(0.88rem, 0.9vw, 1rem) !important;
+    color: #5eead4 !important;
+  }
+
+  .aniversariantes-hero-banner__date {
+    bottom:
+      calc(
+        (
+          clamp(42px, 2.8vw, 46px) -
+          clamp(31px, 2vw, 34px)
+        ) / 2
+      ) !important;
+  }
+
+  .aniversariantes-hero-banner__stats {
+    right: clamp(12px, 0.9vw, 16px) !important;
+    left: auto !important;
+    max-width: calc(100% - clamp(280px, 24vw, 350px)) !important;
+    transform: none !important;
+  }
+
+  .colaboradores-hero-banner__date {
+    bottom:
+      calc(
+        (
+          clamp(42px, 3vw, 52px) -
+          clamp(31px, 2vw, 34px)
+        ) / 2
+      ) !important;
+  }
+
+  .colaboradores-hero-banner__stats {
+    top: auto !important;
+    right: clamp(350px, 29vw, 455px) !important;
+    bottom:
+      calc(
+        (
+          clamp(42px, 3vw, 52px) -
+          clamp(31px, 2vw, 36px)
+        ) / 2
+      ) !important;
+    left: clamp(270px, 22vw, 330px) !important;
+    width: auto !important;
+    max-width: none !important;
+    justify-content: center !important;
+    transform: none !important;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1180px) {
+  .aniversariantes-hero-banner__date,
+  .colaboradores-hero-banner__date {
+    gap: 4px !important;
+    padding-right: 8px !important;
+    padding-left: 8px !important;
+    font-size: 0.6rem !important;
+  }
+
+  .aniversariantes-hero-banner__stats {
+    max-width: calc(100% - 235px) !important;
+    gap: 4px !important;
+  }
+
+  .aniversariantes-hero-banner__stat,
+  .aniversariantes-hero-banner__exportar {
+    gap: 4px !important;
+    padding-right: 7px !important;
+    padding-left: 7px !important;
+    font-size: 0.61rem !important;
+  }
+
+  .aniversariantes-hero-banner__stat svg {
+    display: none !important;
+  }
+
+  .colaboradores-hero-banner__stats {
+    right: 330px !important;
+    left: 225px !important;
+    gap: 4px !important;
+  }
+
+  .colaboradores-hero-banner__stat {
+    gap: 4px !important;
+    padding-right: 7px !important;
+    padding-left: 7px !important;
+    font-size: 0.6rem !important;
+  }
+
+  .colaboradores-hero-banner__stat svg {
+    display: none !important;
+  }
+}
+/* MICROETAPA HEROS ANIVERSARIANTES E COLABORADORES - DATA DIA E HORA - FIM */

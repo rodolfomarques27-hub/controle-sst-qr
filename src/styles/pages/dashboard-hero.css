@@ -1,0 +1,267 @@
+/* MICROETAPA HERO DASHBOARD - MODELO REFERENCIA 1 - INICIO */
+/*
+ * Ajuste corretivo extra compacto:
+ * - diminui mais um pouco a altura do hero;
+ * - sobe e compacta levemente a faixa inferior;
+ * - aproxima visualmente a base do hero da área da linhazinha verde;
+ * - mantém o padrão visual aprovado para replicação nas próximas abas.
+ * Não altera outros heroes.
+ */
+@media (min-width: 1024px) {
+  .hero-header--dashboard {
+    margin-top: -0.6rem !important;
+    padding-top: 0 !important;
+  }
+
+  .dashboard-hero-sst {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    height: clamp(154px, 9.8vw, 178px) !important;
+    min-height: clamp(154px, 9.8vw, 178px) !important;
+    max-height: clamp(154px, 9.8vw, 178px) !important;
+    margin-bottom: 0.75rem !important;
+    overflow: hidden !important;
+    border-radius: clamp(18px, 1.2vw, 28px) !important;
+    box-shadow:
+      0 14px 30px rgba(15, 23, 42, 0.16),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.12) !important;
+  }
+
+  .dashboard-hero-sst::after {
+    display: block !important;
+    height: clamp(42px, 3vw, 52px) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.20) !important;
+    background:
+      linear-gradient(
+        90deg,
+        rgba(8, 13, 24, 0.92) 0%,
+        rgba(17, 24, 39, 0.84) 52%,
+        rgba(56, 34, 18, 0.82) 100%
+      ) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 -8px 20px rgba(0, 0, 0, 0.08) !important;
+    backdrop-filter: blur(12px) saturate(130%) !important;
+  }
+
+  .dashboard-hero-sst > img {
+    object-position: center 48% !important;
+  }
+
+  .dashboard-hero-sst > .relative {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    height: clamp(154px, 9.8vw, 178px) !important;
+    min-height: clamp(154px, 9.8vw, 178px) !important;
+    max-height: clamp(154px, 9.8vw, 178px) !important;
+    padding:
+      clamp(15px, 1vw, 22px)
+      clamp(22px, 1.55vw, 32px)
+      clamp(52px, 3.8vw, 66px) !important;
+    align-items: flex-start !important;
+    overflow: hidden !important;
+  }
+
+  .dashboard-hero-sst > .relative > :first-child {
+    display: block !important;
+    width: min(100%, 36rem) !important;
+    max-width: 36rem !important;
+    text-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.86),
+      0 6px 18px rgba(0, 0, 0, 0.34) !important;
+  }
+
+  .dashboard-hero-sst
+    > .relative
+    > :first-child
+    > p:first-child {
+    margin: 0 !important;
+    font-size: clamp(0.70rem, 0.72vw, 0.90rem) !important;
+    line-height: 1.08 !important;
+    letter-spacing: 0.24em !important;
+  }
+
+  .dashboard-hero-sst
+    > .relative
+    > :first-child
+    > h2 {
+    margin: clamp(5px, 0.35vw, 8px) 0 0 !important;
+    font-size: clamp(1.24rem, 1.35vw, 1.72rem) !important;
+    line-height: 1.02 !important;
+    letter-spacing: -0.03em !important;
+  }
+
+  .dashboard-hero-sst
+    > .relative
+    > :first-child
+    > p:last-of-type {
+    margin-top: clamp(5px, 0.35vw, 8px) !important;
+    font-size: clamp(0.92rem, 0.98vw, 1.18rem) !important;
+    line-height: 1.14 !important;
+  }
+
+  .dashboard-hero-sst
+    > .relative
+    > :first-child
+    > div {
+    width: clamp(46px, 3vw, 64px) !important;
+    height: clamp(3px, 0.2vw, 4px) !important;
+    margin-top: clamp(8px, 0.55vw, 11px) !important;
+    border-radius: 999px !important;
+    box-shadow:
+      0 0 12px rgba(16, 185, 129, 0.32),
+      0 0 24px rgba(16, 185, 129, 0.14) !important;
+  }
+
+  .hero-header--dashboard .page-actions {
+    top: calc(
+      clamp(154px, 9.8vw, 178px) -
+      clamp(31px, 2vw, 36px) -
+      clamp(8px, 0.58vw, 12px)
+    ) !important;
+    right: clamp(14px, 1vw, 22px) !important;
+    z-index: 50 !important;
+    width: auto !important;
+    max-width: 74% !important;
+    height: clamp(31px, 2vw, 36px) !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+  }
+
+  .hero-header--dashboard .page-actions > div,
+  .hero-header--dashboard .dashboard-sst-header-actions {
+    display: flex !important;
+    width: auto !important;
+    height: clamp(31px, 2vw, 36px) !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    flex-wrap: nowrap !important;
+    gap: clamp(6px, 0.42vw, 9px) !important;
+    margin: 0 !important;
+  }
+
+  .hero-header--dashboard .page-actions button {
+    box-sizing: border-box !important;
+    min-width: max-content !important;
+    min-height: clamp(31px, 2vw, 36px) !important;
+    height: clamp(31px, 2vw, 36px) !important;
+    padding:
+      0
+      clamp(0.76rem, 0.84vw, 1rem) !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    border-radius: 999px !important;
+    font-size: clamp(0.66rem, 0.72vw, 0.86rem) !important;
+    line-height: 1 !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 6px 14px rgba(0, 0, 0, 0.20) !important;
+    backdrop-filter: blur(10px) saturate(130%) !important;
+  }
+
+  .hero-header--dashboard .page-actions button svg {
+    width: clamp(0.84rem, 0.9vw, 1rem) !important;
+    height: clamp(0.84rem, 0.9vw, 1rem) !important;
+    min-width: clamp(0.84rem, 0.9vw, 1rem) !important;
+  }
+
+  .hero-header--dashboard .page-actions button:nth-child(1) {
+    border-color: rgba(56, 189, 248, 0.42) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(10, 37, 64, 0.92) 0%,
+        rgba(8, 80, 120, 0.72) 100%
+      ) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.10),
+      0 0 16px rgba(34, 211, 238, 0.14),
+      0 6px 14px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  .hero-header--dashboard .page-actions button:nth-child(2) {
+    border-color: rgba(167, 139, 250, 0.42) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(43, 24, 79, 0.92) 0%,
+        rgba(79, 42, 164, 0.72) 100%
+      ) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.10),
+      0 0 16px rgba(167, 139, 250, 0.14),
+      0 6px 14px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  .hero-header--dashboard .page-actions button:nth-child(3) {
+    border-color: rgba(251, 191, 36, 0.46) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(84, 50, 10, 0.94) 0%,
+        rgba(145, 102, 17, 0.74) 100%
+      ) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.10),
+      0 0 16px rgba(251, 191, 36, 0.14),
+      0 6px 14px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  .hero-header--dashboard .page-actions button:nth-child(4) {
+    border-color: rgba(74, 222, 128, 0.42) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(17, 66, 40, 0.94) 0%,
+        rgba(26, 111, 61, 0.72) 100%
+      ) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.10),
+      0 0 16px rgba(74, 222, 128, 0.14),
+      0 6px 14px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  .dashboard-hero-sst__date {
+    display: flex !important;
+    bottom: clamp(8px, 0.58vw, 12px) !important;
+    left: clamp(16px, 1.1vw, 24px) !important;
+    min-height: clamp(31px, 2vw, 36px) !important;
+    height: clamp(31px, 2vw, 36px) !important;
+    padding:
+      0
+      clamp(0.82rem, 0.92vw, 1.06rem) !important;
+    border: 1px solid rgba(45, 212, 191, 0.46) !important;
+    border-radius: 999px !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(3, 48, 57, 0.92) 0%,
+        rgba(7, 84, 95, 0.72) 100%
+      ) !important;
+    color: #ffffff !important;
+    font-size: clamp(0.76rem, 0.82vw, 0.94rem) !important;
+    line-height: 1 !important;
+    font-weight: 800 !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 0 18px rgba(45, 212, 191, 0.14),
+      0 8px 16px rgba(0, 0, 0, 0.18) !important;
+    backdrop-filter: blur(10px) saturate(130%) !important;
+  }
+
+  .dashboard-hero-sst__date > div {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+    gap: clamp(0.32rem, 0.38vw, 0.48rem) !important;
+  }
+
+  .dashboard-hero-sst__date svg {
+    width: clamp(0.92rem, 0.94vw, 1.04rem) !important;
+    height: clamp(0.92rem, 0.94vw, 1.04rem) !important;
+    min-width: clamp(0.92rem, 0.94vw, 1.04rem) !important;
+    color: #5eead4 !important;
+  }
+}
+/* MICROETAPA HERO DASHBOARD - MODELO REFERENCIA 1 - FIM */

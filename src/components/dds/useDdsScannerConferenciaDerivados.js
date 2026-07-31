@@ -779,8 +779,9 @@ export default function useDdsScannerConferenciaDerivados({
             const responsavelConfirmadoPreenchido =
                 responsavelConfirmado.trim();
 
+            const chuvaConfirmada = confirmado?.chuvaConfirmada === true;
             const semAtividadeConfirmada =
-                confirmado?.semAtividadeConfirmada === true;
+                confirmado?.semAtividadeConfirmada === true || chuvaConfirmada;
 
             const padraoJornadaDds =
                 obterPadraoJornadaDds(posicao);
@@ -862,6 +863,7 @@ export default function useDdsScannerConferenciaDerivados({
                             ""
                     ).trim(),
                 semAtividadeConfirmada,
+                chuvaConfirmada,
                 jornadaTipo:
                     padraoJornadaDds.jornadaTipo,
                 jornadaRotulo:
@@ -1008,8 +1010,9 @@ export default function useDdsScannerConferenciaDerivados({
                 diasSemAtividade:
                     diasConferenciaAssistidaDds.filter(
                         (dia) =>
-                            dia.semAtividadeConfirmada
+                            dia.semAtividadeConfirmada && !dia.chuvaConfirmada
                     ).length,
+                diasComChuva: diasConferenciaAssistidaDds.filter((dia) => dia.chuvaConfirmada).length,
                 pendencias: pendentes.length,
                 diasPendentes: pendentes,
                 diasComJornada:
@@ -1060,11 +1063,10 @@ export default function useDdsScannerConferenciaDerivados({
             ? preConferenciaParticipantesScannerDds.participantes
             : [];
 
+        // Todos os participantes do gabarito pertencem ao snapshot oficial.
+        // A ausência de leitura/marcação muda apenas a frequência para "manual";
+        // nunca deve remover o funcionário da lista salva do DDS.
         return participantes
-            .filter((participante) => (
-                participante?.status !== "pagina_nao_analisada" &&
-                participante?.status !== "pendente"
-            ))
             .map((participante) => ({
                 ...participante,
                 // dds_separacao_lista_impressa_manual_v1

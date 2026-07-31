@@ -1,9 +1,11 @@
+import "../../styles/pages/consulta-qr-responsivo.css";
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { QrCodeComLogo } from "./QrCodeComLogo";
-import { Camera, Check, ClipboardCheck, Copy, Download, Link2, QrCode, Search, ShieldCheck, ChevronDown, PhoneCall, X } from "lucide-react";
+import { AlertTriangle, CalendarClock, Camera, Check, ClipboardCheck, Copy, Download, Link2, QrCode, Search, ShieldCheck, ChevronDown, PhoneCall, X } from "lucide-react";
 import { Card, FotoColaborador, Header, QRCodeReal, StatusPill, obterFotoColaboradorSrc } from "../commonComponents";
+import { precarregarStorageUrl } from "../../hooks/useStorageUrl";
 import { DAY } from "../../constants/sstConstants";
 import { obterTreinamento, statusDocumento, statusGeral, treinamentoSemValidade } from "../../services/colaboradorDocumentosService";
 import { classNames, diasParaVencer, formatDate, normalizarTextoBusca } from "../../utils/sstUtils";
@@ -13,6 +15,7 @@ import { CrachaColaboradorPrint, CRACHA_COLABORADOR_PRINT_STYLES } from "./Crach
 import { ColaboradorIdentificacoesSeguranca } from "../colaboradores/ColaboradorIdentificacoesSeguranca";
 import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import { useDispositivoMobile } from "../../hooks/useDispositivoMobile";
+import { normalizarFuncaoMaoDeObraDds } from "../dds/DdsPageMaoDeObraSupport";
 
 function CardIconSafe() {
     return (
@@ -38,6 +41,47 @@ function CardIconSafe() {
 }
 
 const CRACHA_COLABORADOR_HABILITADO = false;
+
+function colaboradorElegivelParaImpressaoQr(item = {}) {
+    const situacao = normalizarTextoBusca([
+        item.statusMobilizacao,
+        item.status_mobilizacao,
+        item.situacaoCadastro,
+        item.situacao_cadastro,
+        item.statusCadastro,
+        item.status_cadastro,
+        item.classificacao,
+        item.situacao,
+        item.status,
+        statusGeral(item)?.texto,
+    ].filter(Boolean).join(" "));
+
+    const estaInativoOuDesmobilizado =
+        situacao.includes("inativ") ||
+        situacao.includes("desmobil");
+
+    return item.ativo !== false && !estaInativoOuDesmobilizado;
+}
+
+function obterNomeEmpresaEtiquetaQr(item = {}) {
+    const nomeBruto = String(
+        item.empresaExibicao ||
+        item.empresa ||
+        "Empresa não informada"
+    ).trim();
+
+    const nomeSubcontratada = nomeBruto.match(
+        /(?:subcontratada|subcontratado|contratada|contratado|sub\.?)[\s:.-]*(.+)$/i
+    );
+
+    if (nomeSubcontratada?.[1]?.trim()) {
+        return nomeSubcontratada[1].trim();
+    }
+
+    return nomeBruto
+        .replace(/^(?:empresa|contratada|subcontratada|sub\.)\s*:\s*/i, "")
+        .trim();
+}
 
 function obterNomeTreinamentoOrdenacao(treinamento) {
     const treinamentoInfo = obterTreinamento(treinamento?.treinamentoId);
@@ -186,7 +230,7 @@ body {
 
 body {
     margin: 0;
-    padding: 32px;
+    padding: 0;
     background: #ffffff;
     color: #0f172a;
     font-family: Arial, Helvetica, sans-serif;
@@ -205,6 +249,78 @@ body {
     padding: 28px;
     background: #ffffff;
     box-shadow: 0 8px 28px rgba(15, 23, 42, 0.08);
+}
+
+.cabecalho-qr-colaborador {
+    display: flex;
+    width: 100%;
+    height: 9mm;
+    flex: 0 0 9mm;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: #000000;
+    color: #ffffff;
+    text-align: center;
+}
+
+.cabecalho-qr-colaborador h1 {
+    width: calc(100% - 3mm);
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    color: #ffffff;
+    font-size: 10pt;
+    line-height: 1.05;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.funcao-qr {
+    width: calc(100% - 3mm);
+    margin: 0.7mm 0 0;
+    color: #ffffff;
+    font-size: 6.5pt;
+    line-height: 1;
+    font-weight: 900;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.empresa-qr {
+    display: flex;
+    width: 100%;
+    height: 6mm;
+    flex: 0 0 6mm;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0 1mm;
+    overflow: hidden;
+    background: #000000;
+    color: #ffffff;
+    font-size: 5pt;
+    line-height: 1;
+    font-weight: 900;
+    text-transform: uppercase;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    letter-spacing: -0.02em;
+    text-align: center;
+}
+
+.empresa-qr-texto {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-align: center;
+    text-overflow: ellipsis;
 }
 
 .qr-print-safe-box {
@@ -282,35 +398,40 @@ h1 {
 
 
 .cartao-lote {
-    width: 100%;
-    max-width: none;
-    min-height: 255px;
-    padding: 8px 10px 10px;
-    gap: 3px;
+    width: 50mm;
+    max-width: 50mm;
+    height: 50mm;
+    min-height: 50mm;
+    gap: 0;
+    overflow: hidden;
+    padding: 0;
+    border: 0.3mm solid #000000;
+    border-radius: 0;
+    box-shadow: none;
 }
 
 .cartao-lote-unico {
-    width: 270px;
-    max-width: 270px;
+    width: 50mm;
+    max-width: 50mm;
     margin: 0 auto;
 }
 .cartao-lote .qr-print-safe-box,
 .cartao-lote .qr-print-safe-box > *,
 .cartao-lote .qr-print-safe-box svg {
-    width: 190px !important;
-    height: 190px !important;
-    min-width: 190px !important;
-    min-height: 190px !important;
-    max-width: 190px !important;
-    max-height: 190px !important;
+    width: 34.4mm !important;
+    height: 34.4mm !important;
+    min-width: 34.4mm !important;
+    min-height: 34.4mm !important;
+    max-width: 34.4mm !important;
+    max-height: 34.4mm !important;
 }
 
 .cartao-lote .qr-print-safe-box img {
-    width: 48px !important;
-    height: 48px !important;
-    max-width: 48px !important;
-    max-height: 48px !important;
-    border-radius: 14px !important;
+    width: 8mm !important;
+    height: 8mm !important;
+    max-width: 8mm !important;
+    max-height: 8mm !important;
+    border-radius: 1mm !important;
 }
 
 .cartao-lote h1 {
@@ -342,8 +463,15 @@ h1 {
 }
 
 @media print {
+    @page {
+        size: 50mm 50mm;
+        margin: 0;
+    }
+
     body {
-        padding: 18mm;
+        width: 50mm;
+        margin: 0;
+        padding: 0;
     }
 
     .cartao {
@@ -351,8 +479,40 @@ h1 {
         break-inside: avoid;
         page-break-inside: avoid;
     }
+
+    .grade-qrs {
+        display: block;
+        width: 50mm;
+        max-width: 50mm;
+        margin: 0;
+    }
+
+    .grade-qrs .cartao-lote {
+        break-after: page;
+        page-break-after: always;
+    }
+
+    .grade-qrs .cartao-lote:last-child {
+        break-after: auto;
+        page-break-after: auto;
+    }
 }
 `;
+function precarregarFotoConsultaQr(item = {}) {
+    const caminhoFoto =
+        obterFotoColaboradorSrc(item);
+
+    if (!caminhoFoto) {
+        return Promise.resolve("");
+    }
+
+    return precarregarStorageUrl(
+        "fotos-colaboradores",
+        caminhoFoto,
+        600
+    );
+}
+
 function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColaborador }) {
     const [busca, setBusca] = useState("");
     const [idColaboradorConsultaSelecionado, setIdColaboradorConsultaSelecionado] = useState("");
@@ -370,8 +530,68 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
     const [idsColaboradoresQrMassaSelecionados, setIdsColaboradoresQrMassaSelecionados] = useState([]);
     const [linkPublicoCopiado, setLinkPublicoCopiado] = useState(false);
     const [contatoEmergenciaAberto, setContatoEmergenciaAberto] = useState(false);
+    const [cardColaboradorAberto, setCardColaboradorAberto] = useState(() => {
+        if (typeof window === "undefined") return true;
+
+        try {
+            return window.localStorage.getItem("consultaQr:cardColaboradorAberto") !== "false";
+        } catch {
+            return true;
+        }
+    });
     const [tokenAuditoriaPublica, setTokenAuditoriaPublica] = useState("");
     const [mensagemTokenAuditoriaPublica, setMensagemTokenAuditoriaPublica] = useState("Carregando token público da auditoria...");
+    const [agoraHeroConsultaQr, setAgoraHeroConsultaQr] = useState(() => new Date());
+
+    useEffect(() => {
+        const atualizarRelogioHeroConsultaQr = () => {
+            setAgoraHeroConsultaQr(new Date());
+        };
+
+        atualizarRelogioHeroConsultaQr();
+
+        const intervaloRelogioHeroConsultaQr = window.setInterval(
+            atualizarRelogioHeroConsultaQr,
+            30000
+        );
+
+        return () => {
+            window.clearInterval(intervaloRelogioHeroConsultaQr);
+        };
+    }, []);
+
+    const dataHoraHeroConsultaQr = useMemo(() => {
+        const formatarDiaSemana = (valor = "") =>
+            String(valor)
+                .split("-")
+                .map((trecho) =>
+                    trecho
+                        ? trecho.charAt(0).toLocaleUpperCase("pt-BR") +
+                          trecho.slice(1).toLocaleLowerCase("pt-BR")
+                        : trecho
+                )
+                .join("-");
+
+        return {
+            data: new Intl.DateTimeFormat("pt-BR", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+            }).format(agoraHeroConsultaQr),
+
+            diaSemana: formatarDiaSemana(
+                new Intl.DateTimeFormat("pt-BR", {
+                    weekday: "long",
+                }).format(agoraHeroConsultaQr)
+            ),
+
+            hora: new Intl.DateTimeFormat("pt-BR", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hourCycle: "h23",
+            }).format(agoraHeroConsultaQr),
+        };
+    }, [agoraHeroConsultaQr]);
     useEffect(() => {
         let ativo = true;
 
@@ -403,16 +623,56 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
         window.localStorage.setItem("consultaQr:filtrosAbertos", filtrosConsultaQrAbertos ? "true" : "false");
     }, [filtrosConsultaQrAbertos]);
 
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        try {
+            window.localStorage.setItem(
+                "consultaQr:cardColaboradorAberto",
+                cardColaboradorAberto ? "true" : "false"
+            );
+        } catch {
+            // Ignora navegador sem localStorage disponível.
+        }
+    }, [cardColaboradorAberto]);
+
+    const colaboradoresElegiveisQr = useMemo(
+        () => colaboradores.filter(colaboradorElegivelParaImpressaoQr),
+        [colaboradores]
+    );
+
+    const resumoHeroConsultaQr = useMemo(() => {
+        const classificacoes = colaboradoresElegiveisQr.map(
+            (item) => statusGeral(item).texto
+        );
+
+        return {
+            disponiveis: colaboradoresElegiveisQr.length,
+            liberados: classificacoes.filter(
+                (status) => status === "Liberado"
+            ).length,
+            comRestricao: classificacoes.filter(
+                (status) => status !== "Liberado"
+            ).length,
+        };
+    }, [colaboradoresElegiveisQr]);
+
     const empresasConsultaQR = useMemo(() => {
-        const nomes = colaboradores
+        const nomes = colaboradoresElegiveisQr
             .map((item) => item.empresaExibicao || item.empresa || "Empresa não informada")
             .filter(Boolean);
 
         return Array.from(new Set(nomes)).sort((a, b) => a.localeCompare(b));
-    }, [colaboradores]);
+    }, [colaboradoresElegiveisQr]);
 
-    const obterIdColaboradorConsulta = (item = {}) =>
-        String(item.id || item.token || item.codigoFuncionario || item.nome || "");
+    const obterIdColaboradorConsulta = (item) =>
+        String(
+            item?.id ||
+            item?.token ||
+            item?.codigoFuncionario ||
+            item?.nome ||
+            ""
+        );
 
     useEffect(() => {
         const idRecebido = obterIdColaboradorConsulta(colaborador);
@@ -422,16 +682,16 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
     }, [colaborador]);
 
     const colaboradoresPorEmpresa = useMemo(() => {
-        if (filtroEmpresaQR === "Todas") return colaboradores;
+        if (filtroEmpresaQR === "Todas") return colaboradoresElegiveisQr;
 
-        return colaboradores.filter(
+        return colaboradoresElegiveisQr.filter(
             (item) => String(item.empresaExibicao || item.empresa || "Empresa não informada") === String(filtroEmpresaQR)
         );
-    }, [colaboradores, filtroEmpresaQR]);
+    }, [colaboradoresElegiveisQr, filtroEmpresaQR]);
 
     const funcoesConsultaQR = useMemo(() => {
         const funcoes = colaboradoresPorEmpresa
-            .map((item) => item.funcao || item.cargo || "Função não informada")
+            .map((item) => normalizarFuncaoMaoDeObraDds(item.funcao || item.cargo || "Sem função"))
             .filter(Boolean);
 
         return Array.from(new Set(funcoes)).sort((a, b) => a.localeCompare(b, "pt-BR"));
@@ -448,7 +708,7 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
         const termo = normalizarTextoBusca(busca);
 
         const filtrados = colaboradoresPorEmpresa.filter((item) => {
-            const funcaoItem = String(item.funcao || item.cargo || "Função não informada");
+            const funcaoItem = normalizarFuncaoMaoDeObraDds(item.funcao || item.cargo || "Sem função");
 
             if (filtroFuncaoQR !== "Todas" && funcaoItem !== String(filtroFuncaoQR)) {
                 return false;
@@ -471,14 +731,24 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
     }, [busca, colaboradoresPorEmpresa, filtroFuncaoQR, ordenacaoConsultaQR]);
 
     const colaboradorAtual = useMemo(() => {
-        if (!colaboradoresFiltrados.length) return null;
+        if (colaboradoresFiltrados.length) {
+            const selecionadoFiltrado = colaboradoresFiltrados.find((item) =>
+                obterIdColaboradorConsulta(item) === String(idColaboradorConsultaSelecionado || "")
+            );
 
-        const selecionado = colaboradoresFiltrados.find((item) =>
+            return selecionadoFiltrado || colaboradoresFiltrados[0] || null;
+        }
+
+        const selecionadoAnterior = colaboradoresElegiveisQr.find((item) =>
             obterIdColaboradorConsulta(item) === String(idColaboradorConsultaSelecionado || "")
         );
 
-        return selecionado || colaboradoresFiltrados[0] || null;
-    }, [colaboradoresFiltrados, idColaboradorConsultaSelecionado]);
+        return selecionadoAnterior || colaboradoresElegiveisQr[0] || null;
+    }, [
+        colaboradoresElegiveisQr,
+        colaboradoresFiltrados,
+        idColaboradorConsultaSelecionado,
+    ]);
 
     useEffect(() => {
         if (!colaboradoresFiltrados.length) return;
@@ -492,17 +762,55 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
         setIdColaboradorConsultaSelecionado(obterIdColaboradorConsulta(colaboradoresFiltrados[0]));
     }, [colaboradoresFiltrados, idColaboradorConsultaSelecionado]);
 
-    const colaboradoresBaseQrMassa = useMemo(() => {
-        if (filtroEmpresaQrMassa === "Todas") return colaboradores;
+    useEffect(() => {
+        if (
+            typeof window === "undefined" ||
+            !colaboradoresFiltrados.length
+        ) {
+            return undefined;
+        }
 
-        return colaboradores.filter((item) =>
+        const candidatosPreCarga =
+            colaboradoresFiltrados.slice(
+                0,
+                6
+            );
+
+        const agendamentos =
+            candidatosPreCarga.map(
+                (item, indice) =>
+                    window.setTimeout(
+                        () => {
+                            void precarregarFotoConsultaQr(
+                                item
+                            );
+                        },
+                        120 + indice * 90
+                    )
+            );
+
+        return () => {
+            agendamentos.forEach(
+                (idAgendamento) => {
+                    window.clearTimeout(
+                        idAgendamento
+                    );
+                }
+            );
+        };
+    }, [colaboradoresFiltrados]);
+
+    const colaboradoresBaseQrMassa = useMemo(() => {
+        if (filtroEmpresaQrMassa === "Todas") return colaboradoresElegiveisQr;
+
+        return colaboradoresElegiveisQr.filter((item) =>
             String(item.empresaExibicao || item.empresa || "Empresa não informada") === String(filtroEmpresaQrMassa)
         );
-    }, [colaboradores, filtroEmpresaQrMassa]);
+    }, [colaboradoresElegiveisQr, filtroEmpresaQrMassa]);
 
     const funcoesQrMassa = useMemo(() => {
         const funcoes = colaboradoresBaseQrMassa
-            .map((item) => item.funcao || item.cargo || "Função não informada")
+            .map((item) => normalizarFuncaoMaoDeObraDds(item.funcao || item.cargo || "Sem função"))
             .filter(Boolean);
 
         return Array.from(new Set(funcoes)).sort((a, b) => a.localeCompare(b, "pt-BR"));
@@ -512,7 +820,7 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
         if (filtroFuncaoQrMassa === "Todas") return colaboradoresBaseQrMassa;
 
         return colaboradoresBaseQrMassa.filter((item) =>
-            String(item.funcao || item.cargo || "Função não informada") === String(filtroFuncaoQrMassa)
+            normalizarFuncaoMaoDeObraDds(item.funcao || item.cargo || "Sem função") === String(filtroFuncaoQrMassa)
         );
     }, [colaboradoresBaseQrMassa, filtroFuncaoQrMassa]);
 
@@ -575,11 +883,12 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
     const topoConsultaQr = (
         <>
             <Header
+                className="hero-integrated-page-header hero-header--consulta-qr"
                 titulo="Consulta por QR Code"
                 subtitulo={null}
             />
 
-            <section className="empresas-hero-banner">
+            <section className="empresas-hero-banner consulta-qr-hero-banner">
                 <div
                     className="empresas-hero-banner__bg"
                     style={{
@@ -596,6 +905,38 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
                         <p className="empresas-hero-banner__text">
                             Consulte, copie e imprima QR Codes individuais ou em massa.
                         </p>
+                        <div className="consulta-qr-hero-banner__line" />
+                    </div>
+
+                    <div className="consulta-qr-hero-banner__bottom">
+                        <div
+                            className="consulta-qr-hero-banner__date"
+                            aria-label={`Data e hora atuais: ${dataHoraHeroConsultaQr.data}, ${dataHoraHeroConsultaQr.diaSemana}, ${dataHoraHeroConsultaQr.hora}`}
+                        >
+                            <CalendarClock className="h-4 w-4" />
+                            <span>{dataHoraHeroConsultaQr.data}</span>
+                            <span aria-hidden="true">•</span>
+                            <span>{dataHoraHeroConsultaQr.diaSemana}</span>
+                            <span aria-hidden="true">•</span>
+                            <span>{dataHoraHeroConsultaQr.hora}</span>
+                        </div>
+
+                        <div className="consulta-qr-hero-banner__stats">
+                            <div className="consulta-qr-hero-banner__stat consulta-qr-hero-banner__stat--total">
+                                <QrCode className="h-4 w-4" />
+                                <span>{resumoHeroConsultaQr.disponiveis} disponíveis</span>
+                            </div>
+
+                            <div className="consulta-qr-hero-banner__stat consulta-qr-hero-banner__stat--liberados">
+                                <ShieldCheck className="h-4 w-4" />
+                                <span>{resumoHeroConsultaQr.liberados} liberados</span>
+                            </div>
+
+                            <div className="consulta-qr-hero-banner__stat consulta-qr-hero-banner__stat--restricao">
+                                <AlertTriangle className="h-4 w-4" />
+                                <span>{resumoHeroConsultaQr.comRestricao} {resumoHeroConsultaQr.comRestricao === 1 ? "restrição" : "restrições"}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -625,6 +966,56 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
     const geral = statusGeral(colaboradorAtual);
     const treinamentos = colaboradorAtual.treinamentos || [];
     const treinamentosOrdenados = [...treinamentos].sort(compararTreinamentosPorOrdemNumerica);
+    const avaliacaoResumoConsultaQr = geral.avaliacao || {};
+
+    const totalResumoConsultaQr =
+        Math.max(
+            0,
+            Number(avaliacaoResumoConsultaQr.total) || 0
+        );
+
+    const concluidosResumoConsultaQr =
+        Array.isArray(avaliacaoResumoConsultaQr.concluidos)
+            ? avaliacaoResumoConsultaQr.concluidos.length
+            : 0;
+
+    const emDiaResumoConsultaQr =
+        Array.isArray(avaliacaoResumoConsultaQr.emDia)
+            ? avaliacaoResumoConsultaQr.emDia.length
+            : 0;
+
+    const vencendoResumoConsultaQr =
+        Array.isArray(avaliacaoResumoConsultaQr.vencendo)
+            ? avaliacaoResumoConsultaQr.vencendo.length
+            : 0;
+
+    const vencidosResumoConsultaQr =
+        Array.isArray(avaliacaoResumoConsultaQr.vencidos)
+            ? avaliacaoResumoConsultaQr.vencidos.length
+            : 0;
+
+    const resumoTreinamentosConsultaQr = {
+        total: totalResumoConsultaQr,
+        emDia: emDiaResumoConsultaQr,
+        vencendo: vencendoResumoConsultaQr,
+        vencidos: vencidosResumoConsultaQr,
+        percentual:
+            totalResumoConsultaQr > 0
+                ? Math.min(
+                    100,
+                    Math.max(
+                        0,
+                        Math.round(
+                            (
+                                concluidosResumoConsultaQr /
+                                totalResumoConsultaQr
+                            ) *
+                            100
+                        )
+                    )
+                )
+                : 0,
+    };
     const montarUrlConsultaColaborador = (item) => typeof window !== "undefined"
         ? montarUrlConsultaQrColaboradorPublica({
             tokenQrColaborador: item?.token,
@@ -688,6 +1079,8 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
     const idImpressaoCrachaColaborador = `cracha-colaborador-impressao-${colaboradorAtual.id || colaboradorAtual.token}`;
     const idImpressaoLoteColaboradores = "qr-colaboradores-lote-impressao";
     const imprimirQrColaborador = () => {
+        if (!colaboradorElegivelParaImpressaoQr(colaboradorAtual)) return;
+
         const elemento = document.getElementById(idImpressaoQrColaborador);
         if (!elemento) return;
         const janela = window.open("", "_blank", "width=520,height=640");
@@ -699,7 +1092,8 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
     };
 
     const imprimirQrColaboradoresEmLote = () => {
-        if (!colaboradoresQrMassaSelecionados.length) return;
+        const selecionadosElegiveis = colaboradoresQrMassaSelecionados.filter(colaboradorElegivelParaImpressaoQr);
+        if (!selecionadosElegiveis.length || selecionadosElegiveis.length !== colaboradoresQrMassaSelecionados.length) return;
 
         const elemento = document.getElementById(idImpressaoLoteColaboradores);
         if (!elemento) return;
@@ -737,16 +1131,15 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
                                                             <Card className="relative mb-5 overflow-hidden rounded-[26px] border border-slate-200 bg-white p-0 shadow-sm">
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-400 via-blue-500 to-emerald-500" />
 
-                <div
-                    className="select-none px-4 py-2.5 md:px-5 md:py-3"
-                    onClick={(evento) => {
-                        const alvoInterativo = evento.target.closest?.("button, input, select, textarea, a, label, [role='button']");
-                        if (alvoInterativo) return;
-
-                        setFiltrosConsultaQrAbertos((aberto) => !aberto);
-                    }}
-                >
-                    <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                <div className="select-none px-4 py-2.5 md:px-5 md:py-3">
+                    <div
+                        className="flex cursor-pointer flex-col gap-3 xl:flex-row xl:items-center xl:justify-between"
+                        onClick={() => {
+                            setFiltrosConsultaQrAbertos(
+                                (aberto) => !aberto
+                            );
+                        }}
+                    >
                         <div className="flex min-w-0 flex-col gap-1.5 lg:flex-row lg:items-center">
                             <div className="flex min-w-0 items-center gap-2">
                                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-700 ring-1 ring-cyan-100">
@@ -893,6 +1286,21 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
                                                 <button
                                                     key={idItemLista}
                                                     type="button"
+                                                    onPointerEnter={() => {
+                                                        void precarregarFotoConsultaQr(
+                                                            item
+                                                        );
+                                                    }}
+                                                    onPointerDown={() => {
+                                                        void precarregarFotoConsultaQr(
+                                                            item
+                                                        );
+                                                    }}
+                                                    onFocus={() => {
+                                                        void precarregarFotoConsultaQr(
+                                                            item
+                                                        );
+                                                    }}
                                                     onClick={(evento) => {
                                                         evento.stopPropagation();
                                                         setIdColaboradorConsultaSelecionado(idItemLista);
@@ -919,7 +1327,7 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
                                                             {item.nome || "Colaborador sem nome"}
                                                         </span>
                                                         <span className="block truncate text-[11px] font-bold uppercase text-slate-500">
-                                                            {item.funcao || item.cargo || "Função não informada"}
+                                                            {normalizarFuncaoMaoDeObraDds(item.funcao || item.cargo || "Sem função")}
                                                         </span>
                                                         <span className="block truncate text-[11px] font-semibold text-slate-400">
                                                             {item.empresaExibicao || item.empresa || "Empresa não informada"}
@@ -943,197 +1351,316 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
             </Card>
             <div className="consulta-qr-card w-full rounded-[2rem] border border-slate-100 bg-white p-0 shadow-lg ring-1 ring-slate-100/80">
                 <div className="rounded-[1.5rem] bg-white p-4 sm:p-5 md:p-6">
-                                        <div className="grid w-full gap-2 rounded-[1.25rem] bg-white lg:grid-cols-[560px_minmax(0,1fr)_16cm_minmax(0,1fr)_124px_118px] lg:items-center">
-                        <div className="flex min-w-0 items-center justify-start gap-3 pl-0 pr-4 lg:border-r lg:border-slate-200">
-                            <div className="flex shrink-0 flex-col items-center gap-1.5">
+                                                                <div className="consulta-qr-resumo">
+                            <section className="consulta-qr-resumo__identificacao">
+                                <div className="consulta-qr-resumo__foto-coluna">
+                                    <FotoColaborador
+                                        key={obterIdColaboradorConsulta(colaboradorAtual)}
+                                        src={colaboradorAtual}
+                                        colaborador={colaboradorAtual}
+                                        colaboradorId={colaboradorAtual.id}
+                                        nome={colaboradorAtual.nome}
+                                        className="consulta-qr-resumo__foto"
+                                        iconClassName="h-10 w-10"
+                                        loading="eager"
+                                    />
 
-                                <FotoColaborador
-
-                                    src={colaboradorAtual}
-
-                                    colaborador={colaboradorAtual}
-
-                                    colaboradorId={colaboradorAtual.id}
-
-                                    nome={colaboradorAtual.nome}
-
-                                    className="h-[88px] w-[88px] shrink-0 rounded-3xl border-4 border-white object-cover shadow-lg ring-1 ring-slate-200"
-
-                                    iconClassName="h-9 w-9"
-
-                                />
-
-
-                                <span className={classNames(
-
-                                    "inline-flex max-w-[104px] items-center justify-center truncate rounded-2xl border px-3 py-1 text-[10px] font-black uppercase tracking-[0.08em]",
-
-                                    estadoObraClasse
-
-                                )}>
-
-                                    {estadoObraTexto}
-
-                                </span>
-
-                            </div>
-
-                            <div className="min-w-0">
-                                <div className="flex min-w-0 items-center gap-2">
-                                    <h2 className="shrink-0 whitespace-nowrap text-lg font-black leading-tight tracking-tight text-slate-950 sm:text-xl">
-                                        {colaboradorAtual.nome}
-                                    </h2>
-
-                                    <div className="relative shrink-0">
-                                        <button
-                                            type="button"
-                                            onClick={() => setContatoEmergenciaAberto((aberto) => !aberto)}
-                                            className={classNames(
-                                                "inline-flex shrink-0 items-center justify-center gap-1.5 rounded-2xl border px-3 py-1.5 text-[10px] font-black transition",
-                                                temContatoEmergencia
-                                                    ? "border-red-100 bg-red-50 text-red-700 hover:bg-red-100"
-                                                    : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100"
-                                            )}
-                                        >
-                                            <PhoneCall className="h-3.5 w-3.5" />
-                                            Emergência
-                                            <ChevronDown
-                                                className={classNames(
-                                                    "h-3.5 w-3.5 transition",
-                                                    contatoEmergenciaAberto && "rotate-180"
-                                                )}
-                                            />
-                                        </button>
-
-                                        {contatoEmergenciaAberto && (
-                                            <div className="absolute left-0 top-full z-20 mt-2 w-[185px] rounded-2xl border border-red-100 bg-red-50/95 px-3 py-2 text-[10px] shadow-lg">
-                                                {temContatoEmergencia ? (
-                                                    <div className="space-y-0.5">
-                                                        <p className="truncate font-black text-slate-950">
-                                                            {contatoEmergenciaNome || "Contato de emergência"}
-                                                        </p>
-                                                        {contatoEmergenciaParentesco && (
-                                                            <p className="font-semibold text-slate-500">
-                                                                Parentesco: {contatoEmergenciaParentesco}
-                                                            </p>
-                                                        )}
-                                                        {contatoEmergenciaTelefone && (
-                                                            <a
-                                                                href={`tel:${telefoneEmergenciaLimpo}`}
-                                                                className="inline-flex font-black text-red-700 hover:text-red-800"
-                                                            >
-                                                                {contatoEmergenciaTelefone}
-                                                            </a>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <p className="font-semibold text-slate-500">
-                                                        Contato de emergência não cadastrado.
-                                                    </p>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="mt-2.5 space-y-1.5 text-xs font-black uppercase text-slate-500">
-                                    <p className="flex items-center gap-2">
-                                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-slate-100 text-slate-500">
-                                            <ClipboardCheck className="h-3.5 w-3.5" />
-                                        </span>
-                                        {colaboradorAtual.funcao}
-                                    </p>
-                                    <p className="flex items-center gap-2">
-                                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-slate-100 text-slate-500">
-                                            <CardIconSafe />
-                                        </span>
-                                        {colaboradorAtual.empresaExibicao || colaboradorAtual.empresa}
-                                    </p>
-                                    <p className="flex items-center gap-2">
-                                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-slate-100 text-slate-500">
-                                            <QrCode className="h-3.5 w-3.5" />
-                                        </span>
-                                        Código: {colaboradorAtual.codigoFuncionario}
-                                    </p>
-                                </div>
-
-                                <ColaboradorIdentificacoesSeguranca
-                                    colaborador={colaboradorAtual}
-                                    treinamentos={treinamentos}
-                                    className="mt-2.5"
-                                />
-                            </div>
-                        </div>
-
-                        <div className={classNames("flex min-h-[2.5cm] w-[16cm] max-w-full items-center rounded-3xl px-5 py-3 shadow-sm lg:col-start-3 lg:self-center lg:justify-self-center", geral.texto === "Liberado" ? "border border-emerald-100 bg-emerald-50/70" : "border border-red-100 bg-red-50/60")}>
-                            <div className="flex w-full items-center justify-center gap-6">
-                                <div className="flex min-w-0 items-center gap-3">
-                                    <span className={classNames("inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl", geral.texto === "Liberado" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700")}>
-                                        <ShieldCheck className="h-4 w-4" />
+                                    <span className="consulta-qr-resumo__situacao-label">
+                                        Situação
                                     </span>
-                                    <div className="min-w-0">
-                                        <p className="text-xs font-black text-slate-500">
-                                            Status geral do colaborador
-                                        </p>
-                                        <h3 className="mt-0.5 truncate whitespace-nowrap text-xs font-black leading-snug text-slate-950 sm:text-sm">
-                                            {geral.detalhe}
-                                        </h3>
-                                    </div>
+
+                                    <span
+                                        className={classNames(
+                                            "consulta-qr-resumo__situacao",
+                                            geral.classe
+                                        )}
+                                    >
+                                        {geral.texto}
+                                    </span>
                                 </div>
 
-                                <span className={classNames("inline-flex min-w-[112px] shrink-0 items-center justify-center rounded-2xl px-5 py-2.5 text-xs font-black", geral.classe)}>
-                                    {geral.texto}
-                                </span>
-                            </div>
-                        </div>
+                                <div className="consulta-qr-resumo__dados">
+                                    <div className="consulta-qr-resumo__cabecalho">
+                                        <h2 className="consulta-qr-resumo__nome">
+                                            {colaboradorAtual.nome}
+                                        </h2>
 
-                        <div className="flex w-full justify-center lg:col-start-5 lg:justify-center lg:border-l lg:border-slate-200 lg:pl-6">
-                            <div className="flex items-center justify-center rounded-xl border border-slate-100 bg-white p-1 shadow-sm">
-                                <QrCodeComLogo value={urlConsultaColaborador} size={112} level="H" includeMargin bgColor="#ffffff" fgColor="#0f172a" logoRatio={0.22} />
-                            </div>
-                        </div>
+                                        <div className="consulta-qr-resumo__controles">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setContatoEmergenciaAberto(
+                                                        (aberto) => !aberto
+                                                    );
+                                                }}
+                                                className={classNames(
+                                                    "consulta-qr-resumo__controle",
+                                                    temContatoEmergencia
+                                                        ? "border-red-100 bg-red-50 text-red-700 hover:bg-red-100"
+                                                        : "border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100"
+                                                )}
+                                            >
+                                                <PhoneCall className="h-3.5 w-3.5" />
+                                                Emergência
+                                                <ChevronDown
+                                                    className={classNames(
+                                                        "h-3.5 w-3.5 transition-transform",
+                                                        contatoEmergenciaAberto &&
+                                                            "rotate-180"
+                                                    )}
+                                                />
+                                            </button>
 
-                        <div className="flex w-full justify-center lg:col-start-6 lg:justify-start lg:pl-3">
-                            <div className="flex h-[108px] w-[118px] shrink-0 flex-col justify-center gap-3">
-                                <button
-                                    type="button"
-                                    onClick={copiarLinkPublicoColaborador}
-                                    disabled={!urlConsultaColaborador}
-                                    className={classNames(
-                                        "inline-flex min-h-[1.3cm] w-full items-center justify-center gap-1.5 rounded-2xl px-2.5 py-2 text-[10px] font-black ring-1 transition",
-                                        linkPublicoCopiado
-                                            ? "bg-emerald-600 text-white ring-emerald-600"
-                                            : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50",
-                                        !urlConsultaColaborador && "cursor-not-allowed opacity-50"
+                                            <button
+                                                type="button"
+                                                aria-expanded={cardColaboradorAberto}
+                                                title={
+                                                    cardColaboradorAberto
+                                                        ? "Recolher detalhes do colaborador"
+                                                        : "Exibir detalhes do colaborador"
+                                                }
+                                                onClick={() => {
+                                                    if (cardColaboradorAberto) {
+                                                        setContatoEmergenciaAberto(false);
+                                                    }
+
+                                                    setCardColaboradorAberto(
+                                                        (aberto) => !aberto
+                                                    );
+                                                }}
+                                                className="consulta-qr-resumo__controle border-slate-200 bg-white text-slate-600 shadow-sm hover:border-slate-300 hover:bg-slate-50"
+                                            >
+                                                {cardColaboradorAberto
+                                                    ? "Recolher"
+                                                    : "Abrir"
+                                                }
+
+                                                <ChevronDown
+                                                    className={classNames(
+                                                        "h-3.5 w-3.5 transition-transform",
+                                                        cardColaboradorAberto &&
+                                                            "rotate-180"
+                                                    )}
+                                                />
+                                            </button>
+
+                                            {contatoEmergenciaAberto && (
+                                                <div className="consulta-qr-resumo__emergencia">
+                                                    {temContatoEmergencia ? (
+                                                        <div className="space-y-1">
+                                                            <p className="font-black text-slate-950">
+                                                                {contatoEmergenciaNome ||
+                                                                    "Contato de emergência"
+                                                                }
+                                                            </p>
+
+                                                            {contatoEmergenciaParentesco && (
+                                                                <p className="font-semibold text-slate-500">
+                                                                    Parentesco: {contatoEmergenciaParentesco}
+                                                                </p>
+                                                            )}
+
+                                                            {contatoEmergenciaTelefone && (
+                                                                <a
+                                                                    href={
+                                                                        "tel:" +
+                                                                        telefoneEmergenciaLimpo
+                                                                    }
+                                                                    className="inline-flex font-black text-red-700 hover:text-red-800"
+                                                                >
+                                                                    {contatoEmergenciaTelefone}
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <p className="font-semibold text-slate-500">
+                                                            Contato de emergência não cadastrado.
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="consulta-qr-resumo__identificadores">
+                                        <p>
+                                            <span>
+                                                <ClipboardCheck className="h-4 w-4" />
+                                            </span>
+
+                                            {colaboradorAtual.funcao ||
+                                                colaboradorAtual.cargo ||
+                                                "Sem função"
+                                            }
+                                        </p>
+
+                                        <p>
+                                            <span>
+                                                <ShieldCheck className="h-4 w-4" />
+                                            </span>
+
+                                            {colaboradorAtual.empresaExibicao ||
+                                                colaboradorAtual.empresa ||
+                                                "Empresa não informada"
+                                            }
+                                        </p>
+
+                                        <p>
+                                            <span>
+                                                <QrCode className="h-4 w-4" />
+                                            </span>
+
+                                            Código: {colaboradorAtual.codigoFuncionario}
+                                        </p>
+                                    </div>
+
+                                    {cardColaboradorAberto && (
+                                        <ColaboradorIdentificacoesSeguranca
+                                            colaborador={colaboradorAtual}
+                                            treinamentos={treinamentos}
+                                            className="consulta-qr-resumo__identificacoes-especiais"
+                                        />
                                     )}
-                                >
-                                    {linkPublicoCopiado ? <Check className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
-                                    {linkPublicoCopiado ? "Copiado" : "Copiar link"}
-                                </button>
+                                </div>
+                            </section>
 
-                                <button
-                                    type="button"
-                                    onClick={imprimirQrColaborador}
-                                    className="inline-flex min-h-[1.3cm] w-full items-center justify-center gap-1.5 rounded-2xl bg-slate-950 px-2.5 py-2 text-[10px] font-black text-white ring-1 ring-slate-950 transition hover:bg-slate-800"
-                                >
-                                    <Download className="h-3.5 w-3.5" />
-                                    Imprimir QR
-                                </button>
+                            <section className="consulta-qr-resumo__progresso">
+                                <h3 className="consulta-qr-resumo__titulo-secao">
+                                    Progresso Geral dos Treinamentos
+                                </h3>
 
+                                <div className="consulta-qr-resumo__progresso-corpo">
+                                    <div
+                                        className="consulta-qr-resumo__anel"
+                                        style={{
+                                            "--consulta-qr-progresso":
+                                                String(
+                                                    resumoTreinamentosConsultaQr.percentual
+                                                ) + "%",
+                                        }}
+                                        role="img"
+                                        aria-label={
+                                            String(
+                                                resumoTreinamentosConsultaQr.percentual
+                                            ) + "% concluído"
+                                        }
+                                    >
+                                        <div className="consulta-qr-resumo__anel-centro">
+                                            <strong>
+                                                {resumoTreinamentosConsultaQr.percentual}%
+                                            </strong>
 
-                            </div>
+                                            <span>Concluído</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="consulta-qr-resumo__metricas">
+                                        <div className="consulta-qr-resumo__metrica consulta-qr-resumo__metrica--total">
+                                            <span />
+                                            <strong>
+                                                {resumoTreinamentosConsultaQr.total}
+                                            </strong>
+                                            <small>Total</small>
+                                        </div>
+
+                                        <div className="consulta-qr-resumo__metrica consulta-qr-resumo__metrica--emdia">
+                                            <span />
+                                            <strong>
+                                                {resumoTreinamentosConsultaQr.emDia}
+                                            </strong>
+                                            <small>Em dia</small>
+                                        </div>
+
+                                        <div className="consulta-qr-resumo__metrica consulta-qr-resumo__metrica--vencendo">
+                                            <span />
+                                            <strong>
+                                                {resumoTreinamentosConsultaQr.vencendo}
+                                            </strong>
+                                            <small>Vencendo</small>
+                                        </div>
+
+                                        <div className="consulta-qr-resumo__metrica consulta-qr-resumo__metrica--vencidos">
+                                            <span />
+                                            <strong>
+                                                {resumoTreinamentosConsultaQr.vencidos}
+                                            </strong>
+                                            <small>Vencidos</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                                                        <section className="consulta-qr-resumo__qr">
+                                <h3 className="consulta-qr-resumo__titulo-secao">
+                                    QR Code do Colaborador
+                                </h3>
+
+                                <div className="consulta-qr-resumo__qr-box">
+                                    <QrCodeComLogo
+                                        value={urlConsultaColaborador}
+                                        size={88}
+                                        level="H"
+                                        includeMargin
+                                        bgColor="#ffffff"
+                                        fgColor="#0f172a"
+                                        logoRatio={0.22}
+                                    />
+                                </div>
+
+                                <div className="consulta-qr-resumo__acoes-qr">
+                                    <button
+                                        type="button"
+                                        onClick={imprimirQrColaborador}
+                                        className="consulta-qr-resumo__imprimir"
+                                        title="Imprimir QR"
+                                        aria-label="Imprimir QR"
+                                    >
+                                        <Download className="h-4 w-4" />
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={copiarLinkPublicoColaborador}
+                                        disabled={!urlConsultaColaborador}
+                                        title={
+                                            linkPublicoCopiado
+                                                ? "Link copiado"
+                                                : "Copiar link"
+                                        }
+                                        aria-label={
+                                            linkPublicoCopiado
+                                                ? "Link copiado"
+                                                : "Copiar link"
+                                        }
+                                        className={classNames(
+                                            "consulta-qr-resumo__copiar",
+                                            linkPublicoCopiado
+                                                ? "border-emerald-600 bg-emerald-600 text-white"
+                                                : "border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50",
+                                            !urlConsultaColaborador &&
+                                                "cursor-not-allowed opacity-50"
+                                        )}
+                                    >
+                                        {linkPublicoCopiado
+                                            ? <Check className="h-4 w-4" />
+                                            : <Link2 className="h-4 w-4" />
+                                        }
+                                    </button>
+                                </div>
+                            </section>
                         </div>
-
-                    </div>
 
 <div id={idImpressaoQrColaborador} className="hidden">
                                 <div className="cartao cartao-lote cartao-lote-unico">
+                                    <div className="cabecalho-qr-colaborador">
+                                        <h1>{abreviarNomeEtiquetaQr(colaboradorAtual.nome, 24)}</h1>
+                                        <p className="funcao-qr">{normalizarFuncaoMaoDeObraDds(colaboradorAtual.funcao || colaboradorAtual.cargo || "Sem função")}</p>
+                                    </div>
                                     <div className="qr-print-safe-box">
                                         <QrCodeComLogo value={urlConsultaColaborador} size={210} level="H" includeMargin bgColor="#ffffff" fgColor="#0f172a" logoRatio={0.22} />
                                     </div>
-                                    <h1>{abreviarNomeEtiquetaQr(colaboradorAtual.nome, 24)}</h1>
-                                    <p className="meta-qr">
-                                        {colaboradorAtual.empresaExibicao || colaboradorAtual.empresa || "Empresa não informada"}
+                                    <p className="empresa-qr">
+                                        <span className="empresa-qr-texto">{obterNomeEmpresaEtiquetaQr(colaboradorAtual)}</span>
                                     </p>
                                 </div>
                             </div>
@@ -1141,12 +1668,15 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
                                 <div className="grade-qrs">
                                     {colaboradoresQrMassaSelecionados.map((item) => (
                                         <div key={item.id || item.token || item.codigoFuncionario || item.nome} className="cartao cartao-lote">
+                                            <div className="cabecalho-qr-colaborador">
+                                                <h1>{abreviarNomeEtiquetaQr(item.nome, 24)}</h1>
+                                                <p className="funcao-qr">{normalizarFuncaoMaoDeObraDds(item.funcao || item.cargo || "Sem função")}</p>
+                                            </div>
                                             <div className="qr-print-safe-box">
                                                 <QrCodeComLogo value={montarUrlConsultaColaborador(item)} size={210} level="H" includeMargin bgColor="#ffffff" fgColor="#0f172a" logoRatio={0.22} />
                                             </div>
-                                            <h1>{abreviarNomeEtiquetaQr(item.nome, 24)}</h1>
-                                            <p className="meta-qr">
-                                                {item.empresaExibicao || item.empresa || "Empresa não informada"}
+                                            <p className="empresa-qr">
+                                                <span className="empresa-qr-texto">{obterNomeEmpresaEtiquetaQr(item)}</span>
                                             </p>
                                         </div>
                                     ))}
@@ -1161,7 +1691,7 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
                             )}
 
 
-{treinamentos.length === 0 && (
+{cardColaboradorAberto && treinamentos.length === 0 && (
                         <div className="mt-6 rounded-3xl border border-dashed border-slate-300 p-8 text-center">
                             <ClipboardCheck className="mx-auto h-10 w-10 text-slate-300" />
                             <h3 className="mt-3 font-bold text-slate-900">Sem treinamentos lançados</h3>
@@ -1171,7 +1701,7 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
                         </div>
                     )}
 
-                    <div className="mt-6 grid gap-4 md:grid-cols-2">
+                    <div className={classNames("mt-6 grid gap-4 md:grid-cols-2", !cardColaboradorAberto && "hidden")}>
                         {treinamentosOrdenados.map((t) => {
                             const semValidade = treinamentoSemValidade(t.treinamentoId);
                             const st = statusDocumento(t.vencimento, semValidade);
@@ -1240,16 +1770,15 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
 <Card className="relative mt-10 mb-5 w-full overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-sm">
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-400 via-blue-500 to-emerald-500" />
 
-                <div
-                    className="select-none px-4 py-3 md:px-5 md:py-3"
-                    onClick={(evento) => {
-                        const alvoInterativo = evento.target.closest?.("button, input, select, textarea, a, label, [role='button']");
-                        if (alvoInterativo) return;
-
-                        setQrMassaAberto((aberto) => !aberto);
-                    }}
-                >
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="select-none px-4 py-3 md:px-5 md:py-3">
+                    <div
+                        className="flex cursor-pointer flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
+                        onClick={() => {
+                            setQrMassaAberto(
+                                (aberto) => !aberto
+                            );
+                        }}
+                    >
                         <div className="flex items-center gap-3">
                             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-700 ring-1 ring-cyan-100">
                                 <QrCode className="h-4.5 w-4.5" />
@@ -1426,7 +1955,7 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
                                                             {item.nome || "Colaborador sem nome"}
                                                         </span>
                                                         <span className="block truncate text-[11px] font-bold uppercase text-slate-500">
-                                                            {item.funcao || item.cargo || "Função não informada"}
+                                                            {normalizarFuncaoMaoDeObraDds(item.funcao || item.cargo || "Sem função")}
                                                         </span>
                                                     </span>
                                                     <span className="ml-auto shrink-0 text-[10px] font-black uppercase text-emerald-700">

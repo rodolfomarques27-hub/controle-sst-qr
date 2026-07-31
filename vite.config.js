@@ -1,14 +1,29 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import process from "node:process";
+import { basename } from "node:path";
 
-export default defineConfig({
-    plugins: [react(), tailwindcss()],
-    define: {
-        "import.meta.env.VITE_APP_VERSION": JSON.stringify(process.env.npm_package_version || "1.0.6"),
-        "import.meta.env.VITE_APK_VERSION": JSON.stringify("1.0.8"),
-        "import.meta.env.VITE_APP_BUILD_DATE": JSON.stringify(new Date().toISOString()),
-    },
+export default defineConfig(({ mode }) => {
+    const dataBuild = new Date();
+    const commitBuild = String(process.env.VERCEL_GIT_COMMIT_SHA || "").slice(0, 8);
+    const idBuild = commitBuild || dataBuild.toISOString().replace(/\D/g, "").slice(0, 14);
+    const ambienteBuild = process.env.VERCEL_ENV || (mode === "production" ? "production" : "development");
+    const origemBuild = process.env.VITE_BUILD_SOURCE
+        || process.env.VERCEL_GIT_COMMIT_REF
+        || process.env.VERCEL_PROJECT_NAME
+        || basename(process.cwd());
+
+    return {
+        plugins: [react(), tailwindcss()],
+        define: {
+            "import.meta.env.VITE_APP_VERSION": JSON.stringify(process.env.npm_package_version || "1.0.8"),
+            "import.meta.env.VITE_APK_VERSION": JSON.stringify("1.0.8"),
+            "import.meta.env.VITE_APP_BUILD_DATE": JSON.stringify(dataBuild.toISOString()),
+            "import.meta.env.VITE_APP_BUILD_ID": JSON.stringify(idBuild),
+            "import.meta.env.VITE_APP_BUILD_ENV": JSON.stringify(ambienteBuild),
+            "import.meta.env.VITE_APP_BUILD_SOURCE": JSON.stringify(origemBuild),
+        },
     build: {
         rolldownOptions: {
             output: {
@@ -66,6 +81,21 @@ export default defineConfig({
                             priority: 42,
                         },
                         {
+                            name: "vendor-excel-xlsx",
+                            test: /node_modules[\\/]exceljs[\\/]lib[\\/]xlsx[\\/]/,
+                            priority: 41,
+                        },
+                        {
+                            name: "vendor-excel-core",
+                            test: /node_modules[\\/]exceljs[\\/]/,
+                            priority: 40,
+                        },
+                        {
+                            name: "vendor-excel-support",
+                            test: /node_modules[\\/](archiver|dayjs|fast-csv|jszip|readable-stream|saxes|tmp|unzipper|uuid)[\\/]/,
+                            priority: 39,
+                        },
+                        {
                             name: "vendor-qrcode",
                             test: /node_modules[\\/]qrcode\.react[\\/]/,
                             priority: 25,
@@ -79,5 +109,6 @@ export default defineConfig({
                 },
             },
         },
-    },
+        },
+    };
 });

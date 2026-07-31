@@ -1,0 +1,411 @@
+/* MICROETAPA HERO TREINAMENTOS - PADRAO COMPACTO FINAL - INICIO */
+/*
+ * Padrão visual aprovado:
+ * - preserva o espaço branco superior;
+ * - Hero alinhado às margens dos cards;
+ * - altura desktop entre 140 e 150 px;
+ * - faixa inferior entre 42 e 46 px;
+ * - traço verde abaixo do subtítulo;
+ * - Personalizar painel no canto direito;
+ * - botão centralizado verticalmente na faixa inferior;
+ * - nenhuma regra mobile alterada.
+ */
+@media (min-width: 1024px) {
+  .treinamentos-hero-banner {
+    box-sizing: border-box !important;
+    width: calc(100% - 24px) !important;
+    max-width: calc(100% - 24px) !important;
+    height: clamp(140px, 8.6vw, 150px) !important;
+    min-height: clamp(140px, 8.6vw, 150px) !important;
+    max-height: clamp(140px, 8.6vw, 150px) !important;
+    margin:
+      0
+      12px
+      1.1rem !important;
+  }
+
+  .treinamentos-hero-banner::after {
+    display: block !important;
+    height: clamp(42px, 2.8vw, 46px) !important;
+    background:
+      linear-gradient(
+        90deg,
+        rgba(2, 12, 29, 0.88) 0%,
+        rgba(11, 23, 45, 0.82) 56%,
+        rgba(64, 48, 17, 0.58) 100%
+      ) !important;
+  }
+
+  .treinamentos-hero-banner__content {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 100% !important;
+    max-height: 100% !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    padding:
+      clamp(12px, 0.9vw, 15px)
+      clamp(20px, 1.55vw, 26px)
+      calc(clamp(42px, 2.8vw, 46px) + 8px) !important;
+  }
+
+  .treinamentos-hero-banner__content > .min-w-0 {
+    position: relative !important;
+    width: min(68%, 56rem) !important;
+    max-width: min(68%, 56rem) !important;
+  }
+
+  .treinamentos-hero-banner__eyebrow {
+    margin:
+      0
+      0
+      clamp(4px, 0.3vw, 6px) !important;
+    font-size: clamp(0.64rem, 0.48vw, 0.72rem) !important;
+    line-height: 1 !important;
+  }
+
+  .treinamentos-hero-banner__title {
+    margin: 0 !important;
+    max-width: 48rem !important;
+    font-size: clamp(1.2rem, 1.7vw, 1.55rem) !important;
+    line-height: 1.1 !important;
+  }
+
+  .treinamentos-hero-banner__text {
+    margin:
+      clamp(4px, 0.3vw, 6px)
+      0
+      0 !important;
+    max-width: 48rem !important;
+    font-size: clamp(0.76rem, 0.72vw, 0.88rem) !important;
+    line-height: 1.25 !important;
+  }
+
+  .treinamentos-hero-banner__text::after {
+    content: "" !important;
+    display: block !important;
+    width: clamp(42px, 3.4vw, 54px) !important;
+    height: 3px !important;
+    margin-top: clamp(7px, 0.55vw, 9px) !important;
+    border-radius: 999px !important;
+    background:
+      linear-gradient(
+        90deg,
+        #22c55e 0%,
+        #10b981 100%
+      ) !important;
+    box-shadow:
+      0 0 12px rgba(34, 197, 94, 0.2) !important;
+  }
+
+  .hero-header--treinamentos .page-actions {
+    position: absolute !important;
+    z-index: 15 !important;
+    top:
+      calc(
+        clamp(140px, 8.6vw, 150px) -
+        clamp(37px, 2.5vw, 40px)
+      ) !important;
+    right: clamp(24px, 1.7vw, 30px) !important;
+    bottom: auto !important;
+    left: auto !important;
+    display: flex !important;
+    width: max-content !important;
+    max-width: none !important;
+    height: clamp(31px, 2vw, 34px) !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    margin: 0 !important;
+    transform: none !important;
+  }
+
+  .hero-header--treinamentos .page-actions > .top-actions-nowrap {
+    display: flex !important;
+    width: max-content !important;
+    height: clamp(31px, 2vw, 34px) !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    margin: 0 !important;
+  }
+
+  .hero-header--treinamentos .page-actions button {
+    box-sizing: border-box !important;
+    width: max-content !important;
+    min-width: 0 !important;
+    height: clamp(31px, 2vw, 34px) !important;
+    min-height: clamp(31px, 2vw, 34px) !important;
+    max-height: clamp(31px, 2vw, 34px) !important;
+    padding:
+      0
+      clamp(12px, 0.9vw, 16px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.34) !important;
+    border-radius: 999px !important;
+    background: rgba(255, 255, 255, 0.12) !important;
+    color: #ffffff !important;
+    font-size: clamp(0.68rem, 0.62vw, 0.76rem) !important;
+    font-weight: 850 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 6px 16px rgba(0, 0, 0, 0.14) !important;
+    backdrop-filter:
+      blur(12px)
+      saturate(135%) !important;
+  }
+
+  .hero-header--treinamentos .page-actions button:hover {
+    border-color: rgba(255, 255, 255, 0.48) !important;
+    background: rgba(255, 255, 255, 0.22) !important;
+  }
+}
+/* MICROETAPA HERO TREINAMENTOS - PADRAO COMPACTO FINAL - FIM */
+
+/* MICROETAPA HERO TREINAMENTOS - DATA STATUS E ACAO NA FAIXA - INICIO */
+/*
+ * Faixa operacional do Hero de Treinamentos:
+ * - data, dia da semana e hora no canto esquerdo;
+ * - quatro indicadores alimentados pelos dados reais da página;
+ * - Personalizar painel integrado ao grupo do canto direito;
+ * - ação de personalização no padrão visual roxo;
+ * - todos os elementos centralizados verticalmente na faixa;
+ * - ação original do Header preservada para o mobile.
+ */
+@media (min-width: 1024px) {
+  .hero-header--treinamentos .page-actions {
+    display: none !important;
+  }
+
+  .treinamentos-hero-banner__footer {
+    position: absolute !important;
+    z-index: 16 !important;
+    right: clamp(12px, 0.9vw, 16px) !important;
+    bottom: 0 !important;
+    left: clamp(12px, 0.9vw, 16px) !important;
+    display: flex !important;
+    height: clamp(42px, 2.8vw, 46px) !important;
+    min-height: clamp(42px, 2.8vw, 46px) !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: clamp(10px, 0.9vw, 16px) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    pointer-events: none !important;
+  }
+
+  .treinamentos-hero-banner__footer > * {
+    pointer-events: auto !important;
+  }
+
+  .treinamentos-hero-banner__date,
+  .treinamentos-hero-banner__stat,
+  .treinamentos-hero-banner__personalizar {
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    min-height: clamp(31px, 2vw, 34px) !important;
+    height: clamp(31px, 2vw, 34px) !important;
+    max-height: clamp(31px, 2vw, 34px) !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 0 0 auto !important;
+    border-radius: 999px !important;
+    color: #ffffff !important;
+    font-size: clamp(0.66rem, 0.58vw, 0.76rem) !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    backdrop-filter: blur(10px) saturate(135%) !important;
+  }
+
+  .treinamentos-hero-banner__date {
+    gap: clamp(5px, 0.4vw, 7px) !important;
+    padding:
+      0
+      clamp(12px, 0.9vw, 16px) !important;
+    border: 1px solid rgba(45, 212, 191, 0.5) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(3, 48, 57, 0.94) 0%,
+        rgba(7, 84, 95, 0.76) 100%
+      ) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 0 16px rgba(45, 212, 191, 0.13),
+      0 6px 14px rgba(0, 0, 0, 0.18) !important;
+  }
+
+  .treinamentos-hero-banner__date svg {
+    width: clamp(0.88rem, 0.9vw, 1rem) !important;
+    height: clamp(0.88rem, 0.9vw, 1rem) !important;
+    min-width: clamp(0.88rem, 0.9vw, 1rem) !important;
+    color: #5eead4 !important;
+  }
+
+  .treinamentos-hero-banner__stats {
+    display: flex !important;
+    width: max-content !important;
+    max-width:
+      calc(
+        100% -
+        clamp(260px, 27vw, 370px)
+      ) !important;
+    min-width: 0 !important;
+    height: clamp(31px, 2vw, 34px) !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    flex-wrap: nowrap !important;
+    gap: clamp(5px, 0.42vw, 7px) !important;
+    margin: 0 !important;
+  }
+
+  .treinamentos-hero-banner__stat,
+  .treinamentos-hero-banner__personalizar {
+    gap: clamp(4px, 0.34vw, 6px) !important;
+    padding:
+      0
+      clamp(9px, 0.72vw, 13px) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 6px 14px rgba(0, 0, 0, 0.16) !important;
+  }
+
+  .treinamentos-hero-banner__stat svg,
+  .treinamentos-hero-banner__personalizar svg {
+    width: clamp(0.82rem, 0.84vw, 0.94rem) !important;
+    height: clamp(0.82rem, 0.84vw, 0.94rem) !important;
+    min-width: clamp(0.82rem, 0.84vw, 0.94rem) !important;
+  }
+
+  .treinamentos-hero-banner__stat--em-dia {
+    border: 1px solid rgba(74, 222, 128, 0.52) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(5, 84, 49, 0.96) 0%,
+        rgba(12, 122, 70, 0.82) 100%
+      ) !important;
+  }
+
+  .treinamentos-hero-banner__stat--em-dia svg {
+    color: #86efac !important;
+  }
+
+  .treinamentos-hero-banner__stat--a-vencer {
+    border: 1px solid rgba(251, 191, 36, 0.58) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(111, 66, 5, 0.96) 0%,
+        rgba(153, 91, 8, 0.84) 100%
+      ) !important;
+  }
+
+  .treinamentos-hero-banner__stat--a-vencer svg {
+    color: #fde68a !important;
+  }
+
+  .treinamentos-hero-banner__stat--vencidos {
+    border: 1px solid rgba(248, 113, 113, 0.58) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(127, 29, 29, 0.96) 0%,
+        rgba(185, 28, 28, 0.82) 100%
+      ) !important;
+  }
+
+  .treinamentos-hero-banner__stat--vencidos svg {
+    color: #fecaca !important;
+  }
+
+  .treinamentos-hero-banner__stat--pendentes {
+    border: 1px solid rgba(56, 189, 248, 0.54) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(3, 78, 120, 0.96) 0%,
+        rgba(2, 132, 199, 0.8) 100%
+      ) !important;
+  }
+
+  .treinamentos-hero-banner__stat--pendentes svg {
+    color: #bae6fd !important;
+  }
+
+  .treinamentos-hero-banner__personalizar {
+    cursor: pointer !important;
+    border: 1px solid rgba(196, 181, 253, 0.62) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(76, 29, 149, 0.98) 0%,
+        rgba(124, 58, 237, 0.84) 100%
+      ) !important;
+    transition:
+      border-color 0.16s ease,
+      background 0.16s ease,
+      transform 0.16s ease,
+      box-shadow 0.16s ease !important;
+  }
+
+  .treinamentos-hero-banner__personalizar svg {
+    color: #ddd6fe !important;
+  }
+
+  .treinamentos-hero-banner__personalizar:hover {
+    border-color: rgba(221, 214, 254, 0.82) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(91, 33, 182, 0.99) 0%,
+        rgba(139, 92, 246, 0.9) 100%
+      ) !important;
+    transform: translateY(-1px) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      0 0 16px rgba(139, 92, 246, 0.18),
+      0 8px 16px rgba(0, 0, 0, 0.2) !important;
+  }
+
+  .treinamentos-hero-banner__personalizar:active {
+    transform: translateY(0) !important;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1180px) {
+  .treinamentos-hero-banner__footer {
+    gap: 6px !important;
+  }
+
+  .treinamentos-hero-banner__date {
+    gap: 4px !important;
+    padding-right: 9px !important;
+    padding-left: 9px !important;
+    font-size: 0.63rem !important;
+  }
+
+  .treinamentos-hero-banner__stats {
+    gap: 4px !important;
+  }
+
+  .treinamentos-hero-banner__stat,
+  .treinamentos-hero-banner__personalizar {
+    gap: 4px !important;
+    padding-right: 8px !important;
+    padding-left: 8px !important;
+    font-size: 0.62rem !important;
+  }
+
+  .treinamentos-hero-banner__stat svg {
+    display: none !important;
+  }
+}
+
+@media (max-width: 1023.98px) {
+  .treinamentos-hero-banner__footer {
+    display: none !important;
+  }
+}
+/* MICROETAPA HERO TREINAMENTOS - DATA STATUS E ACAO NA FAIXA - FIM */

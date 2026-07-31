@@ -1,3 +1,5 @@
+import "../../styles/pages/auditoria-sistema-hero.css";
+import "../../styles/pages/auditoria-sistema-cards.css";
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -341,6 +343,17 @@ export function RelatorioAuditoria({
     const [permissaoSistemaAtual, setPermissaoSistemaAtual] = useState(null);
     const [mensagemPermissaoSistemaAuditoria, setMensagemPermissaoSistemaAuditoria] = useState("Carregando permissões do sistema...");
     const [mensagemResumoAuditoria, setMensagemResumoAuditoria] = useState("");
+
+    const chaveAtividadesAuditoriaAbertas = "auditoriaSistemaAtividadesAbertasV1";
+    const [atividadesAuditoriaAbertas, setAtividadesAuditoriaAbertas] = useState(() => {
+        if (typeof window === "undefined") return false;
+
+        try {
+            return window.localStorage.getItem(chaveAtividadesAuditoriaAbertas) === "true";
+        } catch {
+            return false;
+        }
+    });
 
     const [mostrarPersonalizacaoAuditoria, setMostrarPersonalizacaoAuditoria] = useState(false);
     const [abaPersonalizacaoAuditoria, setAbaPersonalizacaoAuditoria] = useState("cartas");
@@ -1373,12 +1386,15 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
     );
 
     const renderAtividadesAuditoriaSistema = () => (
-        <div className={classNames("grid gap-5", ultimosEmailsAuditoria.length > 0 ? "lg:grid-cols-2" : "lg:grid-cols-1")}>
+        <div className={classNames("grid items-start gap-5", ultimosEmailsAuditoria.length > 0 ? "lg:grid-cols-2" : "lg:grid-cols-1")}>
             <CardRecolhivel
+                className="auditoria-sistema-card-padrao"
                 titulo="Últimos acessos"
                 subtitulo="Entradas recentes, consultas públicas e abertura da Auditoria."
                 contador={ultimosAcessosAuditoria.length}
-                defaultOpen={false}
+                open={atividadesAuditoriaAbertas}
+                onOpenChange={setAtividadesAuditoriaAbertas}
+                persistKey={chaveAtividadesAuditoriaAbertas}
             >
                 <div className="space-y-3">
                     {ultimosAcessosAuditoria.length === 0 ? (
@@ -1400,10 +1416,13 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
 
             {ultimosEmailsAuditoria.length > 0 && (
                 <CardRecolhivel
+                    className="auditoria-sistema-card-padrao"
                     titulo="Últimos e-mails enviados"
                     subtitulo="Eventos de envio registrados pela auditoria do sistema."
                     contador={ultimosEmailsAuditoria.length}
-                    defaultOpen={false}
+                    open={atividadesAuditoriaAbertas}
+                    onOpenChange={setAtividadesAuditoriaAbertas}
+                    persistKey={chaveAtividadesAuditoriaAbertas}
                 >
                     <div className="space-y-3">
                         {ultimosEmailsAuditoria.map((email) =>
@@ -1437,10 +1456,19 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
     return (
         <div>
             <Header
+                className="hero-integrated-page-header hero-header--auditoria-sistema"
                 titulo="Auditoria do Sistema"
                 subtitulo={null}
                 acao={
                     <div className="flex flex-wrap gap-2">
+                        <button
+                            onClick={onAtualizar}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                        >
+                            <RefreshCw className="h-4 w-4" />
+                            Atualizar registros
+                        </button>
+
                         <button
                             type="button"
                             onClick={() => setMostrarPersonalizacaoAuditoria((atual) => !atual)}
@@ -1452,14 +1480,6 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                             )}
                         >
                             Personalizar painel
-                        </button>
-
-                        <button
-                            onClick={onAtualizar}
-                            className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-                        >
-                            <RefreshCw className="h-4 w-4" />
-                            Atualizar registros
                         </button>
 
                         <button
@@ -1526,7 +1546,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                         <div className="mt-5 h-1 w-14 rounded-full bg-[#1E7C3A]" />
                     </div>
 
-                    <div className="rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm font-black text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] backdrop-blur">
+                    <div className="dashboard-hero-sst__date rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm font-black text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] backdrop-blur">
                         <div className="flex flex-wrap items-center gap-2">
                             <CalendarClock className="h-4 w-4 text-emerald-300" />
                             <span>{dataHeroAuditoriaSistema}</span>
@@ -1651,7 +1671,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
 
                 {renderBlocoAuditoriaPersonalizado("registros", (
                     <CardRecolhivel
-                className="mt-5"
+                        className="auditoria-sistema-card-padrao"
                 titulo="Registros detalhados da auditoria"
                 subtitulo="Filtros por texto, ação, usuário, módulo, categoria, nível e período. Carregamento limitado para manter a tela leve."
                 contador={registrosFiltrados.length}
@@ -2015,7 +2035,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
 
 {renderBlocoAuditoriaPersonalizado("eventos", (
                     <CardRecolhivel
-                className="mt-5"
+                        className="auditoria-sistema-card-padrao"
                 titulo="Eventos verificados pela Auditoria de sistema"
                 subtitulo="Habilite ou desabilite quais tipos de evento devem ser registrados e exibidos no relatório. Alterações feitas aqui também ficam registradas na Auditoria do Sistema."
                 contador={`${eventosHabilitadosAuditoria}/${eventosAuditoriaSistema.length}`}
@@ -2144,7 +2164,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
 
 {renderBlocoAuditoriaPersonalizado("permissoes", (
                     <CardRecolhivel
-                className="mt-5"
+                        className="auditoria-sistema-card-padrao"
                 titulo="Permissões da Auditoria de sistema"
                 subtitulo="Libere ou bloqueie diretamente pelo sistema quem pode acessar somente a Auditoria de sistema. Dashboard Auditoria e Nova Auditoria continuam liberados para todos."
                 contador={usuariosAuditoria.length}
@@ -2265,7 +2285,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
 
                 {false && renderBlocoAuditoriaPersonalizado("storage", (
                     <CardRecolhivel
-                className="mt-5"
+                        className="auditoria-sistema-card-padrao"
                 titulo="Arquivos salvos no Storage"
                 subtitulo="Controle de capacidade, vínculos, tipos de documentos, maiores arquivos e uploads recentes."
                 contador={arquivosStorageAuditoria.length}

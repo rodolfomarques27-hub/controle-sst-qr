@@ -1,0 +1,188 @@
+/*
+ * SAFESCAN — CARDS RECOLHIDOS DE CONFIGURAÇÕES
+ *
+ * Escopo:
+ * - somente cards recolhidos de Configurações;
+ * - padrão visual alinhado aos cards de Colaboradores;
+ * - cards abertos e conteúdos internos preservados.
+ */
+
+.configuracoes-card-recolhido-wrapper {
+  --config-card-faixa:
+    linear-gradient(90deg, #06b6d4 0%, #2563eb 60%, #7c3aed 100%);
+  --config-card-icone-fundo: #cffafe;
+  --config-card-icone-cor: #0369a1;
+}
+
+.configuracoes-card-recolhido {
+  position: relative !important;
+  min-height: 5.95rem !important;
+  overflow: hidden !important;
+  border: 1px solid #dbe7f2 !important;
+  border-radius: 1.45rem !important;
+  background: #ffffff !important;
+  padding: 0 !important;
+  box-shadow:
+    0 10px 24px rgba(15, 23, 42, 0.07) !important;
+}
+
+.configuracoes-card-recolhido::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: 0 0 auto;
+  height: 3px;
+  background: var(--config-card-faixa);
+}
+
+.configuracoes-card-recolhido__conteudo {
+  position: relative;
+  z-index: 2;
+  min-height: 5.8rem;
+  border-radius: inherit;
+  outline: none;
+  padding: 0.85rem 1rem;
+}
+
+.configuracoes-card-recolhido__conteudo:focus-visible {
+  box-shadow:
+    inset 0 0 0 3px rgba(14, 165, 233, 0.22);
+}
+
+.configuracoes-card-recolhido__principal {
+  flex: 1 1 auto;
+}
+
+.configuracoes-card-recolhido__icone {
+  min-width: 3rem;
+  border: 0;
+  background: var(--config-card-icone-fundo);
+  color: var(--config-card-icone-cor);
+  box-shadow: none;
+}
+
+.configuracoes-card-recolhido__icone svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  color: currentColor;
+  stroke: currentColor;
+}
+
+.configuracoes-card-recolhido__botao {
+  min-width: 6.8rem;
+  min-height: 2.15rem;
+  border: 1px solid #020617;
+  background: #020617;
+  padding: 0.4rem 1rem;
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 900;
+  box-shadow:
+    0 9px 20px rgba(15, 23, 42, 0.14);
+  transition:
+    transform 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.configuracoes-card-recolhido__botao:hover {
+  transform: translateY(-1px);
+  background: #0f172a;
+  box-shadow:
+    0 11px 23px rgba(15, 23, 42, 0.18);
+}
+
+.configuracoes-card-recolhido__botao svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+/* Sistema e aparência */
+.configuracoes-card-recolhido-wrapper[data-configuracoes-chave="config-versao-sistema"],
+.configuracoes-card-recolhido-wrapper[data-configuracoes-chave="config-login-visual"] {
+  --config-card-faixa:
+    linear-gradient(90deg, #06b6d4 0%, #2563eb 60%, #7c3aed 100%);
+  --config-card-icone-fundo: #cffafe;
+  --config-card-icone-cor: #0369a1;
+}
+
+/* Limites e revisão pública */
+.configuracoes-card-recolhido-wrapper[data-configuracoes-chave="config-limites-carregamento"],
+.configuracoes-card-recolhido-wrapper[data-configuracoes-chave="config-seguranca-publica"] {
+  --config-card-faixa:
+    linear-gradient(90deg, #f59e0b 0%, #f97316 58%, #ef4444 100%);
+  --config-card-icone-fundo: #fef3c7;
+  --config-card-icone-cor: #b45309;
+}
+
+/* Tokens, QR e emergência */
+.configuracoes-card-recolhido-wrapper[data-configuracoes-chave="config-auditoria-publica"],
+.configuracoes-card-recolhido-wrapper[data-configuracoes-chave="config-emergencia-qr"] {
+  --config-card-faixa:
+    linear-gradient(90deg, #8b5cf6 0%, #7c3aed 55%, #ec4899 100%);
+  --config-card-icone-fundo: #ede9fe;
+  --config-card-icone-cor: #6d28d9;
+}
+
+/* E-mails e eventos */
+.configuracoes-card-recolhido-wrapper[data-configuracoes-chave="config-modelos-email-sst"],
+.configuracoes-card-recolhido-wrapper[data-configuracoes-chave="config-eventos-auditoria"] {
+  --config-card-faixa:
+    linear-gradient(90deg, #0ea5e9 0%, #2563eb 58%, #06b6d4 100%);
+  --config-card-icone-fundo: #dbeafe;
+  --config-card-icone-cor: #1d4ed8;
+}
+
+/* Storage */
+.configuracoes-card-recolhido-wrapper[data-configuracoes-chave="config-arquivos-storage"],
+.configuracoes-card-recolhido-wrapper[data-configuracoes-chave="config-storage-privado"] {
+  --config-card-faixa:
+    linear-gradient(90deg, #10b981 0%, #14b8a6 58%, #06b6d4 100%);
+  --config-card-icone-fundo: #d1fae5;
+  --config-card-icone-cor: #047857;
+}
+
+/* Obras */
+.configuracoes-card-recolhido-wrapper[data-configuracoes-chave="config-obras"] {
+  --config-card-faixa:
+    linear-gradient(90deg, #22c55e 0%, #06b6d4 58%, #2563eb 100%);
+  --config-card-icone-fundo: #dcfce7;
+  --config-card-icone-cor: #059669;
+}
+
+/* Relatórios e Supabase */
+.configuracoes-card-recolhido-wrapper[data-configuracoes-chave="config-relatorios-evidencias"],
+.configuracoes-card-recolhido-wrapper[data-configuracoes-chave="config-supabase-geral"] {
+  --config-card-faixa:
+    linear-gradient(90deg, #6366f1 0%, #7c3aed 58%, #06b6d4 100%);
+  --config-card-icone-fundo: #e0e7ff;
+  --config-card-icone-cor: #4338ca;
+}
+
+@media (max-width: 760px) {
+  .configuracoes-card-recolhido {
+    min-height: auto !important;
+  }
+
+  .configuracoes-card-recolhido__conteudo {
+    min-height: auto;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1rem;
+  }
+
+  .configuracoes-card-recolhido__principal {
+    align-items: flex-start;
+  }
+
+  .configuracoes-card-recolhido__principal h2,
+  .configuracoes-card-recolhido__principal p {
+    overflow: visible;
+    white-space: normal;
+    text-overflow: clip;
+  }
+
+  .configuracoes-card-recolhido__botao {
+    width: 100%;
+  }
+}

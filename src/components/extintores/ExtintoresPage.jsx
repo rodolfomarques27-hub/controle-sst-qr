@@ -29,6 +29,40 @@ const VAZIO = { id: "", pontoId: "", ponto: "", localizacao: "", tipo: "PQS ABC"
 const MANUTENCAO_VAZIA = { tipoServico: "Manutenção de 2º nível / recarga", motivo: "Programada", empresaNome: "", empresaCnpj: "", registroInmetro: "", ordemServico: "", dataSaida: new Date().toISOString().slice(0, 10), previsaoRetorno: "", observacoes: "" };
 const RETORNO_VAZIO = { dataRetorno: new Date().toISOString().slice(0, 10), seloConformidade: "", proximaManutencao: "", proximoEnsaioHidrostatico: "", observacoesRetorno: "" };
 
+const ESTILOS_ETIQUETA_TERMICA = `
+    @page{size:50mm 50mm;margin:0}
+    *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    html,body{margin:0;background:#fff}
+    body{font-family:Arial,sans-serif;color:#000}
+    .pagina-etiqueta{width:50mm;height:50mm;overflow:hidden;break-after:page;page-break-after:always}
+    .pagina-etiqueta:last-child{break-after:auto;page-break-after:auto}
+    .etiqueta{width:50mm;height:50mm;overflow:hidden;background:#fff;border:.3mm solid #000}
+    .etiqueta-cabecalho{display:flex;align-items:center;justify-content:center;height:11mm;background:#000;padding:1mm 2mm;color:#fff;text-align:center}
+    .etiqueta-codigo{font-size:6.1mm;line-height:.8;font-weight:900;letter-spacing:-.1mm}
+    .etiqueta-tipo{margin-top:1.1mm;font-size:2.25mm;line-height:1;font-weight:900;text-transform:uppercase;white-space:nowrap}
+    .qr-print{display:flex;justify-content:center;padding:.55mm 0 .15mm}
+    .qr-print>span{position:relative;display:inline-flex!important;width:31mm!important;height:31mm!important;align-items:center;justify-content:center;overflow:hidden;background:#fff}
+    .qr-print>span>svg{display:block;width:31mm!important;height:31mm!important}
+    .qr-print>span>span{position:absolute!important;left:50%!important;top:50%!important;z-index:2;display:flex!important;width:5.8mm!important;height:5.8mm!important;align-items:center;justify-content:center;transform:translate(-50%,-50%)!important;border-radius:.7mm;background:#fff}
+    .qr-print>span>span img{display:block;width:4.7mm!important;height:4.7mm!important;object-fit:contain;border-radius:.4mm}
+    .etiqueta-instrucao{text-align:center;font-size:1.72mm;font-weight:900;line-height:1;text-transform:uppercase;white-space:nowrap}
+    .etiqueta-informacoes{padding:.55mm 2mm 0}
+    .etiqueta-info{display:flex;align-items:center;justify-content:center;gap:.7mm;border-top:.25mm solid #000;padding-top:.55mm;text-align:center}
+    .etiqueta-info-icone{display:flex;height:3mm;width:3mm;align-items:center;justify-content:center;color:#000}
+    .etiqueta-info-icone svg{width:2.8mm;height:2.8mm;stroke:currentColor;fill:none;stroke-width:2.5}
+    .etiqueta-info-rotulo{display:none}
+    .etiqueta-info-valor{max-width:38mm;overflow:hidden;font-size:2.15mm;font-weight:900;line-height:1;text-align:center;text-transform:uppercase;color:#000;white-space:nowrap;text-overflow:ellipsis}
+`;
+
+function EtiquetaQrExtintor({ item }) {
+    return <div className="etiqueta">
+        <div className="etiqueta-cabecalho"><div><div className="etiqueta-codigo">{item.codigo}</div><div className="etiqueta-tipo">{item.tipo} · {String(item.capacidade).toUpperCase()}</div></div></div>
+        <div className="qr-print"><QrCodeComLogo value={gerarUrlQrExtintor(item)} size={230} level="H" includeMargin bgColor="#ffffff" fgColor="#000000" logoRatio={0.14} /></div>
+        <div className="etiqueta-instrucao">Escaneie para consultar a ficha anual</div>
+        <div className="etiqueta-informacoes"><div className="etiqueta-info"><span className="etiqueta-info-icone" aria-hidden="true"><MapPin /></span><div><div className="etiqueta-info-rotulo">Local</div><div className="etiqueta-info-valor">{item.localizacao || item.ponto || "Não informado"}</div></div></div></div>
+    </div>;
+}
+
 function capacidadesPorTipo(tipo) {
     if (tipo === "CO2") return ["2 kg", "4 kg", "6 kg"];
     const indiceTipo = TIPOS_EXTINTORES_BRASIL.findIndex((item) => item.valor === tipo);
@@ -42,6 +76,7 @@ export function ExtintoresPage() {
     const [busca, setBusca] = useState("");
     const [filtro, setFiltro] = useState("Todos");
     const [qr, setQr] = useState(null);
+    const [qrsLote, setQrsLote] = useState([]);
     const [mensagem, setMensagem] = useState("");
     const [mapasObra, setMapasObra] = useState(() => listarMapasObraLocal());
     const [obraSelecionadaId, setObraSelecionadaId] = useState(
@@ -973,15 +1008,39 @@ export function ExtintoresPage() {
         setQr(item);
         setTimeout(() => {
             const area = document.getElementById(`qr-extintor-${item.id}`);
-            const janela = window.open("", "_blank", "width=460,height=620");
+            const janela = window.open("", "_blank", "width=420,height=520");
             if (!area || !janela) return;
-            janela.document.write(`<html><head><title>${item.codigo}</title><style>@page{size:A4 portrait;margin:0}*{box-sizing:border-box}html,body{margin:0;width:210mm;height:297mm}body{font:14px Arial;text-align:center;color:#0f172a;display:flex;align-items:flex-start;justify-content:center;padding-top:18mm}.etiqueta{border:1px solid #dbe4ee;padding:5mm 6mm 5.5mm;border-radius:5px;width:72mm;box-sizing:border-box}h1{font-size:14px;line-height:1.1;margin:0 0 1.5mm;font-weight:700;white-space:nowrap}.qr-print>span{position:relative;display:inline-flex;align-items:center;justify-content:center;width:58mm!important;height:58mm!important;overflow:hidden}.qr-print>span>svg{display:block;width:58mm;height:58mm}.qr-print>span>span{position:absolute;left:50%;top:50%;z-index:2;display:flex;width:13mm!important;height:13mm!important;align-items:center;justify-content:center;transform:translate(-50%,-50%);border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(15,23,42,.18)}.qr-print>span>span img{display:block;width:10.5mm!important;height:10.5mm!important;object-fit:contain;border-radius:7px}</style></head><body>${area.innerHTML}</body></html>`);
-            janela.document.close(); janela.focus(); janela.print();
+            janela.document.write(`<html><head><title>${item.codigo}</title><style>${ESTILOS_ETIQUETA_TERMICA}</style></head><body><div class="pagina-etiqueta">${area.innerHTML}</div></body></html>`);
+            janela.document.close();
+            janela.focus();
+            const executarImpressao = () => setTimeout(() => janela.print(), 180);
+            if (janela.document.readyState === "complete") executarImpressao();
+            else janela.addEventListener("load", executarImpressao, { once: true });
         }, 100);
     }
 
+    function imprimirEmMassa() {
+        if (!filtrados.length) {
+            setMensagem("Nenhum equipamento disponível nos filtros atuais para impressão.");
+            return;
+        }
+        setQrsLote(filtrados);
+        setTimeout(() => {
+            const areas = Array.from(document.querySelectorAll("[data-qr-extintor-lote]"));
+            const janela = window.open("", "_blank", "width=520,height=720");
+            if (!areas.length || !janela) return;
+            const etiquetas = areas.map((area) => `<div class="pagina-etiqueta">${area.innerHTML}</div>`).join("");
+            janela.document.write(`<html><head><title>QR Codes de extintores</title><style>${ESTILOS_ETIQUETA_TERMICA}</style></head><body>${etiquetas}</body></html>`);
+            janela.document.close();
+            janela.focus();
+            const executarImpressao = () => setTimeout(() => janela.print(), 250);
+            if (janela.document.readyState === "complete") executarImpressao();
+            else janela.addEventListener("load", executarImpressao, { once: true });
+        }, 120);
+    }
+
     return (
-        <section className="min-h-full bg-slate-50/70 px-4 py-6 md:px-7 md:py-8">
+        <section className="min-h-full bg-slate-50/70 px-4 pb-6 pt-0 md:px-7 md:pb-8 md:pt-1">
             <div className="mx-auto max-w-[1480px] space-y-6">
                 <header className="hidden">
                     <div>
@@ -1131,7 +1190,13 @@ export function ExtintoresPage() {
                     </form>
 
                     <div className="flex h-[590px] min-w-0 flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
-                        <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="font-black text-slate-950">Equipamentos cadastrados</h2><p className="mt-0.5 text-xs text-slate-500">{filtrados.length} equipamento(s) exibido(s)</p></div><div className="flex w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 sm:max-w-[310px]"><Search size={16} className="shrink-0 text-slate-400" /><input value={busca} onChange={(evento) => setBusca(evento.target.value)} placeholder="Buscar código, local ou tipo" className="w-full bg-transparent text-sm outline-none" /></div></div>
+                        <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div><h2 className="font-black text-slate-950">Equipamentos cadastrados</h2><p className="mt-0.5 text-xs text-slate-500">{filtrados.length} equipamento(s) exibido(s)</p></div>
+                            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                                <div className="flex w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 sm:w-[270px]"><Search size={16} className="shrink-0 text-slate-400" /><input value={busca} onChange={(evento) => setBusca(evento.target.value)} placeholder="Buscar código, local ou tipo" className="w-full bg-transparent text-sm outline-none" /></div>
+                                <button type="button" onClick={imprimirEmMassa} disabled={!filtrados.length} className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-950 px-3 py-2 text-xs font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"><QrCode size={16} /> Imprimir QR em massa</button>
+                            </div>
+                        </div>
                         <div className="flex flex-wrap gap-2 border-b border-slate-100 px-4 py-3">
                             <FiltroBotao ativo={filtro === "Todos"} onClick={() => setFiltro("Todos")}>Todos</FiltroBotao>
                             {pontosComEquipamentos.map((ponto) => {
@@ -1169,7 +1234,14 @@ export function ExtintoresPage() {
                     </div>
                 </div>
             </div>
-            {qr && <div id={`qr-extintor-${qr.id}`} className="sr-only"><div className="etiqueta"><h1>{qr.codigo} - {qr.tipo} {String(qr.capacidade).toUpperCase()}</h1><div className="qr-print"><QrCodeComLogo value={gerarUrlQrExtintor(qr)} size={230} level="H" includeMargin bgColor="#ffffff" fgColor="#0f172a" logoRatio={0.22} /></div></div></div>}
+            {qr && (
+                <div id={`qr-extintor-${qr.id}`} className="sr-only">
+                    <EtiquetaQrExtintor item={qr} />
+                </div>
+            )}
+            <div className="sr-only" aria-hidden="true">
+                {qrsLote.map((item) => <div key={item.id} data-qr-extintor-lote><EtiquetaQrExtintor item={item} /></div>)}
+            </div>
             {manutencaoAlvo && <ModalManutencao item={manutencaoAlvo} aberta={obterManutencaoAbertaExtintor(manutencaoAlvo.id)} form={formManutencao} setForm={setFormManutencao} retorno={formRetorno} setRetorno={setFormRetorno} onEnviar={enviarParaManutencao} onRetornar={registrarRetorno} onClose={() => setManutencaoAlvo(null)} />}
         </section>
     );

@@ -1,3 +1,4 @@
+import "../../styles/pages/dashboard-hero.css";
 /* eslint-disable no-unused-vars */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -1871,7 +1872,7 @@ export function Dashboard({
     return (
         <div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header
-                className="dashboard-sst-page-header max-xl:!flex-col max-xl:!items-stretch max-xl:[&_.page-header-text]:!max-w-none max-xl:[&_.page-header-text]:!flex-none max-xl:[&_.page-actions]:!w-full max-xl:[&_.page-actions]:!justify-start"
+                className="dashboard-sst-page-header hero-integrated-page-header hero-header--dashboard max-xl:!flex-col max-xl:!items-stretch max-xl:[&_.page-header-text]:!max-w-none max-xl:[&_.page-header-text]:!flex-none"
                 titulo="Dashboard SST"
                 acao={
                     <div className="top-actions-nowrap dashboard-sst-actions-horizontal dashboard-sst-header-actions">
@@ -1910,7 +1911,7 @@ export function Dashboard({
                 />
                 <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(17,24,39,0.34)_0%,rgba(17,24,39,0.22)_34%,rgba(17,24,39,0.08)_68%,rgba(17,24,39,0.06)_100%)]" />
 
-                <div className="relative flex min-h-[155px] flex-col justify-between gap-5 px-6 py-6 text-white lg:flex-row lg:items-center">
+                <div className="relative flex min-h-[132px] flex-col justify-between gap-3 px-6 py-5 text-white lg:flex-row lg:items-end">
                     <div className="min-w-0" style={{ textShadow: "0 2px 10px rgba(0,0,0,0.65)" }}>
                         <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-300">
                             SafeScan Brasil

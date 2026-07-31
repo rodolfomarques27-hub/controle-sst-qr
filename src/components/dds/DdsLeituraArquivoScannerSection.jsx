@@ -6,6 +6,10 @@ export default function DdsLeituraArquivoScannerSection({
     erroArquivoScannerDds,
     erroLeituraArquivoScannerDds,
     executarLeituraArquivoScannerDds,
+    salvarArquivoScannerDds,
+    salvandoArquivoScannerDds,
+    registroScannerDds,
+    mensagemDocumentoPersistidoDds,
     leituraArquivoScannerDds,
     limparArquivoScannerDds,
     linhasLeituraArquivoScannerDds,
@@ -15,8 +19,8 @@ export default function DdsLeituraArquivoScannerSection({
     textoPreviaArquivoScannerDds,
 }) {
     return (
-        <details className="overflow-hidden rounded-xl border border-cyan-100 bg-white ring-1 ring-cyan-50 lg:col-span-2">
-                                        <summary className="flex cursor-pointer list-none flex-col gap-3 px-4 py-4 transition hover:bg-cyan-50/60 sm:flex-row sm:items-center sm:justify-between">
+        <details className="order-[10] min-h-[92px] overflow-hidden rounded-3xl border border-slate-200 border-t-4 border-t-cyan-500 bg-white p-4 shadow-sm lg:col-span-2">
+                                        <summary className="flex min-h-[52px] cursor-pointer list-none flex-col gap-3 rounded-xl transition hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between">
                                             <div className="min-w-0">
                                                 <p className="text-cyan-700 text-[10px] font-black uppercase tracking-wide">
                                                     Folha assinada
@@ -112,7 +116,8 @@ export default function DdsLeituraArquivoScannerSection({
                                                         <p className="text-xs font-black text-slate-900">Leitura inicial do arquivo</p>
                                                         <p className="mt-1 text-xs font-bold text-slate-500">
                                                             Executa leitura local do PDF/imagem para identificar texto, páginas e linhas. Ainda não valida assinatura nem presença.
-                                                                {carregandoLeituraArquivoScannerDds && (
+                                                        </p>
+                                                        {carregandoLeituraArquivoScannerDds && (
                                                                     <div className="mt-3 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 ring-1 ring-cyan-100">
                                                                         <div className="flex items-center gap-3">
                                                                             <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white ring-1 ring-cyan-100">
@@ -156,18 +161,45 @@ export default function DdsLeituraArquivoScannerSection({
                                                                             </div>
                                                                         </div>
                                                                     </div>
-                                                                )}
-                                                        </p>
+                                                        )}
                                                     </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={executarLeituraArquivoScannerDds}
-                                                        disabled={!arquivoScannerDds || carregandoLeituraArquivoScannerDds}
-                                                        className="rounded-xl bg-cyan-600 px-3 py-2 text-[11px] font-black text-white shadow-sm transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
-                                                    >
-                                                        {carregandoLeituraArquivoScannerDds ? "Lendo arquivo..." : leituraArquivoScannerDds ? "Analisar novamente" : "Ler arquivo anexado"}
-                                                    </button>
+                                                    <div className="flex shrink-0 flex-wrap gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={executarLeituraArquivoScannerDds}
+                                                            disabled={!arquivoScannerDds || carregandoLeituraArquivoScannerDds || salvandoArquivoScannerDds}
+                                                            className="rounded-xl border border-cyan-200 bg-white px-3 py-2 text-[11px] font-black text-cyan-800 shadow-sm transition hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                                        >
+                                                            {carregandoLeituraArquivoScannerDds ? "Lendo arquivo..." : leituraArquivoScannerDds ? "Analisar novamente" : "Ler arquivo"}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={salvarArquivoScannerDds}
+                                                            disabled={!arquivoScannerDds || !registroScannerDds?.id || salvandoArquivoScannerDds || carregandoLeituraArquivoScannerDds}
+                                                            className="rounded-xl bg-emerald-600 px-4 py-2 text-[11px] font-black text-white shadow-sm transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                                            title={!registroScannerDds?.id ? "Selecione um DDS cadastrado antes de salvar" : ""}
+                                                        >
+                                                            {salvandoArquivoScannerDds ? "Salvando..." : "Salvar PDF no sistema"}
+                                                        </button>
+                                                    </div>
                                                 </div>
+                                                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600">
+                                                    <span>Destino do arquivo</span>
+                                                    <strong className={registroScannerDds?.codigo ? "text-emerald-700" : "text-amber-700"}>
+                                                        {registroScannerDds?.codigo
+                                                            ? `${registroScannerDds.codigo} · ${registroScannerDds.obraNome || registroScannerDds.empresaNome || "DDS cadastrado"}`
+                                                            : "Selecione um DDS cadastrado acima"}
+                                                    </strong>
+                                                </div>
+                                                {mensagemDocumentoPersistidoDds?.texto && (
+                                                    <p className={`mt-2 rounded-xl border px-3 py-2 text-xs font-bold ${
+                                                        mensagemDocumentoPersistidoDds.tipo === "erro"
+                                                            ? "border-red-200 bg-red-50 text-red-700"
+                                                            : "border-emerald-200 bg-emerald-50 text-emerald-800"
+                                                    }`}>
+                                                        {mensagemDocumentoPersistidoDds.texto}
+                                                    </p>
+                                                )}
                                             </>
                                         )}
 

@@ -810,6 +810,7 @@ export async function listarArquivosCertificadosStorageAppService({
     colaboradores,
     empresasBanco,
     setErroBanco,
+    onProgress,
 }) {
     setErroBanco("");
 
@@ -817,6 +818,7 @@ export async function listarArquivosCertificadosStorageAppService({
         return await listarArquivosCertificadosStorageService({
             colaboradores,
             empresasBanco,
+            onProgress,
         });
     } catch (error) {
         setErroBanco(error.message || "Erro ao listar arquivos do Storage.");

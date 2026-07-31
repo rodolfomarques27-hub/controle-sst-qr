@@ -274,6 +274,30 @@ export default function criarSuporteDds() {
             .trim();
     }
 
+    function colaboradorPodeParticiparDds(colaborador = null) {
+        if (!colaborador || typeof colaborador !== "object") return false;
+
+        const statusCadastro = normalizarComparacaoDds(
+            colaborador.status ||
+            colaborador.status_cadastro ||
+            colaborador.statusCadastro ||
+            ""
+        );
+        const statusMobilizacao = normalizarComparacaoDds(
+            colaborador.status_mobilizacao ||
+            colaborador.statusMobilizacao ||
+            ""
+        );
+        const situacaoCompleta = `${statusCadastro} ${statusMobilizacao}`.trim();
+
+        return !(
+            situacaoCompleta.includes("INATIVO") ||
+            situacaoCompleta.includes("INATIVA") ||
+            situacaoCompleta.includes("DESMOBILIZADO") ||
+            situacaoCompleta.includes("DESMOBILIZADA")
+        );
+    }
+
     function obterNomeEmpresaColaboradorDds(colaborador = null) {
         if (!colaborador || typeof colaborador !== "object") return "";
 
@@ -329,10 +353,11 @@ export default function criarSuporteDds() {
 
     function filtrarColaboradoresPorEmpresaDds(colaboradores = [], empresa = null) {
         const lista = Array.isArray(colaboradores) ? colaboradores : [];
+        const listaOperacional = lista.filter(colaboradorPodeParticiparDds);
 
-        if (!empresa) return lista;
+        if (!empresa) return listaOperacional;
 
-        return lista.filter((colaborador) => colaboradorPertenceEmpresaDds(colaborador, empresa));
+        return listaOperacional.filter((colaborador) => colaboradorPertenceEmpresaDds(colaborador, empresa));
     }
 
     function formatarDataDds(data) {
@@ -653,6 +678,7 @@ export default function criarSuporteDds() {
         };
 
         return base
+            .filter(colaboradorPodeParticiparDds)
             .map((colaborador, indice) => ({
                 numero: indice + 1,
                 codigoSafescan: obterCodigoSafescanParticipanteDds(colaborador),
@@ -888,13 +914,14 @@ export default function criarSuporteDds() {
         );
     }
 
-    const CHAVE_LOCAL_CARDS_DDS = "controle-sst-qr:dds:cards-recolhiveis:v1";
+    const CHAVE_LOCAL_CARDS_DDS = "controle-sst-qr:dds:cards-recolhiveis:v2";
 
     const CARDS_DDS_PADRAO = {
-        qr: true,
-        novo: true,
-        temas: true,
-        qrConferencia: true,
+        qr: false,
+        novo: false,
+        conferencia: false,
+        temas: false,
+        qrConferencia: false,
         transcricao: false,
         preConferencia: false,
         conferenciaFrequencia: false,
@@ -904,9 +931,10 @@ export default function criarSuporteDds() {
         linhaTempo: false,
         controleMaoObra: false,
         historicoMaoObra: false,
-        recados: true,
-        orientacoes: true,
-        preview: true,
+        recados: false,
+        orientacoes: false,
+        preview: false,
+        historicoPdfs: false,
     };
 
     function carregarCardsDdsLocal() {

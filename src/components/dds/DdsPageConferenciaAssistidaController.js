@@ -34,9 +34,17 @@ export default function criarControladorConferenciaAssistidaDds({
     setSalvandoConferenciaAssistidaDds,
     setSalvandoFechamentoConferenciaDds,
     setTemasConferenciaAssistidaDds,
+    salvarRascunhoTemasConferenciaDds,
     supabase,
     temasConferenciaAssistidaDds,
 }) {
+    function persistirTemasConferencia(lista) {
+        if (typeof salvarRascunhoTemasConferenciaDds === "function") {
+            salvarRascunhoTemasConferenciaDds(lista);
+        }
+        return lista;
+    }
+
     function atualizarTemaConferenciaAssistidaDds(
         indiceDia,
         campo,
@@ -45,7 +53,7 @@ export default function criarControladorConferenciaAssistidaDds({
         if (conferenciaOficialConcluidaDds) return;
 
         setTemasConferenciaAssistidaDds((atuais) =>
-            diasRegistroScannerDds.map((_, indice) => {
+            persistirTemasConferencia(diasRegistroScannerDds.map((_, indice) => {
                 const atual =
                     atuais[indice] &&
                     typeof atuais[indice] === "object"
@@ -76,10 +84,11 @@ export default function criarControladorConferenciaAssistidaDds({
                         ? {
                             semAtividadeConfirmada:
                                 false,
+                            chuvaConfirmada: false,
                         }
                         : {}),
                 };
-            })
+            }))
         );
 
         setErroFechamentoConferenciaDds("");
@@ -119,7 +128,7 @@ export default function criarControladorConferenciaAssistidaDds({
         }
 
         setTemasConferenciaAssistidaDds((atuais) =>
-            diasRegistroScannerDds.map((_, indice) => {
+            persistirTemasConferencia(diasRegistroScannerDds.map((_, indice) => {
                 const atual =
                     atuais[indice] &&
                     typeof atuais[indice] === "object"
@@ -147,8 +156,9 @@ export default function criarControladorConferenciaAssistidaDds({
                         : {}),
                     semAtividadeConfirmada:
                         false,
+                    chuvaConfirmada: false,
                 };
-            })
+            }))
         );
 
         setErroFechamentoConferenciaDds("");
@@ -165,7 +175,7 @@ export default function criarControladorConferenciaAssistidaDds({
         if (!dia) return;
 
         setTemasConferenciaAssistidaDds((atuais) =>
-            diasRegistroScannerDds.map((_, indice) => {
+            persistirTemasConferencia(diasRegistroScannerDds.map((_, indice) => {
                 const atual =
                     atuais[indice] &&
                     typeof atuais[indice] === "object"
@@ -192,7 +202,7 @@ export default function criarControladorConferenciaAssistidaDds({
                             dia.semAtividadePlanejada
                         ),
                 };
-            })
+            }))
         );
 
         setErroFechamentoConferenciaDds("");
@@ -204,7 +214,7 @@ export default function criarControladorConferenciaAssistidaDds({
         if (conferenciaOficialConcluidaDds) return;
 
         setTemasConferenciaAssistidaDds((atuais) =>
-            diasRegistroScannerDds.map((_, indice) => {
+            persistirTemasConferencia(diasRegistroScannerDds.map((_, indice) => {
                 const atual =
                     atuais[indice] &&
                     typeof atuais[indice] === "object"
@@ -235,10 +245,32 @@ export default function criarControladorConferenciaAssistidaDds({
                     origemDocumentalTemaConfirmado: "",
                     semAtividadeConfirmada:
                         proximoSemAtividade,
+                    chuvaConfirmada: false,
                 };
-            })
+            }))
         );
 
+        setErroFechamentoConferenciaDds("");
+    }
+
+    function alternarChuvaConferenciaAssistidaDds(indiceDia) {
+        if (conferenciaOficialConcluidaDds) return;
+        setTemasConferenciaAssistidaDds((atuais) =>
+            persistirTemasConferencia(diasRegistroScannerDds.map((_, indice) => {
+                const atual = atuais[indice] && typeof atuais[indice] === "object" ? atuais[indice] : {};
+                if (indice !== indiceDia) return atual;
+                const proximaChuva = atual.chuvaConfirmada !== true;
+                return {
+                    ...atual,
+                    temaConfirmado: proximaChuva ? "" : String(atual.temaConfirmado || ""),
+                    responsavelConfirmado: proximaChuva ? "" : String(atual.responsavelConfirmado || ""),
+                    origemTemaConfirmado: "transcricao_manual",
+                    origemDocumentalTemaConfirmado: "",
+                    semAtividadeConfirmada: false,
+                    chuvaConfirmada: proximaChuva,
+                };
+            }))
+        );
         setErroFechamentoConferenciaDds("");
     }
 
@@ -270,6 +302,7 @@ export default function criarControladorConferenciaAssistidaDds({
                     Boolean(
                         dia.semAtividadeConfirmada
                     ),
+                chuvaConfirmada: Boolean(dia.chuvaConfirmada),
                 jornadaTipo:
                     dia.jornadaTipo || "",
                 jornadaRotulo:
@@ -474,6 +507,28 @@ export default function criarControladorConferenciaAssistidaDds({
         });
     }
 
+    function marcarSemanaFeriasAssistidaDds(numero) {
+        if (conferenciaOficialConcluidaDds) return;
+        setConferenciaAssistidaDds((atual) => {
+            const proximo = { ...atual };
+            for (const dia of diasAtivosConferenciaAssistidaDds) {
+                proximo[obterChaveFrequenciaAssistidaDds(numero, dia)] = "ferias";
+            }
+            return proximo;
+        });
+    }
+
+    function marcarSemanaAtestadoAssistidaDds(numero) {
+        if (conferenciaOficialConcluidaDds) return;
+        setConferenciaAssistidaDds((atual) => {
+            const proximo = { ...atual };
+            for (const dia of diasAtivosConferenciaAssistidaDds) {
+                proximo[obterChaveFrequenciaAssistidaDds(numero, dia)] = "atestado";
+            }
+            return proximo;
+        });
+    }
+
     function limparParticipanteConferenciaAssistidaDds(numero) {
         if (conferenciaOficialConcluidaDds) return;
 
@@ -498,6 +553,7 @@ export default function criarControladorConferenciaAssistidaDds({
                 responsavelConfirmado: "",
                 origemTemaConfirmado: "",
                 semAtividadeConfirmada: false,
+                chuvaConfirmada: false,
             }))
         );
         setParticipantesAdicionaisConferenciaDds(
@@ -924,6 +980,7 @@ export default function criarControladorConferenciaAssistidaDds({
                         ),
                     semAtividadeConfirmada:
                         item?.semAtividadeConfirmada === true,
+                    chuvaConfirmada: item?.chuvaConfirmada === true,
                     jornadaTipo: String(
                         item?.jornadaTipo || ""
                     ),
@@ -1411,11 +1468,14 @@ export default function criarControladorConferenciaAssistidaDds({
         usarSugestaoOcrTemaConferenciaAssistidaDds,
         usarPlanejamentoTemaConferenciaAssistidaDds,
         alternarSemAtividadeConferenciaAssistidaDds,
+        alternarChuvaConferenciaAssistidaDds,
         atualizarParticipanteAdicionalConferenciaDds,
         limparParticipanteAdicionalConferenciaDds,
         definirStatusFrequenciaAssistidaDds,
         marcarSemanaCompletaAssistidaDds,
         marcarSemanaAusenteAssistidaDds,
+        marcarSemanaFeriasAssistidaDds,
+        marcarSemanaAtestadoAssistidaDds,
         limparParticipanteConferenciaAssistidaDds,
         limparConferenciaAssistidaDds,
         salvarConferenciaAssistidaDds,

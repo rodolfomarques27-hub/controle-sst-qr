@@ -1,7 +1,9 @@
+import "../../styles/pages/empresas-hero.css";
 import { useEffect, useMemo, useState } from "react";
 import {
     AlertTriangle,
     Building2,
+    CalendarClock,
     ChevronDown,
     ChevronUp,
     Download,
@@ -492,6 +494,24 @@ export function Empresas({
     const [verificacoesDocumentais, setVerificacoesDocumentais] = useState({});
     const [carregandoVerificacoes, setCarregandoVerificacoes] = useState(false);
     const [erroVerificacoes, setErroVerificacoes] = useState("");
+    const [agoraHeroEmpresas, setAgoraHeroEmpresas] = useState(() => new Date());
+
+    useEffect(() => {
+        const atualizarRelogioHeroEmpresas = () => {
+            setAgoraHeroEmpresas(new Date());
+        };
+
+        atualizarRelogioHeroEmpresas();
+
+        const intervaloRelogioHeroEmpresas = window.setInterval(
+            atualizarRelogioHeroEmpresas,
+            30000
+        );
+
+        return () => {
+            window.clearInterval(intervaloRelogioHeroEmpresas);
+        };
+    }, []);
 
     const alternarEmpresaAberta = (empresaId) => {
         setEmpresasAbertas((atual) => ({
@@ -2069,6 +2089,39 @@ export function Empresas({
     };
 
 
+    const dataHoraHeroEmpresas = useMemo(() => {
+        const formatarDiaSemana = (valor = "") =>
+            String(valor)
+                .split("-")
+                .map((trecho) =>
+                    trecho
+                        ? trecho.charAt(0).toLocaleUpperCase("pt-BR") +
+                          trecho.slice(1).toLocaleLowerCase("pt-BR")
+                        : trecho
+                )
+                .join("-");
+
+        return {
+            data: new Intl.DateTimeFormat("pt-BR", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+            }).format(agoraHeroEmpresas),
+
+            diaSemana: formatarDiaSemana(
+                new Intl.DateTimeFormat("pt-BR", {
+                    weekday: "long",
+                }).format(agoraHeroEmpresas)
+            ),
+
+            hora: new Intl.DateTimeFormat("pt-BR", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hourCycle: "h23",
+            }).format(agoraHeroEmpresas),
+        };
+    }, [agoraHeroEmpresas]);
+
     const filtrosAtuaisEmpresasDocumentos = useMemo(
         () => ({
             buscaEmpresa: buscaEmpresa.trim(),
@@ -2325,17 +2378,10 @@ export function Empresas({
     return (
         <div>
             <Header
+                className="hero-integrated-page-header hero-header--empresas"
                 titulo="Empresas e documentos"
                 subtitulo={null}
-                acao={
-                    <button
-                        onClick={onAtualizarBanco}
-                        className="empresas-cadastro-header__acao"
-                    >
-                        <RefreshCw className={classNames("h-4 w-4", carregandoBanco && "animate-spin")} />
-                        Atualizar banco
-                    </button>
-                }
+                acao={null}
             />
 
             <section className="empresas-hero-banner">
@@ -2357,7 +2403,26 @@ export function Empresas({
                         </p>
                     </div>
 
+                    <div
+                        className="empresas-hero-banner__date"
+                        aria-label={`Data e hora atuais: ${dataHoraHeroEmpresas.data}, ${dataHoraHeroEmpresas.diaSemana}, ${dataHoraHeroEmpresas.hora}`}
+                    >
+                        <CalendarClock className="h-4 w-4" />
+                        <span>{dataHoraHeroEmpresas.data}</span>
+                        <span aria-hidden="true">•</span>
+                        <span>{dataHoraHeroEmpresas.diaSemana}</span>
+                        <span aria-hidden="true">•</span>
+                        <span>{dataHoraHeroEmpresas.hora}</span>
+                    </div>
+
                     <div className="empresas-hero-banner__stats">
+                        <button
+                            onClick={onAtualizarBanco}
+                            className="empresas-hero-banner__atualizar"
+                        >
+                            <RefreshCw className={classNames("h-4 w-4", carregandoBanco && "animate-spin")} />
+                            Atualizar banco
+                        </button>
                         <div className="empresas-hero-banner__stat">
                             <Building2 className="h-4 w-4 text-emerald-300" />
                             <span>{empresasBanco.length} empresas ativas</span>

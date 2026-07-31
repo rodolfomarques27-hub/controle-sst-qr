@@ -1,0 +1,643 @@
+/* MICROETAPA HERO DDS PADRONIZADO - INICIO */
+
+.dds-hero-banner {
+  position: relative;
+  min-height: 12.25rem;
+  overflow: hidden;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 1.55rem;
+  background: #020617;
+  color: #ffffff;
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.13);
+}
+
+.dds-hero-banner__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 52%;
+  filter: saturate(1.05) contrast(1.05) brightness(0.86);
+  opacity: 0.88;
+}
+
+.dds-hero-banner__overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(2, 6, 23, 0.92) 0%,
+      rgba(15, 23, 42, 0.76) 45%,
+      rgba(15, 23, 42, 0.34) 100%
+    ),
+    radial-gradient(
+      circle at 10% 16%,
+      rgba(16, 185, 129, 0.22),
+      transparent 34%
+    );
+}
+
+.dds-hero-banner__content {
+  position: relative;
+  z-index: 1;
+  min-height: 12.25rem;
+  padding: 1.35rem 1.55rem 4.35rem;
+}
+
+.dds-hero-banner__copy {
+  min-width: 0;
+  max-width: 64rem;
+}
+
+.dds-hero-banner__eyebrow {
+  display: inline-flex;
+  min-height: 1.65rem;
+  align-items: center;
+  gap: 0.48rem;
+  border: 1px solid rgba(110, 231, 183, 0.28);
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  padding: 0.3rem 0.72rem;
+  color: #a7f3d0;
+  font-size: 0.62rem;
+  font-weight: 950;
+  letter-spacing: 0.2em;
+  line-height: 1;
+  text-transform: uppercase;
+  backdrop-filter: blur(8px);
+}
+
+.dds-hero-banner__eyebrow > span {
+  width: 0.38rem;
+  height: 0.38rem;
+  flex: 0 0 0.38rem;
+  border-radius: 999px;
+  background: #6ee7b7;
+  box-shadow: 0 0 14px rgba(110, 231, 183, 0.85);
+}
+
+.dds-hero-banner__title {
+  max-width: 58rem;
+  margin: 0.82rem 0 0;
+  color: #ffffff;
+  font-size: clamp(1.75rem, 2.7vw, 2.55rem);
+  font-weight: 950;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.38);
+}
+
+.dds-hero-banner__text {
+  max-width: 72rem;
+  margin: 0.55rem 0 0;
+  color: rgba(241, 245, 249, 0.95);
+  font-size: 0.9rem;
+  font-weight: 650;
+  line-height: 1.35;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.35);
+}
+
+.dds-hero-banner__line {
+  width: 3.55rem;
+  height: 0.2rem;
+  margin-top: 0.75rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #10b981, #34d399);
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.42);
+}
+
+.dds-hero-banner__bottom {
+  position: absolute;
+  right: 1.25rem;
+  bottom: 0.62rem;
+  left: 1.25rem;
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.dds-hero-banner__date {
+  display: inline-flex;
+  width: fit-content;
+  min-width: 0;
+  min-height: 2.35rem;
+  align-items: center;
+  gap: 0.42rem;
+  border: 1px solid rgba(45, 212, 191, 0.5);
+  border-radius: 999px;
+  background: rgba(8, 84, 94, 0.88);
+  padding: 0.48rem 0.82rem;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 8px 18px rgba(2, 6, 23, 0.18);
+  backdrop-filter: blur(8px);
+}
+
+.dds-hero-banner__date svg {
+  width: 0.9rem;
+  height: 0.9rem;
+  flex: 0 0 auto;
+  color: #5eead4;
+}
+
+.dds-hero-banner__stats {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.dds-hero-banner__stat {
+  display: inline-flex;
+  min-height: 2.35rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.38rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.48rem 0.82rem;
+  color: #ffffff;
+  font-size: 0.69rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 8px 18px rgba(2, 6, 23, 0.18);
+  backdrop-filter: blur(8px);
+}
+
+.dds-hero-banner__stat svg {
+  width: 0.92rem;
+  height: 0.92rem;
+  flex: 0 0 auto;
+}
+
+.dds-hero-banner__stat strong {
+  color: inherit;
+  font-weight: 950;
+}
+
+.dds-hero-banner__stat--dias {
+  border-color: rgba(56, 189, 248, 0.55);
+  background: rgba(3, 105, 161, 0.86);
+}
+
+.dds-hero-banner__stat--dias svg {
+  color: #7dd3fc;
+}
+
+.dds-hero-banner__stat--temas {
+  border-color: rgba(52, 211, 153, 0.55);
+  background: rgba(4, 120, 87, 0.88);
+}
+
+.dds-hero-banner__stat--temas svg {
+  color: #6ee7b7;
+}
+
+.dds-hero-banner__stat--participantes {
+  border-color: rgba(167, 139, 250, 0.55);
+  background: rgba(91, 33, 182, 0.88);
+}
+
+.dds-hero-banner__stat--participantes svg {
+  color: #c4b5fd;
+}
+
+@media (max-width: 1180px) {
+  .dds-hero-banner {
+    min-height: auto;
+  }
+
+  .dds-hero-banner__content {
+    min-height: 12rem;
+    padding-bottom: 1.25rem;
+  }
+
+  .dds-hero-banner__bottom {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: 1rem;
+  }
+
+  .dds-hero-banner__stats {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    justify-content: stretch;
+  }
+
+  .dds-hero-banner__stat {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .dds-hero-banner {
+    border-radius: 1.2rem;
+  }
+
+  .dds-hero-banner__content {
+    padding: 1.1rem;
+  }
+
+  .dds-hero-banner__title {
+    font-size: 1.55rem;
+  }
+
+  .dds-hero-banner__text {
+    font-size: 0.8rem;
+  }
+
+  .dds-hero-banner__date {
+    width: 100%;
+    justify-content: center;
+    overflow: hidden;
+    font-size: 0.64rem;
+  }
+
+  .dds-hero-banner__stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dds-hero-banner__stat {
+    width: 100%;
+  }
+}
+
+@media (max-width: 430px) {
+  .dds-hero-banner__date > span:nth-of-type(2),
+  .dds-hero-banner__date > span:nth-of-type(4) {
+    display: none;
+  }
+
+  .dds-hero-banner__date {
+    flex-wrap: wrap;
+    border-radius: 1rem;
+    line-height: 1.2;
+    white-space: normal;
+  }
+}
+
+/* MICROETAPA HERO DDS PADRONIZADO - FIM */
+
+/* MICROETAPA HERO DDS - PADRAO EMPRESAS - INICIO */
+
+/*
+ * Replica o padrão visual aprovado em Empresas:
+ * - altura desktop entre 154 e 178 px;
+ * - faixa operacional escura entre 42 e 52 px;
+ * - traço verde curto abaixo do subtítulo;
+ * - data à esquerda e indicadores à direita;
+ * - pílulas entre 31 e 36 px;
+ * - compactação protegida entre 1024 e 1180 px.
+ */
+@media (min-width: 1024px) {
+  .dds-hero-banner {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    height: clamp(154px, 9.8vw, 178px) !important;
+    min-height: clamp(154px, 9.8vw, 178px) !important;
+    max-height: clamp(154px, 9.8vw, 178px) !important;
+    margin-bottom: 0.75rem !important;
+    overflow: hidden !important;
+    border-radius: clamp(18px, 1.2vw, 28px) !important;
+    box-shadow:
+      0 14px 30px rgba(15, 23, 42, 0.16),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.12) !important;
+  }
+
+  .dds-hero-banner__bg {
+    z-index: 1 !important;
+    object-position: center 48% !important;
+  }
+
+  .dds-hero-banner__overlay {
+    z-index: 2 !important;
+  }
+
+  .dds-hero-banner::after {
+    content: "" !important;
+    position: absolute !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    z-index: 3 !important;
+    display: block !important;
+    height: clamp(42px, 3vw, 52px) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.20) !important;
+    background:
+      linear-gradient(
+        90deg,
+        rgba(8, 13, 24, 0.92) 0%,
+        rgba(17, 24, 39, 0.84) 52%,
+        rgba(56, 34, 18, 0.82) 100%
+      ) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 -8px 20px rgba(0, 0, 0, 0.08) !important;
+    backdrop-filter: blur(12px) saturate(130%) !important;
+  }
+
+  .dds-hero-banner__content {
+    box-sizing: border-box !important;
+    z-index: 10 !important;
+    width: 100% !important;
+    height: clamp(154px, 9.8vw, 178px) !important;
+    min-height: clamp(154px, 9.8vw, 178px) !important;
+    max-height: clamp(154px, 9.8vw, 178px) !important;
+    padding:
+      clamp(15px, 1vw, 22px)
+      clamp(22px, 1.55vw, 32px)
+      clamp(52px, 3.8vw, 66px) !important;
+    overflow: hidden !important;
+  }
+
+  .dds-hero-banner__copy {
+    position: relative !important;
+    display: block !important;
+    width: min(100%, 48rem) !important;
+    max-width: 48rem !important;
+    text-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.86),
+      0 6px 18px rgba(0, 0, 0, 0.34) !important;
+  }
+
+  .dds-hero-banner__eyebrow {
+    display: block !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: #86efac !important;
+    font-size: clamp(0.68rem, 0.70vw, 0.84rem) !important;
+    line-height: 1.08 !important;
+    letter-spacing: 0.24em !important;
+    backdrop-filter: none !important;
+  }
+
+  .dds-hero-banner__eyebrow > span {
+    display: none !important;
+  }
+
+  .dds-hero-banner__title {
+    margin: clamp(5px, 0.35vw, 8px) 0 0 !important;
+    max-width: 48rem !important;
+    font-size: clamp(1.24rem, 1.35vw, 1.72rem) !important;
+    line-height: 1.03 !important;
+    letter-spacing: -0.03em !important;
+  }
+
+  .dds-hero-banner__text {
+    margin-top: clamp(5px, 0.35vw, 8px) !important;
+    max-width: 48rem !important;
+    font-size: clamp(0.86rem, 0.9vw, 1.06rem) !important;
+    line-height: 1.14 !important;
+    font-weight: 700 !important;
+  }
+
+  .dds-hero-banner__line {
+    position: relative !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    display: block !important;
+    width: clamp(46px, 3vw, 64px) !important;
+    height: clamp(3px, 0.2vw, 4px) !important;
+    margin-top: clamp(8px, 0.55vw, 11px) !important;
+    border-radius: 999px !important;
+    background: #1e7c3a !important;
+    box-shadow:
+      0 0 12px rgba(16, 185, 129, 0.32),
+      0 0 24px rgba(16, 185, 129, 0.14) !important;
+  }
+
+  .dds-hero-banner__bottom {
+    position: absolute !important;
+    right: clamp(12px, 0.9vw, 16px) !important;
+    bottom: 0 !important;
+    left: clamp(12px, 0.9vw, 16px) !important;
+    z-index: 16 !important;
+    display: grid !important;
+    width: auto !important;
+    height: clamp(42px, 3vw, 52px) !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: clamp(6px, 0.42vw, 9px) !important;
+    margin: 0 !important;
+  }
+
+  .dds-hero-banner__date {
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    width: fit-content !important;
+    min-width: 0 !important;
+    min-height: clamp(31px, 2vw, 36px) !important;
+    height: clamp(31px, 2vw, 36px) !important;
+    max-height: clamp(31px, 2vw, 36px) !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: clamp(5px, 0.4vw, 7px) !important;
+    margin: 0 !important;
+    padding: 0 clamp(11px, 0.85vw, 15px) !important;
+    border: 1px solid rgba(45, 212, 191, 0.5) !important;
+    border-radius: 999px !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(3, 48, 57, 0.94) 0%,
+        rgba(7, 84, 95, 0.76) 100%
+      ) !important;
+    color: #ffffff !important;
+    font-size: clamp(0.66rem, 0.58vw, 0.76rem) !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.10),
+      0 0 16px rgba(45, 212, 191, 0.13),
+      0 6px 14px rgba(0, 0, 0, 0.18) !important;
+    backdrop-filter: blur(10px) saturate(135%) !important;
+  }
+
+  .dds-hero-banner__date svg {
+    width: clamp(0.88rem, 0.9vw, 1rem) !important;
+    height: clamp(0.88rem, 0.9vw, 1rem) !important;
+    min-width: clamp(0.88rem, 0.9vw, 1rem) !important;
+    color: #5eead4 !important;
+  }
+
+  .dds-hero-banner__stats {
+    display: flex !important;
+    width: auto !important;
+    max-width: calc(100% - clamp(310px, 26vw, 390px)) !important;
+    min-width: 0 !important;
+    min-height: clamp(31px, 2vw, 36px) !important;
+    height: clamp(31px, 2vw, 36px) !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    flex-wrap: nowrap !important;
+    gap: clamp(6px, 0.42vw, 9px) !important;
+    margin: 0 !important;
+  }
+
+  .dds-hero-banner__stat {
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    min-width: max-content !important;
+    min-height: clamp(31px, 2vw, 36px) !important;
+    height: clamp(31px, 2vw, 36px) !important;
+    max-height: clamp(31px, 2vw, 36px) !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: clamp(0.34rem, 0.4vw, 0.5rem) !important;
+    padding: 0 clamp(0.76rem, 0.84vw, 1rem) !important;
+    border-radius: 999px !important;
+    color: #ffffff !important;
+    font-size: clamp(0.66rem, 0.72vw, 0.86rem) !important;
+    line-height: 1 !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 6px 14px rgba(0, 0, 0, 0.20) !important;
+    backdrop-filter: blur(10px) saturate(130%) !important;
+  }
+
+  .dds-hero-banner__stat svg {
+    width: clamp(0.84rem, 0.9vw, 1rem) !important;
+    height: clamp(0.84rem, 0.9vw, 1rem) !important;
+    min-width: clamp(0.84rem, 0.9vw, 1rem) !important;
+  }
+
+  .dds-hero-banner__stat--dias {
+    border: 1px solid rgba(56, 189, 248, 0.52) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(10, 37, 64, 0.96) 0%,
+        rgba(8, 80, 120, 0.82) 100%
+      ) !important;
+  }
+
+  .dds-hero-banner__stat--temas {
+    border: 1px solid rgba(45, 212, 191, 0.46) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(3, 48, 57, 0.92) 0%,
+        rgba(7, 84, 95, 0.72) 100%
+      ) !important;
+  }
+
+  .dds-hero-banner__stat--participantes {
+    border: 1px solid rgba(167, 139, 250, 0.52) !important;
+    background:
+      linear-gradient(
+        135deg,
+        rgba(62, 31, 105, 0.94) 0%,
+        rgba(91, 33, 182, 0.80) 100%
+      ) !important;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1180px) {
+  .dds-hero-banner__date {
+    gap: 4px !important;
+    padding-right: 8px !important;
+    padding-left: 8px !important;
+    font-size: 0.6rem !important;
+  }
+
+  .dds-hero-banner__bottom {
+    gap: 4px !important;
+  }
+
+  .dds-hero-banner__stats {
+    max-width: calc(100% - 245px) !important;
+    gap: 4px !important;
+  }
+
+  .dds-hero-banner__stat {
+    gap: 4px !important;
+    padding-right: 7px !important;
+    padding-left: 7px !important;
+    font-size: 0.6rem !important;
+  }
+
+  .dds-hero-banner__stat svg {
+    display: none !important;
+  }
+}
+
+/* MICROETAPA HERO DDS - PADRAO EMPRESAS - FIM */
+
+/* MICROETAPA HERO DDS - SUBTITULO E INDICADORES ALINHADOS - INICIO */
+
+@media (min-width: 1024px) {
+  .dds-hero-banner__copy {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .dds-hero-banner__text {
+    width: 100% !important;
+    max-width: none !important;
+    white-space: nowrap !important;
+  }
+
+  .dds-hero-banner__bottom {
+    position: absolute !important;
+    right: clamp(12px, 0.9vw, 16px) !important;
+    bottom: 0 !important;
+    left: clamp(12px, 0.9vw, 16px) !important;
+    display: block !important;
+    width: auto !important;
+    height: clamp(42px, 3vw, 52px) !important;
+  }
+
+  .dds-hero-banner__date {
+    position: absolute !important;
+    top: 50% !important;
+    left: 0 !important;
+    margin: 0 !important;
+    transform: translateY(-50%) !important;
+  }
+
+  .dds-hero-banner__stats {
+    position: absolute !important;
+    top: 50% !important;
+    right: 0 !important;
+    bottom: auto !important;
+    left: auto !important;
+    width: auto !important;
+    margin: 0 0 0 auto !important;
+    justify-content: flex-end !important;
+    justify-self: end !important;
+    transform: translateY(-50%) !important;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1180px) {
+  .dds-hero-banner__text {
+    font-size: clamp(0.72rem, 0.82vw, 0.86rem) !important;
+  }
+
+  .dds-hero-banner__stats {
+    max-width: calc(100% - 245px) !important;
+  }
+}
+
+/* MICROETAPA HERO DDS - SUBTITULO E INDICADORES ALINHADOS - FIM */

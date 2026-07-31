@@ -16,6 +16,7 @@ export default function criarControladorMaoDeObraDds({
     normalizarFuncaoMaoDeObraDds,
     normalizarNomeEmpresaMaoDeObraDds,
     obraSelecionadaIdDds,
+    obraSelecionadaNomeDds,
     obterChaveFrequenciaAssistidaDds,
     obterIdEmpresaObjetoDds,
     obterStatusFrequenciaAssistidaDds,
@@ -23,7 +24,6 @@ export default function criarControladorMaoDeObraDds({
     parseDataControleMaoDeObraDds,
     participantesConferenciaAssistidaDds,
     reciboConferenciaFinalDds,
-    registroAtualPertenceAoMesHistoricoDds,
     registroHistoricoMensalConcluidoDds,
     registroScannerDds,
     setCarregandoHistoricoMensalMaoDeObraDds,
@@ -1240,15 +1240,7 @@ export default function criarControladorMaoDeObraDds({
             ""
         );
 
-        const obraNomeBase = obterNomeObraValidoMaoDeObraDds(
-            registroScannerDds?.obraNome,
-            registroScannerDds?.dados?.obraNome,
-            registroScannerDds?.dados?.obraSetor,
-            registroScannerDds?.dados?.obra,
-            dadosDds.obraSetor,
-            dadosDds.obraNome,
-            dadosDds.obra
-        );
+        const obraNomeBase = obterNomeObraValidoMaoDeObraDds(obraSelecionadaNomeDds);
 
         const obraNomeComparacao = normalizarBuscaObraHistoricoMensalDds(obraNomeBase);
         const periodo = obterPeriodoHistoricoMensalMaoDeObraDds();
@@ -1267,15 +1259,21 @@ export default function criarControladorMaoDeObraDds({
             const registrosBase = await listarRegistrosDds({
                 supabase,
                 empresaId,
-                obraId,
+                obraId: "",
                 periodoInicio: periodo.inicio,
                 periodoFim: periodo.fim,
                 limite: 300,
             });
 
-            let registros = obraId
+            let registros = !obraId
                 ? registrosBase
                 : registrosBase.filter((registro) => {
+                    const idRegistro = obterUuidSeguroDds(
+                        registro?.obraId || registro?.obra_id || registro?.dados?.obraId || registro?.dados?.obra_id || ""
+                    );
+
+                    if (idRegistro && idRegistro === obraId) return true;
+
                     const nomeRegistro = normalizarBuscaObraHistoricoMensalDds(
                         obterNomeObraValidoMaoDeObraDds(
                             registro?.obraNome,
@@ -1294,11 +1292,6 @@ export default function criarControladorMaoDeObraDds({
                         obraNomeComparacao.includes(nomeRegistro)
                     );
                 });
-
-            // Fallback: incluir DDS carregado quando o histórico por consulta não retornar registros.
-            if (!registros.length && registroAtualPertenceAoMesHistoricoDds(registroScannerDds, periodo)) {
-                registros = [registroScannerDds];
-            }
 
             setHistoricoMensalMaoDeObraDds(registros);
             setHistoricoMensalConsultadoEmDds(new Date().toISOString());

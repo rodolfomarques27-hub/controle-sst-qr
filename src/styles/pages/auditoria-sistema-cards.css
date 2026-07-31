@@ -1,0 +1,109 @@
+/*
+ * SAFESCAN - CARDS AUDITORIA DO SISTEMA PADRAO
+ *
+ * Escopo exclusivo da Auditoria do Sistema.
+ */
+
+.auditoria-sistema-card-padrao {
+  position: relative !important;
+  isolation: isolate;
+  overflow: hidden !important;
+  border: 1px solid #dbe7f2 !important;
+  border-radius: 1.35rem !important;
+  background: #ffffff !important;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06) !important;
+}
+
+.auditoria-sistema-card-padrao::before {
+  content: "" !important;
+  position: absolute !important;
+  z-index: 0;
+  inset: 0 0 auto 0 !important;
+  width: auto;
+  height: 3px !important;
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+  background:
+    linear-gradient(
+      90deg,
+      #0ea5e9 0%,
+      #2563eb 58%,
+      #22c55e 100%
+    ) !important;
+}
+
+.auditoria-sistema-card-padrao > .flex,
+.auditoria-sistema-card-padrao > .mt-3,
+.auditoria-sistema-card-padrao > .mt-4 {
+  position: relative !important;
+  z-index: 1;
+}
+
+.auditoria-sistema-card-padrao > .flex {
+  align-items: center !important;
+}
+
+.auditoria-sistema-card-padrao > .flex > button {
+  align-items: center !important;
+}
+
+.auditoria-sistema-card-padrao > .flex > button h2 {
+  color: #020617 !important;
+  font-size: 1.02rem !important;
+  font-weight: 950 !important;
+  line-height: 1.15 !important;
+  letter-spacing: -0.025em !important;
+}
+
+.auditoria-sistema-card-padrao > .flex > button p {
+  color: #475569 !important;
+  font-size: 0.86rem !important;
+  font-weight: 650 !important;
+  line-height: 1.35 !important;
+}
+
+.auditoria-sistema-card-padrao
+  > .flex
+  > button
+  > div
+  > div
+  > span {
+  font-weight: 900 !important;
+}
+
+.auditoria-sistema-card-padrao > .flex > button > span {
+  min-height: 2.25rem !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid #dbe7f2 !important;
+  border-radius: 999px !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  padding: 0.42rem 0.82rem !important;
+  font-size: 0.74rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06) !important;
+}
+
+.auditoria-sistema-card-padrao
+  > .flex
+  > button:hover
+  > span {
+  background: #f8fafc !important;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 760px) {
+  .auditoria-sistema-card-padrao {
+    border-radius: 1.15rem !important;
+  }
+
+  .auditoria-sistema-card-padrao > .flex {
+    align-items: stretch !important;
+  }
+
+  .auditoria-sistema-card-padrao > .flex > button {
+    width: 100%;
+  }
+}

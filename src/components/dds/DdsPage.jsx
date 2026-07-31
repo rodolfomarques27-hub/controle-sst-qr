@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { carregarRegistroDdsPorCodigo, listarRegistrosDds, salvarRegistroDds } from "../../services/ddsRegistrosService";
+import { carregarRegistroDdsPorCodigo, listarRegistrosDds, montarUrlConferenciaDds, salvarRegistroDds } from "../../services/ddsRegistrosService";
 import { executarLeituraDdsLocal } from "../../services/documentosOcrService";
 import {
     registrarDocumentoDdsAssinado,
     sincronizarConferenciaEstruturadaDds,
 } from "../../services/ddsDocumentosService";
-import { BookOpen, Printer, Building2, CalendarClock, QrCode, ListChecks, MessageSquareText, ClipboardList, ShieldCheck, Users } from "lucide-react";
+import { BookOpen, Printer, Building2, CalendarClock, ListChecks, MessageSquareText, ClipboardList, ShieldCheck, Users } from "lucide-react";
 import dashboardHeroSstDds from "../../assets/dashboard-hero-sst.webp";
+import "../../styles/pages/dds-hero.css";
 import criarComponentesApresentacaoDds from "./DdsPagePresentation";
 import criarSuporteDds from "./DdsPageSupport";
 import criarControladorMaoDeObraDds from "./DdsPageMaoDeObraController";
@@ -28,13 +29,17 @@ import {
     normalizarFuncaoMaoDeObraDds,
     normalizarNomeEmpresaMaoDeObraDds,
     parseDataControleMaoDeObraDds,
-    registroAtualPertenceAoMesHistoricoDds,
 } from "./DdsPageMaoDeObraSupport";
 import DdsConferenciaAssistidaSection from "./DdsConferenciaAssistidaSection";
 import DdsLeituraArquivoScannerSection from "./DdsLeituraArquivoScannerSection";
 import DdsReciboFinalSection from "./DdsReciboFinalSection";
-import { montarSugestoesFrequenciaDds } from "../../utils/ddsSugestaoFrequenciaUtils";
+import DdsHistoricoPdfsSection from "./DdsHistoricoPdfsSection";
+import {
+    montarSugestoesFrequenciaDds,
+    obterChaveSugestaoFrequenciaDds,
+} from "../../utils/ddsSugestaoFrequenciaUtils";
 import { extrairSugestoesTemaResponsavelDds } from "../../utils/ddsExtracaoTextoUtils";
+import { consolidarAvaliacaoMensalDds } from "../../services/ddsAvaliacaoMensalService";
 
 const {
     diasDds,
@@ -220,14 +225,14 @@ function RelatorioAnaliticoSstDdsCard({
      * após a atualização da página no mesmo navegador.
      */
     const chaveEstadoVisualRelatorioAnaliticoDds =
-        "safescan:dds:relatorio-analitico-expandido";
+        "safescan:dds:relatorio-analitico-expandido:v2";
 
     const [aberto, setAberto] =
         useState(() => {
             if (
                 typeof window === "undefined"
             ) {
-                return true;
+                return false;
             }
 
             try {
@@ -251,7 +256,7 @@ function RelatorioAnaliticoSstDdsCard({
                 // O relatório permanece funcional sem armazenamento local.
             }
 
-            return true;
+            return false;
         });
 
     function alternarEstadoVisualRelatorioAnaliticoDds() {
@@ -1683,7 +1688,7 @@ function RelatorioAnaliticoSstDdsCard({
     }
 
     return (
-        <section className="dds-no-print col-span-full w-full overflow-hidden rounded-3xl border border-slate-200 border-t-4 border-t-emerald-500 bg-white shadow-sm">
+        <section className="dds-no-print order-[90] col-span-full w-full overflow-hidden rounded-3xl border border-slate-200 border-t-4 border-t-emerald-500 bg-white shadow-sm">
             <div className="flex flex-col gap-4 px-4 py-4 xl:flex-row xl:items-start xl:justify-between">
                 {/*
                  * dds_relatorio_analitico_cabecalho_sem_scroll_click_v1
@@ -2032,6 +2037,11 @@ function RelatorioAnaliticoSstDdsCard({
                         </div>
                     ) : (
                         <div className="p-4">
+                            {abaSelecionada.rotulo === "Presença e absenteísmo" && (
+                                <div className="mb-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs font-semibold leading-5 text-sky-900">
+                                    <strong>Regra da assiduidade:</strong> sábados, domingos e jornadas classificadas como hora extra integral aparecem nos dias apurados, mas não entram no cálculo de assiduidade e absenteísmo.
+                                </div>
+                            )}
                             <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
                                 <div className="border-b border-slate-200 bg-slate-100 px-4 py-3">
                                     <h4 className="text-xs font-black uppercase tracking-wide text-slate-800">
@@ -2067,10 +2077,15 @@ function RelatorioAnaliticoSstDdsCard({
 
                                         <tbody>
                                             {(
-                                                abaSelecionada
-                                                    .bloco
-                                                    ?.indicadores ||
-                                                []
+                                                Array.isArray(abaSelecionada.bloco?.indicadores) &&
+                                                abaSelecionada.bloco.indicadores.length > 0
+                                                    ? abaSelecionada.bloco.indicadores
+                                                    : [{
+                                                        nome: "Indicadores indisponíveis",
+                                                        valor: "Sem dado",
+                                                        interpretacao: "Este bloco ainda não possui dados estruturados suficientes para calcular indicadores.",
+                                                        nivel: "nao_calculavel",
+                                                    }]
                                             ).map(
                                                 (indicador) => (
                                                     <tr
@@ -2427,6 +2442,7 @@ export function DdsPage({
     ]);
 
     const [dadosDds, setDadosDds] = useState(dadosDdsAutomaticos);
+    const [chaveDadosDdsCarregada, setChaveDadosDdsCarregada] = useState("");
     const [temasDdsEditaveis, setTemasDdsEditaveis] = useState(() => criarTemasEditaveisDds());
     const [chaveTemasDdsCarregada, setChaveTemasDdsCarregada] = useState("");
     const [recadosDdsEditaveis, setRecadosDdsEditaveis] = useState("");
@@ -2446,8 +2462,55 @@ export function DdsPage({
     const [carregandoRegistrosDisponiveisDds, setCarregandoRegistrosDisponiveisDds] = useState(false);
     const [erroListaRegistrosDds, setErroListaRegistrosDds] = useState("");
     const [empresaFiltroRegistrosDds, setEmpresaFiltroRegistrosDds] = useState("");
+    const [mesFiltroRegistrosDds, setMesFiltroRegistrosDds] = useState(() =>
+        String(new Date().getMonth() + 1).padStart(2, "0")
+    );
+    const anoFiltroRegistrosDds = String(new Date().getFullYear());
     const [excluindoRegistroDdsId, setExcluindoRegistroDdsId] = useState("");
     const [mensagemExclusaoRegistroDds, setMensagemExclusaoRegistroDds] = useState(null);
+    const [agoraHeroDds, setAgoraHeroDds] = useState(() => new Date());
+
+    useEffect(() => {
+        const intervaloHeroDds = window.setInterval(() => {
+            setAgoraHeroDds(new Date());
+        }, 30000);
+
+        return () => {
+            window.clearInterval(intervaloHeroDds);
+        };
+    }, []);
+
+    const dataHoraHeroDds = useMemo(() => {
+        const capitalizarParteDataDds = (valor) => {
+            const texto = String(valor || "");
+
+            return texto
+                ? `${texto.charAt(0).toUpperCase()}${texto.slice(1)}`
+                : "";
+        };
+
+        const diaSemana = new Intl.DateTimeFormat("pt-BR", {
+            weekday: "long",
+        })
+            .format(agoraHeroDds)
+            .split("-")
+            .map(capitalizarParteDataDds)
+            .join("-");
+
+        return {
+            data: new Intl.DateTimeFormat("pt-BR", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+            }).format(agoraHeroDds),
+            diaSemana,
+            hora: new Intl.DateTimeFormat("pt-BR", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false,
+            }).format(agoraHeroDds),
+        };
+    }, [agoraHeroDds]);
     /*
      * dds_lista_registros_estado_persistente_v1
      *
@@ -2508,9 +2571,12 @@ export function DdsPage({
     const [carregandoLeituraArquivoScannerDds, setCarregandoLeituraArquivoScannerDds] = useState(false);
     const [erroLeituraArquivoScannerDds, setErroLeituraArquivoScannerDds] = useState("");
     const [mensagemDocumentoPersistidoDds, setMensagemDocumentoPersistidoDds] = useState(null);
+    const [salvandoArquivoScannerDds, setSalvandoArquivoScannerDds] = useState(false);
     const [excluindoDocumentoPersistidoDds, setExcluindoDocumentoPersistidoDds] = useState(false);
     const [conferenciaAssistidaDds, setConferenciaAssistidaDds] = useState({});
+    const [chaveConferenciaAssistidaCarregadaDds, setChaveConferenciaAssistidaCarregadaDds] = useState("");
     const [temasConferenciaAssistidaDds, setTemasConferenciaAssistidaDds] = useState([]);
+    const [chaveTemasConferenciaCarregadaDds, setChaveTemasConferenciaCarregadaDds] = useState("");
     const [participantesAdicionaisConferenciaDds, setParticipantesAdicionaisConferenciaDds] = useState(() =>
         criarParticipantesAdicionaisConferenciaDds()
     );
@@ -2527,10 +2593,61 @@ export function DdsPage({
         const mes = String(data.getMonth() + 1).padStart(2, "0");
         return ano + "-" + mes;
     });
+    const [empresaHistoricoChaveDds, setEmpresaHistoricoChaveDds] = useState(() => empresaSelecionadaChaveDds);
+    const [obraHistoricoIdDds, setObraHistoricoIdDds] = useState("");
     const [historicoMensalMaoDeObraDds, setHistoricoMensalMaoDeObraDds] = useState([]);
     const [carregandoHistoricoMensalMaoDeObraDds, setCarregandoHistoricoMensalMaoDeObraDds] = useState(false);
     const [erroHistoricoMensalMaoDeObraDds, setErroHistoricoMensalMaoDeObraDds] = useState("");
     const [historicoMensalConsultadoEmDds, setHistoricoMensalConsultadoEmDds] = useState("");
+    const [avaliacaoMensalDds, setAvaliacaoMensalDds] = useState(null);
+    const [erroAvaliacaoMensalDds, setErroAvaliacaoMensalDds] = useState("");
+    const [editorGabaritoDds, setEditorGabaritoDds] = useState(null);
+    const [buscaEditorGabaritoDds, setBuscaEditorGabaritoDds] = useState("");
+    const [nomeManualEditorGabaritoDds, setNomeManualEditorGabaritoDds] = useState("");
+
+    const empresaHistoricoSelecionadaDds = useMemo(
+        () => empresasDds.find((empresa, indice) =>
+            obterChaveEmpresaDds(empresa, indice) === empresaHistoricoChaveDds
+        ) || null,
+        [empresaHistoricoChaveDds, empresasDds]
+    );
+
+    const obrasHistoricoMensalDds = useMemo(() => {
+        const empresaId = obterIdEmpresaObjetoDds(empresaHistoricoSelecionadaDds);
+        if (!empresaId) return [];
+
+        return obrasEmpresasDds.filter((item) => {
+            const obraBase = obterObraBaseDds(item);
+            return obterEmpresaIdObraDds(item) === empresaId &&
+                item?.status !== "Inativa" &&
+                obraBase?.status !== "Inativa";
+        });
+    }, [empresaHistoricoSelecionadaDds, obrasEmpresasDds]);
+
+    const obraHistoricoSelecionadaDds = useMemo(
+        () => obrasHistoricoMensalDds.find((obra, indice) =>
+            obterIdObraEmpresaDds(obra, indice) === obraHistoricoIdDds
+        ) || null,
+        [obraHistoricoIdDds, obrasHistoricoMensalDds]
+    );
+
+    useEffect(() => {
+        const selecaoValida = empresasDds.some((empresa, indice) =>
+            obterChaveEmpresaDds(empresa, indice) === empresaHistoricoChaveDds
+        );
+
+        if (!selecaoValida && empresaSelecionadaChaveDds) {
+            setEmpresaHistoricoChaveDds(empresaSelecionadaChaveDds);
+        }
+    }, [empresaHistoricoChaveDds, empresaSelecionadaChaveDds, empresasDds]);
+
+    function atualizarEmpresaHistoricoMensalDds(chaveEmpresa) {
+        setEmpresaHistoricoChaveDds(chaveEmpresa);
+        setObraHistoricoIdDds("");
+        setHistoricoMensalMaoDeObraDds([]);
+        setAvaliacaoMensalDds(null);
+        setErroHistoricoMensalMaoDeObraDds("");
+    }
 
     const [salvandoReciboFinalDds, setSalvandoReciboFinalDds] = useState(false);
     const [erroReciboFinalDds, setErroReciboFinalDds] = useState("");
@@ -2574,7 +2691,9 @@ export function DdsPage({
     const dadosDdsComRegistro = useMemo(() => ({
         ...dadosDds,
         tokenDds: registroDdsConferencia?.tokenPublico || "",
-        qrConferenciaUrl: registroDdsConferencia?.urlConferencia || "",
+        qrConferenciaUrl: registroDdsConferencia?.tokenPublico
+            ? montarUrlConferenciaDds({ token: registroDdsConferencia.tokenPublico })
+            : "",
         empresaLogoUrl: logoEmpresaDds,
         empresaLogoNome: empresaSelecionadaDds?.logo_nome || empresaSelecionadaDds?.logoNome || "",
         contratanteLogoUrl: logoContratanteDds,
@@ -3254,29 +3373,33 @@ export function DdsPage({
                 ""
             ).trim();
 
-        if (!empresaSelecionada) {
-            return registrosDisponiveisDds;
-        }
-
         const chaveEmpresaSelecionada =
             empresaSelecionada.toLocaleUpperCase(
                 "pt-BR"
             );
 
         return registrosDisponiveisDds.filter(
-            (registro) =>
-                String(
+            (registro) => {
+                const correspondeEmpresa = !empresaSelecionada || String(
                     registro?.empresaNome ||
                     ""
                 )
                     .trim()
                     .toLocaleUpperCase(
                         "pt-BR"
-                    ) ===
-                chaveEmpresaSelecionada
+                    ) === chaveEmpresaSelecionada;
+                const periodo = String(registro?.periodoInicio || registro?.periodoFim || "").slice(0, 10);
+                const mesRegistro = /^\d{4}-\d{2}-\d{2}$/.test(periodo) ? periodo.slice(5, 7) : "";
+                const anoRegistro = /^\d{4}-\d{2}-\d{2}$/.test(periodo) ? periodo.slice(0, 4) : "";
+                const correspondeMes = !mesFiltroRegistrosDds || (
+                    mesRegistro === mesFiltroRegistrosDds && anoRegistro === anoFiltroRegistrosDds
+                );
+                return correspondeEmpresa && correspondeMes;
+            }
         );
     }, [
         empresaFiltroRegistrosDds,
+        mesFiltroRegistrosDds,
         registrosDisponiveisDds,
     ]);
 
@@ -4003,6 +4126,7 @@ export function DdsPage({
         selecionarArquivoScannerDds,
         limparArquivoScannerDds,
         executarLeituraArquivoScannerDds,
+        salvarArquivoScannerDds,
         analisarDocumentoPersistidoDds,
         excluirDocumentoPersistidoDds,
     } = criarControladorScannerDds({
@@ -4013,6 +4137,7 @@ export function DdsPage({
         codigoConferenciaDds,
         dadosDds,
         executarLeituraDdsLocal,
+        leituraArquivoScannerDds,
         participantesRegistroScannerDds,
         registroScannerDds,
         setArquivoScannerDds,
@@ -4027,6 +4152,9 @@ export function DdsPage({
         excluindoDocumentoPersistidoDds,
         setExcluindoDocumentoPersistidoDds,
         setMensagemDocumentoPersistidoDds,
+        registrarDocumentoDdsAssinado,
+        salvandoArquivoScannerDds,
+        setSalvandoArquivoScannerDds,
         supabase,
     });
 
@@ -4174,6 +4302,10 @@ export function DdsPage({
 
                     ausencias += 1;
                     categoria.ausencias += 1;
+                    todosDiasPresentes = false;
+                } else if (status === "ferias" || status === "atestado") {
+                    // Ausência justificada: permanece no histórico, mas não é falta
+                    // nem pendência e não entra no denominador da assiduidade.
                     todosDiasPresentes = false;
                 } else {
                     dias[indiceDia].manuais += 1;
@@ -4392,11 +4524,14 @@ export function DdsPage({
         usarSugestaoOcrTemaConferenciaAssistidaDds,
         usarPlanejamentoTemaConferenciaAssistidaDds,
         alternarSemAtividadeConferenciaAssistidaDds,
+        alternarChuvaConferenciaAssistidaDds,
         atualizarParticipanteAdicionalConferenciaDds,
         limparParticipanteAdicionalConferenciaDds,
         definirStatusFrequenciaAssistidaDds,
         marcarSemanaCompletaAssistidaDds,
         marcarSemanaAusenteAssistidaDds,
+        marcarSemanaFeriasAssistidaDds,
+        marcarSemanaAtestadoAssistidaDds,
         limparParticipanteConferenciaAssistidaDds,
         limparConferenciaAssistidaDds,
         salvarConferenciaAssistidaDds,
@@ -4422,6 +4557,7 @@ export function DdsPage({
         salvandoConferenciaAssistidaDds,
         salvandoFechamentoConferenciaDds,
         salvarRegistroDds,
+        salvarRascunhoTemasConferenciaDds: salvarRascunhoTemasConferenciaAssistidaImediatoDds,
         arquivoScannerDds,
         leituraArquivoScannerDds,
         registrarDocumentoDdsAssinado,
@@ -4680,6 +4816,150 @@ export function DdsPage({
         setTemasConferenciaAssistidaDds,
     });
 
+    const chaveRascunhoConferenciaAssistidaDds = useMemo(() => criarChaveTemasDdsLocal({
+        codigo: registroScannerDds?.codigo || codigoConferenciaDds || dadosDds.codigo,
+    }), [codigoConferenciaDds, dadosDds.codigo, registroScannerDds?.codigo]);
+
+    function pontuarTemasConferenciaDds(lista = []) {
+        return (Array.isArray(lista) ? lista : []).reduce((total, item = {}) => {
+            const camposTexto = [
+                "temaConfirmado",
+                "responsavelConfirmado",
+                "origemTemaConfirmado",
+                "origemDocumentalTemaConfirmado",
+                "entrada",
+                "saida",
+                "inicioAlmoco",
+                "fimAlmoco",
+                "inicioDds",
+                "fimDds",
+            ];
+            const pontosTexto = camposTexto.reduce(
+                (subtotal, campo) => subtotal + String(item?.[campo] || "").trim().length,
+                0
+            );
+            return total + pontosTexto + (item?.semAtividadeConfirmada === true ? 20 : 0);
+        }, 0);
+    }
+
+    function salvarRascunhoTemasConferenciaAssistidaImediatoDds(temasDias) {
+        if (!chaveRascunhoConferenciaAssistidaDds || !Array.isArray(temasDias)) return;
+        try {
+            const mapa = JSON.parse(window.localStorage.getItem("controle-sst-qr:dds:temas-conferencia-por-codigo:v1") || "{}");
+            mapa[chaveRascunhoConferenciaAssistidaDds] = {
+                atualizadoEm: new Date().toISOString(),
+                temasDias,
+            };
+            window.localStorage.setItem("controle-sst-qr:dds:temas-conferencia-por-codigo:v1", JSON.stringify(mapa));
+        } catch {
+            // O preenchimento da conferência continua mesmo sem armazenamento local.
+        }
+    }
+
+    useEffect(() => {
+        if (!chaveRascunhoConferenciaAssistidaDds) return;
+        let rascunhoLocal = null;
+        try {
+            const mapa = JSON.parse(window.localStorage.getItem("controle-sst-qr:dds:temas-conferencia-por-codigo:v1") || "{}");
+            rascunhoLocal = mapa?.[chaveRascunhoConferenciaAssistidaDds] || null;
+        } catch {
+            rascunhoLocal = null;
+        }
+
+        const atualizadoLocal = Date.parse(rascunhoLocal?.atualizadoEm || "") || 0;
+        const atualizadoBanco = Date.parse(registroScannerDds?.dados?.conferenciaAssistida?.atualizadoEm || "") || 0;
+        const temasBanco = registroScannerDds?.dados?.conferenciaAssistida?.temasDias;
+        const rascunhoMaisCompleto = pontuarTemasConferenciaDds(rascunhoLocal?.temasDias) > pontuarTemasConferenciaDds(temasBanco);
+        if (
+            Array.isArray(rascunhoLocal?.temasDias) &&
+            rascunhoLocal.temasDias.length > 0 &&
+            (rascunhoMaisCompleto || atualizadoLocal >= atualizadoBanco)
+        ) {
+            setTemasConferenciaAssistidaDds(rascunhoLocal.temasDias);
+        }
+        setChaveTemasConferenciaCarregadaDds(chaveRascunhoConferenciaAssistidaDds);
+    }, [
+        chaveRascunhoConferenciaAssistidaDds,
+        registroScannerDds?.dados?.conferenciaAssistida?.atualizadoEm,
+    ]);
+
+    useEffect(() => {
+        if (
+            !chaveRascunhoConferenciaAssistidaDds ||
+            chaveTemasConferenciaCarregadaDds !== chaveRascunhoConferenciaAssistidaDds ||
+            !Array.isArray(temasConferenciaAssistidaDds) ||
+            temasConferenciaAssistidaDds.length === 0
+        ) return;
+        try {
+            const mapa = JSON.parse(window.localStorage.getItem("controle-sst-qr:dds:temas-conferencia-por-codigo:v1") || "{}");
+            const rascunhoExistente = mapa?.[chaveRascunhoConferenciaAssistidaDds];
+            if (
+                Array.isArray(rascunhoExistente?.temasDias) &&
+                pontuarTemasConferenciaDds(rascunhoExistente.temasDias) > pontuarTemasConferenciaDds(temasConferenciaAssistidaDds)
+            ) {
+                setTemasConferenciaAssistidaDds(rascunhoExistente.temasDias);
+                return;
+            }
+            mapa[chaveRascunhoConferenciaAssistidaDds] = {
+                atualizadoEm: new Date().toISOString(),
+                temasDias: temasConferenciaAssistidaDds,
+            };
+            window.localStorage.setItem("controle-sst-qr:dds:temas-conferencia-por-codigo:v1", JSON.stringify(mapa));
+        } catch {
+            // O rascunho local não deve bloquear a conferência assistida.
+        }
+    }, [
+        chaveRascunhoConferenciaAssistidaDds,
+        chaveTemasConferenciaCarregadaDds,
+        temasConferenciaAssistidaDds,
+    ]);
+
+    useEffect(() => {
+        if (!chaveRascunhoConferenciaAssistidaDds) return;
+        let rascunhoLocal = null;
+        try {
+            const mapa = JSON.parse(window.localStorage.getItem("controle-sst-qr:dds:frequencia-assistida-por-codigo:v1") || "{}");
+            rascunhoLocal = mapa?.[chaveRascunhoConferenciaAssistidaDds] || null;
+        } catch {
+            rascunhoLocal = null;
+        }
+
+        const atualizadoLocal = Date.parse(rascunhoLocal?.atualizadoEm || "") || 0;
+        const atualizadoBanco = Date.parse(registroScannerDds?.dados?.conferenciaAssistida?.atualizadoEm || "") || 0;
+        if (
+            rascunhoLocal?.frequencia &&
+            typeof rascunhoLocal.frequencia === "object" &&
+            atualizadoLocal >= atualizadoBanco
+        ) {
+            setConferenciaAssistidaDds(rascunhoLocal.frequencia);
+        }
+        setChaveConferenciaAssistidaCarregadaDds(chaveRascunhoConferenciaAssistidaDds);
+    }, [
+        chaveRascunhoConferenciaAssistidaDds,
+        registroScannerDds?.dados?.conferenciaAssistida?.atualizadoEm,
+    ]);
+
+    useEffect(() => {
+        if (
+            !chaveRascunhoConferenciaAssistidaDds ||
+            chaveConferenciaAssistidaCarregadaDds !== chaveRascunhoConferenciaAssistidaDds
+        ) return;
+        try {
+            const mapa = JSON.parse(window.localStorage.getItem("controle-sst-qr:dds:frequencia-assistida-por-codigo:v1") || "{}");
+            mapa[chaveRascunhoConferenciaAssistidaDds] = {
+                atualizadoEm: new Date().toISOString(),
+                frequencia: conferenciaAssistidaDds,
+            };
+            window.localStorage.setItem("controle-sst-qr:dds:frequencia-assistida-por-codigo:v1", JSON.stringify(mapa));
+        } catch {
+            // O rascunho local não deve bloquear a conferência do DDS.
+        }
+    }, [
+        chaveConferenciaAssistidaCarregadaDds,
+        chaveRascunhoConferenciaAssistidaDds,
+        conferenciaAssistidaDds,
+    ]);
+
     const obraSetorFoiSalvaParaEmpresaDds = empresaSelecionadaChaveDds
         ? Object.prototype.hasOwnProperty.call(obrasSetorPorEmpresaDds || {}, empresaSelecionadaChaveDds)
         : false;
@@ -4704,23 +4984,49 @@ export function DdsPage({
         ? fiscalIdealizaSalvoEmpresaDds
         : String(dadosDds.fiscalIdealiza || "");
 
+    const chaveRascunhoDadosDds = useMemo(() => criarChaveTemasDdsLocal({
+        codigo: dadosDdsAutomaticos.codigo,
+    }), [dadosDdsAutomaticos.codigo]);
+
     useEffect(() => {
+        let rascunhoLocal = null;
+        try {
+            const mapa = JSON.parse(window.localStorage.getItem("controle-sst-qr:dds:dados-por-codigo:v1") || "{}");
+            rascunhoLocal = mapa?.[chaveRascunhoDadosDds];
+        } catch {
+            rascunhoLocal = null;
+        }
+
         setDadosDds({
             ...dadosDdsAutomaticos,
+            ...(rascunhoLocal && typeof rascunhoLocal === "object" ? rascunhoLocal : {}),
             obraSetor: obraSetorFoiSalvaParaEmpresaDds
                 ? obraSetorSalvaEmpresaDds
-                : dadosDdsAutomaticos.obraSetor,
+                : String(rascunhoLocal?.obraSetor ?? dadosDdsAutomaticos.obraSetor),
             fiscalIdealiza: fiscalIdealizaFoiSalvoParaEmpresaDds
                 ? fiscalIdealizaSalvoEmpresaDds
-                : dadosDdsAutomaticos.fiscalIdealiza,
+                : String(rascunhoLocal?.fiscalIdealiza ?? dadosDdsAutomaticos.fiscalIdealiza),
         });
+        setChaveDadosDdsCarregada(chaveRascunhoDadosDds);
     }, [
         dadosDdsAutomaticos,
+        chaveRascunhoDadosDds,
         obraSetorFoiSalvaParaEmpresaDds,
         obraSetorSalvaEmpresaDds,
         fiscalIdealizaFoiSalvoParaEmpresaDds,
         fiscalIdealizaSalvoEmpresaDds,
     ]);
+
+    useEffect(() => {
+        if (!chaveRascunhoDadosDds || chaveDadosDdsCarregada !== chaveRascunhoDadosDds) return;
+        try {
+            const mapa = JSON.parse(window.localStorage.getItem("controle-sst-qr:dds:dados-por-codigo:v1") || "{}");
+            mapa[chaveRascunhoDadosDds] = dadosDds;
+            window.localStorage.setItem("controle-sst-qr:dds:dados-por-codigo:v1", JSON.stringify(mapa));
+        } catch {
+            // O rascunho local não deve bloquear o preenchimento do DDS.
+        }
+    }, [chaveDadosDdsCarregada, chaveRascunhoDadosDds, dadosDds]);
 
     const {
         aplicarObraCadastradaDds,
@@ -4817,10 +5123,11 @@ export function DdsPage({
         if (!chaveTemasDds) return;
 
         const temasLocais = carregarTemasDdsLocal(chaveTemasDds);
-        const temasOrigem =
-            temasRegistroAtualDds ||
-            temasLocais ||
-            criarTemasEditaveisDds();
+        const pontuarTemas = (temas) => normalizarTemasDdsEditaveis(temas)
+            .reduce((total, item) => total + (item.tema ? 2 : 0) + (item.responsavel ? 1 : 0), 0);
+        const temasOrigem = temasLocais && pontuarTemas(temasLocais) >= pontuarTemas(temasRegistroAtualDds)
+            ? temasLocais
+            : temasRegistroAtualDds || temasLocais || criarTemasEditaveisDds();
 
         setTemasDdsEditaveis(
             normalizarTemasDdsEditaveis(temasOrigem)
@@ -4858,10 +5165,12 @@ export function DdsPage({
         atualizarTemaDiaDds,
         limparResponsaveisTemasDds,
     } = criarControladorTemasDds({
+        chaveTemasDds,
         criarTemasEditaveisDds,
         dadosDds,
         normalizarTemasDdsEditaveis,
         normalizarTextoTemaDds,
+        salvarTemasDdsLocal,
         setTemasDdsEditaveis,
     });
 
@@ -4874,6 +5183,21 @@ export function DdsPage({
         () => normalizarParticipantesDdsSistema(colaboradoresEmpresaDds),
         [colaboradoresEmpresaDds]
     );
+
+    const resumoHeroDds = useMemo(() => {
+        const temasDefinidos = diasSemanaComTemasDds.filter((dia) => {
+            const tema = String(dia?.tema || "").trim();
+
+            return Boolean(tema) && !dia?.semAtividade;
+        }).length;
+
+        return {
+            diasPlanejados: diasSemanaComTemasDds.length,
+            temasDefinidos,
+            participantes: participantesSistemaDds.length,
+        };
+    }, [diasSemanaComTemasDds, participantesSistemaDds]);
+
     const {
         primeiraFolhaParticipantes,
         folhasContinuacaoDds,
@@ -4901,6 +5225,7 @@ export function DdsPage({
         estatisticasConferenciaAssistidaDds,
         estatisticasTemasConferenciaAssistidaDds,
         fechamentoConferenciaAssistidaDds,
+        historicoMensalMaoDeObraDds,
         participantesConferenciaAssistidaDds,
         registroScannerDds,
         resultadoFinalScannerDds,
@@ -5081,7 +5406,7 @@ export function DdsPage({
         dadosDds,
         dashboardHeroSstDds,
         diasAtivosConferenciaAssistidaDds,
-        empresaSelecionadaDds,
+        empresaSelecionadaDds: empresaHistoricoSelecionadaDds,
         escaparHtmlControleMaoDeObraDds,
         formatarDataControleMaoDeObraDds,
         formatarNumeroMaoDeObraDds,
@@ -5090,7 +5415,10 @@ export function DdsPage({
         mesHistoricoMaoDeObraDds,
         normalizarFuncaoMaoDeObraDds,
         normalizarNomeEmpresaMaoDeObraDds,
-        obraSelecionadaIdDds,
+        obraSelecionadaIdDds: obraHistoricoIdDds,
+        obraSelecionadaNomeDds: obraHistoricoSelecionadaDds
+            ? obterNomeObraEmpresaDds(obraHistoricoSelecionadaDds)
+            : "",
         obterChaveFrequenciaAssistidaDds,
         obterIdEmpresaObjetoDds,
         obterStatusFrequenciaAssistidaDds,
@@ -5098,7 +5426,6 @@ export function DdsPage({
         parseDataControleMaoDeObraDds,
         participantesConferenciaAssistidaDds,
         reciboConferenciaFinalDds,
-        registroAtualPertenceAoMesHistoricoDds,
         registroHistoricoMensalConcluidoDds,
         registroScannerDds,
         setCarregandoHistoricoMensalMaoDeObraDds,
@@ -5112,11 +5439,139 @@ export function DdsPage({
         supabase,
     });
 
+    function gerarAvaliacaoMensalDds() {
+        setErroAvaliacaoMensalDds("");
+        setAvaliacaoMensalDds(null);
+
+        try {
+            const [ano, mes] = String(mesHistoricoMaoDeObraDds || "").split("-").map(Number);
+            const empresaId = obterUuidSeguroDds(obterIdEmpresaObjetoDds(empresaHistoricoSelecionadaDds));
+            const resultado = consolidarAvaliacaoMensalDds(historicoMensalMaoDeObraDds, {
+                ano,
+                mes,
+                empresaId,
+                obraId: obterUuidSeguroDds(obraHistoricoIdDds),
+            });
+            setAvaliacaoMensalDds(resultado);
+        } catch (error) {
+            setErroAvaliacaoMensalDds(error?.message || "Não foi possível gerar a avaliação mensal dos DDS.");
+        }
+    }
+
+    function obterChaveParticipanteEditorDds(participante = {}) {
+        return normalizarTextoCodigoDds(
+            participante.codigoSafescan ||
+            participante.codigoFuncionario ||
+            participante.colaboradorId ||
+            participante.id ||
+            `${participante.nome || ""}|${participante.empresa || ""}`
+        );
+    }
+
+    function abrirEditorGabaritoDds() {
+        if (!registroScannerDds || salvandoRegistroDds) return;
+        const candidatosPorChave = new Map();
+        const registrar = (participante) => {
+            const chave = obterChaveParticipanteEditorDds(participante);
+            if (chave && !candidatosPorChave.has(chave)) candidatosPorChave.set(chave, participante);
+        };
+        participantesRegistroScannerDds.forEach(registrar);
+        normalizarParticipantesDdsSistema(colaboradoresEmpresaDds).forEach(registrar);
+        normalizarParticipantesDdsSistema(colaboradoresCadastradosConferenciaDds).forEach(registrar);
+        normalizarParticipantesDdsSistema(Array.isArray(colaboradores) ? colaboradores : []).forEach(registrar);
+        const candidatos = Array.from(candidatosPorChave.entries())
+            .map(([chave, participante]) => ({ chave, participante }))
+            .sort((a, b) => String(a.participante.nome || "").localeCompare(String(b.participante.nome || ""), "pt-BR"));
+        setBuscaEditorGabaritoDds("");
+        setNomeManualEditorGabaritoDds("");
+        setEditorGabaritoDds({
+            candidatos,
+            selecionados: new Set(participantesRegistroScannerDds.map(obterChaveParticipanteEditorDds).filter(Boolean)),
+        });
+    }
+
+    function alternarParticipanteEditorGabaritoDds(chave) {
+        setEditorGabaritoDds((estadoAtual) => {
+            if (!estadoAtual) return estadoAtual;
+            const selecionados = new Set(estadoAtual.selecionados);
+            if (selecionados.has(chave)) selecionados.delete(chave);
+            else selecionados.add(chave);
+            return { ...estadoAtual, selecionados };
+        });
+    }
+
+    function adicionarParticipanteImpressoManualDds() {
+        const nome = String(nomeManualEditorGabaritoDds || "").trim().replace(/\s+/g, " ").toUpperCase();
+        if (!nome) return;
+        const participante = {
+            nome,
+            funcao: "Cadastro histórico do DDS",
+            origem: "reconciliacao_nominal_manual",
+        };
+        const chave = obterChaveParticipanteEditorDds(participante);
+        if (!chave) return;
+        setEditorGabaritoDds((estadoAtual) => {
+            if (!estadoAtual) return estadoAtual;
+            const candidatos = estadoAtual.candidatos.some((item) => item.chave === chave)
+                ? estadoAtual.candidatos
+                : [...estadoAtual.candidatos, { chave, participante }]
+                    .sort((a, b) => String(a.participante.nome || "").localeCompare(String(b.participante.nome || ""), "pt-BR"));
+            const selecionados = new Set(estadoAtual.selecionados);
+            selecionados.add(chave);
+            return { ...estadoAtual, candidatos, selecionados };
+        });
+        setNomeManualEditorGabaritoDds("");
+        setBuscaEditorGabaritoDds("");
+    }
+
+    async function salvarReconciliacaoNominalGabaritoDds() {
+        if (!registroScannerDds || !editorGabaritoDds || salvandoRegistroDds) return;
+        const participantesImpressos = editorGabaritoDds.candidatos
+            .filter((item) => editorGabaritoDds.selecionados.has(item.chave))
+            .map((item, indice) => ({ ...item.participante, numero: indice + 1 }));
+        if (!participantesImpressos.length) {
+            window.alert("Selecione ao menos um funcionário do gabarito impresso.");
+            return;
+        }
+        setSalvandoRegistroDds(true);
+        setErroScannerDds("");
+
+        try {
+            const dadosAtuais = registroScannerDds.dados || {};
+            const registroAtualizado = await salvarRegistroDds({
+                supabase,
+                registro: {
+                    ...registroScannerDds,
+                    dados: {
+                        ...dadosAtuais,
+                        participantes: participantesImpressos,
+                        totalParticipantes: participantesImpressos.length,
+                        reconciliacaoGabarito: {
+                            origem: "reconciliacao_nominal_documento_assinado",
+                            quantidadeAnterior: participantesRegistroScannerDds.length,
+                            quantidadeImpressa: participantesImpressos.length,
+                            atualizadoEm: new Date().toISOString(),
+                        },
+                    },
+                },
+            });
+            setRegistroScannerDds(registroAtualizado);
+            setRegistroDdsConferencia(registroAtualizado);
+            setEditorGabaritoDds(null);
+        } catch (error) {
+            setErroScannerDds(error?.message || "Não foi possível corrigir o gabarito histórico do DDS.");
+        } finally {
+            setSalvandoRegistroDds(false);
+        }
+    }
+
 
     const {
         imprimirDdsComQrConferencia,
+        salvarDdsNoSistema,
     } = criarControladorImpressaoDds({
         aniversariantesSemanaDds,
+        carregarRegistroDdsPorCodigo,
         dadosDds,
         dadosDdsComRegistro,
         diasSemanaComTemasDds,
@@ -5134,40 +5589,88 @@ export function DdsPage({
         salvarRegistroDds,
         setErroRegistroDds,
         setRegistroDdsConferencia,
+        setRegistroScannerDds,
         setSalvandoRegistroDds,
         supabase,
     });
+
+    async function alternarNovoDdsComPersistencia() {
+        const estavaAberto = cardDdsAberto("novo");
+        alternarCardDds("novo");
+
+        if (estavaAberto) {
+            await salvarDdsNoSistema({ silencioso: true });
+        }
+    }
 
 
     return (
         <div className="space-y-6">
             <DdsPrintStyles />
-            <section className="dds-no-print relative overflow-hidden rounded-[30px] border border-slate-200 bg-slate-950 p-6 text-white shadow-[0_22px_60px_rgba(15,23,42,0.20)] sm:p-7 lg:p-8">
+            <section className="dds-no-print dds-hero-banner">
                 <img
                     src={dashboardHeroSstDds}
                     alt=""
                     aria-hidden="true"
-                    className="absolute inset-0 h-full w-full object-cover opacity-60"
+                    className="dds-hero-banner__bg"
                 />
-                <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(15,23,42,0.90),rgba(15,23,42,0.72),rgba(15,23,42,0.42)),radial-gradient(circle_at_top_left,rgba(16,185,129,0.26),transparent_32%)]" />
-                <div className="absolute inset-0 bg-slate-950/5" />
+                <div className="dds-hero-banner__overlay" />
 
-                <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="max-w-4xl">
-                        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.28em] text-emerald-200 backdrop-blur">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_14px_rgba(110,231,183,0.8)]" />
+                <div className="dds-hero-banner__content">
+                    <div className="dds-hero-banner__copy">
+                        <div className="dds-hero-banner__eyebrow">
+                            <span />
                             SafeScan Brasil
                         </div>
 
-                        <h1 className="mt-4 text-3xl font-black leading-tight tracking-tight text-white drop-shadow-sm sm:text-4xl lg:text-[42px]">
+                        <h1 className="dds-hero-banner__title">
                             DDS — Diálogo Diário de Segurança
                         </h1>
 
-                        <p className="mt-3 max-w-5xl text-sm font-semibold leading-6 text-slate-100 sm:text-[15px] xl:whitespace-nowrap">
+                        <p className="dds-hero-banner__text">
                             Gere o DDS semanal de obra com assinatura manual, QR de conferência, temas por dia e controle visual para fiscalização.
                         </p>
+
+                        <div className="dds-hero-banner__line" />
                     </div>
-</div>
+
+                    <div className="dds-hero-banner__bottom">
+                        <div
+                            className="dds-hero-banner__date"
+                            aria-label="Data e hora atuais"
+                        >
+                            <CalendarClock aria-hidden="true" />
+                            <span>{dataHoraHeroDds.data}</span>
+                            <span aria-hidden="true">•</span>
+                            <span>{dataHoraHeroDds.diaSemana}</span>
+                            <span aria-hidden="true">•</span>
+                            <span>{dataHoraHeroDds.hora}</span>
+                        </div>
+
+                        <div
+                            className="dds-hero-banner__stats"
+                            aria-label="Indicadores do DDS semanal"
+                        >
+                            <div className="dds-hero-banner__stat dds-hero-banner__stat--dias">
+                                <CalendarClock aria-hidden="true" />
+                                <strong>{resumoHeroDds.diasPlanejados}</strong>
+                                <span>dias planejados</span>
+                            </div>
+
+                            <div className="dds-hero-banner__stat dds-hero-banner__stat--temas">
+                                <BookOpen aria-hidden="true" />
+                                <strong>{resumoHeroDds.temasDefinidos}</strong>
+                                <span>temas definidos</span>
+                            </div>
+
+                            <div className="dds-hero-banner__stat dds-hero-banner__stat--participantes">
+                                <Users aria-hidden="true" />
+                                <strong>{resumoHeroDds.participantes}</strong>
+                                <span>participantes</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </section>
             <section className="dds-no-print grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                 <DdsResumoCard
@@ -5205,10 +5708,10 @@ export function DdsPage({
             <section className="dds-no-print space-y-4">
                 <div className="min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-blue-500 bg-white p-4 shadow-sm">
                     <div
-                        onClick={() => alternarCardDds("novo")}
+                        onClick={alternarNovoDdsComPersistencia}
                         role="button"
                         tabIndex={0}
-                        onKeyDown={(evento) => { if (evento.key === "Enter" || evento.key === " ") alternarCardDds("novo"); }}
+                        onKeyDown={(evento) => { if (evento.key === "Enter" || evento.key === " ") alternarNovoDdsComPersistencia(); }}
                         className="flex min-h-[52px] cursor-default items-center justify-between gap-3 rounded-xl transition hover:bg-slate-50"
                     >
                         <div className="flex items-center gap-3">
@@ -5222,7 +5725,7 @@ export function DdsPage({
                     </div>
                         <button
                             type="button"
-                            onClick={(evento) => { evento.stopPropagation(); alternarCardDds("novo"); }}
+                            onClick={(evento) => { evento.stopPropagation(); alternarNovoDdsComPersistencia(); }}
                             className="shrink-0"
                         >
                             <BotaoAlternarCardDds aberto={cardDdsAberto("novo")} />
@@ -5348,49 +5851,6 @@ export function DdsPage({
                     )}
                 </div>
 
-                <div
-                    className="min-h-[92px] cursor-pointer rounded-3xl border border-slate-200 border-t-4 border-t-emerald-500 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-200"
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => alternarCardDds("qrConferencia")}
-                    onKeyDown={(evento) => {
-                        if (evento.key === "Enter" || evento.key === " ") {
-                            evento.preventDefault();
-                            alternarCardDds("qrConferencia");
-                        }
-                    }}
-                >
-                    <div className="flex min-h-[52px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex items-center gap-3">
-                            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-emerald-700 ring-1 ring-emerald-100">
-                                <QrCode className="h-5 w-5" />
-                            </span>
-                            <div>
-                                <h2 className="text-lg font-black text-emerald-950">QR de conferência</h2>
-                                <p className="text-sm font-semibold text-emerald-800">
-                                    O QR valida o documento. A assinatura continua manual.
-                                </p>
-                            </div>
-                        </div>
-
-                        <button
-                            type="button"
-                            onClick={(evento) => {
-                                evento.stopPropagation();
-                                alternarCardDds("qrConferencia");
-                            }}
-                            className="shrink-0"
-                        >
-                            <BotaoAlternarCardDds aberto={cardDdsAberto("qrConferencia")} />
-                        </button>
-                    </div>
-
-                    {cardDdsAberto("qrConferencia") && (
-                        <div className="mt-4 rounded-xl bg-white p-4 text-sm font-bold leading-6 text-slate-600 ring-1 ring-emerald-100">
-                            A folha semanal terá domingo a sábado, rubrica nos dias com atividade, X preto/escuro para ausência e coluna final Semana completa para marcar presença nos dias úteis/com atividade.
-                        </div>
-                    )}
-                </div>
                 <div className="self-start rounded-3xl border border-slate-200 border-t-4 border-t-cyan-500 bg-white p-4 shadow-sm">
                     <div
                         onClick={() => alternarCardDds("conferencia")}
@@ -5423,7 +5883,7 @@ export function DdsPage({
                         <div className="mt-3 grid grid-cols-1 gap-3">
                             <form
                                 onSubmit={buscarRegistroScannerDds}
-                                className="grid grid-cols-1 gap-2 xl:grid-cols-[minmax(220px,0.45fr)_minmax(360px,1fr)_auto_auto] xl:items-end"
+                                className="grid grid-cols-1 gap-2 md:grid-cols-[minmax(220px,0.45fr)_120px] xl:grid-cols-[minmax(220px,0.42fr)_120px_minmax(360px,1fr)_auto_auto] xl:items-end"
                             >
                                 <label className="block min-w-0">
                                     <span className="text-[10px] font-black uppercase tracking-wide text-cyan-700">
@@ -5474,6 +5934,31 @@ export function DdsPage({
                                 </label>
 
                                 <label className="block min-w-0">
+                                    <span className="block text-center text-[10px] font-black uppercase tracking-wide text-cyan-700">
+                                        Mês / {anoFiltroRegistrosDds}
+                                    </span>
+                                    <select
+                                        value={mesFiltroRegistrosDds}
+                                        disabled={carregandoRegistrosDisponiveisDds}
+                                        onChange={(evento) => {
+                                            setMesFiltroRegistrosDds(evento.target.value);
+                                            setCodigoConferenciaDds("");
+                                            setRegistroScannerDds(null);
+                                            setErroScannerDds("");
+                                            setArquivoScannerDds(null);
+                                            setLeituraArquivoScannerDds(null);
+                                            setMensagemDocumentoPersistidoDds(null);
+                                        }}
+                                        className="mt-2 h-10 w-full rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 text-center text-sm font-black text-slate-800 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100 disabled:opacity-60"
+                                    >
+                                        <option value="">Todos</option>
+                                        {Array.from({ length: 12 }, (_, indice) => String(indice + 1).padStart(2, "0")).map((mes) => (
+                                            <option key={mes} value={mes}>{mes}</option>
+                                        ))}
+                                    </select>
+                                </label>
+
+                                <label className="block min-w-0">
                                     <span className="flex items-center justify-between gap-3 text-[10px] font-black uppercase tracking-wide text-cyan-700">
                                         <span>
                                             DDS cadastrados
@@ -5482,7 +5967,7 @@ export function DdsPage({
                                         <span className="whitespace-nowrap text-slate-400">
                                             {carregandoRegistrosDisponiveisDds
                                                 ? "Carregando..."
-                                                : empresaFiltroRegistrosDds
+                                                : empresaFiltroRegistrosDds || mesFiltroRegistrosDds
                                                     ? `${registrosFiltradosDds.length} de ${registrosDisponiveisDds.length} registro(s)`
                                                     : `${registrosDisponiveisDds.length} registro(s)`}
                                         </span>
@@ -5517,8 +6002,8 @@ export function DdsPage({
                                                 ? "Carregando DDS cadastrados..."
                                                 : registrosFiltradosDds.length > 0
                                                     ? "Selecione um DDS cadastrado"
-                                                    : empresaFiltroRegistrosDds
-                                                        ? "Nenhum DDS para a empresa selecionada"
+                                                    : empresaFiltroRegistrosDds || mesFiltroRegistrosDds
+                                                        ? "Nenhum DDS para os filtros selecionados"
                                                         : "Nenhum DDS cadastrado localizado"}
                                         </option>
 
@@ -5626,7 +6111,7 @@ export function DdsPage({
 
                                 <div
                                     data-dds-lista-registros
-                                    className="overflow-hidden rounded-xl border border-slate-200 bg-white xl:col-span-4"
+                                    className="overflow-hidden rounded-xl border border-slate-200 bg-white xl:col-span-5"
                                 >
                                     {/* dds_lista_registros_header_click_v3 */}
                                      <div
@@ -5857,6 +6342,10 @@ export function DdsPage({
                                 erroArquivoScannerDds={erroArquivoScannerDds}
                                 erroLeituraArquivoScannerDds={erroLeituraArquivoScannerDds}
                                 executarLeituraArquivoScannerDds={executarLeituraArquivoScannerDds}
+                                salvarArquivoScannerDds={salvarArquivoScannerDds}
+                                salvandoArquivoScannerDds={salvandoArquivoScannerDds}
+                                registroScannerDds={registroScannerDds}
+                                mensagemDocumentoPersistidoDds={mensagemDocumentoPersistidoDds}
                                 leituraArquivoScannerDds={leituraArquivoScannerDds}
                                 limparArquivoScannerDds={limparArquivoScannerDds}
                                 linhasLeituraArquivoScannerDds={linhasLeituraArquivoScannerDds}
@@ -5867,7 +6356,7 @@ export function DdsPage({
                             />
 
                             {preConferenciaParticipantesScannerDds.total > 0 && (
-<div className="min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-violet-500 bg-white p-4 shadow-sm lg:col-span-2">
+<div className="order-[20] min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-violet-500 bg-white p-4 shadow-sm lg:col-span-2">
     <div
         onClick={() => alternarCardDds("preConferencia")}
         role="button"
@@ -5895,6 +6384,14 @@ export function DdsPage({
             className="flex flex-wrap items-center gap-2"
             onClick={(evento) => evento.stopPropagation()}
         >
+            <button
+                type="button"
+                onClick={abrirEditorGabaritoDds}
+                disabled={!registroScannerDds || salvandoRegistroDds}
+                className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-violet-800 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+                Reconciliar nomes impressos
+            </button>
             <span className={`rounded-xl border px-3 py-2 text-xs font-black ${
                 preConferenciaParticipantesScannerDds.statusVisual === "ok"
                     ? "border-emerald-200 bg-emerald-50 text-emerald-800"
@@ -5997,11 +6494,79 @@ export function DdsPage({
 </div>
 )}
 
+{editorGabaritoDds && (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/70 p-4" role="dialog" aria-modal="true" aria-label="Reconciliar nomes do gabarito DDS">
+        <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-violet-200 bg-white shadow-2xl">
+            <div className="flex flex-col gap-3 border-b border-slate-200 p-5 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                    <p className="text-[10px] font-black uppercase tracking-wide text-violet-700">Reconciliação nominal</p>
+                    <h3 className="mt-1 text-lg font-black text-slate-950">Marque somente quem está impresso no PDF</h3>
+                    <p className="mt-1 text-xs font-bold leading-5 text-slate-500">A lista reúne o snapshot salvo e os colaboradores atuais. Assinaturas escritas fora da lista devem permanecer nos participantes complementares.</p>
+                </div>
+                <button type="button" onClick={() => setEditorGabaritoDds(null)} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50">Fechar</button>
+            </div>
+            <div className="grid gap-3 border-b border-slate-100 bg-slate-50 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                <input
+                    type="search"
+                    value={buscaEditorGabaritoDds}
+                    onChange={(evento) => setBuscaEditorGabaritoDds(evento.target.value)}
+                    placeholder="Buscar por nome, função ou código"
+                    className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                />
+                <div className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-xs font-black text-violet-800">{editorGabaritoDds.selecionados.size} selecionado(s)</div>
+            </div>
+            <div className="grid gap-2 border-b border-violet-100 bg-violet-50/60 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                <div>
+                    <p className="text-[10px] font-black uppercase tracking-wide text-violet-700">Nome impresso ausente do cadastro</p>
+                    <input
+                        type="text"
+                        value={nomeManualEditorGabaritoDds}
+                        onChange={(evento) => setNomeManualEditorGabaritoDds(evento.target.value)}
+                        onKeyDown={(evento) => {
+                            if (evento.key === "Enter") {
+                                evento.preventDefault();
+                                adicionarParticipanteImpressoManualDds();
+                            }
+                        }}
+                        placeholder="Digite o nome exatamente como aparece no PDF"
+                        className="mt-1 h-10 w-full rounded-xl border border-violet-200 bg-white px-3 text-sm font-bold text-slate-800 outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                    />
+                </div>
+                <button type="button" onClick={adicionarParticipanteImpressoManualDds} disabled={!String(nomeManualEditorGabaritoDds || "").trim()} className="rounded-xl border border-violet-300 bg-white px-4 py-2 text-xs font-black uppercase tracking-wide text-violet-700 hover:bg-violet-100 disabled:opacity-40">Adicionar à lista impressa</button>
+            </div>
+            <div className="flex-1 overflow-auto p-4">
+                <div className="space-y-2">
+                    {editorGabaritoDds.candidatos
+                        .filter(({ participante }) => {
+                            const busca = normalizarTextoCodigoDds(buscaEditorGabaritoDds);
+                            if (!busca) return true;
+                            return normalizarTextoCodigoDds(`${participante.nome || ""} ${participante.funcao || ""} ${participante.codigoSafescan || participante.codigoFuncionario || ""}`).includes(busca);
+                        })
+                        .map(({ chave, participante }) => (
+                            <label key={chave} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition ${editorGabaritoDds.selecionados.has(chave) ? "border-violet-300 bg-violet-50" : "border-slate-200 bg-white hover:bg-slate-50"}`}>
+                                <input type="checkbox" checked={editorGabaritoDds.selecionados.has(chave)} onChange={() => alternarParticipanteEditorGabaritoDds(chave)} className="h-5 w-5 accent-violet-600" />
+                                <span className="min-w-0 flex-1">
+                                    <strong className="block truncate text-sm text-slate-950">{participante.nome || "Nome não informado"}</strong>
+                                    <span className="mt-0.5 block truncate text-[11px] font-bold text-slate-500">{participante.funcao || "Sem função"} · {participante.codigoSafescan || participante.codigoFuncionario || "Sem código"}</span>
+                                </span>
+                            </label>
+                        ))}
+                </div>
+            </div>
+            <div className="flex flex-col gap-2 border-t border-slate-200 bg-white p-4 sm:flex-row sm:justify-end">
+                <button type="button" onClick={() => setEditorGabaritoDds(null)} className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-black text-slate-700 hover:bg-slate-50">Cancelar</button>
+                <button type="button" onClick={salvarReconciliacaoNominalGabaritoDds} disabled={salvandoRegistroDds || editorGabaritoDds.selecionados.size === 0} className="rounded-xl bg-violet-600 px-5 py-2 text-xs font-black uppercase tracking-wide text-white hover:bg-violet-700 disabled:opacity-40">{salvandoRegistroDds ? "Salvando..." : "Salvar gabarito nominal"}</button>
+            </div>
+        </div>
+    </div>
+)}
+
 {<DdsConferenciaAssistidaSection
      BotaoAlternarCardDds={BotaoAlternarCardDds}
      QUANTIDADE_LINHAS_COMPLEMENTARES_DDS={QUANTIDADE_LINHAS_COMPLEMENTARES_DDS}
      alternarCardDds={alternarCardDds}
      alternarSemAtividadeConferenciaAssistidaDds={alternarSemAtividadeConferenciaAssistidaDds}
+     alternarChuvaConferenciaAssistidaDds={alternarChuvaConferenciaAssistidaDds}
      atualizarParticipanteAdicionalConferenciaDds={atualizarParticipanteAdicionalConferenciaDds}
      colaboradoresCadastradosConferenciaDds={colaboradoresCadastradosConferenciaDds}
      empresasCadastradasConferenciaDds={empresasCadastradasConferenciaDds}
@@ -6026,6 +6591,8 @@ export function DdsPage({
      limparParticipanteConferenciaAssistidaDds={limparParticipanteConferenciaAssistidaDds}
      marcarSemanaCompletaAssistidaDds={marcarSemanaCompletaAssistidaDds}
      marcarSemanaAusenteAssistidaDds={marcarSemanaAusenteAssistidaDds}
+     marcarSemanaFeriasAssistidaDds={marcarSemanaFeriasAssistidaDds}
+     marcarSemanaAtestadoAssistidaDds={marcarSemanaAtestadoAssistidaDds}
      obterStatusFrequenciaAssistidaDds={obterStatusFrequenciaAssistidaDds}
      participantesAdicionaisAtivosConferenciaDds={participantesAdicionaisAtivosConferenciaDds}
      participantesAdicionaisConferenciaDds={participantesAdicionaisConferenciaDds}
@@ -6039,7 +6606,7 @@ export function DdsPage({
      usarPlanejamentoTemaConferenciaAssistidaDds={usarPlanejamentoTemaConferenciaAssistidaDds}
  />}
 {resultadoFinalApresentacaoDds && (
-<div className={`min-h-[92px] rounded-3xl border border-slate-200 border-t-4 bg-white p-4 shadow-sm lg:col-span-2 ${
+<div className={`order-[60] min-h-[92px] rounded-3xl border border-slate-200 border-t-4 bg-white p-4 shadow-sm lg:col-span-2 ${
     resultadoFinalApresentacaoDds.statusVisual === "ok"
         ? "border-t-emerald-500"
         : resultadoFinalApresentacaoDds.statusVisual === "parcial"
@@ -6273,7 +6840,7 @@ export function DdsPage({
  />}
 
 {historicoDds.length > 0 && (
-<div className="min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-slate-500 bg-white p-4 shadow-sm lg:col-span-2">
+<div className="order-[70] min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-slate-500 bg-white p-4 shadow-sm lg:col-span-2">
     <div
     onClick={() => alternarCardDds("linhaTempo")}
     role="button"
@@ -6349,7 +6916,7 @@ export function DdsPage({
 )}
 
 {reciboConferenciaFinalDds && (
-<div className="min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-sky-500 bg-white p-4 shadow-sm lg:col-span-2">
+<div className="order-[80] min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-sky-500 bg-white p-4 shadow-sm lg:col-span-2">
     <div
     onClick={() => alternarCardDds("controleMaoObra")}
     role="button"
@@ -6648,7 +7215,7 @@ export function DdsPage({
 </div>
 )}
 
-<section className="dds-no-print col-span-full min-h-[92px] w-full rounded-3xl border border-slate-200 border-t-4 border-t-indigo-500 bg-white p-4 shadow-sm">
+<section className="dds-no-print order-[100] col-span-full min-h-[92px] w-full rounded-3xl border border-slate-200 border-t-4 border-t-indigo-500 bg-white p-4 shadow-sm">
     <div
     onClick={() => alternarCardDds("historicoMaoObra")}
     role="button"
@@ -6658,22 +7225,86 @@ export function DdsPage({
             alternarCardDds("historicoMaoObra");
         }
     }}
-    className="grid min-h-[76px] cursor-default gap-4 rounded-xl transition hover:bg-slate-50 2xl:grid-cols-[minmax(0,1fr)_auto] 2xl:items-start"
+    className="flex min-h-[76px] cursor-default flex-col gap-4 rounded-xl transition hover:bg-slate-50"
 >
-        <div className="min-w-0 2xl:max-w-3xl">
-            <p className="text-slate-400 text-[10px] font-black uppercase tracking-wide">
-                Histórico mensal
-            </p>
-            <h3 className="mt-1 text-base font-black text-slate-950">
-                Histórico mensal de mão de obra
-            </h3>
-            <p className="mt-1 max-w-3xl text-xs font-semibold leading-5 text-slate-500">
-                Busca os DDS da obra selecionada no mês informado e resume a base oficial salva na Conferência Assistida.
-            </p>
+        <div className="flex min-w-0 items-start justify-between gap-4">
+            <div className="min-w-0">
+                <p className="text-slate-400 text-[10px] font-black uppercase tracking-wide">
+                    Histórico mensal
+                </p>
+                <h3 className="mt-1 text-base font-black text-slate-950">
+                    Histórico mensal de mão de obra
+                </h3>
+                <p className="mt-1 max-w-3xl text-xs font-semibold leading-5 text-slate-500">
+                    Consulte e consolide os DDS por empresa, obra e mês.
+                </p>
+            </div>
+            <button
+                type="button"
+                onClick={(evento) => {
+                    evento.stopPropagation();
+                    alternarCardDds("historicoMaoObra");
+                }}
+                className="shrink-0"
+            >
+                <BotaoAlternarCardDds aberto={cardDdsAberto("historicoMaoObra")} />
+            </button>
         </div>
+    </div>
 
-        <div className="flex w-full flex-wrap items-end gap-2 2xl:w-auto 2xl:self-start 2xl:flex-nowrap 2xl:justify-end" onClick={(evento) => evento.stopPropagation()}>
-            <label className="block w-full sm:w-[150px]">
+    {cardDdsAberto("historicoMaoObra") && (
+        <>
+        <div className="flex w-full flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-3 xl:flex-nowrap" onClick={(evento) => evento.stopPropagation()}>
+            <div className="flex min-w-0 flex-1 flex-wrap items-end gap-2 xl:flex-none xl:flex-nowrap">
+            <label className="block w-full sm:w-[290px] xl:w-[290px]">
+                <span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500">
+                    Empresa
+                </span>
+                <select
+                    value={empresaHistoricoChaveDds}
+                    onChange={(evento) => atualizarEmpresaHistoricoMensalDds(evento.target.value)}
+                    className="h-8 w-full rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-800 outline-none transition focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100"
+                >
+                    <option value="">Selecione uma empresa</option>
+                    {empresasDds.map((empresa, indice) => {
+                        const chave = obterChaveEmpresaDds(empresa, indice);
+                        return (
+                            <option key={chave} value={chave}>
+                                {obterNomeEmpresaObjetoDds(empresa) || `Empresa ${indice + 1}`}
+                            </option>
+                        );
+                    })}
+                </select>
+            </label>
+
+            <label className="block w-full sm:w-[320px] xl:w-[300px]">
+                <span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500">
+                    Obra
+                </span>
+                <select
+                    value={obraHistoricoIdDds}
+                    onChange={(evento) => {
+                        setObraHistoricoIdDds(evento.target.value);
+                        setHistoricoMensalMaoDeObraDds([]);
+                        setAvaliacaoMensalDds(null);
+                        setErroHistoricoMensalMaoDeObraDds("");
+                    }}
+                    disabled={!empresaHistoricoSelecionadaDds}
+                    className="h-8 w-full rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-800 outline-none transition focus:border-indigo-300 focus:bg-white focus:ring-4 focus:ring-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    <option value="">Todas as obras</option>
+                    {obrasHistoricoMensalDds.map((obra, indice) => {
+                        const id = obterIdObraEmpresaDds(obra, indice);
+                        return (
+                            <option key={id} value={id}>
+                                {obterNomeObraEmpresaDds(obra) || `Obra ${indice + 1}`}
+                            </option>
+                        );
+                    })}
+                </select>
+            </label>
+
+            <label className="block w-full sm:w-[130px]">
                 <span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500">
                     Mês/Ano
                 </span>
@@ -6687,10 +7318,21 @@ export function DdsPage({
             <button
                 type="button"
                 onClick={buscarHistoricoMensalMaoDeObraDds}
-                disabled={carregandoHistoricoMensalMaoDeObraDds}
+                disabled={carregandoHistoricoMensalMaoDeObraDds || !empresaHistoricoSelecionadaDds}
                 className="h-8 min-w-[170px] shrink-0 whitespace-nowrap rounded-xl bg-slate-950 px-4 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
                 {carregandoHistoricoMensalMaoDeObraDds ? "Buscando..." : "Buscar DDS do mês"}
+            </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 xl:flex-nowrap">
+            <button
+                type="button"
+                onClick={gerarAvaliacaoMensalDds}
+                disabled={!historicoMensalMaoDeObraDds.length}
+                className="h-8 min-w-[180px] shrink-0 whitespace-nowrap rounded-xl bg-indigo-600 px-4 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-indigo-600/20 transition hover:-translate-y-0.5 hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+                Gerar avaliação mensal
             </button>
 
             <button
@@ -6709,28 +7351,8 @@ export function DdsPage({
                 Exportar Excel mensal
             </button>
 
-            <button
-                type="button"
-                onClick={() => alternarCardDds("historicoMaoObra")}
-                className="shrink-0"
-            >
-                <BotaoAlternarCardDds
-                    aberto={cardDdsAberto("historicoMaoObra")}
-                />
-            </button>
+            </div>
 </div>
-    </div>
-
-    {cardDdsAberto("historicoMaoObra") && (
-        <>
-    <div className="mt-3 inline-flex max-w-full items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600">
-        Obra base: <span className="font-black text-slate-900">{dadosDds.obraSetor || registroScannerDds?.obraNome || "Selecione uma obra cadastrada no DDS"}</span>
-        {historicoMensalConsultadoEmDds && (
-            <span className="text-[11px] font-bold text-slate-400">
-                Consulta: {new Date(historicoMensalConsultadoEmDds).toLocaleString("pt-BR")}
-            </span>
-        )}
-    </div>
 
     {erroHistoricoMensalMaoDeObraDds && (
         <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
@@ -6806,9 +7428,148 @@ export function DdsPage({
             })}
         </div>
     )}
+
+    {erroAvaliacaoMensalDds && (
+        <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold text-red-700">{erroAvaliacaoMensalDds}</div>
+    )}
+
+    {avaliacaoMensalDds && (
+        <div className="mt-4 space-y-3 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4">
+            <div>
+                <p className="text-[10px] font-black uppercase tracking-wide text-indigo-700">Avaliação mensal consolidada</p>
+                <h4 className="mt-1 text-sm font-black text-slate-950">Frequência, participante-dia e integridade documental</h4>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+                {[
+                    ["DDS incluídos", avaliacaoMensalDds.resumo.ddsIncluidos],
+                    ["DDS excluídos", avaliacaoMensalDds.resumo.ddsExcluidos],
+                    ["Dias ativos", avaliacaoMensalDds.resumo.diasAtivos],
+                    ["Colaboradores", avaliacaoMensalDds.resumo.colaboradoresUnicos],
+                    ["Participante-dia", avaliacaoMensalDds.resumo.possibilidades],
+                    ["Presenças", avaliacaoMensalDds.resumo.presencas],
+                    ["Ausências", avaliacaoMensalDds.resumo.ausencias],
+                    ["Pendências", avaliacaoMensalDds.resumo.pendencias],
+                ].map(([rotulo, valor]) => (
+                    <div key={rotulo} className="rounded-xl border border-white bg-white p-3 text-center shadow-sm">
+                        <p className="text-[9px] font-black uppercase tracking-wide text-slate-500">{rotulo}</p>
+                        <p className="mt-1 text-lg font-black text-slate-950">{valor}</p>
+                    </div>
+                ))}
+            </div>
+            <div className="grid gap-2 md:grid-cols-3">
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3"><p className="text-[10px] font-black uppercase text-emerald-700">Assiduidade</p><strong className="text-xl text-emerald-900">{avaliacaoMensalDds.resumo.assiduidade === null ? "Bloqueada" : `${avaliacaoMensalDds.resumo.assiduidade}%`}</strong></div>
+                <div className="rounded-xl border border-red-100 bg-red-50 p-3"><p className="text-[10px] font-black uppercase text-red-700">Absenteísmo</p><strong className="text-xl text-red-900">{avaliacaoMensalDds.resumo.absenteismo === null ? "Bloqueado" : `${avaliacaoMensalDds.resumo.absenteismo}%`}</strong></div>
+                <div className="rounded-xl border border-amber-100 bg-amber-50 p-3"><p className="text-[10px] font-black uppercase text-amber-700">Pendências</p><strong className="text-xl text-amber-900">{avaliacaoMensalDds.resumo.pendenciasPercentual === null ? "Bloqueadas" : `${avaliacaoMensalDds.resumo.pendenciasPercentual}%`}</strong></div>
+            </div>
+            <div className={`rounded-xl border px-4 py-3 text-xs font-bold ${avaliacaoMensalDds.integridade.fechamentoValido ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-700"}`}>
+                Fechamento N×D: esperado {avaliacaoMensalDds.integridade.esperado}, localizado {avaliacaoMensalDds.integridade.localizado}. {avaliacaoMensalDds.integridade.fechamentoValido ? "Base mensal válida." : "Percentuais dependentes bloqueados."}
+            </div>
+            {avaliacaoMensalDds.integridade.excluidos.length > 0 && (
+                <div className="grid gap-2 md:grid-cols-2">
+                    {avaliacaoMensalDds.integridade.excluidos.map((item, indice) => <div key={`${item.codigo}-${indice}`} className="rounded-xl border border-amber-200 bg-white px-3 py-2 text-xs"><strong>{item.codigo}</strong><span className="ml-2 font-bold text-amber-700">{String(item.motivo).replaceAll("_", " ")}</span></div>)}
+                </div>
+            )}
+        </div>
+    )}
         </>
     )}
 </section>
+
+{false && (<section className="dds-no-print col-span-full w-full rounded-3xl border border-slate-200 border-t-4 border-t-emerald-500 bg-white p-4 shadow-sm">
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+            <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Relatório separado</p>
+            <h3 className="mt-1 text-base font-black text-slate-950">Avaliação mensal dos DDS</h3>
+            <p className="mt-1 max-w-3xl text-xs font-semibold leading-5 text-slate-500">
+                Consolida os DDS encontrados acima por participante-dia. DDS incompletos ou duplicados permanecem visíveis na integridade e não entram silenciosamente nos indicadores.
+            </p>
+        </div>
+        <button
+            type="button"
+            onClick={gerarAvaliacaoMensalDds}
+            disabled={!historicoMensalMaoDeObraDds.length}
+            className="h-9 shrink-0 rounded-xl bg-emerald-600 px-5 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+            Gerar avaliação mensal
+        </button>
+    </div>
+
+    {!historicoMensalMaoDeObraDds.length && (
+        <p className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold text-slate-600">
+            Selecione empresa e obra, informe o mês e use “Buscar DDS do mês” antes de gerar a avaliação.
+        </p>
+    )}
+
+    {erroAvaliacaoMensalDds && (
+        <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold text-red-700">{erroAvaliacaoMensalDds}</p>
+    )}
+
+    {avaliacaoMensalDds && (
+        <div className="mt-4 space-y-4">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+                {[
+                    ["DDS incluídos", avaliacaoMensalDds.resumo.ddsIncluidos, "text-emerald-800"],
+                    ["DDS excluídos", avaliacaoMensalDds.resumo.ddsExcluidos, "text-red-700"],
+                    ["Dias ativos", avaliacaoMensalDds.resumo.diasAtivos, "text-sky-800"],
+                    ["Colaboradores", avaliacaoMensalDds.resumo.colaboradoresUnicos, "text-violet-800"],
+                    ["Participante-dia", avaliacaoMensalDds.resumo.possibilidades, "text-slate-950"],
+                    ["Presenças", avaliacaoMensalDds.resumo.presencas, "text-emerald-800"],
+                    ["Ausências", avaliacaoMensalDds.resumo.ausencias, "text-red-700"],
+                    ["Pendências", avaliacaoMensalDds.resumo.pendencias, "text-amber-700"],
+                ].map(([rotulo, valor, classe]) => (
+                    <div key={rotulo} className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-center">
+                        <p className="text-[9px] font-black uppercase tracking-wide text-slate-500">{rotulo}</p>
+                        <p className={`mt-1 text-lg font-black ${classe}`}>{valor}</p>
+                    </div>
+                ))}
+            </div>
+
+            <div className="grid gap-3 lg:grid-cols-3">
+                {[
+                    ["Assiduidade mensal", avaliacaoMensalDds.resumo.assiduidade, "text-emerald-700"],
+                    ["Absenteísmo mensal", avaliacaoMensalDds.resumo.absenteismo, "text-red-700"],
+                    ["Pendências mensais", avaliacaoMensalDds.resumo.pendenciasPercentual, "text-amber-700"],
+                ].map(([rotulo, valor, classe]) => (
+                    <div key={rotulo} className="rounded-2xl border border-slate-200 bg-white p-4">
+                        <p className="text-xs font-black text-slate-700">{rotulo}</p>
+                        <p className={`mt-2 text-2xl font-black ${classe}`}>{valor === null ? "Bloqueado" : `${valor.toLocaleString("pt-BR")}%`}</p>
+                    </div>
+                ))}
+            </div>
+
+            <div className={`rounded-2xl border p-4 ${avaliacaoMensalDds.integridade.fechamentoValido ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"}`}>
+                <h4 className="text-sm font-black text-slate-950">Integridade da consolidação</h4>
+                <p className="mt-1 text-xs font-bold text-slate-700">
+                    Fechamento N×D: esperado {avaliacaoMensalDds.integridade.esperado}, localizado {avaliacaoMensalDds.integridade.localizado} — {avaliacaoMensalDds.integridade.fechamentoValido ? "base válida" : "percentuais bloqueados"}.
+                </p>
+                {avaliacaoMensalDds.integridade.excluidos.length > 0 && (
+                    <div className="mt-3 grid gap-2 md:grid-cols-2">
+                        {avaliacaoMensalDds.integridade.excluidos.map((item, indice) => (
+                            <div key={`${item.codigo}-${indice}`} className="rounded-xl border border-amber-200 bg-white px-3 py-2 text-xs">
+                                <strong className="text-slate-900">{item.codigo}</strong>
+                                <span className="ml-2 font-bold text-amber-700">{String(item.motivo).replaceAll("_", " ")}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {avaliacaoMensalDds.comparacaoSemanal.length > 0 && (
+                <div className="overflow-hidden rounded-2xl border border-slate-200">
+                    <div className="grid grid-cols-[minmax(0,1fr)_repeat(5,minmax(70px,auto))] gap-2 bg-slate-950 px-4 py-2 text-[9px] font-black uppercase tracking-wide text-white">
+                        <span>DDS / dias incluídos</span><span>Possibilidades</span><span>Presenças</span><span>Ausências</span><span>Pendências</span><span>Assiduidade</span>
+                    </div>
+                    {avaliacaoMensalDds.comparacaoSemanal.map((item) => (
+                        <div key={item.codigo} className="grid grid-cols-[minmax(0,1fr)_repeat(5,minmax(70px,auto))] items-center gap-2 border-t border-slate-100 px-4 py-3 text-xs font-bold text-slate-700">
+                            <span><strong className="block text-slate-950">{item.codigo}</strong>{item.diasIncluidos.join(", ")}</span>
+                            <span>{item.possibilidades}</span><span className="text-emerald-700">{item.presencas}</span><span className="text-red-700">{item.ausencias}</span><span className="text-amber-700">{item.pendencias}</span><span>{item.assiduidade === null ? "-" : `${item.assiduidade}%`}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    )}
+</section>)}
 
 {registroScannerDds && (
     <RelatorioAnaliticoSstDdsCard
@@ -6844,7 +7605,7 @@ export function DdsPage({
 
 
 {registroScannerDds && (
-                                <div data-dds-registro-localizado className="min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-emerald-500 bg-white p-4 shadow-sm lg:col-span-2">
+                                <div data-dds-registro-localizado className="order-[30] min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-emerald-500 bg-white p-4 shadow-sm lg:col-span-2">
                                     <div
     onClick={() => alternarCardDds("registroLocalizado")}
     role="button"
@@ -7033,6 +7794,12 @@ export function DdsPage({
                     )}
                 </div>
             </section>
+
+            <DdsHistoricoPdfsSection
+                supabase={supabase}
+                aberto={cardDdsAberto("historicoPdfs")}
+                onAlternar={() => alternarCardDds("historicoPdfs")}
+            />
 
             <section className="dds-no-print min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-sky-500 bg-white p-4 shadow-sm">
                 <div

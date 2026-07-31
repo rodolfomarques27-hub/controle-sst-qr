@@ -96,9 +96,16 @@ function obterExtintoresDoPonto(
       ? extintores
       : []
   ).filter((extintor) => {
+    const pontoPersistidoId =
+      String(
+        extintor?.pontoId ||
+          extintor?.ponto_id ||
+          "",
+      );
+
     const vinculoDireto =
       pontoId &&
-      String(extintor?.pontoId || "") ===
+      pontoPersistidoId ===
         pontoId;
 
     const vinculoPorReferencia =
@@ -108,10 +115,12 @@ function obterExtintoresDoPonto(
         referenciasMapa.has(referencia),
       );
 
-    return (
-      vinculoDireto ||
-      vinculoPorReferencia
-    );
+    // O vínculo oficial persistido no cadastro é prioritário. Referências
+    // antigas do mapa só podem ser usadas para equipamentos que ainda não
+    // possuem ponto oficial, evitando recolocar extintores já transferidos.
+    return pontoPersistidoId
+      ? vinculoDireto
+      : vinculoPorReferencia;
   });
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 export default function useDdsScannerResultadoFinal({
     arquivoScannerDds,
@@ -21,7 +21,19 @@ export default function useDdsScannerResultadoFinal({
     setReciboFinalEmitidoEmDds,
     setTemasConferenciaAssistidaDds,
 }) {
+    const chaveRestauracaoConferenciaRef = useRef("");
+
     useEffect(() => {
+        const codigoRegistro = String(registroScannerDds?.codigo || "").trim();
+        const atualizadoEmRegistro = String(registroScannerDds?.dados?.conferenciaAssistida?.atualizadoEm || "").trim();
+        const chaveRestauracao = codigoRegistro
+            ? `${codigoRegistro}|${atualizadoEmRegistro || "sem-versao"}`
+            : "";
+
+        if (!chaveRestauracao || diasRegistroScannerDds.length === 0) return;
+        if (chaveRestauracaoConferenciaRef.current === chaveRestauracao) return;
+        chaveRestauracaoConferenciaRef.current = chaveRestauracao;
+
         const conferenciaSalva =
             registroScannerDds?.dados?.conferenciaAssistida;
 

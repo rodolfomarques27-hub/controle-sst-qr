@@ -1,0 +1,159 @@
+/*
+ * SAFESCAN — AÇÕES DO HERO DE CONFIGURAÇÕES
+ *
+ * Escopo:
+ * - sequência operacional definida no JSX;
+ * - seletores completos para vencer o estilo translúcido global;
+ * - cores sólidas e independentes da imagem de fundo;
+ * - nenhuma alteração nos demais heros.
+ */
+
+.page-header.hero-integrated-page-header.hero-header--configuracoes
+  .page-actions
+  .configuracoes-hero-actions {
+  gap: 0.5rem;
+}
+
+.page-header.hero-integrated-page-header.hero-header--configuracoes
+  .page-actions
+  .configuracoes-hero-action {
+  min-height: 32px;
+  border: 1px solid transparent !important;
+  color: #ffffff !important;
+  background-color: transparent !important;
+  background-clip: padding-box !important;
+  opacity: 1 !important;
+  mix-blend-mode: normal !important;
+  box-shadow:
+    0 7px 18px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
+  backdrop-filter: none !important;
+}
+
+.page-header.hero-integrated-page-header.hero-header--configuracoes
+  .page-actions
+  .configuracoes-hero-action:hover {
+  color: #ffffff !important;
+  filter: brightness(1.08);
+}
+
+.page-header.hero-integrated-page-header.hero-header--configuracoes
+  .page-actions
+  .configuracoes-hero-action--atualizar {
+  border-color: #67e8f9 !important;
+  background-color: #0e7490 !important;
+  background-image:
+    linear-gradient(
+      135deg,
+      #0891b2 0%,
+      #0e7490 100%
+    ) !important;
+}
+
+.page-header.hero-integrated-page-header.hero-header--configuracoes
+  .page-actions
+  .configuracoes-hero-action--atualizar:hover {
+  background-color: #0891b2 !important;
+  background-image:
+    linear-gradient(
+      135deg,
+      #06b6d4 0%,
+      #0891b2 100%
+    ) !important;
+}
+
+.page-header.hero-integrated-page-header.hero-header--configuracoes
+  .page-actions
+  .configuracoes-hero-action--personalizar {
+  border-color: #94a3b8 !important;
+  background-color: #334155 !important;
+  background-image:
+    linear-gradient(
+      135deg,
+      #475569 0%,
+      #334155 100%
+    ) !important;
+}
+
+.page-header.hero-integrated-page-header.hero-header--configuracoes
+  .page-actions
+  .configuracoes-hero-action--personalizar[aria-pressed="true"] {
+  border-color: #93c5fd !important;
+  background-color: #1d4ed8 !important;
+  background-image:
+    linear-gradient(
+      135deg,
+      #2563eb 0%,
+      #1d4ed8 100%
+    ) !important;
+}
+
+.page-header.hero-integrated-page-header.hero-header--configuracoes
+  .page-actions
+  .configuracoes-hero-action--abrir {
+  border-color: #6ee7b7 !important;
+  background-color: #047857 !important;
+  background-image:
+    linear-gradient(
+      135deg,
+      #059669 0%,
+      #047857 100%
+    ) !important;
+}
+
+.page-header.hero-integrated-page-header.hero-header--configuracoes
+  .page-actions
+  .configuracoes-hero-action--abrir:hover {
+  background-color: #059669 !important;
+  background-image:
+    linear-gradient(
+      135deg,
+      #10b981 0%,
+      #059669 100%
+    ) !important;
+}
+
+.page-header.hero-integrated-page-header.hero-header--configuracoes
+  .page-actions
+  .configuracoes-hero-action--recolher {
+  border-color: #fde68a !important;
+  background-color: #92400e !important;
+  background-image:
+    linear-gradient(
+      135deg,
+      #b45309 0%,
+      #92400e 100%
+    ) !important;
+}
+
+.page-header.hero-integrated-page-header.hero-header--configuracoes
+  .page-actions
+  .configuracoes-hero-action--recolher:hover {
+  background-color: #b45309 !important;
+  background-image:
+    linear-gradient(
+      135deg,
+      #d97706 0%,
+      #b45309 100%
+    ) !important;
+}
+
+.page-header.hero-integrated-page-header.hero-header--configuracoes
+  .page-actions
+  .configuracoes-hero-action:disabled {
+  filter: grayscale(0.15);
+}
+
+@media (max-width: 1023px) {
+  .page-header.hero-integrated-page-header.hero-header--configuracoes
+    .page-actions
+    .configuracoes-hero-actions {
+    flex-wrap: wrap !important;
+  }
+
+  .page-header.hero-integrated-page-header.hero-header--configuracoes
+    .page-actions
+    .configuracoes-hero-action {
+    color: #ffffff !important;
+  }
+}

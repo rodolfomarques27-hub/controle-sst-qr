@@ -1,5 +1,7 @@
-import React, { useMemo, useState } from "react";
-import { CalendarDays, ChevronDown, Download, Search, Users } from "lucide-react";
+import "../../styles/pages/aniversariantes-hero.css";
+import "../../styles/pages/heroes-aniversariantes-colaboradores-data.css";
+import React, { useEffect, useMemo, useState } from "react";
+import { CalendarClock, CalendarDays, ChevronDown, Download, Search, Users } from "lucide-react";
 import { Card, FotoColaborador, Header, obterFotoColaboradorSrc } from "../commonComponents";
 import { STATUS_CLASSIFICACAO_COLABORADOR } from "../../constants/sstConstants";
 import { baixarRelatorioAniversariantesPDF } from "../../services/exportacaoService";
@@ -183,6 +185,24 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
     const [exportandoPDF, setExportandoPDF] = useState(false);
     const [versaoFiltroSalvo, setVersaoFiltroSalvo] = useState(0);
     const [layoutAniversariantes, setLayoutAniversariantes] = useState(() => carregarLayoutAniversariantes());
+    const [agoraHeroAniversariantes, setAgoraHeroAniversariantes] = useState(() => new Date());
+
+    useEffect(() => {
+        const atualizarRelogioHeroAniversariantes = () => {
+            setAgoraHeroAniversariantes(new Date());
+        };
+
+        atualizarRelogioHeroAniversariantes();
+
+        const intervaloRelogioHeroAniversariantes = window.setInterval(
+            atualizarRelogioHeroAniversariantes,
+            30000
+        );
+
+        return () => {
+            window.clearInterval(intervaloRelogioHeroAniversariantes);
+        };
+    }, []);
     const filtrosAniversariantesRecolhidos = layoutAniversariantes.filtrosRecolhidos;
     const listaAniversariantesRecolhida = layoutAniversariantes.listaRecolhida;
 
@@ -283,6 +303,39 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
             mesAtual: new Date().getMonth() + 1,
         };
     }, [baseGrafico]);
+
+    const dataHoraHeroAniversariantes = useMemo(() => {
+        const formatarDiaSemana = (valor = "") =>
+            String(valor)
+                .split("-")
+                .map((trecho) =>
+                    trecho
+                        ? trecho.charAt(0).toLocaleUpperCase("pt-BR") +
+                          trecho.slice(1).toLocaleLowerCase("pt-BR")
+                        : trecho
+                )
+                .join("-");
+
+        return {
+            data: new Intl.DateTimeFormat("pt-BR", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+            }).format(agoraHeroAniversariantes),
+
+            diaSemana: formatarDiaSemana(
+                new Intl.DateTimeFormat("pt-BR", {
+                    weekday: "long",
+                }).format(agoraHeroAniversariantes)
+            ),
+
+            hora: new Intl.DateTimeFormat("pt-BR", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hourCycle: "h23",
+            }).format(agoraHeroAniversariantes),
+        };
+    }, [agoraHeroAniversariantes]);
 
     const proximo = useMemo(() => proximoAniversariante(colaboradoresComAniversario), [colaboradoresComAniversario]);
     const diasAteProximo = proximo?.colaborador ? calcularDiasAteAniversario(proximo.colaborador) : null;
@@ -409,19 +462,8 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
         <div>
             <Header
                 titulo="Aniversariantes"
-                className="header-aniversariantes"
+                className="header-aniversariantes hero-integrated-page-header hero-header--aniversariantes"
                 subtitulo={null}
-                acao={(
-                    <button
-                        type="button"
-                        onClick={exportarPDFAniversariantes}
-                        disabled={exportandoPDF || filtrados.length === 0}
-                        className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                        <Download className="h-4 w-4" />
-                        {exportandoPDF ? "Gerando PDF..." : "Exportar PDF"}
-                    </button>
-                )}
             />
 
             <section className="aniversariantes-hero-banner">
@@ -432,18 +474,66 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
                     }}
                 />
                 <div className="aniversariantes-hero-banner__overlay" />
+
                 <div className="aniversariantes-hero-banner__content">
                     <div className="min-w-0">
-                        <p className="aniversariantes-hero-banner__eyebrow">SAFESCAN BRASIL</p>
+                        <p className="aniversariantes-hero-banner__eyebrow">
+                            SAFESCAN BRASIL
+                        </p>
+
                         <h2 className="aniversariantes-hero-banner__title">
                             Gestão de aniversariantes
                         </h2>
+
                         <p className="aniversariantes-hero-banner__text">
                             Acompanhe aniversários por mês e empresa em uma visão única.
                         </p>
+
+                        <div className="aniversariantes-hero-banner__line" />
                     </div>
 
+                    <div
+                        className="aniversariantes-hero-banner__date"
+                        aria-label={`Data e hora atuais: ${dataHoraHeroAniversariantes.data}, ${dataHoraHeroAniversariantes.diaSemana}, ${dataHoraHeroAniversariantes.hora}`}
+                    >
+                        <CalendarClock className="h-4 w-4" />
+                        <span>{dataHoraHeroAniversariantes.data}</span>
+                        <span aria-hidden="true">•</span>
+                        <span>{dataHoraHeroAniversariantes.diaSemana}</span>
+                        <span aria-hidden="true">•</span>
+                        <span>{dataHoraHeroAniversariantes.hora}</span>
+                    </div>
 
+                    <div className="aniversariantes-hero-banner__stats">
+                        <div className="aniversariantes-hero-banner__stat aniversariantes-hero-banner__stat--exibidos">
+                            <Search className="h-4 w-4" />
+                            <span>{filtrados.length} exibidos</span>
+                        </div>
+
+                        <div className="aniversariantes-hero-banner__stat aniversariantes-hero-banner__stat--ano">
+                            <Users className="h-4 w-4" />
+                            <span>{resumoMensal.totalAno} no ano</span>
+                        </div>
+
+                        <div className="aniversariantes-hero-banner__stat aniversariantes-hero-banner__stat--proximo">
+                            <CalendarDays className="h-4 w-4" />
+                            <span>
+                                {diasAteProximo === null
+                                    ? "Sem próximo aniversário"
+                                    : `Próximo em ${diasAteProximo} dia(s)`}
+                            </span>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={exportarPDFAniversariantes}
+                            disabled={exportandoPDF || filtrados.length === 0}
+                            className="aniversariantes-hero-banner__exportar"
+                        >
+                            <Download className="h-4 w-4" />
+                            {exportandoPDF ? "Gerando PDF..." : "Exportar PDF"}
+                        </button>
+                    </div>
                 </div>
             </section>
 

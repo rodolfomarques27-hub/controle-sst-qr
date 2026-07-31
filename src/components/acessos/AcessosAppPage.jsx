@@ -1,3 +1,4 @@
+import "../../styles/pages/acessos-app-hero.css";
 import React, { useEffect, useMemo, useState } from "react";
 import {
     AlertTriangle,
@@ -3232,45 +3233,58 @@ export function AcessosAppPage({ usuario = null }) {
         <div className="page-shell space-y-5">
             <section
                 data-acessos-app-hero="true"
-                className="relative overflow-hidden rounded-[22px] border border-[#E5E9EF] bg-[#111827] shadow-[0_10px_28px_rgba(26,35,50,0.12)]"
+                className="acessos-app-hero"
             >
-                <div
-                    className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-100"
-                    style={{
-                        backgroundImage: `url(${dashboardHeroBackground})`,
-                        backgroundPosition: "center center",
-                        backgroundSize: "cover",
-                    }}
-                />
-                <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(17,24,39,0.36)_0%,rgba(17,24,39,0.24)_34%,rgba(17,24,39,0.10)_68%,rgba(17,24,39,0.08)_100%)]" />
+                <div className="acessos-app-hero__media">
+                    <div
+                        className="acessos-app-hero__background"
+                        style={{
+                            backgroundImage: `url(${dashboardHeroBackground})`,
+                        }}
+                    />
+                    <div className="acessos-app-hero__overlay" />
 
-                <div className="relative flex min-h-[155px] flex-col justify-between gap-5 px-6 py-6 text-white lg:flex-row lg:items-center">
-                    <div className="min-w-0" style={{ textShadow: "0 2px 10px rgba(0,0,0,0.65)" }}>
-                        <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-300">
-                            SafeScan Brasil
-                        </p>
-                        <h2 className="mt-2 text-xl font-black leading-tight text-white md:text-2xl">
-                            Acessos do App
-                        </h2>
-                        <p className="mt-2 max-w-3xl text-base font-bold text-slate-200 md:text-lg">
-                            Central administrativa para login real, senha temporária, perfis, bloqueios e permissões de acesso ao sistema SST.
-                        </p>
-                        <div className="mt-5 h-1 w-14 rounded-full bg-[#1E7C3A]" />
-                    </div>
+                    <div className="acessos-app-hero__content">
+                        <div
+                            className="acessos-app-hero__copy"
+                            style={{ textShadow: "0 2px 10px rgba(0,0,0,0.65)" }}
+                        >
+                            <p className="acessos-app-hero__brand">
+                                SafeScan Brasil
+                            </p>
 
-                    <div className="rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm font-black text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] backdrop-blur">
-                        <div className="flex flex-wrap items-center gap-2">
-                            <CalendarClock className="h-4 w-4 text-emerald-300" />
-                            <span>{dataHeroAcessosApp}</span>
-                            <span className="text-emerald-300">•</span>
-                            <span className="capitalize">{diaSemanaHeroAcessosApp}</span>
-                            <span className="text-emerald-300">•</span>
-                            <span>{horaHeroAcessosApp}</span>
+                            <h2 className="acessos-app-hero__title">
+                                Acessos do App
+                            </h2>
+
+                            <p className="acessos-app-hero__text">
+                                Central administrativa para login real, senha temporária, perfis, bloqueios e permissões de acesso ao sistema SST.
+                            </p>
+
+                            <div className="acessos-app-hero__line" />
                         </div>
                     </div>
                 </div>
-            </section>
 
+                <div className="acessos-app-hero__footer">
+                    <div
+                        className="acessos-app-hero__date"
+                        aria-label="Data e horário atual"
+                    >
+                        <CalendarClock
+                            className="acessos-app-hero__date-icon"
+                            strokeWidth={2.2}
+                        />
+                        <span>{dataHeroAcessosApp}</span>
+                        <span className="acessos-app-hero__separator">•</span>
+                        <span className="acessos-app-hero__weekday">
+                            {diaSemanaHeroAcessosApp}
+                        </span>
+                        <span className="acessos-app-hero__separator">•</span>
+                        <span>{horaHeroAcessosApp}</span>
+                    </div>
+                </div>
+            </section>
             <Card className="overflow-hidden border border-slate-200 bg-white p-0 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
                 <div className="grid gap-0 lg:grid-cols-[0.56fr_0.44fr]">
                     <section className="px-6 py-7 sm:px-8">

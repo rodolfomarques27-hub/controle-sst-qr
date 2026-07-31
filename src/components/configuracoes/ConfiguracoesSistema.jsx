@@ -21,6 +21,8 @@ import { CalendarClock,
     SlidersHorizontal,
 } from "lucide-react";
 import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
+import "../../styles/pages/configuracoes-hero-actions.css";
+import "../../styles/pages/configuracoes-cards.css";
 import { Header, Card } from "../commonComponents";
 import { ArquivosStorageConfiguracoes } from "./ArquivosStorageConfiguracoes";
 import { EmergenciaQrPinCard } from "./EmergenciaQrPinCard";
@@ -73,6 +75,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { reduzirFotoParaAuditoria } from "../../services/imagemService";
 import { obterUrlPublicaStorage } from "../../services/supabaseServices";
 import { QrCodeComLogo, QrCodeLogoControls } from "../qr/QrCodeComLogo";
+import { montarUrlPublicaSistema } from "../../utils/urlPublicaUtils.js";
 import {
     adicionarObra,
     atualizarObra,
@@ -965,36 +968,60 @@ export function ConfiguracoesSistema({
         if (!blocoConfiguracaoVisivel(chave)) return null;
 
         if (blocoConfiguracaoRecolhido(chave)) {
-            return (
-                <div className="h-full">
-                    <Card className="h-full py-3">
-                    <div
-                        role="button"
-                        tabIndex={0}
-                        aria-label={`Abrir ${titulo}`}
-                        onClick={(evento) => {
-                            if (cliqueVeioDeControleInterativoConfiguracao(evento)) return;
-                            alternarRecolhidoBlocoConfiguracao(chave);
-                        }}
-                        onKeyDown={(evento) => {
-                            if (evento.target !== evento.currentTarget) return;
+            const secaoAtual = secoesConfiguracoes.find((secao) => secao.chave === chave);
+            const IconeSecao = secaoAtual?.icon || Settings;
 
-                            if (evento.key === "Enter" || evento.key === " ") {
-                                evento.preventDefault();
+            return (
+                <div
+                    className="configuracoes-card-recolhido-wrapper h-full"
+                    data-configuracoes-chave={chave}
+                >
+                    <Card className="configuracoes-card-recolhido h-full">
+                        <div
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`Abrir ${titulo}`}
+                            onClick={(evento) => {
+                                if (cliqueVeioDeControleInterativoConfiguracao(evento)) return;
                                 alternarRecolhidoBlocoConfiguracao(chave);
-                            }
-                        }}
-                        className="flex min-w-0 items-center justify-between gap-3 rounded-xl"
-                    >
-                        <div className="min-w-0">
-                            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Card recolhido</p>
-                            <h2 className="mt-0.5 truncate text-sm font-black leading-tight text-slate-950">{titulo}</h2>
-                            <p className="mt-0.5 line-clamp-1 text-xs leading-relaxed text-slate-500">{descricao}</p>
+                            }}
+                            onKeyDown={(evento) => {
+                                if (evento.target !== evento.currentTarget) return;
+
+                                if (evento.key === "Enter" || evento.key === " ") {
+                                    evento.preventDefault();
+                                    alternarRecolhidoBlocoConfiguracao(chave);
+                                }
+                            }}
+                            className="configuracoes-card-recolhido__conteudo flex min-w-0 items-center justify-between gap-4"
+                        >
+                            <div className="configuracoes-card-recolhido__principal flex min-w-0 items-center gap-4">
+                                <span className="configuracoes-card-recolhido__icone flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl">
+                                    <IconeSecao className="h-5 w-5" />
+                                </span>
+
+                                <div className="min-w-0">
+                                    <h2 className="truncate text-lg font-black leading-tight text-slate-950">
+                                        {titulo}
+                                    </h2>
+                                    <p className="mt-1 line-clamp-1 text-sm leading-relaxed text-slate-500">
+                                        {descricao}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={(evento) => {
+                                    evento.stopPropagation();
+                                    alternarRecolhidoBlocoConfiguracao(chave);
+                                }}
+                                className="configuracoes-card-recolhido__botao inline-flex shrink-0 items-center justify-center gap-2 rounded-full"
+                            >
+                                <ChevronDown className="h-4 w-4" />
+                                Abrir
+                            </button>
                         </div>
-                        <div className="shrink-0">
-                            {botaoRecolherBlocoConfiguracao(chave, "px-3 py-1.5 text-[11px]")}
-                        </div>
-                    </div>
                     </Card>
                 </div>
             );
@@ -2151,6 +2178,7 @@ export function ConfiguracoesSistema({
         switch (chave) {
         case "config-versao-sistema": {
             const dataBuild = new Date(import.meta.env.VITE_APP_BUILD_DATE);
+            const ambienteBuild = import.meta.env.VITE_APP_BUILD_ENV === "production" ? "Produção" : "Desenvolvimento";
             const ultimaAtualizacao = Number.isNaN(dataBuild.getTime())
                 ? "Data não disponível"
                 : new Intl.DateTimeFormat("pt-BR", {
@@ -2176,7 +2204,7 @@ export function ConfiguracoesSistema({
                             <span className="w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-black uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-200">Versão atual</span>
                         </div>
 
-                        <div className="mt-5 grid gap-3 md:grid-cols-3">
+                        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                             <div className="rounded-2xl bg-blue-50 p-4 ring-1 ring-blue-100">
                                 <p className="text-[11px] font-black uppercase tracking-wide text-blue-600">Site</p>
                                 <p className="mt-2 text-2xl font-black text-slate-950">v{import.meta.env.VITE_APP_VERSION}</p>
@@ -2188,6 +2216,17 @@ export function ConfiguracoesSistema({
                             <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
                                 <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">Última atualização</p>
                                 <p className="mt-2 text-sm font-black leading-5 text-slate-900">{ultimaAtualizacao}</p>
+                            </div>
+                            <div className="rounded-2xl bg-cyan-50 p-4 ring-1 ring-cyan-100">
+                                <p className="text-[11px] font-black uppercase tracking-wide text-cyan-700">Build atual</p>
+                                <p className="mt-2 font-mono text-lg font-black text-slate-950">{import.meta.env.VITE_APP_BUILD_ID}</p>
+                            </div>
+                            <div className="rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-100">
+                                <p className="text-[11px] font-black uppercase tracking-wide text-amber-700">Ambiente / origem</p>
+                                <p className="mt-2 text-sm font-black text-slate-950">{ambienteBuild}</p>
+                                <p className="mt-1 truncate font-mono text-xs font-bold text-slate-600" title={import.meta.env.VITE_APP_BUILD_SOURCE}>
+                                    {import.meta.env.VITE_APP_BUILD_SOURCE}
+                                </p>
                             </div>
                         </div>
                     </Card>
@@ -3235,9 +3274,7 @@ export function ConfiguracoesSistema({
                                   <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-end">
                                       <div className="flex shrink-0 items-center justify-center rounded-2xl bg-white px-3 py-3 ring-1 ring-slate-200">
                                           <QrCodeComLogo
-                                              value={typeof window !== "undefined"
-                                                  ? `${window.location.origin}/?qr=exemplo-logo-configuracoes`
-                                                  : "https://controle-sst-qr.local/?qr=exemplo-logo-configuracoes"}
+                                              value={montarUrlPublicaSistema("/?qr=exemplo-logo-configuracoes")}
                                               size={82}
                                               level="H"
                                               includeMargin
@@ -3728,34 +3765,43 @@ export function ConfiguracoesSistema({
     return (
         <div className="page-shell">
             <Header
+                className="hero-integrated-page-header hero-header--configuracoes"
                 titulo="Configurações do sistema"
                 subtitulo={null}
                 acao={(
-                    <div className="top-actions-nowrap flex-wrap justify-end">
+                    <div className="configuracoes-hero-actions top-actions-nowrap flex-wrap justify-end">
                         {acaoTopo}
-                        <button
-                            type="button"
-                            onClick={() => setMostrarOrganizacaoCards((valor) => !valor)}
-                            className={classNames(
-                                "inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold shadow-sm ring-1 transition hover:-translate-y-0.5",
-                                mostrarOrganizacaoCards
-                                    ? "bg-blue-50 text-blue-700 ring-blue-100 hover:bg-blue-100"
-                                    : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50"
-                            )}
-                        >
-                            <SlidersHorizontal className="h-4 w-4" />
-                            Personalizar painel
-                        </button>
-                        <button type="button" onClick={abrirTodosBlocosConfiguracao} className="inline-flex items-center rounded-2xl bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50">Abrir todos</button>
-                        <button type="button" onClick={recolherTodosBlocosConfiguracao} className="inline-flex items-center rounded-2xl bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50">Recolher todos</button>
                         <button
                             type="button"
                             onClick={carregarConfiguracao}
                             disabled={carregandoConfig || salvandoConfig}
-                            className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="configuracoes-hero-action configuracoes-hero-action--atualizar inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             <RefreshCw className={classNames("h-4 w-4", carregandoConfig && "animate-spin")} />
                             Atualizar configurações
+                        </button>
+                        <button
+                            type="button"
+                            aria-pressed={mostrarOrganizacaoCards}
+                            onClick={() => setMostrarOrganizacaoCards((valor) => !valor)}
+                            className="configuracoes-hero-action configuracoes-hero-action--personalizar inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition hover:-translate-y-0.5"
+                        >
+                            <SlidersHorizontal className="h-4 w-4" />
+                            Personalizar painel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={abrirTodosBlocosConfiguracao}
+                            className="configuracoes-hero-action configuracoes-hero-action--abrir inline-flex items-center rounded-2xl px-4 py-2.5 text-sm font-bold transition hover:-translate-y-0.5"
+                        >
+                            Abrir todos
+                        </button>
+                        <button
+                            type="button"
+                            onClick={recolherTodosBlocosConfiguracao}
+                            className="configuracoes-hero-action configuracoes-hero-action--recolher inline-flex items-center rounded-2xl px-4 py-2.5 text-sm font-bold transition hover:-translate-y-0.5"
+                        >
+                            Recolher todos
                         </button>
                     </div>
                 )}
@@ -3788,7 +3834,7 @@ export function ConfiguracoesSistema({
                         <div className="mt-5 h-1 w-14 rounded-full bg-[#1E7C3A]" />
                     </div>
 
-                    <div className="rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm font-black text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] backdrop-blur">
+                    <div className="dashboard-hero-sst__date rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm font-black text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] backdrop-blur">
                         <div className="flex flex-wrap items-center gap-2">
                             <CalendarClock className="h-4 w-4 text-emerald-300" />
                             <span>{dataHeroConfiguracoes}</span>

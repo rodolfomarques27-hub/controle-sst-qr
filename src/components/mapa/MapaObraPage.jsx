@@ -410,6 +410,20 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
           return;
         }
 
+        const pontoPersistidoId =
+          String(
+            extintor?.pontoId ||
+              extintor?.ponto_id ||
+              "",
+          );
+
+        if (
+          pontoPersistidoId &&
+          pontoPersistidoId !== chavePonto
+        ) {
+          return;
+        }
+
         const idAtual = String(extintor.id);
 
         ids.add(idAtual);

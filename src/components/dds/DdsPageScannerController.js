@@ -6,6 +6,7 @@ export default function criarControladorScannerDds({
     codigoConferenciaDds,
     dadosDds,
     executarLeituraDdsLocal,
+    leituraArquivoScannerDds,
     participantesRegistroScannerDds,
     registroScannerDds,
     setArquivoScannerDds,
@@ -20,6 +21,9 @@ export default function criarControladorScannerDds({
     excluindoDocumentoPersistidoDds,
     setExcluindoDocumentoPersistidoDds,
     setMensagemDocumentoPersistidoDds,
+    registrarDocumentoDdsAssinado,
+    salvandoArquivoScannerDds,
+    setSalvandoArquivoScannerDds,
     supabase,
 }) {
     function normalizarDocumentoPersistidoDds(
@@ -885,11 +889,64 @@ export default function criarControladorScannerDds({
         }
     }
 
+    async function salvarArquivoScannerDds() {
+        if (!arquivoScannerDds) {
+            setMensagemDocumentoPersistidoDds({ tipo: "erro", texto: "Selecione o PDF DDS antes de salvar." });
+            return;
+        }
+
+        if (!registroScannerDds?.id || !registroScannerDds?.codigo) {
+            setMensagemDocumentoPersistidoDds({
+                tipo: "erro",
+                texto: "Selecione um DDS cadastrado na Conferência DDS antes de salvar o PDF.",
+            });
+            return;
+        }
+
+        if (salvandoArquivoScannerDds) return;
+        setSalvandoArquivoScannerDds(true);
+        setMensagemDocumentoPersistidoDds(null);
+
+        try {
+            const resultado = await registrarDocumentoDdsAssinado({
+                supabase,
+                registro: registroScannerDds,
+                arquivo: arquivoScannerDds,
+                leitura: leituraArquivoScannerDds,
+                quantidadePaginas: leituraArquivoScannerDds?.totalPaginas || null,
+            });
+
+            const documento = normalizarDocumentoPersistidoDds(resultado.documento);
+            setRegistroScannerDds((registroAtual) => ({
+                ...registroAtual,
+                dados: {
+                    ...(registroAtual?.dados || {}),
+                    documentoAssinado: documento,
+                },
+            }));
+            setMensagemDocumentoPersistidoDds({
+                tipo: "sucesso",
+                texto: resultado.reutilizado
+                    ? `O PDF já estava salvo no histórico do ${registroScannerDds.codigo}.`
+                    : `PDF salvo no histórico do ${registroScannerDds.codigo}.`,
+            });
+            window.dispatchEvent(new CustomEvent("safescan:dds-pdf-salvo"));
+        } catch (error) {
+            setMensagemDocumentoPersistidoDds({
+                tipo: "erro",
+                texto: error?.message || "Não foi possível salvar o PDF DDS.",
+            });
+        } finally {
+            setSalvandoArquivoScannerDds(false);
+        }
+    }
+
     return {
         buscarRegistroScannerDds,
         selecionarArquivoScannerDds,
         limparArquivoScannerDds,
         executarLeituraArquivoScannerDds,
+        salvarArquivoScannerDds,
         analisarDocumentoPersistidoDds,
         excluirDocumentoPersistidoDds,
     };

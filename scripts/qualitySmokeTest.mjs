@@ -522,6 +522,30 @@ const codigoSupabaseClient = readFileSync(
     new URL("../src/lib/supabaseClient.js", import.meta.url),
     "utf8"
 );
+const codigoDdsRegistrosService = readFileSync(
+    new URL("../src/services/ddsRegistrosService.js", import.meta.url),
+    "utf8"
+);
+const codigoUrlPublicaUtils = readFileSync(
+    new URL("../src/utils/urlPublicaUtils.js", import.meta.url),
+    "utf8"
+);
+const codigoAuditoriaPublicaConstants = readFileSync(
+    new URL("../src/constants/auditoriaPublicaConstants.js", import.meta.url),
+    "utf8"
+);
+const codigoExtintoresVistoriaService = readFileSync(
+    new URL("../src/services/extintoresVistoriaService.js", import.meta.url),
+    "utf8"
+);
+const codigoAmbientesControleTabela = readFileSync(
+    new URL("../src/components/mapa/AmbientesControleTabela.jsx", import.meta.url),
+    "utf8"
+);
+const codigoDdsPage = readFileSync(
+    new URL("../src/components/dds/DdsPage.jsx", import.meta.url),
+    "utf8"
+);
 const codigoAppColaboradoresHandlersService = readFileSync(
     new URL("../src/services/appColaboradoresHandlersService.js", import.meta.url),
     "utf8"
@@ -647,7 +671,7 @@ assert.match(
 
 assert.match(
     codigoTreinamentosPage,
-    /const empresasFiltroCertificados = useMemo\(\(\) => \{[\s\S]*obterChaveEmpresaFiltroCertificados\(colaborador\)[\s\S]*empresaA\.nome\.localeCompare/,
+    /const empresasFiltroCertificados = useMemo\(\(\) => \{[\s\S]*obterChaveEmpresaFiltroCertificados\(colaborador\)[\s\S]*empresaA\.titulo[\s\S]*\.localeCompare/,
     "As empresas do filtro devem ser derivadas dos colaboradores."
 );
 
@@ -732,8 +756,8 @@ assert.match(
 );
 assert.match(
     codigoDashboard,
-    /colaboradoresMobilizados[\s\S]*Liberados, com pendência ou a vencer/,
-    "O card Mobilizados deve representar Liberados, Com pendência e A vencer."
+    /colaboradoresMobilizados[\s\S]*Liberados ou com pendência não bloqueante/,
+    "O card Mobilizados deve representar liberados e pendências não bloqueantes."
 );
 assert.match(
     codigoDashboard,
@@ -787,8 +811,44 @@ assert.match(
 );
 assert.match(
     codigoDashboard,
-    /horasTrabalhadasMes[\s\S]*Total de horas trabalhadas no mês[\s\S]*valor: "—"[\s\S]*Integração futura com DDS/,
-    "O card futuro de horas trabalhadas não pode apresentar um total inventado."
+    /horasTrabalhadasMes[\s\S]*Total de horas trabalhadas no mês[\s\S]*horasDdsMes\.carregando[\s\S]*horasDdsMes\.totalHorasFormatado[\s\S]*dia\(s\) validado\(s\) no DDS/,
+    "O card de horas trabalhadas deve usar o total mensal validado pelas conferências DDS."
+);
+
+assert.match(
+    codigoUrlPublicaUtils,
+    /https:\/\/www\.safescanbrasil\.com\.br/,
+    "Os QR públicos devem possuir o domínio oficial como origem segura."
+);
+assert.match(
+    codigoUrlPublicaUtils,
+    /host === "localhost"[\s\S]*host === "127\.0\.0\.1"[\s\S]*host === "::1"/,
+    "Os QR públicos devem bloquear origens locais de desenvolvimento."
+);
+assert.match(
+    codigoDdsRegistrosService,
+    /export function montarUrlConferenciaDds[\s\S]*obterOrigemPublicaSistema/,
+    "A montagem da URL do QR do DDS deve passar pela normalização da origem pública."
+);
+assert.match(
+    codigoAuditoriaPublicaConstants,
+    /montarUrlConsultaQrColaboradorPublica[\s\S]*obterOrigemPublicaSistema[\s\S]*montarLinkAuditoriaPublicaSistema[\s\S]*obterOrigemPublicaSistema/,
+    "Colaboradores e auditorias devem usar a origem pública protegida."
+);
+assert.match(
+    codigoExtintoresVistoriaService,
+    /gerarUrlQrExtintor[\s\S]*montarUrlPublicaSistema/,
+    "O QR de extintores deve usar a origem pública protegida."
+);
+assert.match(
+    codigoAmbientesControleTabela,
+    /function urlQr[\s\S]*montarUrlPublicaSistema[\s\S]*const urlPonto = montarUrlPublicaSistema/,
+    "Os QR de pontos e ambientes do mapa devem usar a origem pública protegida."
+);
+assert.match(
+    codigoDdsPage,
+    /qrConferenciaUrl:\s*registroDdsConferencia\?\.tokenPublico[\s\S]*montarUrlConferenciaDds\(\{ token: registroDdsConferencia\.tokenPublico \}\)/,
+    "A impressão do DDS deve reconstruir o QR pelo token no momento da renderização."
 );
 assert.match(
     codigoDashboardService,

@@ -105,7 +105,11 @@ export async function sincronizarCertificadosDoStorageService({
 export async function listarArquivosCertificadosStorageService({
     colaboradores = [],
     empresasBanco = [],
+    onProgress = null,
 } = {}) {
+    const informarProgresso = (dados) => {
+        if (typeof onProgress === "function") onProgress(dados);
+    };
     const coletados = [];
     const bucketsAuditados = [
         {
@@ -150,6 +154,7 @@ export async function listarArquivosCertificadosStorageService({
             return;
         }
 
+        const subpastas = [];
         for (const item of data || []) {
             const caminho = prefixo ? `${prefixo}/${item.name}` : item.name;
             const pareceArquivo = item.name && /\.[a-z0-9]{2,5}$/i.test(item.name);
@@ -165,14 +170,28 @@ export async function listarArquivosCertificadosStorageService({
                     atualizadoEm: item.updated_at || item.created_at || null,
                 });
             } else {
-                await listarNivel(bucketInfo, caminho);
+                subpastas.push(() => listarNivel(bucketInfo, caminho));
             }
+        }
+
+        for (let inicio = 0; inicio < subpastas.length; inicio += 8) {
+            await Promise.all(subpastas.slice(inicio, inicio + 8).map((listarSubpasta) => listarSubpasta()));
         }
     };
 
-    for (const bucketInfo of bucketsAuditados) {
+    const totalEtapasProgresso = bucketsAuditados.length + 6;
+    informarProgresso({ etapa: "storage", atual: 0, total: totalEtapasProgresso, mensagem: "Consultando áreas do Storage..." });
+    let bucketsConcluidos = 0;
+    await Promise.all(bucketsAuditados.map(async (bucketInfo) => {
         await listarNivel(bucketInfo, "");
-    }
+        bucketsConcluidos += 1;
+        informarProgresso({
+            etapa: "storage",
+            atual: bucketsConcluidos,
+            total: totalEtapasProgresso,
+            mensagem: `${bucketInfo.bucket}: concluído (${coletados.length} arquivo(s) localizado(s))`,
+        });
+    }));
 
     let certificados = [];
     let documentosEmpresaBanco = [];
@@ -180,47 +199,30 @@ export async function listarArquivosCertificadosStorageService({
     let auditoriasCampoBanco = [];
     let desviosAuditoriaBanco = [];
 
-    try {
-        certificados = await buscarTodosRegistrosSupabase("certificados", "*");
-    } catch (certificadosError) {
-        throw new Error(`Erro ao consultar certificados: ${certificadosError.message}`, { cause: certificadosError });
-    }
+    informarProgresso({ etapa: "vinculos", atual: bucketsAuditados.length, total: totalEtapasProgresso, mensagem: "Cruzando arquivos com os registros do sistema..." });
+    let consultasConcluidas = 0;
+    const consultarVinculo = async (consulta, rotulo, obrigatoria = false) => {
+        try {
+            return await consulta();
+        } catch (error) {
+            if (obrigatoria) throw error;
+            console.warn(`Erro ao consultar ${rotulo} para vínculos do Storage:`, error.message);
+            return [];
+        } finally {
+            consultasConcluidas += 1;
+            informarProgresso({ etapa: "vinculos", atual: bucketsAuditados.length + consultasConcluidas, total: totalEtapasProgresso, mensagem: `${rotulo}: conferido` });
+        }
+    };
 
-    try {
-        documentosEmpresaBanco = await buscarTodosRegistrosSupabase("documentos_empresas", "*");
-    } catch (documentosEmpresaError) {
-        throw new Error(`Erro ao consultar documentos de empresas: ${documentosEmpresaError.message}`, { cause: documentosEmpresaError });
-    }
+    [certificados, documentosEmpresaBanco, usuariosPermissoesBanco, auditoriasCampoBanco, desviosAuditoriaBanco] = await Promise.all([
+        consultarVinculo(() => buscarTodosRegistrosSupabase("certificados", "*"), "Certificados", true),
+        consultarVinculo(() => buscarTodosRegistrosSupabase("documentos_empresas", "*"), "Documentos de empresas", true),
+        consultarVinculo(() => buscarTodosRegistrosSupabase("usuarios_permissoes_sistema", "*"), "Usuários do App", true),
+        consultarVinculo(() => buscarTodosRegistrosSupabase("auditorias_campo", "id, empresa_id, numero_auditoria, titulo, empresa_nome, foto_antes_url, foto_depois_url"), "Auditorias"),
+        consultarVinculo(() => buscarTodosRegistrosSupabase("auditoria_campo_desvios", "id, auditoria_id, empresa_id, categoria, descricao, foto_antes_url, foto_depois_url"), "Desvios"),
+    ]);
 
-    try {
-        usuariosPermissoesBanco = await buscarTodosRegistrosSupabase(
-            "usuarios_permissoes_sistema",
-            "*"
-        );
-    } catch (usuariosPermissoesStorageError) {
-        throw new Error(
-            `Erro ao consultar fotos dos usuários do App: ${usuariosPermissoesStorageError.message}`,
-            { cause: usuariosPermissoesStorageError }
-        );
-    }
-
-    try {
-        auditoriasCampoBanco = await buscarTodosRegistrosSupabase(
-            "auditorias_campo",
-            "id, empresa_id, numero_auditoria, titulo, empresa_nome, foto_antes_url, foto_depois_url"
-        );
-    } catch (auditoriasCampoStorageError) {
-        console.warn("Erro ao consultar auditorias para vínculo de fotos:", auditoriasCampoStorageError.message);
-    }
-
-    try {
-        desviosAuditoriaBanco = await buscarTodosRegistrosSupabase(
-            "auditoria_campo_desvios",
-            "id, auditoria_id, empresa_id, categoria, descricao, foto_antes_url, foto_depois_url"
-        );
-    } catch (desviosAuditoriaStorageError) {
-        console.warn("Erro ao consultar desvios para vínculo de fotos:", desviosAuditoriaStorageError.message);
-    }
+    informarProgresso({ etapa: "finalizando", atual: totalEtapasProgresso, total: totalEtapasProgresso, mensagem: `Organizando ${coletados.length} arquivo(s)...` });
 
     const colaboradoresPorId = (colaboradores || []).reduce((acc, colaborador) => {
         acc[colaborador.id] = colaborador;

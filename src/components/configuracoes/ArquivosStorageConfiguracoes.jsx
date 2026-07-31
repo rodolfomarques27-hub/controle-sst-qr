@@ -118,6 +118,7 @@ export function ArquivosStorageConfiguracoes({
     const [filtrosStorage, setFiltrosStorage] = useState(FILTROS_STORAGE_PADRAO);
     const [arquivosStorage, setArquivosStorage] = useState([]);
     const [carregandoStorage, setCarregandoStorage] = useState(false);
+    const [progressoCarregamentoStorage, setProgressoCarregamentoStorage] = useState({ etapa: "", atual: 0, total: 1, mensagem: "" });
     const [excluindoStorage, setExcluindoStorage] = useState("");
     const [limpandoStorage, setLimpandoStorage] = useState(false);
     const [progressoLimpezaStorage, setProgressoLimpezaStorage] = useState({ atual: 0, total: 0 });
@@ -275,12 +276,16 @@ export function ArquivosStorageConfiguracoes({
         if (!onListarArquivosStorage) return;
 
         setCarregandoStorage(true);
+        setProgressoCarregamentoStorage({ etapa: "iniciando", atual: 0, total: 1, mensagem: "Preparando a verificação do Storage..." });
 
         try {
-            const lista = await onListarArquivosStorage();
+            const lista = await onListarArquivosStorage((progresso) => {
+                if (storageMontadoRef.current) setProgressoCarregamentoStorage(progresso);
+            });
 
             if (storageMontadoRef.current) {
                 setArquivosStorage(lista || []);
+                setProgressoCarregamentoStorage({ etapa: "concluido", atual: 1, total: 1, mensagem: `${(lista || []).length} arquivo(s) analisado(s).` });
             }
         } finally {
             if (storageMontadoRef.current) {
@@ -508,6 +513,27 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
                 </div>
             )}
 
+            {carregandoStorage && (
+                <div className="mt-4 rounded-2xl bg-blue-50 p-4 ring-1 ring-blue-200" role="status" aria-live="polite">
+                    <div className="flex items-center justify-between gap-3">
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-wide text-blue-700">Status da verificação</p>
+                            <p className="mt-1 text-sm font-bold text-slate-900">{progressoCarregamentoStorage.mensagem}</p>
+                        </div>
+                        <span className="shrink-0 text-sm font-black text-blue-700">
+                            {Math.round((progressoCarregamentoStorage.atual / Math.max(1, progressoCarregamentoStorage.total)) * 100)}%
+                        </span>
+                    </div>
+                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-blue-100">
+                        <div
+                            className="h-full rounded-full bg-blue-600 transition-all duration-300"
+                            style={{ width: `${Math.max(4, Math.round((progressoCarregamentoStorage.atual / Math.max(1, progressoCarregamentoStorage.total)) * 100))}%` }}
+                        />
+                    </div>
+                    <p className="mt-2 text-xs font-semibold text-blue-700">Etapa: {progressoCarregamentoStorage.etapa || "iniciando"}</p>
+                </div>
+            )}
+
             {mostrarPainelLimpezaStorage && arquivosStorage.length > 0 && (
                 <div className="mt-4 rounded-3xl border border-red-100 bg-red-50/70 p-4">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -560,27 +586,27 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
             </div>
 
             <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                <div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                <div className="flex min-h-32 flex-col items-center justify-center rounded-3xl bg-slate-50 p-4 text-center ring-1 ring-slate-200">
                     <p className="text-xs font-black uppercase tracking-wide text-slate-500">Total no Storage</p>
                     <p className="mt-2 text-2xl font-black text-slate-950">{formatarBytes(storageTotalBytes)}</p>
                     <p className="mt-1 text-xs text-slate-500">Limite administrativo: {formatarBytes(storageLimiteBytes)}</p>
                 </div>
-                <div className="rounded-3xl bg-blue-50 p-4 ring-1 ring-blue-100">
+                <div className="flex min-h-32 flex-col items-center justify-center rounded-3xl bg-blue-50 p-4 text-center ring-1 ring-blue-100">
                     <p className="text-xs font-black uppercase tracking-wide text-blue-700">Ativos do sistema</p>
                     <p className="mt-2 text-2xl font-black text-blue-900">{arquivosAtivosSistema.length}</p>
                     <p className="mt-1 text-xs text-blue-700">{formatarBytes(storageAtivosSistemaBytes)} protegidos e fora da limpeza</p>
                 </div>
-                <div className="rounded-3xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
+                <div className="flex min-h-32 flex-col items-center justify-center rounded-3xl bg-emerald-50 p-4 text-center ring-1 ring-emerald-100">
                     <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Com vínculo</p>
                     <p className="mt-2 text-2xl font-black text-emerald-900">{arquivosEmUso.length}</p>
                     <p className="mt-1 text-xs text-emerald-700">{formatarBytes(storageEmUsoBytes)} em registros ativos</p>
                 </div>
-                <div className="rounded-3xl bg-red-50 p-4 ring-1 ring-red-100">
+                <div className="flex min-h-32 flex-col items-center justify-center rounded-3xl bg-red-50 p-4 text-center ring-1 ring-red-100">
                     <p className="text-xs font-black uppercase tracking-wide text-red-700">Sem vínculo</p>
                     <p className="mt-2 text-2xl font-black text-red-900">{arquivosSemRegistro.length}</p>
                     <p className="mt-1 text-xs text-red-700">{formatarBytes(storageSemRegistroBytes)} sem registro</p>
                 </div>
-                <div className="rounded-3xl bg-blue-50 p-4 ring-1 ring-blue-100">
+                <div className="flex min-h-32 flex-col items-center justify-center rounded-3xl bg-blue-50 p-4 text-center ring-1 ring-blue-100">
                     <p className="text-xs font-black uppercase tracking-wide text-blue-700">Último upload</p>
                     <p className="mt-2 break-words text-sm font-black text-blue-900">{ultimoUploadStorage?.nome || "Não carregado"}</p>
                     <p className="mt-1 text-xs text-blue-700">

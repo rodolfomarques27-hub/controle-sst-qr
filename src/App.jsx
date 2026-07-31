@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     supabase,
     SUPABASE_CONFIGURADO,
@@ -124,6 +124,8 @@ function AppTransicaoInterna() {
 
 export default function App() {
     const [usuario, setUsuario] = useState(null);
+    const chaveCargaInicialUsuarioRef = useRef("");
+    const chaveUsuarioSessao = String(usuario?.id || usuario?.email || "").trim();
     const [carregandoSessao, setCarregandoSessao] = useState(() => SUPABASE_CONFIGURADO);
     const [tela, setTela] = useState("dashboard");
 
@@ -668,13 +670,14 @@ export default function App() {
         });
     }
 
-    async function listarArquivosCertificadosStorage() {
+    async function listarArquivosCertificadosStorage(onProgress) {
         const { listarArquivosCertificadosStorageAppService } = await carregarTreinamentosHandlers();
 
         return listarArquivosCertificadosStorageAppService({
             colaboradores,
             empresasBanco,
             setErroBanco,
+            onProgress,
         });
     }
 
@@ -1025,9 +1028,22 @@ export default function App() {
         };
     }, []);
     useEffect(() => {
-        if (!usuario) return;
+        if (!chaveUsuarioSessao) {
+            chaveCargaInicialUsuarioRef.current = "";
+            return;
+        }
+
+        if (
+            chaveCargaInicialUsuarioRef.current ===
+            chaveUsuarioSessao
+        ) {
+            return;
+        }
 
         const timer = window.setTimeout(async () => {
+            chaveCargaInicialUsuarioRef.current =
+                chaveUsuarioSessao;
+
             carregarColaboradores();
             carregarObrasEmpresas();
             registrarAuditoria("ACESSO", "sistema", "Usuário acessou o sistema");
@@ -1035,7 +1051,13 @@ export default function App() {
         }, 0);
 
         return () => window.clearTimeout(timer);
-    }, [usuario, carregarColaboradores, carregarObrasEmpresas, registrarAuditoria, verificarAcessoAuditoria]);
+    }, [
+        chaveUsuarioSessao,
+        carregarColaboradores,
+        carregarObrasEmpresas,
+        registrarAuditoria,
+        verificarAcessoAuditoria,
+    ]);
 
     useEffect(() => {
         if (!usuario) return undefined;

@@ -16651,3 +16651,445 @@
 }
 /* AJUSTE FINAL ALTURA ARMAZENAMENTO - FIM */
 /* MICROETAPA DASHBOARD TELA DIVIDIDA - FIM */
+/* Cabeçalho integrado ao hero — modelo compacto aprovado */
+.hero-integrated-page-header {
+  position: relative;
+  z-index: 30;
+  min-height: 0;
+  height: 0;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.hero-integrated-page-header .page-header-text {
+  display: none;
+}
+
+.hero-integrated-page-header .page-actions {
+  position: absolute;
+  top: 153px;
+  right: 18px;
+  z-index: 40;
+  max-width: 64%;
+  justify-content: flex-end;
+}
+
+/* Modelo 2: imagem no topo e faixa operacional integrada no rodapé. */
+.dashboard-hero-sst,
+.empresas-hero-banner,
+.colaboradores-hero-banner,
+.aniversariantes-hero-banner,
+.treinamentos-hero-banner,
+[data-dashboard-auditoria-campo-hero="true"],
+[data-configuracoes-hero="true"] {
+  min-height: 164px !important;
+}
+
+.dashboard-hero-sst::after,
+.empresas-hero-banner::after,
+.colaboradores-hero-banner::after,
+.aniversariantes-hero-banner::after,
+.treinamentos-hero-banner::after,
+[data-dashboard-auditoria-campo-hero="true"]::after,
+[data-configuracoes-hero="true"]::after {
+  content: "";
+  position: absolute;
+  z-index: 5;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 55px;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  background: linear-gradient(90deg, rgba(15, 23, 42, 0.5), rgba(30, 41, 59, 0.3));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px) saturate(135%);
+}
+
+.dashboard-hero-sst > .relative,
+.empresas-hero-banner__content,
+.colaboradores-hero-banner__content,
+.aniversariantes-hero-banner__content,
+.treinamentos-hero-banner__content,
+[data-dashboard-auditoria-campo-hero="true"] > .relative,
+[data-configuracoes-hero="true"] > .relative {
+  min-height: 164px !important;
+  padding: 18px 22px 65px !important;
+  align-items: flex-start !important;
+}
+
+.dashboard-hero-sst__date,
+.empresas-hero-banner__stats,
+.colaboradores-hero-banner__stats,
+.aniversariantes-hero-banner__stats {
+  position: absolute !important;
+  z-index: 12;
+  bottom: 10px;
+  left: 22px;
+  right: auto;
+  align-self: auto;
+  margin: 0 !important;
+}
+
+.dashboard-hero-sst__date {
+  min-height: 35px;
+  padding: 0.42rem 0.85rem !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(10px) saturate(135%) !important;
+  white-space: nowrap;
+}
+
+.empresas-hero-banner__stats,
+.colaboradores-hero-banner__stats,
+.aniversariantes-hero-banner__stats {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.empresas-hero-banner__stat,
+.colaboradores-hero-banner__stat,
+.aniversariantes-hero-banner__stat {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.hero-integrated-page-header .page-actions button {
+  min-height: 34px;
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+  border-color: rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  box-shadow: 0 7px 18px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(12px) saturate(135%);
+}
+
+.hero-integrated-page-header .page-actions button:hover {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+.hero-integrated-page-header .page-actions > div {
+  flex-wrap: nowrap !important;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.hero-header--auditoria-sistema .page-actions,
+.hero-header--configuracoes .page-actions {
+  max-width: 72%;
+}
+
+.hero-header--auditoria-sistema .page-actions button,
+.hero-header--configuracoes .page-actions button {
+  min-height: 32px;
+  padding: 0.38rem 0.68rem;
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.hero-header--empresas .page-actions,
+.hero-header--treinamentos .page-actions,
+.hero-header--aniversariantes .page-actions {
+  max-width: 40%;
+}
+
+.hero-header--empresas .page-actions,
+.hero-header--colaboradores .page-actions,
+.hero-header--treinamentos .page-actions,
+.hero-header--aniversariantes .page-actions {
+  top: 116px;
+}
+
+.hero-header--empresas .page-actions button,
+.hero-header--colaboradores .page-actions button,
+.hero-header--treinamentos .page-actions button,
+.hero-header--aniversariantes .page-actions button {
+  border-color: rgba(255, 255, 255, 0.34) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #fff !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 6px 16px rgba(0, 0, 0, 0.14) !important;
+  backdrop-filter: blur(12px) saturate(135%);
+}
+
+.hero-header--empresas .page-actions button:hover,
+.hero-header--colaboradores .page-actions button:hover,
+.hero-header--treinamentos .page-actions button:hover,
+.hero-header--aniversariantes .page-actions button:hover {
+  background: rgba(255, 255, 255, 0.22) !important;
+}
+
+
+.empresas-hero-banner__content > .min-w-0,
+.colaboradores-hero-banner__content > .min-w-0,
+.aniversariantes-hero-banner__content > .min-w-0,
+.treinamentos-hero-banner__content > .min-w-0 {
+  max-width: 58%;
+}
+
+.empresas-hero-banner,
+.colaboradores-hero-banner,
+.aniversariantes-hero-banner,
+.treinamentos-hero-banner,
+[data-dashboard-auditoria-campo-hero="true"],
+[data-configuracoes-hero="true"] {
+  min-height: 164px !important;
+  margin-bottom: 1.1rem !important;
+}
+
+.empresas-hero-banner__content,
+.colaboradores-hero-banner__content,
+.aniversariantes-hero-banner__content,
+.treinamentos-hero-banner__content,
+[data-dashboard-auditoria-campo-hero="true"] > .relative,
+[data-configuracoes-hero="true"] > .relative {
+  min-height: 164px !important;
+  padding: 18px 22px 65px !important;
+  align-items: flex-start !important;
+}
+
+.empresas-hero-banner__title,
+.colaboradores-hero-banner__title,
+.aniversariantes-hero-banner__title,
+.treinamentos-hero-banner__title {
+  margin-top: 0.25rem !important;
+  font-size: clamp(1.2rem, 1.7vw, 1.55rem) !important;
+  line-height: 1.15 !important;
+}
+
+.empresas-hero-banner__text,
+.colaboradores-hero-banner__text,
+.aniversariantes-hero-banner__text,
+.treinamentos-hero-banner__text {
+  margin-top: 0.3rem !important;
+}
+
+.empresas-hero-banner__stats,
+.colaboradores-hero-banner__stats,
+.aniversariantes-hero-banner__stats {
+  align-self: flex-end;
+  margin-bottom: 0 !important;
+}
+
+@media (max-width: 1023px) {
+  .hero-integrated-page-header {
+    height: auto;
+    margin-bottom: 0.55rem !important;
+  }
+
+  .hero-integrated-page-header .page-actions {
+    position: static;
+    max-width: none;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .hero-integrated-page-header .page-actions > div {
+    flex-wrap: wrap !important;
+    justify-content: flex-start;
+  }
+
+  .empresas-hero-banner__content > .min-w-0,
+  .colaboradores-hero-banner__content > .min-w-0,
+  .aniversariantes-hero-banner__content > .min-w-0,
+  .treinamentos-hero-banner__content > .min-w-0 {
+    max-width: none;
+  }
+
+  .dashboard-hero-sst,
+  .empresas-hero-banner,
+  .colaboradores-hero-banner,
+  .aniversariantes-hero-banner,
+  .treinamentos-hero-banner,
+  [data-dashboard-auditoria-campo-hero="true"],
+  [data-configuracoes-hero="true"] {
+    min-height: 132px !important;
+  }
+
+  .dashboard-hero-sst::after,
+  .empresas-hero-banner::after,
+  .colaboradores-hero-banner::after,
+  .aniversariantes-hero-banner::after,
+  .treinamentos-hero-banner::after,
+  [data-dashboard-auditoria-campo-hero="true"]::after,
+  [data-configuracoes-hero="true"]::after {
+    display: none;
+  }
+
+  .dashboard-hero-sst > .relative,
+  .empresas-hero-banner__content,
+  .colaboradores-hero-banner__content,
+  .aniversariantes-hero-banner__content,
+  .treinamentos-hero-banner__content,
+  [data-dashboard-auditoria-campo-hero="true"] > .relative,
+  [data-configuracoes-hero="true"] > .relative {
+    min-height: 132px !important;
+    padding: 18px !important;
+  }
+
+  .dashboard-hero-sst__date,
+  .empresas-hero-banner__stats,
+  .colaboradores-hero-banner__stats,
+  .aniversariantes-hero-banner__stats {
+    position: static !important;
+    margin-top: 0.75rem !important;
+  }
+
+  .hero-integrated-page-header .page-actions button {
+    background: #fff;
+    color: #334155;
+    border-color: #e2e8f0;
+  }
+}
+
+@media (max-width: 640px) {
+  .empresas-hero-banner,
+  .colaboradores-hero-banner,
+  .aniversariantes-hero-banner,
+  .treinamentos-hero-banner,
+  [data-dashboard-auditoria-campo-hero="true"],
+  [data-configuracoes-hero="true"] {
+    min-height: 122px !important;
+  }
+
+  .empresas-hero-banner__content,
+  .colaboradores-hero-banner__content,
+  .aniversariantes-hero-banner__content,
+  .treinamentos-hero-banner__content,
+  [data-dashboard-auditoria-campo-hero="true"] > .relative,
+  [data-configuracoes-hero="true"] > .relative {
+    min-height: 122px !important;
+    padding: 16px !important;
+  }
+}
+
+/*
+ * PADRÃO DEFINITIVO DOS HEROS DESKTOP
+ * Uma única geometria evita que ações mudem de posição conforme o conteúdo.
+ */
+@media (min-width: 1024px) {
+  .dashboard-hero-sst,
+  .empresas-hero-banner,
+  .colaboradores-hero-banner,
+  .aniversariantes-hero-banner,
+  .treinamentos-hero-banner,
+  [data-dashboard-auditoria-campo-hero="true"],
+  [data-configuracoes-hero="true"] {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    height: 172px !important;
+    min-height: 172px !important;
+    max-height: 172px !important;
+  }
+
+  .dashboard-hero-sst::after,
+  .empresas-hero-banner::after,
+  .colaboradores-hero-banner::after,
+  .aniversariantes-hero-banner::after,
+  .treinamentos-hero-banner::after,
+  [data-dashboard-auditoria-campo-hero="true"]::after,
+  [data-configuracoes-hero="true"]::after {
+    height: 52px !important;
+    background: linear-gradient(90deg, rgba(15, 23, 42, 0.48), rgba(30, 41, 59, 0.28)) !important;
+    backdrop-filter: blur(14px) saturate(140%) !important;
+  }
+
+  .dashboard-hero-sst > .relative,
+  .empresas-hero-banner__content,
+  .colaboradores-hero-banner__content,
+  .aniversariantes-hero-banner__content,
+  .treinamentos-hero-banner__content,
+  [data-dashboard-auditoria-campo-hero="true"] > .relative,
+  [data-configuracoes-hero="true"] > .relative {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    height: 172px !important;
+    min-height: 172px !important;
+    max-height: 172px !important;
+    padding: 15px 20px 61px !important;
+    align-items: flex-start !important;
+    overflow: hidden;
+  }
+
+  .dashboard-hero-sst h2,
+  [data-dashboard-auditoria-campo-hero="true"] h2,
+  [data-configuracoes-hero="true"] h2 {
+    margin-top: 0.25rem !important;
+    font-size: 1.45rem !important;
+    line-height: 1.15 !important;
+  }
+
+  .dashboard-hero-sst h2 + p,
+  [data-dashboard-auditoria-campo-hero="true"] h2 + p,
+  [data-configuracoes-hero="true"] h2 + p {
+    margin-top: 0.3rem !important;
+    font-size: 0.9rem !important;
+    line-height: 1.25 !important;
+  }
+
+  .dashboard-hero-sst h2 + p + div,
+  [data-dashboard-auditoria-campo-hero="true"] h2 + p + div,
+  [data-configuracoes-hero="true"] h2 + p + div {
+    margin-top: 0.55rem !important;
+  }
+
+  .hero-integrated-page-header .page-actions,
+  .hero-header--dashboard .page-actions,
+  .hero-header--auditoria-campo .page-actions,
+  .hero-header--auditoria-sistema .page-actions,
+  .hero-header--configuracoes .page-actions,
+  .hero-header--empresas .page-actions,
+  .hero-header--colaboradores .page-actions,
+  .hero-header--treinamentos .page-actions,
+  .hero-header--aniversariantes .page-actions {
+    top: 129px !important;
+    right: 16px !important;
+    height: 34px;
+    max-width: 72%;
+    align-items: center !important;
+    justify-content: flex-end !important;
+  }
+
+  .hero-integrated-page-header .page-actions > div {
+    height: 34px;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .hero-integrated-page-header .page-actions button {
+    box-sizing: border-box !important;
+    min-height: 34px !important;
+    height: 34px !important;
+    padding: 0 0.8rem !important;
+    border: 1px solid rgba(255, 255, 255, 0.34) !important;
+    border-radius: 999px !important;
+    background: rgba(255, 255, 255, 0.12) !important;
+    color: #fff !important;
+    font-size: 0.75rem !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 6px 16px rgba(0, 0, 0, 0.14) !important;
+    transform: none !important;
+  }
+
+  .dashboard-hero-sst__date,
+  .empresas-hero-banner__stats,
+  .colaboradores-hero-banner__stats,
+  .aniversariantes-hero-banner__stats {
+    bottom: 9px !important;
+    left: 18px !important;
+    min-height: 34px;
+    height: 34px;
+    align-items: center !important;
+  }
+
+  .dashboard-hero-sst__date {
+    display: flex !important;
+    padding: 0 0.8rem !important;
+    border-radius: 999px !important;
+  }
+}

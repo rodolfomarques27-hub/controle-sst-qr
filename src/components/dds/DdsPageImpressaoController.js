@@ -1,5 +1,6 @@
 export default function criarControladorImpressaoDds({
     aniversariantesSemanaDds,
+    carregarRegistroDdsPorCodigo,
     dadosDds,
     dadosDdsComRegistro,
     diasSemanaComTemasDds,
@@ -17,16 +18,17 @@ export default function criarControladorImpressaoDds({
     salvarRegistroDds,
     setErroRegistroDds,
     setRegistroDdsConferencia,
+    setRegistroScannerDds,
     setSalvandoRegistroDds,
     supabase,
 }) {
-    async function imprimirDdsComQrConferencia() {
+    async function salvarDdsNoSistema({ imprimir = false, silencioso = false } = {}) {
         if (salvandoRegistroDds) return;
 
         setErroRegistroDds("");
 
         if (!supabase) {
-            window.print();
+            if (imprimir) window.print();
             return;
         }
 
@@ -34,6 +36,40 @@ export default function criarControladorImpressaoDds({
         setErroRegistroDds("");
 
         try {
+            const registroExistente = await carregarRegistroDdsPorCodigo({
+                supabase,
+                codigo: dadosDds.codigo,
+            });
+            const dadosExistentes = registroExistente?.dados || {};
+            const participantesExistentes = Array.isArray(dadosExistentes.participantes)
+                ? dadosExistentes.participantes
+                : [];
+            const conferenciaConcluida =
+                dadosExistentes?.conferenciaAssistida?.fechamento?.status === "concluida";
+            const participantesSnapshot = conferenciaConcluida && participantesExistentes.length > 0
+                ? participantesExistentes
+                : participantesSistemaDds.map((participante, indice) => ({
+                    numero: participante.numero || indice + 1,
+                    codigoSafescan:
+                        participante.codigoFuncionario ||
+                        participante.codigo_funcionario ||
+                        participante.codigoSafescan ||
+                        participante.codigoSafeScan ||
+                        participante.codigo_safescan ||
+                        participante.codigo ||
+                        participante.codigo_colaborador ||
+                        participante.codigoColaborador ||
+                        participante.codigo_qr ||
+                        participante.qr_codigo ||
+                        participante.codigoQr ||
+                        participante.matricula_esocial ||
+                        participante.matriculaEsocial ||
+                        participante.matricula ||
+                        "",
+                    nome: participante.nome,
+                    funcao: participante.funcao,
+                    empresa: participante.empresa,
+                }));
             const registro = await salvarRegistroDds({
                 supabase,
                 registro: {
@@ -48,11 +84,12 @@ export default function criarControladorImpressaoDds({
                     fiscalIdealiza: dadosDds.fiscalIdealiza,
                     liderEncarregado: dadosDds.encarregado,
                     dados: {
+                        ...dadosExistentes,
                         periodo: dadosDds.periodo,
                         resumoSemana: dadosDds.resumoSemana,
                         turno: dadosDds.turno,
                         funcaoResponsavel: dadosDds.funcaoResponsavel,
-                        totalParticipantes: participantesSistemaDds.length,
+                        totalParticipantes: participantesSnapshot.length,
                         totalFolhas: folhasContinuacaoDds.length + 1,
                         recadosSemana: recadosDdsEditaveis,
                         orientacoesImportantes: orientacoesDdsEditaveis,
@@ -62,28 +99,7 @@ export default function criarControladorImpressaoDds({
                         empresaLogoNome: dadosDdsComRegistro.empresaLogoNome || "" ,
                         contratanteLogoUrl: dadosDdsComRegistro.contratanteLogoUrl || "" ,
                         contratanteLogoNome: dadosDdsComRegistro.contratanteLogoNome || "" ,
-                        participantes: participantesSistemaDds.map((participante, indice) => ({
-                            numero: participante.numero || indice + 1,
-                            codigoSafescan:
-                                participante.codigoFuncionario ||
-                                participante.codigo_funcionario ||
-                                participante.codigoSafescan ||
-                                participante.codigoSafeScan ||
-                                participante.codigo_safescan ||
-                                participante.codigo ||
-                                participante.codigo_colaborador ||
-                                participante.codigoColaborador ||
-                                participante.codigo_qr ||
-                                participante.qr_codigo ||
-                                participante.codigoQr ||
-                                participante.matricula_esocial ||
-                                participante.matriculaEsocial ||
-                                participante.matricula ||
-                                "",
-                            nome: participante.nome,
-                            funcao: participante.funcao,
-                            empresa: participante.empresa,
-                        })),
+                        participantes: participantesSnapshot,
                         diasSemana: diasSemanaComTemasDds.map((dia) => ({
                             dia: dia.dia,
                             data: dia.data,
@@ -97,17 +113,25 @@ export default function criarControladorImpressaoDds({
             });
 
             setRegistroDdsConferencia(registro);
-            window.setTimeout(() => window.print(), 150);
+            setRegistroScannerDds(registro);
+            if (imprimir) window.setTimeout(() => window.print(), 150);
+            return registro;
         } catch (error) {
             const mensagem = error?.message || "Não foi possível gerar o QR de conferência do DDS.";
             setErroRegistroDds(mensagem);
-            window.alert(mensagem);
+            if (!silencioso) window.alert(mensagem);
+            return null;
         } finally {
             setSalvandoRegistroDds(false);
         }
     }
 
+    async function imprimirDdsComQrConferencia() {
+        return salvarDdsNoSistema({ imprimir: true });
+    }
+
     return {
         imprimirDdsComQrConferencia,
+        salvarDdsNoSistema,
     };
 }

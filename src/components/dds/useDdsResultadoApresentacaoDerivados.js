@@ -107,6 +107,30 @@ function obterNomeDiaIndicadorDds(dia = {}) {
     ).trim();
 }
 
+function diaElegivelAssiduidadeDds(dia = {}) {
+    const jornadaTipo = normalizarTextoIndicadorDds(
+        dia?.jornadaTipo || dia?.jornada_tipo || ""
+    );
+
+    if (
+        jornadaTipo.includes("sabado") ||
+        jornadaTipo.includes("domingo") ||
+        jornadaTipo.includes("extra_integral")
+    ) {
+        return false;
+    }
+
+    const data = parseDataIndicadorDds(
+        dia?.data || dia?.dataDds || dia?.dia
+    );
+
+    if (data && (data.getDay() === 0 || data.getDay() === 6)) {
+        return false;
+    }
+
+    return true;
+}
+
 function classificarAbsenteismoIndicadorDds(valor) {
     if (valor === null) {
         return "nao_calculavel";
@@ -261,6 +285,7 @@ export default function useDdsResultadoApresentacaoDerivados({
     estatisticasConferenciaAssistidaDds,
     estatisticasTemasConferenciaAssistidaDds,
     fechamentoConferenciaAssistidaDds,
+    historicoMensalMaoDeObraDds,
     participantesConferenciaAssistidaDds,
     registroScannerDds,
     resultadoFinalScannerDds,
@@ -604,6 +629,12 @@ export default function useDdsResultadoApresentacaoDerivados({
                 )
                     ? diasConferenciaAssistidaDds
                     : diasAtivos;
+
+            // Sábado, domingo e jornadas exclusivamente extras permanecem no
+            // DDS e nos indicadores de aplicação, mas não criam obrigação de
+            // presença nem alteram assiduidade/absenteísmo.
+            const diasFrequencia =
+                diasAtivos.filter(diaElegivelAssiduidadeDds);
 
             const participantes =
                 Array.isArray(
@@ -1285,7 +1316,7 @@ export default function useDdsResultadoApresentacaoDerivados({
                         let ausencias = 0;
                         let manuais = 0;
 
-                        diasAtivos.forEach(
+                        diasFrequencia.forEach(
                             (dia) => {
                                 const status =
                                     obterStatusParticipanteDia(
@@ -1312,7 +1343,7 @@ export default function useDdsResultadoApresentacaoDerivados({
                         );
 
                         const totalDias =
-                            diasAtivos.length;
+                            diasFrequencia.length;
 
                         return {
                             ...participante,
@@ -1452,7 +1483,7 @@ export default function useDdsResultadoApresentacaoDerivados({
 
             const totalPossibilidades =
                 participantes.length *
-                diasAtivos.length;
+                diasFrequencia.length;
 
             const presencasGerais =
                 participantesDetalhados.reduce(
@@ -1489,7 +1520,7 @@ export default function useDdsResultadoApresentacaoDerivados({
             const baseTemDimensao =
                 participantes.length >
                     0 &&
-                diasAtivos.length >
+                diasFrequencia.length >
                     0;
 
             const baseFrequenciaConsistente =
@@ -1509,7 +1540,7 @@ export default function useDdsResultadoApresentacaoDerivados({
             const detalhesBaseFrequencia = [
                 `N funcionários: ${participantes.length}`,
                 detalheComposicaoBaseParticipantes,
-                `D dias apurados: ${diasAtivos.length}`,
+                `D dias apurados (sem sábado/domingo/hora extra integral): ${diasFrequencia.length}`,
                 `N×D possibilidades totais: ${totalPossibilidades}`,
                 `Presenças + ausências: ${totalClassificacoesFechadas}`,
                 `Pendências manuais: ${manuaisGerais}`,
@@ -1749,7 +1780,7 @@ export default function useDdsResultadoApresentacaoDerivados({
 
             const rotatividadeCalculavel =
                 baseFrequenciaConsistente &&
-                diasAtivos.length >
+                diasFrequencia.length >
                     2;
 
             const rotatividadeAparente =
@@ -1779,7 +1810,7 @@ export default function useDdsResultadoApresentacaoDerivados({
              * classificações usados pelos indicadores analíticos.
              */
             const diasDetalhamentoNominal =
-                diasAtivos.map(
+                diasFrequencia.map(
                     (
                         dia,
                         indiceDia
@@ -1895,7 +1926,7 @@ export default function useDdsResultadoApresentacaoDerivados({
                                         participante
                                     ),
                             statusPorDia:
-                                diasAtivos.map(
+                                diasFrequencia.map(
                                     (dia) => ({
                                         chave:
                                             obterChaveDiaIndicadorDds(
@@ -2485,7 +2516,7 @@ export default function useDdsResultadoApresentacaoDerivados({
                             "Base única de participantes",
                         valor:
                             baseTemDimensao
-                                ? `${participantes.length} funcionário(s) × ${diasAtivos.length} dia(s) = ${totalPossibilidades} possibilidades`
+                                ? `${participantes.length} funcionário(s) × ${diasFrequencia.length} dia(s) útil(eis) = ${totalPossibilidades} possibilidades (sábado/domingo/hora extra integral fora da taxa)`
                                 : "Indicador não calculável — dado ausente",
                         interpretacao:
                             baseTemDimensao
@@ -2930,13 +2961,59 @@ export default function useDdsResultadoApresentacaoDerivados({
                 ],
             };
 
+            const comparativosHistoricos = (Array.isArray(historicoMensalMaoDeObraDds)
+                ? historicoMensalMaoDeObraDds
+                : [])
+                .map((registro) => {
+                    const conferencia = registro?.dados?.conferenciaAssistida || {};
+                    const fechamento = conferencia?.fechamento || registro?.dados?.fechamento || {};
+                    const status = String(
+                        fechamento?.status || registro?.statusConferencia || ""
+                    ).trim().toLowerCase();
+                    const estatisticas = fechamento?.estatisticas || conferencia?.estatisticas || {};
+                    const presencas = Number(
+                        estatisticas?.presencas ?? fechamento?.resumo?.presencas ?? 0
+                    );
+                    const ausencias = Number(
+                        estatisticas?.ausencias ?? fechamento?.resumo?.ausencias ?? 0
+                    );
+                    const total = presencas + ausencias;
+
+                    if (status !== "concluida" || total <= 0) return null;
+
+                    return {
+                        codigo: String(registro?.codigo || registro?.dados?.codigo || "DDS").trim(),
+                        presencas,
+                        total,
+                        taxa: (presencas / total) * 100,
+                    };
+                })
+                .filter(Boolean);
+
+            const indicadorEvolucaoPresenca = comparativosHistoricos.length >= 2
+                ? (() => {
+                    const primeiro = comparativosHistoricos[0];
+                    const ultimo = comparativosHistoricos[comparativosHistoricos.length - 1];
+                    const variacao = ultimo.taxa - primeiro.taxa;
+                    return criarIndicadorDds({
+                        nome: "Evolução da taxa de presença semana a semana",
+                        valor: `${formatarPercentualIndicadorDds(primeiro.taxa)} → ${formatarPercentualIndicadorDds(ultimo.taxa)}`,
+                        interpretacao: `Comparação de ${comparativosHistoricos.length} DDS concluídos no histórico mensal. Variação de ${variacao >= 0 ? "+" : ""}${variacao.toFixed(2).replace(".", ",")} p.p.`,
+                        nivel: variacao >= 0 ? "normal" : variacao > -10 ? "atencao" : "critico",
+                        detalhes: comparativosHistoricos.map(
+                            (item) => `${item.codigo}: ${formatarPercentualIndicadorDds(item.taxa)} (${item.presencas}/${item.total})`
+                        ),
+                    });
+                })()
+                : criarIndicadorNaoCalculavelDds(
+                    "Evolução da taxa de presença semana a semana",
+                    "São necessários dois ou mais DDS concluídos, com presença e ausência salvas, para calcular a evolução."
+                );
+
             const blocoComparativo = {
                 titulo: "5. Comparativo",
                 indicadores: [
-                    criarIndicadorNaoCalculavelDds(
-                        "Evolução da taxa de presença semana a semana",
-                        "O comparativo será calculado na consolidação do histórico mensal, usando dois ou mais DDS concluídos."
-                    ),
+                    indicadorEvolucaoPresenca,
                     criarIndicadorNaoCalculavelDds(
                         "Comparação entre encarregados/líderes",
                         "O DDS ainda não possui um encarregado ou líder estruturado para cada grupo de participantes."
@@ -3282,7 +3359,7 @@ export default function useDdsResultadoApresentacaoDerivados({
                     composicaoParticipantesConsistente:
                         composicaoBaseParticipantesConsistente,
                     diasApurados:
-                        diasAtivos.length,
+                        diasFrequencia.length,
                     possibilidadesTotais:
                         totalPossibilidades,
                     presencas:
@@ -3307,7 +3384,7 @@ export default function useDdsResultadoApresentacaoDerivados({
                     participantesGabarito,
                     participantesComplementares,
                     diasAtivos:
-                        diasAtivos.length,
+                        diasFrequencia.length,
                     possibilidadesTotais:
                         totalPossibilidades,
                     presencas:
@@ -3328,6 +3405,7 @@ export default function useDdsResultadoApresentacaoDerivados({
             estatisticasConferenciaAssistidaDds,
             estatisticasTemasConferenciaAssistidaDds,
             participantesConferenciaAssistidaDds,
+            historicoMensalMaoDeObraDds,
             registroScannerDds,
         ]);
 

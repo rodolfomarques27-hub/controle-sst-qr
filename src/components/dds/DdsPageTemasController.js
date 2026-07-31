@@ -1,10 +1,19 @@
 export default function criarControladorTemasDds({
     criarTemasEditaveisDds,
     dadosDds,
+    chaveTemasDds,
     normalizarTemasDdsEditaveis,
     normalizarTextoTemaDds,
+    salvarTemasDdsLocal,
     setTemasDdsEditaveis,
 }) {
+    function persistirTemas(atualizados) {
+        if (chaveTemasDds && typeof salvarTemasDdsLocal === "function") {
+            salvarTemasDdsLocal(chaveTemasDds, atualizados);
+        }
+        return atualizados;
+    }
+
     function atualizarTemaDiaDds(indiceDia, campo, valor) {
         setTemasDdsEditaveis((temasAtuais) => {
             const atualizados = criarTemasEditaveisDds().map((temaPadrao, indice) => ({
@@ -17,7 +26,7 @@ export default function criarControladorTemasDds({
                 [campo]: valor,
             };
 
-            return atualizados;
+            return persistirTemas(atualizados);
         });
     }
 
@@ -42,7 +51,7 @@ export default function criarControladorTemasDds({
                     responsavel: "",
                 };
 
-            return atualizados;
+            return persistirTemas(atualizados);
         });
     }
 
@@ -59,7 +68,7 @@ export default function criarControladorTemasDds({
         }
 
         setTemasDdsEditaveis((temasAtuais) =>
-            normalizarTemasDdsEditaveis(temasAtuais).map((item) => {
+            persistirTemas(normalizarTemasDdsEditaveis(temasAtuais).map((item) => {
                 const semAtividade =
                     normalizarTextoTemaDds(item.tema) ===
                     "NAO HOUVE ATIVIDADES";
@@ -70,16 +79,16 @@ export default function criarControladorTemasDds({
                         ...item,
                         responsavel: responsavelGeral,
                     };
-            })
+            }))
         );
     }
 
     function limparResponsaveisTemasDds() {
         setTemasDdsEditaveis((temasAtuais) =>
-            normalizarTemasDdsEditaveis(temasAtuais).map((item) => ({
+            persistirTemas(normalizarTemasDdsEditaveis(temasAtuais).map((item) => ({
                 ...item,
                 responsavel: "",
-            }))
+            })))
         );
     }
 

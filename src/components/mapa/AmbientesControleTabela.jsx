@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { criarTokenMapaLocal } from "../../services/mapaObraLocalService";
 import { QrCodeComLogo } from "../qr/QrCodeComLogo";
+import { montarUrlPublicaSistema } from "../../utils/urlPublicaUtils.js";
 
 const TIPOS = [
   "Container de materiais",
@@ -121,14 +122,9 @@ export function AmbientesControleTabela({
   }
   function urlQr(ambiente) {
     const caminho = `/consulta-ponto/${encodeURIComponent(ponto.token)}?ambiente=${encodeURIComponent(ambiente.token)}`;
-    return typeof window === "undefined"
-      ? caminho
-      : `${window.location.origin}${caminho}`;
+    return montarUrlPublicaSistema(caminho);
   }
-  const urlPonto =
-    typeof window === "undefined"
-      ? `/consulta-ponto/${ponto.token}`
-      : `${window.location.origin}/consulta-ponto/${encodeURIComponent(ponto.token)}`;
+  const urlPonto = montarUrlPublicaSistema(`/consulta-ponto/${encodeURIComponent(ponto.token)}`);
   async function copiarUrlPonto() {
     try {
       await navigator.clipboard.writeText(urlPonto);
