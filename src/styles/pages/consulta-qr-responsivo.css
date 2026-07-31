@@ -1117,3 +1117,124 @@
 }
 
 /* MICROETAPA CONSULTA QR - REDUCAO EXCLUSIVA DA ALTURA V2 - FIM */
+
+/* HOTFIX PRODUCAO HERO CONSULTA QR - RESTAURAR RODAPE - INICIO */
+/*
+ * Geometria final e isolada do Hero da Consulta QR.
+ *
+ * A correção:
+ * - restaura a altura completa do Hero no desktop;
+ * - garante a faixa operacional inferior;
+ * - mantém data e indicadores visíveis acima da faixa;
+ * - protege a regra contra estilos genéricos do Hero de Empresas;
+ * - não altera o comportamento responsivo abaixo de 1024px.
+ */
+@media (min-width: 1024px) {
+  .hero-header--consulta-qr
+    + .consulta-qr-hero-banner {
+    position: relative !important;
+    box-sizing: border-box !important;
+    isolation: isolate !important;
+    width: 100% !important;
+    height: clamp(154px, 9.8vw, 178px) !important;
+    min-height: clamp(154px, 9.8vw, 178px) !important;
+    max-height: clamp(154px, 9.8vw, 178px) !important;
+    overflow: hidden !important;
+    border-radius: clamp(18px, 1.2vw, 28px) !important;
+  }
+
+  .hero-header--consulta-qr
+    + .consulta-qr-hero-banner::after {
+    content: "" !important;
+    position: absolute !important;
+    z-index: 5 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    display: block !important;
+    height: clamp(42px, 3vw, 52px) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.2) !important;
+    background:
+      linear-gradient(
+        90deg,
+        rgba(8, 13, 24, 0.92) 0%,
+        rgba(17, 24, 39, 0.84) 52%,
+        rgba(56, 34, 18, 0.82) 100%
+      ) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.08),
+      0 -8px 20px rgba(0, 0, 0, 0.08) !important;
+    backdrop-filter: blur(12px) saturate(130%) !important;
+  }
+
+  .hero-header--consulta-qr
+    + .consulta-qr-hero-banner
+    .empresas-hero-banner__content {
+    position: relative !important;
+    z-index: 6 !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    width: 100% !important;
+    height: clamp(154px, 9.8vw, 178px) !important;
+    min-height: clamp(154px, 9.8vw, 178px) !important;
+    max-height: clamp(154px, 9.8vw, 178px) !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    padding:
+      clamp(15px, 1vw, 22px)
+      clamp(22px, 1.55vw, 32px)
+      clamp(52px, 3.8vw, 66px) !important;
+    overflow: hidden !important;
+  }
+
+  .hero-header--consulta-qr
+    + .consulta-qr-hero-banner
+    .consulta-qr-hero-banner__bottom {
+    position: absolute !important;
+    z-index: 18 !important;
+    top: auto !important;
+    right: clamp(16px, 1.1vw, 24px) !important;
+    bottom:
+      calc(
+        (
+          clamp(42px, 3vw, 52px) -
+          clamp(31px, 2vw, 36px)
+        ) / 2
+      ) !important;
+    left: clamp(16px, 1.1vw, 24px) !important;
+    display: flex !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: clamp(31px, 2vw, 36px) !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-direction: row !important;
+    gap: 0.75rem !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    transform: none !important;
+  }
+
+  .hero-header--consulta-qr
+    + .consulta-qr-hero-banner
+    .consulta-qr-hero-banner__date,
+  .hero-header--consulta-qr
+    + .consulta-qr-hero-banner
+    .consulta-qr-hero-banner__stat {
+    min-height: clamp(31px, 2vw, 36px) !important;
+    height: clamp(31px, 2vw, 36px) !important;
+  }
+
+  .hero-header--consulta-qr
+    + .consulta-qr-hero-banner
+    .consulta-qr-hero-banner__stats {
+    display: flex !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    flex-wrap: nowrap !important;
+  }
+}
+/* HOTFIX PRODUCAO HERO CONSULTA QR - RESTAURAR RODAPE - FIM */

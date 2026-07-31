@@ -143,3 +143,73 @@
   }
 }
 /* MICROETAPA HEROS ANIVERSARIANTES E COLABORADORES - DATA DIA E HORA - FIM */
+
+/* HOTFIX PRODUCAO HERO COLABORADORES - EVITAR SOBREPOSICAO - INICIO */
+/*
+ * Proteção específica contra a regra global definitiva dos Heros.
+ *
+ * A regra global posiciona todos os indicadores em left: 18px.
+ * Neste Hero essa região pertence à pílula de data.
+ *
+ * A correção:
+ * - mantém a data no canto esquerdo;
+ * - posiciona os três indicadores depois da data;
+ * - preserva a área dos três botões à direita;
+ * - não altera mobile, JSX, textos ou funcionalidades.
+ */
+@media (min-width: 1024px) {
+  .hero-header--colaboradores
+    + .colaboradores-hero-banner
+    .colaboradores-hero-banner__date {
+    z-index: 18 !important;
+    top: auto !important;
+    left: clamp(12px, 0.9vw, 16px) !important;
+    bottom:
+      calc(
+        (
+          clamp(42px, 3vw, 52px) -
+          clamp(31px, 2vw, 34px)
+        ) / 2
+      ) !important;
+    transform: none !important;
+  }
+
+  .hero-header--colaboradores
+    + .colaboradores-hero-banner
+    .colaboradores-hero-banner__stats {
+    position: absolute !important;
+    z-index: 16 !important;
+    top: auto !important;
+    right: clamp(350px, 29vw, 455px) !important;
+    bottom:
+      calc(
+        (
+          clamp(42px, 3vw, 52px) -
+          clamp(31px, 2vw, 36px)
+        ) / 2
+      ) !important;
+    left: clamp(270px, 22vw, 330px) !important;
+    display: flex !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: clamp(31px, 2vw, 36px) !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-wrap: nowrap !important;
+    gap: clamp(6px, 0.42vw, 9px) !important;
+    margin: 0 !important;
+    transform: none !important;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1180px) {
+  .hero-header--colaboradores
+    + .colaboradores-hero-banner
+    .colaboradores-hero-banner__stats {
+    right: 330px !important;
+    left: 225px !important;
+    gap: 4px !important;
+  }
+}
+/* HOTFIX PRODUCAO HERO COLABORADORES - EVITAR SOBREPOSICAO - FIM */
