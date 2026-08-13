@@ -26,6 +26,9 @@ const CAMINHOS_ASSINATURA_EMAIL_SST =
 
         alerta_auditoria:
             "modelos/alerta_auditoria/assinatura",
+
+        certidao_mensal_documental:
+            "modelos/certidao_mensal_documental/assinatura",
     });
 
 function validarClienteSupabase(supabase) {

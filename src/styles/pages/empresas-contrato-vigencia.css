@@ -1,0 +1,43 @@
+.empresas-contrato-data-centralizada {
+    position: relative;
+    box-sizing: border-box;
+    width: 100%;
+    padding-left: 42px !important;
+    padding-right: 42px !important;
+    text-align: center;
+    text-align-last: center;
+    direction: ltr;
+    font-variant-numeric: tabular-nums;
+}
+
+.empresas-contrato-data-centralizada::-webkit-date-and-time-value {
+    min-width: 0;
+    width: 100%;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.empresas-contrato-data-centralizada::-webkit-datetime-edit {
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    padding: 0;
+    text-align: center;
+}
+
+.empresas-contrato-data-centralizada::-webkit-datetime-edit-fields-wrapper {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.empresas-contrato-data-centralizada::-webkit-calendar-picker-indicator {
+    position: absolute;
+    top: 50%;
+    right: 16px;
+    margin: 0;
+    padding: 0;
+    transform: translateY(-50%);
+    cursor: pointer;
+}

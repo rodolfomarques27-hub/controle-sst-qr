@@ -1,0 +1,5871 @@
+.certidao-mensal-page {
+    --certidao-verde: #147a3d;
+    --certidao-verde-escuro: #0f5b2e;
+    --certidao-verde-suave: #eff8f1;
+    --certidao-linha: #e4e8e4;
+    --certidao-texto: #1b251f;
+    --certidao-texto-suave: #67736c;
+    --certidao-critico: #dc2626;
+    --certidao-analise: #d97706;
+    --certidao-pendente: #6b7280;
+    --certidao-fundo: #f7f7f5;
+    width: 100%;
+    margin-top: -0.75rem;
+}
+
+.hero-header--certidao-mensal {
+    margin-bottom: 0.55rem !important;
+}
+
+.certidao-mensal-hero {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #e5e9ef;
+    border-radius: 24px;
+    background: #111827;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.1);
+    margin-bottom: 1rem;
+}
+
+.certidao-mensal-hero__background,
+.certidao-mensal-hero__overlay {
+    position: absolute;
+    inset: 0;
+}
+
+.certidao-mensal-hero__background {
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+}
+
+.certidao-mensal-hero__overlay {
+    background:
+        linear-gradient(
+            90deg,
+            rgba(15, 23, 42, 0.78) 0%,
+            rgba(15, 23, 42, 0.5) 48%,
+            rgba(15, 23, 42, 0.22) 100%
+        );
+}
+
+.certidao-mensal-hero__content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 132px;
+    padding: 1.15rem 1.25rem 3.8rem;
+    color: #fff;
+}
+
+.certidao-mensal-hero__identity {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    min-width: 0;
+}
+
+.certidao-mensal-hero__badge {
+    display: grid;
+    width: 56px;
+    height: 56px;
+    flex: 0 0 56px;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(10px);
+}
+
+.certidao-mensal-hero__badge svg {
+    width: 26px;
+    height: 26px;
+    color: #d8ffe0;
+}
+
+.certidao-mensal-hero__copy {
+    min-width: 0;
+    max-width: 700px;
+}
+
+.certidao-mensal-hero__eyebrow {
+    margin: 0;
+    color: #9ae6b4;
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.certidao-mensal-hero__title {
+    margin: 0.25rem 0 0;
+    color: #fff;
+    font-size: clamp(1.55rem, 2vw, 2.15rem);
+    font-weight: 900;
+    line-height: 1.05;
+}
+
+.certidao-mensal-hero__text {
+    margin: 0.4rem 0 0;
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.93rem;
+    font-weight: 650;
+    line-height: 1.35;
+}
+
+.certidao-mensal-hero__line {
+    width: 3rem;
+    height: 3px;
+    margin-top: 0.7rem;
+    border-radius: 999px;
+    background: #22c55e;
+}
+
+.certidao-mensal-hero__summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(170px, 1fr));
+    gap: 0.8rem;
+    align-self: stretch;
+}
+
+.certidao-mensal-hero__summary-card {
+    display: flex;
+    min-height: 96px;
+    flex-direction: column;
+    justify-content: center;
+    border-left: 1px solid rgba(255, 255, 255, 0.18);
+    padding-left: 1.1rem;
+}
+
+.certidao-mensal-hero__summary-card span {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.9rem;
+    font-weight: 650;
+}
+
+.certidao-mensal-hero__summary-card strong {
+    margin-top: 0.1rem;
+    color: #fff;
+    font-size: clamp(1.9rem, 2.5vw, 3.1rem);
+    font-weight: 900;
+    line-height: 1;
+}
+
+.certidao-mensal-hero__summary-card small {
+    margin-top: 0.35rem;
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 0.82rem;
+    font-weight: 650;
+}
+
+.certidao-mensal-hero__stats {
+    position: absolute;
+    right: 1rem;
+    bottom: 0.85rem;
+    left: 1rem;
+    z-index: 3;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.certidao-mensal-hero__stat {
+    display: inline-flex;
+    min-height: 34px;
+    align-items: center;
+    gap: 0.45rem;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.35);
+    padding: 0 0.85rem;
+    color: #fff;
+    font-size: 0.74rem;
+    font-weight: 800;
+    backdrop-filter: blur(10px);
+}
+
+.certidao-mensal-hero__stat svg {
+    width: 0.95rem;
+    height: 0.95rem;
+    color: #8de4a5;
+}
+
+.certidao-mensal-hero__stat--critico svg {
+    color: #fde68a;
+}
+
+.certidao-mensal-resumo {
+    display: grid;
+    grid-template-columns: 205px 330px minmax(0, 1fr);
+    gap: 0.9rem;
+    margin-bottom: 0.95rem;
+}
+
+.certidao-mensal-resumo__card,
+.certidao-mensal-resumo__faixa {
+    border: 1px solid var(--certidao-linha);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.045);
+}
+
+.certidao-mensal-resumo__card {
+    display: flex;
+    min-height: 92px;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.95rem 1rem;
+}
+
+.certidao-mensal-resumo__card--critico {
+    border-color: #f3d0cb;
+}
+
+.certidao-mensal-resumo__card-icon {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    place-items: center;
+    border-radius: 14px;
+    background: #edf7ef;
+    color: var(--certidao-verde);
+}
+
+.certidao-mensal-resumo__card--critico .certidao-mensal-resumo__card-icon {
+    background: #fff1ee;
+    color: var(--certidao-critico);
+}
+
+.certidao-mensal-resumo__card-icon svg {
+    width: 21px;
+    height: 21px;
+}
+
+.certidao-mensal-resumo__card-body {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+}
+
+.certidao-mensal-resumo__card-body small {
+    color: var(--certidao-texto-suave);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.certidao-mensal-resumo__card-body strong {
+    margin-top: 0.22rem;
+    color: var(--certidao-texto);
+    font-size: 2.2rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.certidao-mensal-resumo__card-body p {
+    margin: 0.25rem 0 0;
+    color: var(--certidao-critico);
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.certidao-mensal-resumo__faixa {
+    padding: 0.35rem 0.45rem;
+}
+
+.certidao-mensal-resumo__faixa-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0;
+    align-items: stretch;
+}
+
+.certidao-mensal-resumo__metric {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0.8rem 0.95rem;
+}
+
+.certidao-mensal-resumo__metric + .certidao-mensal-resumo__metric {
+    border-left: 1px solid var(--certidao-linha);
+}
+
+.certidao-mensal-resumo__metric-head small {
+    color: var(--certidao-texto-suave);
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.certidao-mensal-resumo__metric-body {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.55rem;
+    margin-top: 0.4rem;
+}
+
+.certidao-mensal-resumo__metric-body strong,
+.certidao-mensal-resumo__metric-update strong {
+    color: var(--certidao-texto);
+    font-size: 2rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.certidao-mensal-resumo__metric-body svg,
+.certidao-mensal-resumo__metric-update svg {
+    width: 1.1rem;
+    height: 1.1rem;
+}
+
+.certidao-mensal-resumo__metric.is-validas svg {
+    color: var(--certidao-verde);
+}
+
+.certidao-mensal-resumo__metric.is-analise svg {
+    color: var(--certidao-analise);
+}
+
+.certidao-mensal-resumo__metric.is-pendentes svg {
+    color: var(--certidao-pendente);
+}
+
+.certidao-mensal-resumo__metric.is-vencidas svg {
+    color: var(--certidao-critico);
+}
+
+.certidao-mensal-resumo__metric--update {
+    justify-content: center;
+}
+
+.certidao-mensal-resumo__metric-update {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-top: 0.45rem;
+}
+
+.certidao-mensal-resumo__metric-update strong {
+    font-size: 1.2rem;
+}
+
+.certidao-mensal-resumo__metric-update svg {
+    color: #64748b;
+}
+
+.certidao-mensal-workspace {
+    display: grid;
+    grid-template-columns: minmax(300px, 0.95fr) minmax(470px, 1.55fr) minmax(500px, 1.85fr);
+    gap: 0.9rem;
+    align-items: start;
+}
+
+.certidao-mensal-panel {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--certidao-linha);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.055);
+}
+
+.certidao-mensal-panel__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    border-top: 4px solid var(--certidao-verde);
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--certidao-linha);
+    min-height: 76px;
+    box-sizing: border-box;
+}
+
+.certidao-mensal-panel__header p {
+    margin: 0;
+    color: var(--certidao-texto);
+    font-size: 0.98rem;
+    font-weight: 900;
+}
+
+.certidao-mensal-panel__header span {
+    display: block;
+    margin-top: 0.2rem;
+    color: var(--certidao-texto-suave);
+    font-size: 0.76rem;
+    font-weight: 650;
+}
+
+.certidao-mensal-empresas__toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 42px;
+    gap: 0.55rem;
+    padding: 0.85rem 1rem 0.55rem;
+}
+
+.certidao-mensal-empresas__search {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    border: 1px solid #dbe1dd;
+    border-radius: 12px;
+    background: #fff;
+    padding: 0 0.75rem;
+}
+
+.certidao-mensal-empresas__search svg,
+.certidao-mensal-empresas__filter svg {
+    width: 16px;
+    height: 16px;
+    color: #6b7280;
+}
+
+.certidao-mensal-empresas__search input {
+    width: 100%;
+    height: 38px;
+    border: 0;
+    background: transparent;
+    color: var(--certidao-texto);
+    font-size: 0.8rem;
+    outline: none;
+}
+
+.certidao-mensal-empresas__filter {
+    display: grid;
+    width: 42px;
+    height: 38px;
+    place-items: center;
+    border: 1px solid #dbe1dd;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.certidao-mensal-empresas__filter-wrap {
+    position: relative;
+}
+
+.certidao-mensal-empresas__filter.is-active,
+.certidao-mensal-empresas__filter[aria-expanded="true"] {
+    border-color: #8eb99a;
+    background: #f1f8f3;
+}
+
+.certidao-mensal-empresas__filter-menu {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 0.4rem);
+    right: 0;
+    width: 220px;
+    overflow: hidden;
+    border: 1px solid #d8e2dc;
+    border-radius: 14px;
+    background: #fff;
+    padding: 0.45rem;
+    box-shadow: 0 16px 35px rgba(31, 49, 38, 0.16);
+}
+
+.certidao-mensal-empresas__filter-menu > strong {
+    display: block;
+    padding: 0.45rem 0.6rem;
+    color: #718077;
+    font-size: 0.64rem;
+    font-weight: 850;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.certidao-mensal-empresas__filter-menu button {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    padding: 0.6rem;
+    color: #33443a;
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-align: left;
+}
+
+.certidao-mensal-empresas__filter-menu button:hover,
+.certidao-mensal-empresas__filter-menu button.is-selected {
+    background: #eef7f0;
+    color: #126532;
+}
+
+.certidao-mensal-empresas__filter-menu button i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #178442;
+}
+
+.certidao-mensal-empresas__lista {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 0 0.65rem 0.65rem;
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: visible;
+    overscroll-behavior: contain;
+    scrollbar-color: #9fb0a5 transparent;
+    scrollbar-width: thin;
+}
+
+.certidao-mensal-empresas__lista::-webkit-scrollbar {
+    width: 6px;
+}
+
+.certidao-mensal-empresas__lista::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.certidao-mensal-empresas__lista::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #9fb0a5;
+}
+
+.certidao-mensal-empresas__lista::-webkit-scrollbar-thumb:hover {
+    background: #71877a;
+}
+
+.certidao-mensal-empresa-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.85rem;
+    align-items: center;
+    width: 100%;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    background: #fff;
+    padding: 0.85rem 0.8rem;
+    text-align: left;
+    transition:
+        border-color 160ms ease,
+        background 160ms ease,
+        box-shadow 160ms ease;
+}
+
+.certidao-mensal-empresa-row.is-subcontratada {
+    width: calc(100% - 0.55rem);
+    margin-left: 0.55rem;
+    background: #f8faf8;
+}
+
+.certidao-mensal-empresa-row:hover {
+    border-color: #d6e2da;
+    background: #fafcfb;
+}
+
+.certidao-mensal-empresa-row.is-active {
+    border-color: #a7d2b2;
+    background: #f6fbf7;
+    box-shadow: inset 0 0 0 1px rgba(20, 122, 61, 0.04);
+}
+
+.certidao-mensal-empresa-row__main {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 0.7rem;
+    align-items: center;
+    min-width: 0;
+}
+
+.certidao-mensal-empresa-row__logo {
+    position: relative;
+    display: grid;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid #dce5df;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.certidao-mensal-empresa-row__logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 3px;
+}
+
+.certidao-mensal-empresa-row__logo.is-fallback {
+    grid-template-columns: 14px auto;
+    gap: 2px;
+    color: #65776c;
+    background: #f1f5f2;
+}
+
+.certidao-mensal-empresa-row__logo.is-fallback svg {
+    width: 14px;
+    height: 14px;
+}
+
+.certidao-mensal-empresa-row__logo.is-fallback small {
+    margin: 0;
+    color: #405348;
+    font-size: 0.56rem;
+    font-weight: 900;
+}
+
+.certidao-mensal-empresa-row__dot {
+    width: 8px;
+    height: 8px;
+    margin-top: 0.35rem;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.certidao-mensal-empresa-row__dot.is-confirmado {
+    color: var(--certidao-verde);
+}
+
+.certidao-mensal-empresa-row__dot.is-em-analise {
+    color: var(--certidao-analise);
+}
+
+.certidao-mensal-empresa-row__dot.is-pendente {
+    color: var(--certidao-pendente);
+}
+
+.certidao-mensal-empresa-row__dot.is-vencido {
+    color: var(--certidao-critico);
+}
+
+.certidao-mensal-empresa-row__main strong {
+    display: block;
+    color: var(--certidao-texto);
+    font-size: 0.82rem;
+    font-weight: 850;
+    line-height: 1.3;
+}
+
+.certidao-mensal-empresa-row__main small {
+    display: block;
+    margin-top: 0.35rem;
+    color: var(--certidao-texto-suave);
+    font-size: 0.66rem;
+    font-weight: 650;
+}
+
+.certidao-mensal-empresa-row__main em {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.25rem;
+    overflow: hidden;
+    color: #668071;
+    font-size: 0.6rem;
+    font-style: normal;
+    font-weight: 750;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.certidao-mensal-empresa-row__main em b {
+    border-radius: 999px;
+    background: #e6f3e9;
+    padding: 0.16rem 0.38rem;
+    color: #277144;
+    font-size: 0.52rem;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.certidao-mensal-empresa-row__main em span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.certidao-mensal-empresa-row__meta {
+    display: grid;
+    grid-template-columns: auto;
+    justify-items: end;
+    gap: 0.08rem;
+    min-width: 72px;
+}
+
+.certidao-mensal-empresa-row__meta strong {
+    color: var(--certidao-texto);
+    font-size: 1.05rem;
+    font-weight: 900;
+    line-height: 1;
+}
+
+.certidao-mensal-empresa-row__meta small {
+    color: var(--certidao-texto-suave);
+    font-size: 0.64rem;
+    font-weight: 650;
+}
+
+.certidao-mensal-empresa-row__meta svg {
+    width: 14px;
+    height: 14px;
+    color: #94a3b8;
+    margin-top: 0.2rem;
+}
+
+.certidao-mensal-empresa-row.is-nao-aplicavel {
+    background: #f8faf9;
+}
+
+.certidao-mensal-empresa-row.is-nao-aplicavel
+.certidao-mensal-empresa-row__meta strong {
+    color: #64748b;
+}
+
+.certidao-mensal-empresa-row.is-nao-aplicavel
+.certidao-mensal-empresa-row__meta small {
+    color: #64748b;
+    font-weight: 800;
+}
+
+.certidao-mensal-empresas__empty {
+    border: 1px dashed #d8ddd9;
+    border-radius: 14px;
+    padding: 1rem;
+    color: var(--certidao-texto-suave);
+    font-size: 0.8rem;
+    text-align: center;
+}
+
+.certidao-mensal-hero__summary-card > * {
+    transform: translateY(1.5rem);
+}
+
+.certidao-mensal-empresas__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    border-top: 1px solid var(--certidao-linha);
+    padding: 0.85rem 1rem;
+}
+
+.certidao-mensal-empresas__footer span {
+    color: var(--certidao-texto-suave);
+    font-size: 0.75rem;
+    font-weight: 650;
+}
+
+.certidao-mensal-empresas__footer > small {
+    color: #7b8c81;
+    font-size: 0.68rem;
+    font-weight: 650;
+}
+
+.certidao-mensal-empresas__pagination {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.certidao-mensal-empresas__pagination button {
+    display: grid;
+    min-width: 32px;
+    height: 32px;
+    place-items: center;
+    border: 1px solid #dbe1dd;
+    border-radius: 10px;
+    background: #fff;
+    color: var(--certidao-texto-suave);
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+
+.certidao-mensal-empresas__pagination button.is-active {
+    border-color: var(--certidao-verde);
+    background: var(--certidao-verde);
+    color: #fff;
+}
+
+.certidao-mensal-empresas__pagination button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.certidao-mensal-checklist__header {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.8rem;
+    border-top: 4px solid var(--certidao-verde);
+    border-bottom: 1px solid var(--certidao-linha);
+    padding: 0.5rem 1rem;
+    min-height: 76px;
+    box-sizing: border-box;
+}
+
+.certidao-mensal-checklist {
+    display: flex;
+    flex-direction: column;
+}
+
+.certidao-mensal-checklist__header-main {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    min-width: 0;
+}
+
+.certidao-mensal-checklist__header-main > div {
+    min-width: 0;
+}
+
+.certidao-mensal-checklist__header-icon {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    place-items: center;
+    border-radius: 12px;
+    background: #edf7ef;
+    color: var(--certidao-verde);
+    overflow: hidden;
+    border: 1px solid #dce8df;
+    background: #fff;
+}
+
+.certidao-mensal-checklist__header-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.certidao-mensal-checklist__header-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 3px;
+}
+
+.certidao-mensal-checklist__header h3 {
+    margin: 0;
+    color: var(--certidao-texto);
+    font-size: 0.98rem;
+    font-weight: 900;
+}
+
+.certidao-mensal-checklist__header .certidao-mensal-checklist__empresa-nome {
+    margin-top: 0.3rem;
+    overflow: hidden;
+    color: #34483c;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.certidao-mensal-checklist__header p,
+.certidao-mensal-checklist__header small {
+    display: block;
+    margin: 0.2rem 0 0;
+    color: var(--certidao-texto-suave);
+    font-size: 0.74rem;
+    font-weight: 650;
+}
+
+.certidao-mensal-checklist__history {
+    display: inline-flex;
+    min-height: 38px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 1px solid #a9d1b5;
+    border-radius: 12px;
+    background: #f7fbf8;
+    padding: 0 0.85rem;
+    color: var(--certidao-verde);
+    font-size: 0.75rem;
+    font-weight: 800;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.certidao-mensal-checklist__history svg {
+    width: 15px;
+    height: 15px;
+}
+
+.certidao-mensal-checklist__history-panel {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% - 0.35rem);
+    right: 1rem;
+    width: min(440px, calc(100% - 2rem));
+    border: 1px solid #d6e3da;
+    border-radius: 14px;
+    background: #fff;
+    padding: 0.8rem;
+    box-shadow: 0 18px 45px rgba(24, 54, 36, 0.18);
+}
+
+.certidao-mensal-checklist__history-panel > header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.7rem;
+}
+
+.certidao-mensal-checklist__history-panel > header > div {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.certidao-mensal-checklist__history-panel > header strong,
+.certidao-mensal-checklist__history-panel > header span,
+.certidao-mensal-checklist__history-current strong,
+.certidao-mensal-checklist__history-current span {
+    display: block;
+}
+
+.certidao-mensal-checklist__history-panel > header strong {
+    color: #243a2d;
+    font-size: 0.78rem;
+    font-weight: 900;
+}
+
+.certidao-mensal-checklist__history-panel > header span {
+    margin-top: 0.18rem;
+    overflow: hidden;
+    color: #708078;
+    font-size: 0.66rem;
+    font-weight: 650;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.certidao-mensal-checklist__history-panel > header button {
+    display: grid;
+    box-sizing: border-box;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    align-self: flex-start;
+    place-items: center;
+    margin-left: auto;
+    border: 1px solid #dbe3de;
+    border-radius: 8px;
+    background: #fff;
+    color: #63736a;
+}
+
+.certidao-mensal-checklist__history-panel > header button svg {
+    width: 14px;
+    height: 14px;
+}
+
+.certidao-mensal-checklist__history-current {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.75rem;
+    border: 1px solid #b9ddc3;
+    border-radius: 11px;
+    background: #eef8f1;
+    padding: 0.65rem;
+    color: #226e40;
+}
+
+.certidao-mensal-checklist__history-current > svg {
+    width: 18px;
+    height: 18px;
+}
+
+.certidao-mensal-checklist__history-current strong { font-size: 0.76rem; }
+.certidao-mensal-checklist__history-current span { margin-top: 0.12rem; font-size: 0.64rem; }
+
+.certidao-mensal-checklist__history-panel > p {
+    margin: 0.7rem 0 0;
+    color: #738078;
+    font-size: 0.67rem;
+    font-weight: 650;
+}
+
+.certidao-mensal-checklist__lista {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.45rem;
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: visible;
+    padding: 0.7rem;
+    overscroll-behavior: contain;
+    scrollbar-color: #9fb0a5 transparent;
+    scrollbar-width: thin;
+}
+
+.certidao-mensal-checklist__lista::-webkit-scrollbar {
+    width: 6px;
+}
+
+.certidao-mensal-checklist__lista::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.certidao-mensal-checklist__lista::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #9fb0a5;
+}
+
+.certidao-mensal-checklist__lista::-webkit-scrollbar-thumb:hover {
+    background: #71877a;
+}
+
+.certidao-mensal-doc-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.7rem;
+    align-items: center;
+    border: 1px solid #edf0ed;
+    border-radius: 14px;
+    background: #fff;
+    padding: 0.72rem 0.75rem;
+    transition:
+        border-color 160ms ease,
+        background 160ms ease,
+        box-shadow 160ms ease;
+}
+
+.certidao-mensal-doc-row:hover {
+    border-color: #d6e2da;
+    background: #fafcfb;
+}
+
+.certidao-mensal-doc-row.is-active {
+    border-color: #a7d2b2;
+    background: #f6fbf7;
+    box-shadow: inset 0 0 0 1px rgba(20, 122, 61, 0.05);
+}
+
+.certidao-mensal-doc-row.is-system {
+    position: relative;
+    display: block;
+    border-color: #dce7e0;
+    background: #fbfdfb;
+    padding: 0.85rem;
+}
+
+.certidao-mensal-doc-row.is-system.is-active {
+    border-color: #91c9a1;
+    background: #f5fbf7;
+}
+
+.certidao-mensal-doc-row.is-system .certidao-mensal-doc-row__body {
+    width: 100%;
+}
+
+.certidao-mensal-doc-row.is-system .certidao-mensal-doc-row__title {
+    padding-right: 7rem;
+}
+
+.certidao-mensal-doc-row__body {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: start;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    color: inherit;
+    text-align: left;
+}
+
+.certidao-mensal-doc-row__numero {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    border: 1px solid #d8dfdb;
+    border-radius: 50%;
+    background: #fff;
+    color: #506158;
+    font-size: 0.72rem;
+    font-weight: 900;
+}
+
+.certidao-mensal-doc-row.is-active .certidao-mensal-doc-row__numero {
+    border-color: var(--certidao-verde);
+    background: var(--certidao-verde);
+    color: #fff;
+}
+
+.certidao-mensal-doc-row__title strong {
+    display: block;
+    color: var(--certidao-texto);
+    font-size: 0.82rem;
+    font-weight: 850;
+    line-height: 1.25;
+}
+
+.certidao-mensal-doc-row__title small {
+    display: block;
+    margin-top: 0.16rem;
+    color: #7b867f;
+    font-size: 0.68rem;
+    font-weight: 650;
+}
+
+.certidao-mensal-doc-row__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.18rem;
+    margin-top: 0.35rem;
+}
+
+.certidao-mensal-doc-row__meta span {
+    color: var(--certidao-texto-suave);
+    font-size: 0.67rem;
+    font-weight: 650;
+    line-height: 1.35;
+}
+
+.certidao-mensal-doc-row__metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.42rem;
+    margin-top: 0.65rem;
+}
+
+.certidao-mensal-doc-row__metrics > span {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-width: 0;
+    min-height: 42px;
+    align-items: center;
+    gap: 0.12rem 0.28rem;
+    border: 1px solid #dfe6e1;
+    border-radius: 9px;
+    background: #fff;
+    padding: 0.34rem 0.42rem;
+}
+
+.certidao-mensal-doc-row__metrics small {
+    max-width: 100%;
+    color: #708078;
+    font-size: 0.53rem;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.certidao-mensal-doc-row__metrics strong {
+    min-width: 2.2rem;
+    color: #34483c;
+    font-size: 0.88rem;
+    font-weight: 900;
+    line-height: 1;
+    text-align: center;
+}
+
+.certidao-mensal-doc-row__metrics em {
+    grid-column: 1 / -1;
+    overflow: hidden;
+    max-width: 100%;
+    color: #68776f;
+    font-size: 0.58rem;
+    font-style: normal;
+    font-weight: 650;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.certidao-mensal-doc-row__metrics > span.is-sucesso {
+    border-color: #b9ddc2;
+    background: #edf8f0;
+}
+
+.certidao-mensal-doc-row__metrics > span.is-sucesso strong { color: #157139; }
+
+.certidao-mensal-doc-row__metrics > span.is-alerta {
+    border-color: #f2cf94;
+    background: #fff8e9;
+}
+
+.certidao-mensal-doc-row__metrics > span.is-alerta strong { color: #b45e08; }
+
+.certidao-mensal-doc-row__metrics > span.is-info {
+    border-color: #bfd9eb;
+    background: #f0f8fd;
+}
+
+.certidao-mensal-doc-row__metrics > span.is-info strong { color: #17678f; }
+
+.certidao-mensal-doc-row.is-system .certidao-mensal-doc-row__actions {
+    position: absolute;
+    top: 1rem;
+    right: 0.9rem;
+    align-self: auto;
+    padding: 0;
+}
+
+.certidao-mensal-doc-row__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    align-self: stretch;
+}
+
+.certidao-mensal-doc-row__upload,
+.certidao-mensal-doc-row__menu {
+    border: 1px solid #dbe1dd;
+    background: #fff;
+    color: var(--certidao-texto-suave);
+}
+
+.certidao-mensal-doc-row__upload {
+    display: inline-flex;
+    min-height: 34px;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 10px;
+    padding: 0 0.7rem;
+    font-size: 0.7rem;
+    font-weight: 800;
+}
+
+.certidao-mensal-doc-row__upload:disabled {
+    cursor: default;
+    opacity: 0.72;
+}
+
+.certidao-mensal-doc-row__upload svg {
+    width: 14px;
+    height: 14px;
+}
+
+.certidao-mensal-doc-row__menu {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border-radius: 10px;
+}
+
+.certidao-mensal-doc-row__menu svg {
+    width: 14px;
+    height: 14px;
+}
+
+.certidao-mensal-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.38rem;
+    color: #6b7280;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
+.certidao-mensal-status i {
+    width: 7px;
+    height: 7px;
+    flex: 0 0 7px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.certidao-mensal-status.is-confirmado {
+    color: var(--certidao-verde);
+}
+
+.certidao-mensal-status.is-em-analise {
+    color: var(--certidao-analise);
+}
+
+.certidao-mensal-status.is-pendente {
+    color: var(--certidao-pendente);
+}
+
+.certidao-mensal-status.is-vencido {
+    color: var(--certidao-critico);
+}
+
+.certidao-mensal-checklist__footer {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin-top: auto;
+    border-top: 1px solid var(--certidao-linha);
+    padding: 0.85rem 1rem;
+}
+
+.certidao-mensal-checklist__footer > span {
+    color: var(--certidao-texto);
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.certidao-mensal-checklist__legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+}
+
+.certidao-mensal-evidencia__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.8rem;
+    border-top: 4px solid var(--certidao-verde);
+    border-bottom: 1px solid var(--certidao-linha);
+    padding: 0.5rem 1rem;
+    min-height: 76px;
+    box-sizing: border-box;
+}
+
+.certidao-mensal-unified-header__main {
+    display: flex;
+    min-width: 0;
+    align-items: flex-start;
+    gap: 0.7rem;
+}
+
+.certidao-mensal-unified-header__main > div {
+    min-width: 0;
+}
+
+.certidao-mensal-panel__header .certidao-mensal-unified-header__icon,
+.certidao-mensal-checklist__header .certidao-mensal-unified-header__icon,
+.certidao-mensal-evidencia__header .certidao-mensal-unified-header__icon {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid #dce8df;
+    border-radius: 12px;
+    background: #edf7ef;
+    color: var(--certidao-verde);
+    margin: 0;
+}
+
+.certidao-mensal-unified-header__icon.is-logo {
+    background: #fff;
+}
+
+.certidao-mensal-unified-header__icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.certidao-mensal-unified-header__icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 3px;
+}
+
+.certidao-mensal-panel__header .certidao-mensal-unified-header__main h3,
+.certidao-mensal-checklist__header .certidao-mensal-unified-header__main h3,
+.certidao-mensal-evidencia__header .certidao-mensal-unified-header__main h3 {
+    margin: 0;
+    color: var(--certidao-texto);
+    font-size: 0.98rem;
+    font-weight: 900;
+    line-height: 1.2;
+}
+
+.certidao-mensal-panel__header .certidao-mensal-unified-header__main p,
+.certidao-mensal-checklist__header .certidao-mensal-unified-header__main p,
+.certidao-mensal-evidencia__header .certidao-mensal-unified-header__main p {
+    display: block;
+    margin: 0.3rem 0 0;
+    overflow: hidden;
+    color: #34483c;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.certidao-mensal-panel__header .certidao-mensal-unified-header__main small,
+.certidao-mensal-checklist__header .certidao-mensal-unified-header__main small,
+.certidao-mensal-evidencia__header .certidao-mensal-unified-header__main small {
+    display: block;
+    margin-top: 0.3rem;
+    overflow: hidden;
+    color: var(--certidao-texto-suave);
+    font-size: 0.66rem;
+    font-weight: 650;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.certidao-mensal-evidencia__eyebrow {
+    margin: 0;
+    color: var(--certidao-verde);
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.certidao-mensal-evidencia__header h3 {
+    margin: 0.28rem 0 0;
+    color: var(--certidao-texto);
+    font-size: 1.1rem;
+    font-weight: 900;
+}
+
+.certidao-mensal-evidencia__header > div > span {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--certidao-texto-suave);
+    font-size: 0.72rem;
+    font-weight: 650;
+}
+
+.certidao-mensal-evidencia__tabs {
+    display: flex;
+    gap: 0.35rem;
+    padding: 0.75rem 1rem 0;
+    border-bottom: 1px solid var(--certidao-linha);
+    background: #fcfcfb;
+}
+
+.certidao-mensal-evidencia__tabs button {
+    min-height: 38px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    padding: 0 0.7rem;
+    color: #717b75;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.certidao-mensal-evidencia__tabs button.is-active {
+    border-bottom-color: var(--certidao-verde);
+    color: var(--certidao-verde);
+}
+
+.certidao-mensal-evidencia__toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.7rem;
+    border-bottom: 1px solid var(--certidao-linha);
+    padding: 0.7rem 1rem;
+}
+
+.certidao-mensal-evidencia__file,
+.certidao-mensal-evidencia__controls {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.certidao-mensal-evidencia__file {
+    min-width: 0;
+}
+
+.certidao-mensal-evidencia__file svg,
+.certidao-mensal-evidencia__controls svg {
+    width: 15px;
+    height: 15px;
+}
+
+.certidao-mensal-evidencia__file span {
+    overflow: hidden;
+    color: var(--certidao-texto);
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.certidao-mensal-evidencia__controls span {
+    color: var(--certidao-texto);
+    font-size: 0.74rem;
+    font-weight: 700;
+}
+
+.certidao-mensal-evidencia__controls button {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    border: 1px solid #dde2de;
+    border-radius: 8px;
+    background: #fff;
+    color: #67736c;
+}
+
+.certidao-mensal-evidencia__body {
+    padding: 0.85rem 1rem 1rem;
+}
+
+.certidao-mensal-evidencia__preview {
+    border: 1px solid var(--certidao-linha);
+    border-radius: 16px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.certidao-mensal-preview-doc {
+    display: flex;
+    min-height: 240px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    border-bottom: 1px solid var(--certidao-linha);
+    background: linear-gradient(180deg, #fafaf8, #ffffff);
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.certidao-mensal-preview-doc__seal {
+    width: 54px;
+    height: 54px;
+    border: 2px solid #111827;
+    border-radius: 50%;
+}
+
+.certidao-mensal-preview-doc__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.certidao-mensal-preview-doc__header strong {
+    color: #111827;
+    font-size: 0.85rem;
+    font-weight: 900;
+}
+
+.certidao-mensal-preview-doc__header span,
+.certidao-mensal-preview-doc__body span {
+    color: #374151;
+    font-size: 0.73rem;
+    font-weight: 650;
+}
+
+.certidao-mensal-preview-doc h4 {
+    max-width: 34rem;
+    margin: 0.25rem 0 0;
+    color: #111827;
+    font-size: 0.9rem;
+    font-weight: 900;
+    line-height: 1.35;
+}
+
+.certidao-mensal-preview-doc__body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.certidao-mensal-extraidos {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.certidao-mensal-extraidos__row {
+    min-width: 0;
+    border-right: 1px solid var(--certidao-linha);
+    border-bottom: 1px solid var(--certidao-linha);
+    padding: 0.8rem 0.9rem;
+}
+
+.certidao-mensal-extraidos__row:nth-child(2n) {
+    border-right: 0;
+}
+
+.certidao-mensal-extraidos__row span {
+    display: block;
+    color: #728078;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.certidao-mensal-extraidos__row strong {
+    display: block;
+    margin-top: 0.28rem;
+    color: var(--certidao-texto);
+    font-size: 0.83rem;
+    font-weight: 850;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.certidao-mensal-evidencia__acoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    margin-top: 0.85rem;
+}
+
+.certidao-mensal-acao {
+    display: inline-flex;
+    min-height: 38px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    border-radius: 12px;
+    padding: 0 0.85rem;
+    font-size: 0.74rem;
+    font-weight: 850;
+}
+
+.certidao-mensal-acao svg {
+    width: 15px;
+    height: 15px;
+}
+
+.certidao-mensal-acao--confirmar {
+    border: 1px solid var(--certidao-verde);
+    background: var(--certidao-verde);
+    color: #fff;
+}
+
+.certidao-mensal-acao--reenvio {
+    border: 1px solid #f0c794;
+    background: #fffaf3;
+    color: #a16207;
+}
+
+.certidao-mensal-acao--original {
+    border: 1px solid #dbe1dd;
+    background: #fff;
+    color: #516056;
+}
+
+.certidao-mensal-regras {
+    margin-top: 0.95rem;
+    border: 1px solid var(--certidao-linha);
+    border-radius: 16px;
+    background: #fff;
+    overflow: hidden;
+}
+
+.certidao-mensal-regras > header {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    border-bottom: 1px solid var(--certidao-linha);
+    padding: 0.85rem 0.9rem;
+}
+
+.certidao-mensal-regras > header svg {
+    width: 18px;
+    height: 18px;
+    color: var(--certidao-verde);
+}
+
+.certidao-mensal-regras > header strong {
+    display: block;
+    color: var(--certidao-texto);
+    font-size: 0.82rem;
+    font-weight: 900;
+}
+
+.certidao-mensal-regras > header span {
+    display: block;
+    margin-top: 0.15rem;
+    color: var(--certidao-texto-suave);
+    font-size: 0.7rem;
+    font-weight: 650;
+}
+
+.certidao-mensal-regras__lista {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding: 0.7rem;
+}
+
+.certidao-mensal-regra {
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr) auto;
+    gap: 0.55rem;
+    align-items: center;
+    border: 1px solid #edf0ed;
+    border-radius: 12px;
+    background: #fbfcfb;
+    padding: 0.68rem 0.72rem;
+}
+
+.certidao-mensal-regra svg {
+    width: 15px;
+    height: 15px;
+}
+
+.certidao-mensal-regra span {
+    color: #425146;
+    font-size: 0.74rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.certidao-mensal-regra small {
+    color: #6b7280;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.certidao-mensal-regra.is-aprovada svg {
+    color: var(--certidao-verde);
+}
+
+.certidao-mensal-regra.is-alerta svg {
+    color: var(--certidao-analise);
+}
+
+.certidao-mensal-regra.is-reprovada svg {
+    color: var(--certidao-critico);
+}
+
+.certidao-mensal-regras__link {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 0.9rem 0.9rem;
+    color: var(--certidao-verde);
+    font-size: 0.76rem;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.certidao-mensal-evidencia__arquivo {
+    display: grid;
+    min-height: 470px;
+    place-items: center;
+    padding: 1rem;
+    background: linear-gradient(180deg, #fafaf8, #f3f4f6);
+}
+
+.certidao-mensal-evidencia__arquivo-page {
+    display: flex;
+    width: min(100%, 420px);
+    min-height: 340px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    border: 1px solid #d7dbd7;
+    background: #fff;
+    padding: 2rem;
+    text-align: center;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.1);
+}
+
+.certidao-mensal-evidencia__arquivo-page svg {
+    width: 38px;
+    height: 38px;
+    color: var(--certidao-verde);
+}
+
+.certidao-mensal-evidencia__arquivo-page strong {
+    color: var(--certidao-texto);
+    font-size: 0.96rem;
+    font-weight: 900;
+    line-height: 1.35;
+}
+
+.certidao-mensal-evidencia__arquivo-page span {
+    max-width: 18rem;
+    color: var(--certidao-texto-suave);
+    font-size: 0.74rem;
+    font-weight: 650;
+    line-height: 1.45;
+}
+
+@media (max-width: 1480px) {
+    .certidao-mensal-resumo {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .certidao-mensal-resumo__faixa {
+        grid-column: 1 / -1;
+    }
+
+    .certidao-mensal-workspace {
+        grid-template-columns: minmax(280px, 0.95fr) minmax(440px, 1.45fr);
+    }
+
+    .certidao-mensal-evidencia {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 1180px) {
+    .certidao-mensal-hero__content {
+        flex-direction: column;
+        padding-bottom: 4.1rem;
+    }
+
+    .certidao-mensal-hero__summary {
+        width: 100%;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .certidao-mensal-hero__summary-card {
+        min-height: 84px;
+    }
+}
+
+@media (max-width: 1023px) {
+    .certidao-mensal-workspace {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .certidao-mensal-evidencia {
+        grid-column: auto;
+    }
+
+    .certidao-mensal-resumo {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .certidao-mensal-resumo__faixa-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .certidao-mensal-resumo__metric--update {
+        grid-column: 1 / -1;
+        border-left: 0 !important;
+        border-top: 1px solid var(--certidao-linha);
+    }
+
+    .certidao-mensal-extraidos {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .certidao-mensal-extraidos__row {
+        border-right: 0;
+    }
+}
+
+@media (max-width: 760px) {
+    .certidao-mensal-hero__content {
+        padding-bottom: 1.2rem;
+    }
+
+    .certidao-mensal-hero__stats {
+        position: static;
+        padding: 0 1rem 1rem;
+    }
+
+    .certidao-mensal-hero__summary {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .certidao-mensal-hero__summary-card {
+        border-left: 0;
+        padding-left: 0;
+    }
+
+    .certidao-mensal-empresas__footer,
+    .certidao-mensal-checklist__header,
+    .certidao-mensal-evidencia__toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .certidao-mensal-doc-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .certidao-mensal-doc-row__actions {
+        justify-content: space-between;
+    }
+
+    .certidao-mensal-evidencia__header {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 640px) {
+    .certidao-mensal-panel__header,
+    .certidao-mensal-checklist__header,
+    .certidao-mensal-evidencia__header {
+        min-height: auto;
+    }
+
+    .certidao-mensal-doc-row__metrics {
+        grid-template-columns: 1fr;
+    }
+
+    .certidao-mensal-hero__identity {
+        flex-direction: column;
+    }
+
+    .certidao-mensal-hero__badge {
+        width: 48px;
+        height: 48px;
+    }
+
+    .certidao-mensal-hero__title {
+        font-size: 1.4rem;
+    }
+
+    .certidao-mensal-hero__text {
+        font-size: 0.84rem;
+    }
+
+    .certidao-mensal-resumo__metric-body strong {
+        font-size: 1.45rem;
+    }
+
+    .certidao-mensal-evidencia__acoes {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+/* ========================================================================== */
+/* ========================================================================== */
+/* CERTIDAO-MENSAL-REFINO-3-5                                                 */
+/* Hero fotográfico e padronização final dos indicadores                      */
+/* ========================================================================== */
+
+.certidao-mensal-hero {
+    height: clamp(154px, 9.8vw, 178px);
+    min-height: 154px;
+}
+
+.certidao-mensal-hero__background {
+    background-position: center center;
+    background-size: cover;
+    transform: scale(1.01);
+    filter:
+        saturate(0.86)
+        contrast(1.05)
+        brightness(0.82);
+}
+
+.certidao-mensal-hero__overlay {
+    background:
+        linear-gradient(
+            90deg,
+            rgba(3, 13, 25, 0.93) 0%,
+            rgba(4, 18, 31, 0.73) 37%,
+            rgba(4, 15, 27, 0.32) 63%,
+            rgba(3, 12, 23, 0.76) 100%
+        );
+}
+
+.certidao-mensal-hero__content {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    align-items: center;
+    gap: 1.35rem;
+    padding: 0.25rem 1.25rem;
+}
+
+.certidao-mensal-hero__identity {
+    max-width: calc(100% - 525px);
+    flex: 1 1 auto;
+    align-items: center;
+}
+
+.certidao-mensal-hero__copy {
+    max-width: none;
+}
+
+.certidao-mensal-hero__text {
+    max-width: none;
+    font-size: clamp(0.72rem, 0.88vw, 0.9rem);
+    white-space: nowrap;
+}
+
+.certidao-mensal-hero__summary {
+    position: relative;
+    display: grid;
+    box-sizing: border-box;
+    width: 500px;
+    min-height: 144px;
+    flex: 0 0 500px;
+    grid-template-columns:
+        minmax(275px, 1.18fr)
+        minmax(205px, 0.82fr);
+    gap: 0;
+    align-self: center;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.17);
+    border-radius: 20px;
+    background: rgba(2, 10, 19, 0.42);
+    padding: 0.5rem;
+    transform: none;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        0 12px 30px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(19px) saturate(115%);
+    -webkit-backdrop-filter: blur(19px) saturate(115%);
+}
+
+.certidao-mensal-hero__summary::before {
+    content: "";
+    position: absolute;
+    inset: -24px;
+    z-index: -1;
+    background: rgba(3, 12, 22, 0.4);
+    filter: blur(15px);
+}
+
+.certidao-mensal-hero__summary-card {
+    display: flex;
+    box-sizing: border-box;
+    min-height: 126px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.52rem;
+    border: 0;
+    padding: 0 1.2rem;
+    text-align: center;
+    transform: translateY(-8px);
+}
+
+.certidao-mensal-hero__summary-card--competencia {
+    gap: 0.35rem;
+    padding: 0 1.55rem;
+}
+
+.certidao-mensal-hero__summary-card--conformidade {
+    gap: 0.35rem;
+    padding-right: 1.1rem;
+    padding-left: 1.1rem;
+}
+
+.certidao-mensal-hero__summary-card--conformidade::after {
+    content: "";
+    display: block;
+    width: 1px;
+    height: 26px;
+    flex: 0 0 26px;
+}
+
+.certidao-mensal-hero__summary-card +
+.certidao-mensal-hero__summary-card {
+    border-left: 1px solid rgba(255, 255, 255, 0.24);
+}
+
+.certidao-mensal-hero__summary-label {
+    color: rgba(255, 255, 255, 0.94);
+    font-size: 0.78rem;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.certidao-mensal-hero__summary-card strong {
+    margin: 0;
+    color: #fff;
+    font-size: clamp(2.25rem, 2.7vw, 3rem);
+    font-weight: 900;
+    line-height: 1;
+    white-space: nowrap;
+    text-align: center;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+.certidao-mensal-hero__summary-card--competencia strong {
+    font-size: clamp(2.4rem, 2.85vw, 3.15rem);
+}
+
+.certidao-mensal-hero__month-picker {
+    position: relative;
+    display: inline-flex;
+    min-height: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.38rem;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0 0.7rem;
+    color: #fff;
+    cursor: pointer;
+    transition: background 160ms ease, border-color 160ms ease;
+}
+
+.certidao-mensal-hero__month-picker:hover {
+    border-color: rgba(255, 255, 255, 0.48);
+    background: rgba(255, 255, 255, 0.17);
+}
+
+.certidao-mensal-hero__month-picker svg {
+    width: 13px;
+    height: 13px;
+}
+
+.certidao-mensal-hero__month-picker span {
+    color: #fff;
+    font-size: 0.66rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.certidao-mensal-competencia-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+}
+
+.certidao-mensal-competencia-menu {
+    position: fixed;
+    z-index: 9999;
+    width: 286px;
+    overflow: hidden;
+    border: 1px solid #d7e2da;
+    border-radius: 14px;
+    background: #fff;
+    color: #24342a;
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.24);
+}
+
+.certidao-mensal-competencia-menu > header {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    border-bottom: 1px solid #e6ebe7;
+    padding: 0.72rem 0.8rem;
+    background: #f7faf8;
+}
+
+.certidao-mensal-competencia-menu > header svg {
+    width: 17px;
+    height: 17px;
+    color: #147a3d;
+}
+
+.certidao-mensal-competencia-menu > header strong,
+.certidao-mensal-competencia-menu > header span {
+    display: block;
+}
+
+.certidao-mensal-competencia-menu > header strong {
+    font-size: 0.76rem;
+    font-weight: 900;
+}
+
+.certidao-mensal-competencia-menu > header span {
+    margin-top: 0.1rem;
+    color: #718078;
+    font-size: 0.62rem;
+    font-weight: 650;
+}
+
+.certidao-mensal-competencia-menu__meses {
+    display: grid;
+    max-height: 236px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.35rem;
+    overflow-y: auto;
+    padding: 0.65rem;
+    scrollbar-color: #9fb0a5 transparent;
+    scrollbar-width: thin;
+}
+
+.certidao-mensal-competencia-menu__meses button {
+    min-height: 32px;
+    border: 1px solid #e0e7e2;
+    border-radius: 8px;
+    background: #fff;
+    color: #43534a;
+    font-size: 0.68rem;
+    font-weight: 800;
+}
+
+.certidao-mensal-competencia-menu__meses button:hover {
+    border-color: #9fcaad;
+    background: #f0f8f2;
+}
+
+.certidao-mensal-competencia-menu__meses button.is-selected {
+    border-color: #147a3d;
+    background: #147a3d;
+    color: #fff;
+}
+
+.certidao-mensal-hero__summary-card--conformidade strong {
+    font-size: clamp(2.25rem, 2.7vw, 3rem);
+}
+
+.certidao-mensal-resumo {
+    grid-template-columns:
+        minmax(235px, 1fr)
+        minmax(235px, 1fr)
+        minmax(0, 4fr);
+}
+
+.certidao-mensal-resumo__card {
+    display: flex;
+    min-width: 0;
+    min-height: 92px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    padding: 0.72rem 0.9rem;
+    text-align: center;
+}
+
+.certidao-mensal-resumo__card--contratadas,
+.certidao-mensal-resumo__card--critico {
+    width: 100%;
+}
+
+.certidao-mensal-resumo__card-label {
+    display: block;
+    width: 100%;
+    color: var(--certidao-texto-suave);
+    font-size: 0.72rem;
+    font-weight: 750;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.certidao-mensal-resumo__card-value {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    gap: 0.62rem;
+}
+
+.certidao-mensal-resumo__card-value strong {
+    margin: 0;
+    color: var(--certidao-texto);
+    font-size: 2rem;
+    font-weight: 900;
+    line-height: 1;
+    text-align: center;
+}
+
+.certidao-mensal-resumo__card-icon {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    place-items: center;
+    border-radius: 50%;
+}
+
+.certidao-mensal-resumo__card--critico p {
+    margin: 0.08rem 0 0;
+    font-size: 0.64rem;
+    white-space: nowrap;
+}
+
+.certidao-mensal-resumo__faixa-grid {
+    grid-template-columns:
+        repeat(4, minmax(88px, 0.8fr))
+        minmax(210px, 1.45fr);
+}
+
+.certidao-mensal-resumo__metric {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.8rem 0.75rem;
+    text-align: center;
+}
+
+.certidao-mensal-resumo__metric-head {
+    width: 100%;
+    text-align: center;
+}
+
+.certidao-mensal-resumo__metric-head small {
+    display: block;
+    width: 100%;
+    color: var(--certidao-texto-suave);
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.certidao-mensal-resumo__metric-body {
+    display: flex;
+    min-height: 34px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.48rem;
+    margin-top: 0.38rem;
+}
+
+.certidao-mensal-resumo__metric-body svg {
+    width: 1.1rem;
+    height: 1.1rem;
+    flex: 0 0 1.1rem;
+}
+
+.certidao-mensal-resumo__metric-body strong {
+    min-width: 1.4rem;
+    margin: 0;
+    color: var(--certidao-texto);
+    font-size: 1.75rem;
+    font-weight: 900;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.certidao-mensal-resumo__metric-body--update {
+    gap: 0.45rem;
+}
+
+.certidao-mensal-resumo__metric-body--update strong {
+    min-width: 0;
+    font-size: 0.82rem;
+    font-weight: 850;
+}
+
+.certidao-mensal-resumo__metric--update {
+    align-items: center;
+    justify-content: center;
+}
+
+@media (max-width: 1480px) {
+    .certidao-mensal-resumo {
+        grid-template-columns:
+            minmax(235px, 1fr)
+            minmax(235px, 1fr);
+    }
+
+    .certidao-mensal-resumo__faixa {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 1180px) {
+    .certidao-mensal-hero {
+        height: auto;
+        min-height: 154px;
+    }
+
+    .certidao-mensal-hero__content {
+        height: auto;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .certidao-mensal-hero__identity {
+        max-width: none;
+    }
+
+    .certidao-mensal-hero__text {
+        white-space: normal;
+    }
+
+    .certidao-mensal-hero__summary {
+        width: 100%;
+        min-height: 105px;
+        flex-basis: auto;
+    }
+
+    .certidao-mensal-resumo__faixa-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .certidao-mensal-resumo__metric--update {
+        grid-column: 1 / -1;
+        border-top: 1px solid var(--certidao-linha);
+        border-left: 0;
+    }
+}
+
+@media (max-width: 760px) {
+    .certidao-mensal-hero__summary {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .certidao-mensal-hero__summary-card +
+    .certidao-mensal-hero__summary-card {
+        border-top: 1px solid rgba(255, 255, 255, 0.24);
+        border-left: 0;
+    }
+
+    .certidao-mensal-resumo {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .certidao-mensal-resumo__card-label,
+    .certidao-mensal-resumo__metric-head small {
+        white-space: normal;
+    }
+}
+
+/* CERTIDAO-MENSAL-SNAPSHOT-MAO-DE-OBRA */
+.certidao-mensal-snapshot {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 20px;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 24px;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.98),
+            rgba(248, 250, 252, 0.94)
+        );
+    box-shadow:
+        0 18px 44px rgba(15, 23, 42, 0.08);
+}
+
+.certidao-mensal-snapshot__header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+}
+
+.certidao-mensal-snapshot__header > div {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.certidao-mensal-snapshot__header strong {
+    color: #0f172a;
+    font-size: 0.98rem;
+    font-weight: 900;
+}
+
+.certidao-mensal-snapshot__header span {
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 650;
+}
+
+.certidao-mensal-snapshot__icon {
+    display: inline-flex;
+    width: 46px;
+    height: 46px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    background: rgba(22, 163, 74, 0.12);
+    color: #15803d;
+}
+
+.certidao-mensal-snapshot__icon svg {
+    width: 23px;
+    height: 23px;
+}
+
+.certidao-mensal-snapshot__status {
+    display: inline-flex;
+    min-height: 32px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 7px 13px;
+    text-align: center;
+    font-size: 0.72rem;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.certidao-mensal-snapshot__status.is-rascunho {
+    background: rgba(245, 158, 11, 0.13);
+    color: #b45309;
+}
+
+.certidao-mensal-snapshot__status.is-confirmado {
+    background: rgba(22, 163, 74, 0.13);
+    color: #15803d;
+}
+
+.certidao-mensal-snapshot__indicadores {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.certidao-mensal-snapshot__indicadores article {
+    display: flex;
+    min-height: 112px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 19px;
+    background: rgba(255, 255, 255, 0.86);
+    padding: 14px;
+    text-align: center;
+}
+
+.certidao-mensal-snapshot__indicadores span {
+    color: #64748b;
+    font-size: 0.7rem;
+    font-weight: 850;
+}
+
+.certidao-mensal-snapshot__indicadores strong {
+    color: #0f172a;
+    font-size: 1.32rem;
+    font-weight: 950;
+    line-height: 1;
+}
+
+.certidao-mensal-snapshot__indicadores small {
+    color: #94a3b8;
+    font-size: 0.67rem;
+    font-weight: 700;
+}
+
+.certidao-mensal-snapshot__colaboradores {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 20px;
+    background: rgba(248, 250, 252, 0.78);
+    padding: 16px;
+}
+
+.certidao-mensal-snapshot__colaboradores > header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.certidao-mensal-snapshot__colaboradores > header strong {
+    color: #0f172a;
+    font-size: 0.82rem;
+    font-weight: 900;
+}
+
+.certidao-mensal-snapshot__colaboradores > header span {
+    color: #64748b;
+    font-size: 0.7rem;
+    font-weight: 800;
+}
+
+.certidao-mensal-snapshot__nomes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+}
+
+.certidao-mensal-snapshot__nomes > span {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border-radius: 14px;
+    background: #fff;
+    padding: 10px 12px;
+    text-align: center;
+    box-shadow:
+        inset 0 0 0 1px rgba(148, 163, 184, 0.16);
+}
+
+.certidao-mensal-snapshot__nomes b {
+    max-width: 100%;
+    overflow: hidden;
+    color: #1e293b;
+    font-size: 0.73rem;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.certidao-mensal-snapshot__nomes small {
+    max-width: 100%;
+    overflow: hidden;
+    color: #64748b;
+    font-size: 0.65rem;
+    font-weight: 650;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.certidao-mensal-snapshot__nomes .is-restante {
+    background: rgba(22, 163, 74, 0.08);
+}
+
+.certidao-mensal-snapshot__vazio {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.certidao-mensal-snapshot__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-radius: 19px;
+    background: rgba(15, 23, 42, 0.035);
+    padding: 14px 16px;
+}
+
+.certidao-mensal-snapshot__footer > div {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.certidao-mensal-snapshot__footer strong {
+    color: #1e293b;
+    font-size: 0.78rem;
+    font-weight: 900;
+}
+
+.certidao-mensal-snapshot__footer span {
+    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 650;
+}
+
+.certidao-mensal-snapshot__confirmar {
+    display: inline-flex;
+    min-height: 40px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 0;
+    border-radius: 14px;
+    background: #15803d;
+    padding: 10px 16px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 0.72rem;
+    font-weight: 900;
+    transition:
+        transform 160ms ease,
+        opacity 160ms ease,
+        background 160ms ease;
+}
+
+.certidao-mensal-snapshot__confirmar:hover:not(:disabled) {
+    background: #166534;
+    transform: translateY(-1px);
+}
+
+.certidao-mensal-snapshot__confirmar:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+}
+
+.certidao-mensal-snapshot__confirmar svg {
+    width: 17px;
+    height: 17px;
+}
+
+@media (max-width: 820px) {
+    .certidao-mensal-snapshot__header {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .certidao-mensal-snapshot__status {
+        grid-column: 1 / -1;
+        width: 100%;
+    }
+
+    .certidao-mensal-snapshot__indicadores {
+        grid-template-columns: 1fr;
+    }
+
+    .certidao-mensal-snapshot__indicadores article {
+        min-height: 94px;
+    }
+
+    .certidao-mensal-snapshot__nomes {
+        grid-template-columns: 1fr;
+    }
+
+    .certidao-mensal-snapshot__footer {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+
+    .certidao-mensal-snapshot__confirmar {
+        width: 100%;
+    }
+}
+/* FIM CERTIDAO-MENSAL-SNAPSHOT-MAO-DE-OBRA */
+
+/* SafeScan: decisão documental sem ações falsas */
+
+.certidao-mensal-acao:disabled {
+    cursor: not-allowed;
+    opacity: 1;
+    box-shadow: none;
+}
+
+.certidao-mensal-acao--confirmar:disabled {
+    border-color: #b8c4bc;
+    background: #eef2ef;
+    color: #65736a;
+}
+
+.certidao-mensal-acao--nao-conforme {
+    border: 1px solid #e7aaa3;
+    background: #fff4f2;
+    color: #b42318;
+}
+
+.certidao-mensal-acao--reenvio:disabled {
+    border-color: #efc27f;
+    background: #fff9ed;
+    color: #976000;
+}
+
+.certidao-mensal-evidencia__tratativa {
+    margin: 0.65rem 0 0;
+    border: 1px solid #f0c5bf;
+    border-radius: 12px;
+    background: #fff7f5;
+    padding: 0.7rem 0.8rem;
+    color: #a3382f;
+    font-size: 0.72rem;
+    font-weight: 750;
+    line-height: 1.45;
+}
+
+.certidao-mensal-regra.is-aprovada {
+    border-color: #d7eadc;
+    background: #f8fcf9;
+}
+
+.certidao-mensal-regra.is-alerta {
+    border-color: #f1d7a6;
+    background: #fffaf0;
+}
+
+.certidao-mensal-regra.is-reprovada {
+    border-color: #efc2bd;
+    background: #fff6f4;
+}
+
+.certidao-mensal-regra small {
+    min-width: 72px;
+    text-align: right;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.certidao-mensal-regra.is-aprovada small {
+    color: var(--certidao-verde);
+}
+
+.certidao-mensal-regra.is-alerta small {
+    color: #9a6700;
+}
+
+.certidao-mensal-regra.is-reprovada small {
+    color: var(--certidao-critico);
+}
+
+.certidao-mensal-regras__resumo {
+    padding: 0 0.9rem 0.9rem;
+    color: var(--certidao-texto-suave);
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+@media (max-width: 620px) {
+    .certidao-mensal-evidencia__acoes {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .certidao-mensal-acao {
+        width: 100%;
+    }
+
+    .certidao-mensal-regra {
+        grid-template-columns:
+            18px
+            minmax(0, 1fr);
+    }
+
+    .certidao-mensal-regra small {
+        grid-column: 2;
+        min-width: 0;
+        text-align: left;
+    }
+}
+
+/* SafeScan: visualização real do PDF persistido */
+
+.certidao-mensal-evidencia__arquivo--pdf {
+    display: block;
+    min-height: 620px;
+    padding: 0;
+    overflow: hidden;
+    background: #f4f6f5;
+}
+
+.certidao-mensal-evidencia__arquivo-frame {
+    display: block;
+    width: 100%;
+    height: clamp(620px, 72vh, 860px);
+    border: 0;
+    background: #ffffff;
+}
+
+.certidao-mensal-evidencia__arquivo--pdf
+.certidao-mensal-evidencia__arquivo-page.is-indisponivel {
+    width: min(
+        calc(100% - 2rem),
+        440px
+    );
+    margin: 1rem auto;
+}
+
+@media (max-width: 760px) {
+    .certidao-mensal-evidencia__arquivo--pdf {
+        min-height: 520px;
+    }
+
+    .certidao-mensal-evidencia__arquivo-frame {
+        height: 65vh;
+        min-height: 520px;
+    }
+}
+
+/* SafeScan: prévia real e cards sem esticamento artificial */
+
+.certidao-mensal-workspace
+> .certidao-mensal-panel {
+    align-self: start;
+}
+
+.certidao-mensal-evidencia__toolbar-action {
+    display: inline-flex;
+    min-height: 34px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 0.42rem;
+    border: 1px solid #cfdad3;
+    border-radius: 10px;
+    background: #ffffff;
+    padding: 0 0.72rem;
+    color: #3f5147;
+    font-size: 0.7rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.certidao-mensal-evidencia__toolbar-action:hover {
+    border-color: #9fc5aa;
+    background: #f4faf6;
+    color: var(--certidao-verde);
+}
+
+.certidao-mensal-evidencia__toolbar-action svg {
+    width: 14px;
+    height: 14px;
+}
+
+.certidao-mensal-preview-real {
+    height: clamp(300px, 34vh, 390px);
+    overflow: hidden;
+    border-bottom: 1px solid var(--certidao-linha);
+    background: #f3f5f4;
+}
+
+.certidao-mensal-preview-real__frame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #ffffff;
+}
+
+.certidao-mensal-preview-real__empty {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1.25rem;
+    color: var(--certidao-texto-suave);
+    text-align: center;
+}
+
+.certidao-mensal-preview-real__empty svg {
+    width: 28px;
+    height: 28px;
+    color: #7f9488;
+}
+
+.certidao-mensal-preview-real__empty strong {
+    color: var(--certidao-texto);
+    font-size: 0.78rem;
+    font-weight: 850;
+}
+
+.certidao-mensal-preview-real__empty span {
+    max-width: 310px;
+    font-size: 0.7rem;
+    font-weight: 650;
+    line-height: 1.45;
+}
+
+@media (max-width: 760px) {
+    .certidao-mensal-evidencia__toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .certidao-mensal-evidencia__toolbar-action {
+        width: 100%;
+    }
+
+    .certidao-mensal-preview-real {
+        height: 320px;
+    }
+}
+
+/* SafeScan: altura uniforme e scroll interno estável */
+
+@media (min-width: 1481px) {
+    .certidao-mensal-workspace {
+        --certidao-altura-paineis:
+            clamp(
+                620px,
+                calc(100vh - 250px),
+                900px
+            );
+    }
+
+    .certidao-mensal-workspace
+    .certidao-mensal-empresas,
+    .certidao-mensal-workspace
+    .certidao-mensal-checklist,
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia {
+        height: var(--certidao-altura-paineis);
+        min-height: 0;
+        max-height: var(--certidao-altura-paineis);
+        box-sizing: border-box;
+    }
+
+    .certidao-mensal-workspace
+    .certidao-mensal-empresas,
+    .certidao-mensal-workspace
+    .certidao-mensal-checklist {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia {
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+    }
+
+    .certidao-mensal-workspace
+    .certidao-mensal-empresas
+    > .certidao-mensal-panel__header,
+    .certidao-mensal-workspace
+    .certidao-mensal-empresas__toolbar,
+    .certidao-mensal-workspace
+    .certidao-mensal-empresas__footer,
+    .certidao-mensal-workspace
+    .certidao-mensal-checklist__header,
+    .certidao-mensal-workspace
+    .certidao-mensal-checklist__footer {
+        flex: 0 0 auto;
+    }
+
+    .certidao-mensal-workspace
+    .certidao-mensal-empresas__lista,
+    .certidao-mensal-workspace
+    .certidao-mensal-checklist__lista {
+        height: 0;
+        min-height: 0;
+        flex: 1 1 0;
+        max-height: none;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+    }
+}
+/* SafeScan: tratativa documental de solicitação de reenvio */
+.certidao-mensal-status.is-reenvio-solicitado {
+    border-color: #efc27f;
+    background: #fff9ed;
+    color: #976000;
+}
+
+.certidao-mensal-reenvio-modal__overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2600;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    background: rgba(18, 28, 22, 0.52);
+    backdrop-filter: blur(4px);
+}
+
+.certidao-mensal-reenvio-modal__dialog {
+    width: min(560px, 100%);
+    overflow: hidden;
+    border: 1px solid #dce4de;
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: 0 24px 70px rgba(18, 28, 22, 0.24);
+}
+
+.certidao-mensal-reenvio-modal__header {
+    display: grid;
+    grid-template-columns: 46px minmax(0, 1fr) 38px;
+    gap: 0.8rem;
+    align-items: center;
+    border-bottom: 1px solid #e4e9e5;
+    padding: 1rem 1.1rem;
+}
+
+.certidao-mensal-reenvio-modal__icone {
+    display: grid;
+    width: 46px;
+    height: 46px;
+    place-items: center;
+    border-radius: 14px;
+    background: #fff4df;
+    color: #a16207;
+}
+
+.certidao-mensal-reenvio-modal__icone svg {
+    width: 21px;
+    height: 21px;
+}
+
+.certidao-mensal-reenvio-modal__header p {
+    margin: 0 0 0.15rem;
+    color: #15803d;
+    font-size: 0.66rem;
+    font-weight: 900;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+}
+
+.certidao-mensal-reenvio-modal__header h2 {
+    margin: 0;
+    color: #1f2922;
+    font-size: 1.05rem;
+    line-height: 1.25;
+}
+
+.certidao-mensal-reenvio-modal__header span {
+    display: block;
+    margin-top: 0.2rem;
+    overflow: hidden;
+    color: #69766e;
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.certidao-mensal-reenvio-modal__fechar {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    border: 1px solid #dce4de;
+    border-radius: 12px;
+    background: #fff;
+    color: #647168;
+}
+
+.certidao-mensal-reenvio-modal__fechar svg {
+    width: 18px;
+    height: 18px;
+}
+
+.certidao-mensal-reenvio-modal__body {
+    padding: 1.1rem;
+}
+
+.certidao-mensal-reenvio-modal__aviso {
+    display: flex;
+    gap: 0.7rem;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    border: 1px solid #f0c794;
+    border-radius: 14px;
+    background: #fffaf3;
+    padding: 0.8rem;
+    color: #7c4a03;
+}
+
+.certidao-mensal-reenvio-modal__aviso svg {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    margin-top: 0.1rem;
+}
+
+.certidao-mensal-reenvio-modal__aviso strong,
+.certidao-mensal-reenvio-modal__aviso span {
+    display: block;
+}
+
+.certidao-mensal-reenvio-modal__aviso strong {
+    font-size: 0.78rem;
+}
+
+.certidao-mensal-reenvio-modal__aviso span {
+    margin-top: 0.2rem;
+    font-size: 0.7rem;
+    line-height: 1.45;
+}
+
+.certidao-mensal-reenvio-modal__body label {
+    display: block;
+    margin-bottom: 0.4rem;
+    color: #354239;
+    font-size: 0.75rem;
+    font-weight: 850;
+}
+
+.certidao-mensal-reenvio-modal__body textarea {
+    width: 100%;
+    min-height: 126px;
+    resize: vertical;
+    border: 1px solid #ccd6cf;
+    border-radius: 14px;
+    background: #fff;
+    padding: 0.8rem;
+    color: #1f2922;
+    font: inherit;
+    font-size: 0.78rem;
+    line-height: 1.5;
+    outline: none;
+}
+
+.certidao-mensal-reenvio-modal__body textarea:focus {
+    border-color: #159447;
+    box-shadow: 0 0 0 3px rgba(21, 148, 71, 0.12);
+}
+
+.certidao-mensal-reenvio-modal__contador {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.35rem;
+    color: #748078;
+    font-size: 0.66rem;
+}
+
+.certidao-mensal-reenvio-modal__erro {
+    margin: 0.75rem 0 0;
+    border: 1px solid #f0c5bf;
+    border-radius: 12px;
+    background: #fff7f5;
+    padding: 0.65rem 0.75rem;
+    color: #a3382f;
+    font-size: 0.72rem;
+    font-weight: 750;
+}
+
+.certidao-mensal-reenvio-modal__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    border-top: 1px solid #e4e9e5;
+    background: #f8faf8;
+    padding: 0.9rem 1.1rem;
+}
+
+.certidao-mensal-reenvio-modal__footer button {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    border-radius: 12px;
+    padding: 0 1rem;
+    font-size: 0.74rem;
+    font-weight: 850;
+}
+
+.certidao-mensal-reenvio-modal__footer button svg {
+    width: 15px;
+    height: 15px;
+}
+
+.certidao-mensal-reenvio-modal__footer .is-secundario {
+    border: 1px solid #d7dfd9;
+    background: #fff;
+    color: #536158;
+}
+
+.certidao-mensal-reenvio-modal__footer .is-principal {
+    border: 1px solid #d39226;
+    background: #d39226;
+    color: #fff;
+}
+
+.certidao-mensal-reenvio-modal__footer button:disabled,
+.certidao-mensal-reenvio-modal__fechar:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+}
+
+@media (max-width: 620px) {
+    .certidao-mensal-reenvio-modal__header {
+        grid-template-columns: 42px minmax(0, 1fr) 36px;
+        padding: 0.85rem;
+    }
+
+    .certidao-mensal-reenvio-modal__footer {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .certidao-mensal-reenvio-modal__footer button {
+        width: 100%;
+    }
+}
+
+/* SafeScan: linha do tempo do histórico documental */
+.certidao-mensal-historico {
+    min-height: 190px;
+    overflow: hidden;
+    border: 1px solid #dce5df;
+    border-radius: 16px;
+    background: #ffffff;
+}
+
+.certidao-mensal-historico__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 1px solid #e1e8e3;
+    background: #f9fbf9;
+    padding: 0.9rem 1rem;
+}
+
+.certidao-mensal-historico__header > div {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.certidao-mensal-historico__header svg {
+    width: 19px;
+    height: 19px;
+    flex: 0 0 auto;
+    color: #168344;
+}
+
+.certidao-mensal-historico__header strong,
+.certidao-mensal-historico__header span {
+    display: block;
+}
+
+.certidao-mensal-historico__header strong {
+    color: #26322b;
+    font-size: 0.82rem;
+    font-weight: 850;
+}
+
+.certidao-mensal-historico__header span {
+    margin-top: 0.16rem;
+    color: #718078;
+    font-size: 0.67rem;
+    font-weight: 650;
+}
+
+.certidao-mensal-historico__total {
+    flex: 0 0 auto;
+    margin: 0 !important;
+    border: 1px solid #d8e4dc;
+    border-radius: 999px;
+    background: #eef7f1;
+    padding: 0.34rem 0.58rem;
+    color: #226c40 !important;
+    font-size: 0.64rem !important;
+    font-weight: 850 !important;
+}
+
+.certidao-mensal-historico__lista {
+    max-height: 560px;
+    overflow-y: auto;
+    margin: 0;
+    padding: 0.9rem 1rem 1rem;
+    scrollbar-width: thin;
+    scrollbar-color: #b8c8be transparent;
+    list-style: none;
+}
+
+.certidao-mensal-historico__evento {
+    position: relative;
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 0.7rem;
+}
+
+.certidao-mensal-historico__evento:not(:last-child) {
+    padding-bottom: 1rem;
+}
+
+.certidao-mensal-historico__evento:not(:last-child)::before {
+    position: absolute;
+    top: 33px;
+    bottom: 0;
+    left: 16px;
+    width: 2px;
+    background: #e1e8e3;
+    content: "";
+}
+
+.certidao-mensal-historico__marcador {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border: 1px solid #d9e3dc;
+    border-radius: 11px;
+    background: #f5f8f6;
+    color: #55635a;
+}
+
+.certidao-mensal-historico__marcador svg {
+    width: 16px;
+    height: 16px;
+}
+
+.certidao-mensal-historico__evento.is-enviado
+.certidao-mensal-historico__marcador,
+.certidao-mensal-historico__evento.is-conforme
+.certidao-mensal-historico__marcador {
+    border-color: #b7dfc5;
+    background: #eef9f2;
+    color: #14833e;
+}
+
+.certidao-mensal-historico__evento.is-substituido
+.certidao-mensal-historico__marcador {
+    border-color: #bed8ea;
+    background: #f0f7fc;
+    color: #2775a8;
+}
+
+.certidao-mensal-historico__evento.is-reenvio
+.certidao-mensal-historico__marcador {
+    border-color: #efca8f;
+    background: #fff8ea;
+    color: #9b6208;
+}
+
+.certidao-mensal-historico__evento.is-nao-conforme
+.certidao-mensal-historico__marcador {
+    border-color: #efbbb5;
+    background: #fff3f1;
+    color: #c43228;
+}
+
+.certidao-mensal-historico__evento article {
+    min-width: 0;
+    border: 1px solid #e0e7e2;
+    border-radius: 14px;
+    background: #ffffff;
+    padding: 0.8rem;
+}
+
+.certidao-mensal-historico__evento article > header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.certidao-mensal-historico__evento article > header strong,
+.certidao-mensal-historico__evento article > header time {
+    display: block;
+}
+
+.certidao-mensal-historico__evento article > header strong {
+    color: #26322b;
+    font-size: 0.77rem;
+    font-weight: 850;
+}
+
+.certidao-mensal-historico__evento article > header time {
+    margin-top: 0.16rem;
+    color: #78847c;
+    font-size: 0.63rem;
+    font-weight: 700;
+}
+
+.certidao-mensal-historico__versao {
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: #edf7f0;
+    padding: 0.27rem 0.5rem;
+    color: #18763f;
+    font-size: 0.62rem;
+    font-weight: 850;
+}
+
+.certidao-mensal-historico__evento article > p {
+    margin: 0.55rem 0 0;
+    color: #56635b;
+    font-size: 0.69rem;
+    font-weight: 650;
+    line-height: 1.5;
+}
+
+.certidao-mensal-historico__arquivo {
+    display: flex;
+    gap: 0.55rem;
+    align-items: flex-start;
+    margin-top: 0.65rem;
+    border-radius: 11px;
+    background: #f6f9f7;
+    padding: 0.62rem;
+}
+
+.certidao-mensal-historico__arquivo svg {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    margin-top: 0.05rem;
+    color: #168344;
+}
+
+.certidao-mensal-historico__arquivo strong,
+.certidao-mensal-historico__arquivo span {
+    display: block;
+}
+
+.certidao-mensal-historico__arquivo strong {
+    overflow: hidden;
+    color: #344138;
+    font-size: 0.67rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.certidao-mensal-historico__arquivo span {
+    margin-top: 0.16rem;
+    color: #79857d;
+    font-size: 0.61rem;
+}
+
+.certidao-mensal-historico__detalhe {
+    margin-top: 0.62rem;
+    border-left: 3px solid #e9b85f;
+    border-radius: 4px 10px 10px 4px;
+    background: #fff9ef;
+    padding: 0.56rem 0.66rem;
+}
+
+.certidao-mensal-historico__detalhe strong,
+.certidao-mensal-historico__detalhe span {
+    display: block;
+}
+
+.certidao-mensal-historico__detalhe strong {
+    color: #895606;
+    font-size: 0.63rem;
+    font-weight: 850;
+}
+
+.certidao-mensal-historico__detalhe span {
+    margin-top: 0.16rem;
+    color: #67583d;
+    font-size: 0.66rem;
+    line-height: 1.45;
+}
+
+.certidao-mensal-historico__evento article > footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.35rem 0.8rem;
+    margin-top: 0.65rem;
+    border-top: 1px dashed #e0e6e2;
+    padding-top: 0.55rem;
+    color: #7b867f;
+    font-size: 0.6rem;
+    font-weight: 700;
+}
+
+.certidao-mensal-historico.is-carregando,
+.certidao-mensal-historico.is-vazio,
+.certidao-mensal-historico.is-erro {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1.4rem;
+    text-align: left;
+}
+
+.certidao-mensal-historico.is-carregando > svg,
+.certidao-mensal-historico.is-vazio > svg,
+.certidao-mensal-historico.is-erro > svg {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 auto;
+    color: #748178;
+}
+
+.certidao-mensal-historico.is-erro > svg {
+    color: #c4372e;
+}
+
+.certidao-mensal-historico.is-carregando strong,
+.certidao-mensal-historico.is-vazio strong,
+.certidao-mensal-historico.is-erro strong,
+.certidao-mensal-historico.is-carregando span,
+.certidao-mensal-historico.is-vazio span,
+.certidao-mensal-historico.is-erro span {
+    display: block;
+}
+
+.certidao-mensal-historico.is-carregando strong,
+.certidao-mensal-historico.is-vazio strong,
+.certidao-mensal-historico.is-erro strong {
+    color: #344138;
+    font-size: 0.75rem;
+    font-weight: 850;
+}
+
+.certidao-mensal-historico.is-carregando span,
+.certidao-mensal-historico.is-vazio span,
+.certidao-mensal-historico.is-erro span {
+    margin-top: 0.16rem;
+    color: #758078;
+    font-size: 0.66rem;
+}
+
+.certidao-mensal-historico.is-erro button {
+    display: inline-flex;
+    min-height: 36px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-left: auto;
+    border: 1px solid #dfb0aa;
+    border-radius: 11px;
+    background: #fff5f3;
+    padding: 0 0.75rem;
+    color: #ad3027;
+    font-size: 0.66rem;
+    font-weight: 850;
+}
+
+.certidao-mensal-historico.is-erro button svg {
+    width: 14px;
+    height: 14px;
+}
+
+@media (max-width: 620px) {
+    .certidao-mensal-historico__header {
+        align-items: flex-start;
+    }
+
+    .certidao-mensal-historico__evento {
+        grid-template-columns: 30px minmax(0, 1fr);
+        gap: 0.55rem;
+    }
+
+    .certidao-mensal-historico__marcador {
+        width: 30px;
+        height: 30px;
+    }
+
+    .certidao-mensal-historico__evento:not(:last-child)::before {
+        top: 29px;
+        left: 14px;
+    }
+
+    .certidao-mensal-historico__evento article > header {
+        display: block;
+    }
+
+    .certidao-mensal-historico__versao {
+        display: inline-block;
+        margin-top: 0.45rem;
+    }
+
+    .certidao-mensal-historico.is-erro {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .certidao-mensal-historico.is-erro button {
+        width: 100%;
+        margin-left: 0;
+    }
+}
+
+/* SafeScan: integração da aba de histórico documental */
+.certidao-mensal-evidencia__historico {
+    min-width: 0;
+    background: #f7faf8;
+    padding: 0.9rem 1rem 1rem;
+}
+
+@media (max-width: 620px) {
+    .certidao-mensal-evidencia__historico {
+        padding: 0.75rem;
+    }
+}
+/* Envio por e-mail da competência documental */
+.certidao-mensal-checklist__header {
+    flex-wrap: wrap;
+}
+
+.certidao-mensal-checklist__header-main {
+    min-width: 0;
+    flex: 1 1 220px;
+}
+
+.certidao-mensal-checklist__header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.55rem;
+    margin-left: auto;
+}
+
+.certidao-mensal-checklist__send {
+    display: inline-flex;
+    min-height: 38px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 1px solid #168347;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #168347, #0f6f3a);
+    padding: 0 0.9rem;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 850;
+    line-height: 1;
+    white-space: nowrap;
+    box-shadow: 0 7px 16px rgb(22 131 71 / 16%);
+    transition:
+        transform 160ms ease,
+        box-shadow 160ms ease,
+        opacity 160ms ease;
+}
+
+.certidao-mensal-checklist__send:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 9px 20px rgb(22 131 71 / 22%);
+}
+
+.certidao-mensal-checklist__send:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+    transform: none;
+}
+
+.certidao-mensal-checklist__send.is-sucesso {
+    border-color: #138347;
+    background: #edf9f1;
+    color: #116e3d;
+    box-shadow: none;
+}
+
+.certidao-mensal-checklist__send.is-erro {
+    border-color: #d7a1a1;
+    background: #fff6f6;
+    color: #a12e2e;
+    box-shadow: none;
+}
+
+.certidao-mensal-checklist__send svg,
+.certidao-mensal-checklist__email-confirm > svg,
+.certidao-mensal-checklist__email-feedback > svg,
+.certidao-mensal-checklist__vigencia > svg {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+}
+
+.certidao-mensal-checklist__email-confirm,
+.certidao-mensal-checklist__email-feedback,
+.certidao-mensal-checklist__vigencia {
+    display: flex;
+    flex: 0 0 100%;
+    align-items: center;
+    gap: 0.7rem;
+    width: 100%;
+    margin-top: 0.15rem;
+    border: 1px solid #d9e7dd;
+    border-radius: 12px;
+    background: #f8fbf9;
+    padding: 0.68rem 0.75rem;
+}
+
+.certidao-mensal-checklist__vigencia {
+    align-items: flex-start;
+    border-color: #d6dee8;
+    background: #f8fafc;
+    color: #475569;
+}
+
+.certidao-mensal-checklist__vigencia > svg {
+    margin-top: 0.08rem;
+}
+
+.certidao-mensal-checklist__vigencia > div {
+    min-width: 0;
+    flex: 1;
+}
+
+.certidao-mensal-checklist__vigencia strong,
+.certidao-mensal-checklist__vigencia span {
+    display: block;
+}
+
+.certidao-mensal-checklist__vigencia strong {
+    color: #334155;
+    font-size: 0.75rem;
+    font-weight: 850;
+}
+
+.certidao-mensal-checklist__vigencia span {
+    margin-top: 0.16rem;
+    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 650;
+    line-height: 1.35;
+}
+
+.certidao-mensal-checklist__email-confirm > div:first-of-type {
+    min-width: 0;
+    flex: 1;
+}
+
+.certidao-mensal-checklist__email-confirm strong,
+.certidao-mensal-checklist__email-confirm span {
+    display: block;
+}
+
+.certidao-mensal-checklist__email-confirm strong {
+    color: #20392a;
+    font-size: 0.76rem;
+    font-weight: 850;
+}
+
+.certidao-mensal-checklist__email-confirm span {
+    margin-top: 0.16rem;
+    color: #65766c;
+    font-size: 0.69rem;
+    font-weight: 650;
+}
+
+.certidao-mensal-checklist__email-confirm-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.42rem;
+}
+
+.certidao-mensal-checklist__email-confirm-actions button {
+    min-height: 32px;
+    border: 1px solid #cbdad0;
+    border-radius: 9px;
+    background: #fff;
+    padding: 0 0.68rem;
+    color: #52645a;
+    font-size: 0.69rem;
+    font-weight: 800;
+}
+
+.certidao-mensal-checklist__email-confirm-actions .is-confirm {
+    border-color: #168347;
+    background: #168347;
+    color: #fff;
+}
+
+.certidao-mensal-checklist__email-feedback {
+    color: #40564a;
+    font-size: 0.71rem;
+    font-weight: 720;
+}
+
+.certidao-mensal-checklist__email-feedback span {
+    min-width: 0;
+    flex: 1;
+}
+
+.certidao-mensal-checklist__email-feedback small {
+    margin: 0 0 0 auto;
+    color: inherit;
+    font-size: 0.63rem;
+    font-weight: 750;
+}
+
+.certidao-mensal-checklist__email-feedback.is-sucesso {
+    border-color: #b9dec5;
+    background: #f0faf3;
+    color: #17673c;
+}
+
+.certidao-mensal-checklist__email-feedback.is-erro {
+    border-color: #efcccc;
+    background: #fff6f6;
+    color: #9a3030;
+}
+
+.certidao-mensal-checklist__email-feedback.is-enviando {
+    border-color: #c7d9e8;
+    background: #f5f9fc;
+    color: #315d7c;
+}
+
+.certidao-mensal-checklist__send .is-spinning,
+.certidao-mensal-checklist__email-feedback .is-spinning {
+    animation: certidao-email-spin 900ms linear infinite;
+}
+
+@keyframes certidao-email-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 760px) {
+    .certidao-mensal-checklist__header-actions {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .certidao-mensal-checklist__send,
+    .certidao-mensal-checklist__history {
+        flex: 1 1 0;
+        justify-content: center;
+    }
+
+    .certidao-mensal-checklist__email-confirm,
+    .certidao-mensal-checklist__email-feedback {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .certidao-mensal-checklist__email-confirm-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .certidao-mensal-checklist__email-feedback small {
+        width: 100%;
+        margin-left: 1.45rem;
+    }
+}
+
+
+/* SafeScan: cards documentais cromáticos compactos 2026-08-04 */
+.certidao-mensal-checklist .certidao-mensal-doc-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "body actions";
+    align-items: start;
+    gap: 12px;
+    min-width: 0;
+    min-height: 96px;
+    overflow: hidden;
+    padding: 12px 16px;
+    transition:
+        background-color 160ms ease,
+        border-color 160ms ease,
+        box-shadow 160ms ease;
+}
+
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-active {
+    box-shadow:
+        0 0 0 2px rgba(22, 135, 73, 0.15);
+}
+
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-pendente,
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-pendente.is-active,
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-reenvio-solicitado,
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-reenvio-solicitado.is-active {
+    background-color: #e7ebef;
+    border-color: #b9c2cb;
+}
+
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-em-analise,
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-em-analise.is-active {
+    background-color: #ffffff;
+    border-color: #dfa042;
+}
+
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-vencido,
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-vencido.is-active {
+    background-color: #fde8e8;
+    border-color: #dc4c4c;
+}
+
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-vencido.is-active {
+    box-shadow:
+        0 0 0 2px rgba(220, 76, 76, 0.2);
+}
+
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-vencido.is-active .certidao-mensal-doc-row__numero {
+    border-color: #c93636;
+    background: #c93636;
+    color: #fff;
+}
+
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-confirmado,
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-confirmado.is-active {
+    background-color: #daf1e2;
+    border-color: #4ba96d;
+}
+
+.certidao-mensal-checklist .certidao-mensal-doc-row__body {
+    grid-area: body;
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    align-items: start;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    padding: 0;
+    text-align: left;
+}
+
+.certidao-mensal-checklist .certidao-mensal-doc-row__content {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.certidao-mensal-checklist .certidao-mensal-doc-row__top,
+.certidao-mensal-checklist .certidao-mensal-doc-row__title,
+.certidao-mensal-checklist .certidao-mensal-doc-row__meta {
+    min-width: 0;
+}
+
+.certidao-mensal-checklist .certidao-mensal-doc-row__title {
+    display: grid;
+    gap: 2px;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.certidao-mensal-checklist .certidao-mensal-doc-row__title strong {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.certidao-mensal-checklist .certidao-mensal-doc-row__title small {
+    display: block;
+    min-width: 0;
+    margin-top: 0;
+    color: #65736b;
+    line-height: 1.25;
+    white-space: normal;
+}
+
+.certidao-mensal-checklist .certidao-mensal-doc-row__meta {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+    gap: 1px;
+    margin-top: 3px;
+    text-align: left;
+}
+
+.certidao-mensal-checklist .certidao-mensal-doc-row__detail-primary,
+.certidao-mensal-checklist .certidao-mensal-doc-row__detail-secondary {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.certidao-mensal-checklist .certidao-mensal-doc-row__detail-primary {
+    font-weight: 500;
+}
+
+.certidao-mensal-checklist .certidao-mensal-doc-row__actions {
+    grid-area: actions;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    align-self: start;
+    justify-self: end;
+    min-width: max-content;
+    padding: 0;
+}
+
+.certidao-mensal-checklist .certidao-mensal-doc-row__upload {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+    .certidao-mensal-checklist .certidao-mensal-doc-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        min-height: 90px;
+        padding: 11px 12px;
+    }
+
+    .certidao-mensal-checklist .certidao-mensal-doc-row__body {
+        grid-template-columns: 30px minmax(0, 1fr);
+        gap: 9px;
+    }
+
+    .certidao-mensal-checklist .certidao-mensal-doc-row__title {
+        gap: 4px;
+    }
+
+    .certidao-mensal-checklist .certidao-mensal-doc-row__upload {
+        padding-inline: 9px;
+    }
+}
+
+/* SafeScan: empresas compactas e cards internos neutros 2026-08-05 */
+
+/* Lista de empresas: somente logo, nome, quantidade e acesso. */
+.certidao-mensal-workspace .certidao-mensal-empresa-row {
+    min-height: 54px;
+    gap: 0.55rem;
+    padding: 0.55rem 0.68rem;
+}
+
+.certidao-mensal-workspace .certidao-mensal-empresa-row.is-subcontratada {
+    width: 100%;
+    margin-left: 0;
+    background: #fff;
+}
+
+.certidao-mensal-workspace .certidao-mensal-empresa-row.is-subcontratada:hover {
+    background: #fafcfb;
+}
+
+.certidao-mensal-workspace .certidao-mensal-empresa-row.is-subcontratada.is-active {
+    background: #f6fbf7;
+}
+
+.certidao-mensal-workspace .certidao-mensal-empresa-row__main {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 0.58rem;
+}
+
+.certidao-mensal-workspace .certidao-mensal-empresa-row__logo {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+    border-radius: 9px;
+}
+
+.certidao-mensal-workspace .certidao-mensal-empresa-row__main > div {
+    min-width: 0;
+}
+
+.certidao-mensal-workspace .certidao-mensal-empresa-row__main strong {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 0.76rem;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.certidao-mensal-workspace .certidao-mensal-empresa-row__meta {
+    display: flex;
+    min-width: auto;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.34rem;
+}
+
+.certidao-mensal-workspace .certidao-mensal-empresa-row__meta strong {
+    min-width: 1.35rem;
+    font-size: 0.88rem;
+    line-height: 1;
+    text-align: right;
+}
+
+.certidao-mensal-workspace .certidao-mensal-empresa-row__meta svg {
+    width: 13px;
+    height: 13px;
+    margin-top: 0;
+}
+
+/* Relação de Empregados e ASO + PCMSO: seleção indicada somente pelo círculo do número. */
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-system,
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-system.is-pendente,
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-system.is-em-analise,
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-system.is-confirmado,
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-system.is-vencido,
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-system.is-reenvio-solicitado {
+    border-color: #d6ddd8;
+    background: #f6f8f7;
+    box-shadow: none;
+    padding: 0;
+}
+
+.certidao-mensal-checklist
+.certidao-mensal-doc-row.is-system
+.certidao-mensal-doc-row__body {
+    width: 100%;
+    min-height: inherit;
+    box-sizing: border-box;
+    padding: 12px 16px;
+    cursor: default;
+}
+
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-system.is-active,
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-system.is-active.is-pendente,
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-system.is-active.is-em-analise,
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-system.is-active.is-confirmado,
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-system.is-active.is-vencido,
+.certidao-mensal-checklist .certidao-mensal-doc-row.is-system.is-active.is-reenvio-solicitado {
+    border-color: #d6ddd8;
+    background: #f6f8f7;
+    box-shadow: none;
+}
+
+.certidao-mensal-checklist
+.certidao-mensal-doc-row.is-system
+.certidao-mensal-doc-row__numero {
+    border-color: #d1d9d4;
+    background: #fff;
+    color: #53635a;
+}
+
+.certidao-mensal-checklist
+.certidao-mensal-doc-row.is-system.is-active
+.certidao-mensal-doc-row__numero {
+    border-color: var(--certidao-verde);
+    background: var(--certidao-verde);
+    color: #fff;
+}
+
+.certidao-mensal-checklist
+.certidao-mensal-doc-row.is-system
+.certidao-mensal-doc-row__metrics
+> span.is-neutro
+strong {
+    min-width: 1.3rem;
+    color: #5f6d65;
+    font-size: 0.76rem;
+    font-weight: 750;
+}
+
+.certidao-mensal-checklist
+.certidao-mensal-doc-row.is-system
+.certidao-mensal-doc-row__metrics
+> span.is-neutro
+em {
+    color: #718078;
+    font-weight: 600;
+}
+
+/* SafeScan: subcontratada em segunda linha 2026-08-05 */
+.certidao-mensal-workspace .certidao-mensal-empresa-row__identity {
+    display: grid;
+    min-width: 0;
+    align-content: center;
+    gap: 0.12rem;
+}
+
+.certidao-mensal-workspace .certidao-mensal-empresa-row__identity > strong {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.certidao-mensal-workspace .certidao-mensal-empresa-row__subcontratada {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    color: #168749;
+    font-size: 0.57rem;
+    font-style: normal;
+    font-weight: 750;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: help;
+}
+
+.certidao-mensal-workspace
+.certidao-mensal-empresa-row.is-active
+.certidao-mensal-empresa-row__subcontratada {
+    color: #11743e;
+}
+
+/* SafeScan: hero elevado e relatório documental 2026-08-05 */
+
+/*
+ * A regra antiga aplicava 1.5rem para baixo.
+ * O novo valor preserva leve compensação e sobe o conteúdo
+ * aproximadamente 18px em relação à posição anterior.
+ */
+.certidao-mensal-hero__summary-card > * {
+    transform: translateY(0.35rem);
+}
+
+.certidao-mensal-hero__summary-card--conformidade::after {
+    content: none;
+    display: none;
+}
+
+.certidao-mensal-hero__summary-card--competencia
+.certidao-mensal-hero__month-picker,
+.certidao-mensal-hero__summary-card--conformidade
+.certidao-mensal-hero__report-button {
+    min-width: 136px;
+}
+
+.certidao-mensal-hero__report-button {
+    border-color: rgba(134, 239, 172, 0.44);
+    background: rgba(22, 163, 74, 0.22);
+}
+
+.certidao-mensal-hero__report-button:hover {
+    border-color: rgba(187, 247, 208, 0.7);
+    background: rgba(22, 163, 74, 0.34);
+}
+
+.certidao-mensal-hero__report-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+@media (max-width: 640px) {
+    .certidao-mensal-hero__summary-card--competencia
+    .certidao-mensal-hero__month-picker,
+    .certidao-mensal-hero__summary-card--conformidade
+    .certidao-mensal-hero__report-button {
+        width: min(100%, 180px);
+    }
+}
+
+/* =========================================================
+   RELATÓRIO INDIVIDUAL DA EMPRESA - AÇÃO NO CABEÇALHO
+   ========================================================= */
+
+.certidao-mensal-checklist__header-actions {
+    flex-wrap: wrap;
+}
+
+.certidao-mensal-checklist__print {
+    display: inline-flex;
+    min-height: 38px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 1px solid #78bd90;
+    border-radius: 10px;
+    background: #edf8f1;
+    padding: 0.55rem 0.8rem;
+    color: #166d3d;
+    font-size: 0.75rem;
+    font-weight: 850;
+    white-space: nowrap;
+    transition:
+        transform 160ms ease,
+        border-color 160ms ease,
+        background 160ms ease,
+        box-shadow 160ms ease,
+        opacity 160ms ease;
+}
+
+.certidao-mensal-checklist__print:hover:not(:disabled) {
+    transform: translateY(-1px);
+    border-color: #4fa871;
+    background: #e5f5eb;
+    box-shadow: 0 8px 18px rgb(23 115 65 / 16%);
+}
+
+.certidao-mensal-checklist__print:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+    transform: none;
+}
+
+.certidao-mensal-checklist__print svg {
+    width: 16px;
+    height: 16px;
+}
+
+@media (max-width: 980px) {
+    .certidao-mensal-checklist__header-actions {
+        width: 100%;
+        margin-left: 0;
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 760px) {
+    .certidao-mensal-checklist__print,
+    .certidao-mensal-checklist__send,
+    .certidao-mensal-checklist__history {
+        flex: 1 1 150px;
+        justify-content: center;
+    }
+}
+
+
+
+/* SafeScan: refinamento visual e regra anual externa 2026-08-06 */
+.certidao-mensal-checklist__header {
+    min-height: 88px;
+    align-items: center;
+    padding-block: 0.72rem;
+}
+
+.certidao-mensal-checklist__header-main {
+    flex: 1 1 440px;
+    align-items: center;
+}
+
+.certidao-mensal-checklist__header .certidao-mensal-unified-header__icon {
+    width: 52px;
+    height: 52px;
+    flex-basis: 52px;
+    border-radius: 12px;
+}
+
+.certidao-mensal-checklist__header .certidao-mensal-checklist__empresa-nome {
+    display: block;
+    max-width: min(100%, 520px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.certidao-mensal-checklist__header-actions {
+    display: grid;
+    flex: 1 1 520px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 0.65rem;
+}
+
+.certidao-mensal-checklist__header-actions > button {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    text-align: center;
+}
+
+@media (max-width: 980px) {
+    .certidao-mensal-checklist__header-actions {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 700px) {
+    .certidao-mensal-checklist__header-actions {
+        grid-template-columns: 1fr;
+    }
+}
+/* ============================================================
+   SAFE-SCAN-632F-ABRIR-VERSAO-HISTORICA
+   ============================================================ */
+
+.certidao-mensal-historico__arquivo {
+    display: grid;
+    grid-template-columns:
+        auto
+        minmax(0, 1fr)
+        auto;
+    align-items: center;
+    column-gap: 10px;
+}
+
+.certidao-mensal-historico__arquivo > div {
+    min-width: 0;
+}
+
+.certidao-mensal-historico__abrir-versao {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 6px 11px;
+    border: 1px solid rgba(15, 118, 110, 0.24);
+    border-radius: 9px;
+    background: #ffffff;
+    color: #0f766e;
+    font: inherit;
+    font-size: 0.74rem;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+        border-color 160ms ease,
+        background-color 160ms ease,
+        color 160ms ease,
+        box-shadow 160ms ease;
+}
+
+.certidao-mensal-historico__abrir-versao:hover {
+    border-color: rgba(15, 118, 110, 0.46);
+    background: #f0fdfa;
+    color: #115e59;
+}
+
+.certidao-mensal-historico__abrir-versao:focus-visible {
+    outline: 2px solid rgba(13, 148, 136, 0.36);
+    outline-offset: 2px;
+}
+
+@media (max-width: 720px) {
+    .certidao-mensal-historico__arquivo {
+        grid-template-columns:
+            auto
+            minmax(0, 1fr);
+        row-gap: 8px;
+    }
+
+    .certidao-mensal-historico__abrir-versao {
+        grid-column: 2;
+        justify-self: start;
+    }
+}
+
+/* ============================================================
+   SAFESCAN J.48-P1D - MODAL HISTORICO
+   SOMENTE REVISAO - SEM PERSISTENCIA
+   ============================================================ */
+
+.certidao-mensal-regularizacao-modal__overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2700;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    background: rgba(18, 28, 22, 0.58);
+    backdrop-filter: blur(4px);
+}
+
+.certidao-mensal-regularizacao-modal__dialog {
+    display: flex;
+    width: min(920px, 100%);
+    max-height: min(90vh, 860px);
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #d8e3db;
+    border-radius: 20px;
+    background: #ffffff;
+    box-shadow: 0 26px 80px rgba(18, 28, 22, 0.28);
+}
+
+.certidao-mensal-regularizacao-modal__header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 38px;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 1px solid #e2e9e4;
+    padding: 1rem 1.1rem;
+}
+
+.certidao-mensal-regularizacao-modal__header p {
+    margin: 0 0 0.15rem;
+    color: #15803d;
+    font-size: 0.66rem;
+    font-weight: 900;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+}
+
+.certidao-mensal-regularizacao-modal__header h2 {
+    margin: 0;
+    color: #1f2922;
+    font-size: 1.08rem;
+    line-height: 1.25;
+}
+
+.certidao-mensal-regularizacao-modal__header span {
+    display: block;
+    margin-top: 0.2rem;
+    overflow: hidden;
+    color: #68766d;
+    font-size: 0.74rem;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.certidao-mensal-regularizacao-modal__header > button {
+    display: grid;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    border: 1px solid #dce4de;
+    border-radius: 12px;
+    background: #fff;
+    color: #647168;
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.certidao-mensal-regularizacao-modal__aviso {
+    margin: 1rem 1.1rem 0;
+    border: 1px solid #efc27f;
+    border-radius: 14px;
+    background: #fff9ed;
+    padding: 0.8rem 0.9rem;
+    color: #805300;
+}
+
+.certidao-mensal-regularizacao-modal__aviso strong,
+.certidao-mensal-regularizacao-modal__aviso span {
+    display: block;
+}
+
+.certidao-mensal-regularizacao-modal__aviso strong {
+    font-size: 0.78rem;
+    font-weight: 900;
+}
+
+.certidao-mensal-regularizacao-modal__aviso span {
+    margin-top: 0.22rem;
+    font-size: 0.7rem;
+    font-weight: 650;
+    line-height: 1.5;
+}
+
+.certidao-mensal-regularizacao-modal__resumo {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+    padding: 0.85rem 1.1rem 0;
+}
+
+.certidao-mensal-regularizacao-modal__resumo article {
+    display: flex;
+    min-height: 72px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #dce6df;
+    border-radius: 13px;
+    background: #f8fbf9;
+    text-align: center;
+}
+
+.certidao-mensal-regularizacao-modal__resumo span {
+    color: #68766d;
+    font-size: 0.66rem;
+    font-weight: 800;
+}
+
+.certidao-mensal-regularizacao-modal__resumo strong {
+    margin-top: 0.2rem;
+    color: #176e3d;
+    font-size: 1.15rem;
+    font-weight: 900;
+}
+
+.certidao-mensal-regularizacao-modal__atalhos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.8rem 1.1rem;
+}
+
+.certidao-mensal-regularizacao-modal__atalhos button {
+    min-height: 34px;
+    border: 1px solid #cddbd1;
+    border-radius: 10px;
+    background: #fff;
+    padding: 0 0.72rem;
+    color: #4f6156;
+    font-size: 0.69rem;
+    font-weight: 800;
+}
+
+.certidao-mensal-regularizacao-modal__lista {
+    display: flex;
+    min-height: 180px;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 0.42rem;
+    overflow-y: auto;
+    border-top: 1px solid #edf1ee;
+    border-bottom: 1px solid #edf1ee;
+    background: #f7faf8;
+    padding: 0.8rem 1.1rem;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+}
+
+.certidao-mensal-regularizacao-modal__colaborador {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr);
+    align-items: center;
+    gap: 0.65rem;
+    border: 1px solid #dfe7e1;
+    border-radius: 12px;
+    background: #fff;
+    padding: 0.68rem 0.75rem;
+    cursor: pointer;
+}
+
+.certidao-mensal-regularizacao-modal__colaborador.is-selecionado {
+    border-color: #8bc69d;
+    background: #f0f8f2;
+}
+
+.certidao-mensal-regularizacao-modal__colaborador input {
+    width: 17px;
+    height: 17px;
+    margin: 0;
+    accent-color: #168347;
+}
+
+.certidao-mensal-regularizacao-modal__colaborador span,
+.certidao-mensal-regularizacao-modal__colaborador strong,
+.certidao-mensal-regularizacao-modal__colaborador small {
+    min-width: 0;
+}
+
+.certidao-mensal-regularizacao-modal__colaborador strong,
+.certidao-mensal-regularizacao-modal__colaborador small {
+    display: block;
+}
+
+.certidao-mensal-regularizacao-modal__colaborador strong {
+    overflow: hidden;
+    color: #26342b;
+    font-size: 0.74rem;
+    font-weight: 850;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.certidao-mensal-regularizacao-modal__colaborador small {
+    margin-top: 0.16rem;
+    color: #728078;
+    font-size: 0.65rem;
+    font-weight: 650;
+    line-height: 1.4;
+}
+
+.certidao-mensal-regularizacao-modal__vazio {
+    margin: auto;
+    color: #6e7b73;
+    font-size: 0.74rem;
+    font-weight: 750;
+    text-align: center;
+}
+
+.certidao-mensal-regularizacao-modal__erro {
+    margin: 0.75rem 1.1rem 0;
+    border: 1px solid #f0c5bf;
+    border-radius: 12px;
+    background: #fff7f5;
+    padding: 0.65rem 0.75rem;
+    color: #a3382f;
+    font-size: 0.72rem;
+    font-weight: 750;
+}
+
+.certidao-mensal-regularizacao-modal__footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 0.65rem;
+    background: #f8faf8;
+    padding: 0.9rem 1.1rem;
+}
+
+.certidao-mensal-regularizacao-modal__footer > div strong,
+.certidao-mensal-regularizacao-modal__footer > div span {
+    display: block;
+}
+
+.certidao-mensal-regularizacao-modal__footer > div strong {
+    color: #176e3d;
+    font-size: 1rem;
+    font-weight: 900;
+}
+
+.certidao-mensal-regularizacao-modal__footer > div span {
+    margin-top: 0.1rem;
+    color: #6c7971;
+    font-size: 0.67rem;
+    font-weight: 700;
+}
+
+.certidao-mensal-regularizacao-modal__modo {
+    border: 1px solid #efc27f;
+    border-radius: 999px;
+    background: #fff9ed;
+    padding: 0.42rem 0.68rem;
+    color: #805300;
+    font-size: 0.66rem;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+.certidao-mensal-regularizacao-modal__footer button {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    padding: 0 1rem;
+    font-size: 0.73rem;
+    font-weight: 850;
+}
+
+.certidao-mensal-regularizacao-modal__footer .is-principal {
+    border: 1px solid #168347;
+    background: #168347;
+    color: #fff;
+}
+
+@media (max-width: 700px) {
+    .certidao-mensal-regularizacao-modal__resumo {
+        grid-template-columns: 1fr;
+    }
+
+    .certidao-mensal-regularizacao-modal__footer {
+        grid-template-columns: 1fr;
+    }
+
+    .certidao-mensal-regularizacao-modal__modo {
+        white-space: normal;
+    }
+
+    .certidao-mensal-regularizacao-modal__footer button {
+        width: 100%;
+    }
+}
+/* SafeScan: P15-E1 perfil documental */
+.certidao-mensal-perfil-modal {
+    width: min(760px, 100%);
+    max-height: min(88vh, 820px);
+    display: flex;
+    flex-direction: column;
+}
+
+.certidao-mensal-perfil-modal .certidao-mensal-reenvio-modal__body {
+    overflow-y: auto;
+}
+
+.certidao-mensal-perfil-modal__icone {
+    background: #edf8f0;
+    color: #15803d;
+}
+
+.certidao-mensal-perfil-modal__body {
+    min-height: 0;
+}
+
+.certidao-mensal-perfil-modal__aviso {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    margin-bottom: 0.9rem;
+    border: 1px solid #cfe3d5;
+    border-radius: 14px;
+    background: #f5faf6;
+    padding: 0.75rem 0.8rem;
+    color: #315d3d;
+}
+
+.certidao-mensal-perfil-modal__aviso > svg {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 auto;
+    margin-top: 0.08rem;
+    color: #15803d;
+}
+
+.certidao-mensal-perfil-modal__aviso strong,
+.certidao-mensal-perfil-modal__aviso span {
+    display: block;
+}
+
+.certidao-mensal-perfil-modal__aviso strong {
+    font-size: 0.78rem;
+    font-weight: 900;
+}
+
+.certidao-mensal-perfil-modal__aviso span {
+    margin-top: 0.18rem;
+    color: #5c7163;
+    font-size: 0.7rem;
+    line-height: 1.45;
+}
+
+.certidao-mensal-perfil-modal__estado {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.9rem;
+    border: 1px solid #e0e7e2;
+    border-radius: 14px;
+    background: #fff;
+    padding: 0.75rem 0.85rem;
+}
+
+.certidao-mensal-perfil-modal__estado small,
+.certidao-mensal-perfil-modal__estado strong {
+    display: block;
+}
+
+.certidao-mensal-perfil-modal__estado small {
+    color: #758179;
+    font-size: 0.65rem;
+    font-weight: 750;
+}
+
+.certidao-mensal-perfil-modal__estado strong {
+    margin-top: 0.18rem;
+    color: #25382d;
+    font-size: 0.82rem;
+    font-weight: 900;
+}
+
+.certidao-mensal-perfil-modal__estado > span {
+    flex: 0 0 auto;
+    border-radius: 999px;
+    padding: 0.42rem 0.68rem;
+    font-size: 0.66rem;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.certidao-mensal-perfil-modal__estado > span.is-exigido {
+    background: #e9f7ee;
+    color: #14743a;
+}
+
+.certidao-mensal-perfil-modal__estado > span.is-nao-exigido {
+    background: #f1f3f2;
+    color: #68736c;
+}
+
+.certidao-mensal-perfil-modal__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+}
+
+.certidao-mensal-perfil-modal__campo {
+    min-width: 0;
+    margin: 0;
+    border: 0;
+    padding: 0;
+}
+
+.certidao-mensal-perfil-modal__campo.is-wide {
+    grid-column: 1 / -1;
+}
+
+.certidao-mensal-perfil-modal__campo > span,
+.certidao-mensal-perfil-modal__campo > legend {
+    display: block;
+    margin-bottom: 0.38rem;
+    color: #354239;
+    font-size: 0.72rem;
+    font-weight: 850;
+}
+
+.certidao-mensal-perfil-modal__campo > small {
+    display: block;
+    margin-top: 0.32rem;
+    color: #7a867e;
+    font-size: 0.64rem;
+    line-height: 1.4;
+}
+
+.certidao-mensal-perfil-modal__campo select,
+.certidao-mensal-perfil-modal__campo input[type="month"],
+.certidao-mensal-perfil-modal__campo textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #ccd6cf;
+    border-radius: 12px;
+    background: #fff;
+    color: #1f2922;
+    font: inherit;
+    font-size: 0.76rem;
+    outline: none;
+}
+
+.certidao-mensal-perfil-modal__campo select,
+.certidao-mensal-perfil-modal__campo input[type="month"] {
+    min-height: 42px;
+    padding: 0 0.7rem;
+}
+
+.certidao-mensal-perfil-modal__campo textarea {
+    min-height: 104px;
+    resize: vertical;
+    padding: 0.7rem;
+    line-height: 1.45;
+}
+
+.certidao-mensal-perfil-modal__campo select:focus,
+.certidao-mensal-perfil-modal__campo input[type="month"]:focus,
+.certidao-mensal-perfil-modal__campo textarea:focus {
+    border-color: #159447;
+    box-shadow: 0 0 0 3px rgba(21, 148, 71, 0.12);
+}
+
+.certidao-mensal-perfil-modal__opcoes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+}
+
+.certidao-mensal-perfil-modal__opcoes label {
+    display: flex;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d4ddd6;
+    border-radius: 12px;
+    background: #fff;
+    padding: 0 0.65rem;
+    color: #526159;
+    font-size: 0.72rem;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.certidao-mensal-perfil-modal__opcoes label.is-selected {
+    border-color: #7fc295;
+    background: #edf8f0;
+    color: #116833;
+}
+
+.certidao-mensal-perfil-modal__opcoes label.is-selected.is-nao {
+    border-color: #adb8b1;
+    background: #f2f4f3;
+    color: #556159;
+}
+
+.certidao-mensal-perfil-modal__opcoes input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.certidao-mensal-perfil-modal__contador {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.32rem;
+    color: #748078;
+    font-size: 0.64rem;
+}
+
+.certidao-mensal-perfil-modal__historico {
+    margin-top: 1rem;
+    border: 1px solid #dce5df;
+    border-radius: 14px;
+    background: #fbfcfb;
+    overflow: hidden;
+}
+
+.certidao-mensal-perfil-modal__historico > header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    border-bottom: 1px solid #e1e8e3;
+    background: #f6f9f7;
+    padding: 0.72rem 0.8rem;
+}
+
+.certidao-mensal-perfil-modal__historico > header > div {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.certidao-mensal-perfil-modal__historico > header svg {
+    width: 17px;
+    height: 17px;
+    flex: 0 0 auto;
+    color: #15803d;
+}
+
+.certidao-mensal-perfil-modal__historico > header strong,
+.certidao-mensal-perfil-modal__historico > header span {
+    display: block;
+}
+
+.certidao-mensal-perfil-modal__historico > header strong {
+    color: #2e4235;
+    font-size: 0.74rem;
+    font-weight: 900;
+}
+
+.certidao-mensal-perfil-modal__historico > header span {
+    margin-top: 0.12rem;
+    color: #77837b;
+    font-size: 0.62rem;
+}
+
+.certidao-mensal-perfil-modal__historico > header > small {
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: #e9f4ec;
+    padding: 0.3rem 0.48rem;
+    color: #176c37;
+    font-size: 0.61rem;
+    font-weight: 900;
+}
+
+.certidao-mensal-perfil-modal__mensagem {
+    margin: 0;
+    padding: 0.9rem;
+    color: #708078;
+    font-size: 0.7rem;
+    line-height: 1.5;
+}
+
+.certidao-mensal-perfil-modal__mensagem.is-error {
+    color: #a3382f;
+}
+
+.certidao-mensal-perfil-modal__timeline {
+    display: grid;
+    gap: 0;
+}
+
+.certidao-mensal-perfil-modal__timeline article {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr);
+    gap: 0.55rem;
+    align-items: flex-start;
+    padding: 0.72rem 0.8rem;
+}
+
+.certidao-mensal-perfil-modal__timeline article + article {
+    border-top: 1px solid #e7ece8;
+}
+
+.certidao-mensal-perfil-modal__timeline article > svg {
+    width: 16px;
+    height: 16px;
+    margin-top: 0.08rem;
+    color: #5b7363;
+}
+
+.certidao-mensal-perfil-modal__timeline strong,
+.certidao-mensal-perfil-modal__timeline span,
+.certidao-mensal-perfil-modal__timeline small {
+    display: block;
+}
+
+.certidao-mensal-perfil-modal__timeline strong {
+    color: #304337;
+    font-size: 0.7rem;
+    font-weight: 900;
+}
+
+.certidao-mensal-perfil-modal__timeline span {
+    margin-top: 0.16rem;
+    color: #69776e;
+    font-size: 0.65rem;
+    line-height: 1.45;
+}
+
+.certidao-mensal-perfil-modal__timeline small {
+    margin-top: 0.22rem;
+    color: #89928c;
+    font-size: 0.59rem;
+}
+
+@media (max-width: 720px) {
+    .certidao-mensal-perfil-modal__grid {
+        grid-template-columns: 1fr;
+    }
+
+    .certidao-mensal-perfil-modal__campo.is-wide {
+        grid-column: auto;
+    }
+
+    .certidao-mensal-perfil-modal__estado {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+/* SafeScan: P15-E1-R1A-R2 config compacta */
+.certidao-mensal-checklist__empresa-row {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.42rem;
+}
+
+.certidao-mensal-checklist__empresa-row .certidao-mensal-checklist__empresa-nome {
+    min-width: 0;
+    margin: 0;
+}
+
+.certidao-mensal-checklist__config {
+    display: inline-grid;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    place-items: center;
+    border: 1px solid #b9d9c2;
+    border-radius: 8px;
+    background: #f7fbf8;
+    color: var(--certidao-verde);
+    cursor: pointer;
+    transition:
+        background 160ms ease,
+        border-color 160ms ease,
+        transform 160ms ease;
+}
+
+.certidao-mensal-checklist__config:hover:not(:disabled) {
+    border-color: #72bf88;
+    background: #edf8f0;
+    transform: translateY(-1px);
+}
+
+.certidao-mensal-checklist__config:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.certidao-mensal-checklist__config svg {
+    display: block;
+    width: 15px;
+    height: 15px;
+}
+
+.certidao-mensal-perfil-modal__icone svg {
+    display: block;
+    width: 20px;
+    height: 20px;
+    stroke-width: 2;
+}
+
+/* SafeScan: P15-E1-R1B anual e alinhamento */
+.certidao-mensal-checklist__empresa-row {
+    width: 100%;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.certidao-mensal-checklist__empresa-row .certidao-mensal-checklist__empresa-nome {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.certidao-mensal-checklist__empresa-row .certidao-mensal-checklist__config {
+    margin-left: auto;
+    align-self: flex-start;
+    transform: translateY(-1px);
+}
+
+.certidao-mensal-perfil-modal__icone svg,
+.certidao-mensal-perfil-modal__aviso svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 2.2;
+}
+
+.certidao-mensal-perfil-modal__modo {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+    margin-bottom: 0.9rem;
+}
+
+.certidao-mensal-perfil-modal__modo-botao {
+    min-height: 44px;
+    border: 1px solid #bfd9c6;
+    border-radius: 14px;
+    background: #ffffff;
+    color: #365141;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+        border-color 160ms ease,
+        background 160ms ease,
+        color 160ms ease,
+        transform 160ms ease;
+}
+
+.certidao-mensal-perfil-modal__modo-botao:hover {
+    border-color: #7dbc90;
+    background: #f3faf5;
+}
+
+.certidao-mensal-perfil-modal__modo-botao.is-active {
+    border-color: var(--certidao-verde);
+    background: rgba(33, 124, 66, 0.10);
+    color: var(--certidao-verde);
+}
+
+@media (min-width: 768px) {
+    .certidao-mensal-perfil-modal__modo {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* SafeScan: P15-E1-R1C ajuste fino icones */
+.certidao-mensal-perfil-modal__cabecalho {
+    align-items: flex-start;
+}
+
+.certidao-mensal-perfil-modal__icone {
+    width: 56px;
+    min-width: 56px;
+    height: 56px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: flex-start;
+    line-height: 0;
+}
+
+.certidao-mensal-perfil-modal__icone svg {
+    width: 22px;
+    height: 22px;
+    display: block;
+    flex: 0 0 auto;
+    margin: 0;
+}
+
+.certidao-mensal-perfil-modal__aviso {
+    align-items: flex-start;
+}
+
+.certidao-mensal-perfil-modal__aviso svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+    flex: 0 0 auto;
+    margin-top: 2px;
+}
+
+.certidao-mensal-checklist__empresa-row {
+    position: relative;
+    align-items: flex-start;
+    padding-right: 3rem;
+    min-height: 2.25rem;
+}
+
+.certidao-mensal-checklist__empresa-row .certidao-mensal-checklist__empresa-nome {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.certidao-mensal-checklist__empresa-row .certidao-mensal-checklist__config {
+    position: absolute;
+    top: 0.05rem;
+    right: 0.10rem;
+    margin-left: 0;
+    align-self: auto;
+    transform: none;
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    line-height: 0;
+}
+
+.certidao-mensal-checklist__empresa-row .certidao-mensal-checklist__config svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+    flex: 0 0 auto;
+    margin: 0;
+}
+
+/* SafeScan: P15-E1-R1D alinhamento estrutural definitivo */
+
+/*
+ * MODAL
+ * O span do icone tambem e atingido pela regra generica:
+ * .certidao-mensal-reenvio-modal__header span
+ *
+ * Por isso usamos um seletor mais especifico e mantemos
+ * exatamente os 46px definidos pela primeira coluna do header.
+ */
+.certidao-mensal-reenvio-modal__header
+    > .certidao-mensal-perfil-modal__icone {
+    display: grid;
+    width: 46px;
+    min-width: 46px;
+    height: 46px;
+    place-items: center;
+    align-self: center;
+    margin: 0;
+    overflow: visible;
+    padding: 0;
+    border-radius: 14px;
+    background: #edf8f0;
+    color: #15803d;
+    font-size: 0;
+    line-height: 0;
+    text-overflow: clip;
+    white-space: normal;
+}
+
+.certidao-mensal-reenvio-modal__header
+    > .certidao-mensal-perfil-modal__icone
+    > svg {
+    position: static;
+    display: block;
+    width: 21px;
+    height: 21px;
+    flex: 0 0 21px;
+    margin: 0;
+    padding: 0;
+    transform: none;
+    stroke-width: 2;
+}
+
+/*
+ * BOTAO DE CONFIGURACAO DO CARD
+ *
+ * O header ja e position: relative.
+ * A empresa-row deixa de ser o containing block,
+ * permitindo que o botao absoluto use o header inteiro.
+ */
+.certidao-mensal-checklist__empresa-row {
+    position: static;
+    width: auto;
+    min-height: 0;
+    padding-right: 0;
+}
+
+.certidao-mensal-checklist__header
+    .certidao-mensal-checklist__config {
+    position: absolute;
+    z-index: 4;
+    top: 0.62rem;
+    right: 0.90rem;
+    display: grid;
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    place-items: center;
+    margin: 0;
+    padding: 0;
+    border-radius: 10px;
+    line-height: 0;
+    transform: none;
+}
+
+.certidao-mensal-checklist__header
+    .certidao-mensal-checklist__config
+    > svg {
+    position: static;
+    display: block;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    margin: 0;
+    padding: 0;
+    transform: none;
+}
+
+/*
+ * Reserva apenas o espaco horizontal do botao no bloco superior,
+ * sem alterar os tres botoes grandes.
+ */
+.certidao-mensal-checklist__header-main {
+    padding-right: 2.75rem;
+}
+
+/* SafeScan: P15-F-A documento nao exigido */
+
+.certidao-mensal-checklist
+.certidao-mensal-doc-row.is-nao-exigido {
+    border-color: #cbd5cf;
+    background: #f7f9f8;
+}
+
+.certidao-mensal-checklist
+.certidao-mensal-doc-row.is-nao-exigido.is-active {
+    border-color: #98a79f;
+    box-shadow:
+        inset 3px 0 0 #98a79f;
+}
+
+.certidao-mensal-checklist
+.certidao-mensal-doc-row.is-nao-exigido
+.certidao-mensal-doc-row__numero {
+    border-color: #cbd5cf;
+    background: #eef2f0;
+    color: #5f6d65;
+}
+
+.certidao-mensal-doc-row__nao-exigido {
+    display: inline-flex;
+    width: fit-content;
+    max-width: 100%;
+    align-items: center;
+    margin-top: 0.28rem;
+    padding: 0.18rem 0.48rem;
+    border: 1px solid #c7d2cc;
+    border-radius: 999px;
+    background: #eef3f0;
+    color: #516158;
+    font-size: 0.62rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.certidao-mensal-checklist
+.certidao-mensal-doc-row.is-nao-exigido
+.certidao-mensal-doc-row__upload:disabled {
+    border-color: #d1d9d4;
+    background: #edf1ef;
+    color: #7b8981;
+    cursor: not-allowed;
+    opacity: 1;
+}
+
+.certidao-mensal-evidencia__nao-exigido {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    margin: 0.8rem 1rem 0;
+    padding: 0.75rem 0.85rem;
+    border: 1px solid #cad5cf;
+    border-radius: 12px;
+    background: #f3f6f4;
+    color: #4f6056;
+}
+
+.certidao-mensal-evidencia__nao-exigido > svg {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    margin-top: 1px;
+}
+
+.certidao-mensal-evidencia__nao-exigido > div {
+    display: grid;
+    min-width: 0;
+    gap: 0.12rem;
+}
+
+.certidao-mensal-evidencia__nao-exigido strong {
+    color: #3f5147;
+    font-size: 0.76rem;
+    font-weight: 850;
+}
+
+.certidao-mensal-evidencia__nao-exigido span {
+    color: #68776f;
+    font-size: 0.68rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.certidao-mensal-acao--nao-exigido:disabled {
+    border-color: #cbd5cf;
+    background: #eef2f0;
+    color: #65746c;
+    cursor: not-allowed;
+    opacity: 1;
+}
+ 
+/* J52-C2-DIRECT-APLICABILIDADE-ESOCIAL */
+
+
+.certidao-mensal-doc-row.is-nao-aplicavel {
+    opacity: 0.78;
+}
+
+.certidao-mensal-doc-row__aplicabilidade {
+    display: inline-flex;
+    width: fit-content;
+    margin-top: 0.32rem;
+    border: 1px solid #d8dee6;
+    border-radius: 999px;
+    padding: 0.2rem 0.45rem;
+    background: #f8fafc;
+    color: #596579;
+    font-size: 0.58rem;
+    font-weight: 850;
+    line-height: 1.2;
+}
+
+.certidao-mensal-doc-row__aplicabilidade-acoes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem;
+    width: 100%;
+}
+
+.certidao-mensal-doc-row__aplicabilidade-acoes > button {
+    min-height: 30px;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    padding: 0.35rem 0.4rem;
+    background: #ffffff;
+    color: #42526a;
+    font-size: 0.59rem;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.certidao-mensal-doc-row__aplicabilidade-acoes > button:hover:not(:disabled) {
+    border-color: #86d5ad;
+    background: #f0fdf4;
+    color: #087443;
+}
+
+.certidao-mensal-doc-row__aplicabilidade-acoes > button:disabled {
+    cursor: not-allowed;
+    opacity: 0.48;
+}
+
+/* J52-HOMOLOGACAO-ESOCIAL-SELECT */
+.certidao-mensal-doc-row__aplicabilidade-select {
+    width: 100%;
+    min-height: 32px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 0.35rem 1.7rem 0.35rem 0.55rem;
+    background: #ffffff;
+    color: #42526a;
+    font-size: 0.6rem;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.certidao-mensal-doc-row__aplicabilidade-select:hover:not(:disabled),
+.certidao-mensal-doc-row__aplicabilidade-select:focus {
+    border-color: #86d5ad;
+    outline: none;
+}
+
+.certidao-mensal-doc-row__aplicabilidade-select:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.certidao-mensal-doc-row.is-aplicabilidade-pendente
+    .certidao-mensal-doc-row__upload,
+.certidao-mensal-doc-row.is-nao-aplicavel
+    .certidao-mensal-doc-row__upload {
+    display: none;
+}
+
+/* SAFESCAN-TEXT-WRAP-CERTIDAO-20260810 */
+
+/*
+ * Cards documentais:
+ * mantém ação em coluna própria e permite quebra somente no texto explicativo.
+ */
+.certidao-mensal-checklist .certidao-mensal-doc-row__body,
+.certidao-mensal-checklist .certidao-mensal-doc-row__content,
+.certidao-mensal-checklist .certidao-mensal-doc-row__top,
+.certidao-mensal-checklist .certidao-mensal-doc-row__title {
+    min-width: 0;
+}
+
+.certidao-mensal-checklist .certidao-mensal-doc-row__title small {
+    display: block;
+    max-width: 100%;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: none;
+}
+
+.certidao-mensal-checklist .certidao-mensal-doc-row__actions {
+    flex: 0 0 auto;
+    min-width: max-content;
+}
+
+.certidao-mensal-checklist .certidao-mensal-doc-row__upload {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+/*
+ * Folha de pagamento:
+ * título e explicação da conferência ficam em blocos independentes.
+ */
+.certidao-fgts-resumo__rodape
+    .certidao-folha-resumo__conferencia-texto {
+    display: grid;
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 0.22rem;
+}
+
+.certidao-fgts-resumo__rodape
+    .certidao-folha-resumo__conferencia-texto strong {
+    display: block;
+    margin: 0;
+    line-height: 1.25;
+    white-space: normal;
+}
+
+.certidao-fgts-resumo__rodape
+    .certidao-folha-resumo__conferencia-texto span {
+    display: block;
+    min-width: 0;
+    margin: 0;
+    line-height: 1.4;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: none;
+}
+
+/* SAFESCAN-FOLHA-CONFERENCIA-ALIGN-20260810 */
+
+/*
+ * Folha de Pagamento — conferência manual.
+ *
+ * O aviso é deliberadamente textual.
+ * Não utiliza ícone porque título e descrição já comunicam
+ * de forma suficiente a necessidade de conferência humana.
+ */
+.certidao-folha-resumo__rodape {
+    display: block;
+    width: 100%;
+}
+
+.certidao-folha-resumo__rodape
+    .certidao-folha-resumo__conferencia-texto {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    gap: 0.42rem;
+    margin: 0;
+    padding: 0;
+}
+
+.certidao-folha-resumo__rodape
+    .certidao-folha-resumo__conferencia-texto strong {
+    display: block;
+    margin: 0;
+    padding: 0;
+    color: inherit;
+    line-height: 1.22;
+    white-space: normal;
+}
+
+.certidao-folha-resumo__rodape
+    .certidao-folha-resumo__conferencia-texto span {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    margin: 0.08rem 0 0;
+    padding: 0;
+    line-height: 1.45;
+    white-space: normal;
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: none;
+}
+
+/* SAFESCAN-FOLHA-CONFERENCIA-ALINHAMENTO-EMPRESA */
+.certidao-folha-resumo__rodape
+    .certidao-folha-resumo__conferencia-texto {
+    box-sizing: border-box;
+    padding-left: 2.75rem;
+}
+
+/* SAFESCAN-ITENS-13-14-APRESENTACAO-20260811 */
+
+/*
+ * Item 13 — eSocial SST
+ *
+ * O status principal deixa de usar reticências.
+ * A segunda linha de status é removida porque repete
+ * a informação de documento ainda aguardado.
+ */
+.certidao-mensal-checklist
+.certidao-mensal-doc-row.is-doc-esocial
+.certidao-mensal-doc-row__detail-primary {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow: visible;
+    color: #65736b;
+    font-size: 0.62rem;
+    font-weight: 650;
+    line-height: 1.25;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: normal;
+}
+
+.certidao-mensal-checklist
+.certidao-mensal-doc-row.is-doc-esocial
+.certidao-mensal-doc-row__detail-secondary {
+    display: none;
+}
+
+.certidao-mensal-checklist
+.certidao-mensal-doc-row.is-doc-esocial
+.certidao-mensal-doc-row__meta {
+    gap: 0;
+    margin-top: 2px;
+}
+
+/*
+ * Item 14 — Relação de Empregados
+ *
+ * Cada indicador usa duas linhas centralizadas:
+ *
+ * RÓTULO
+ * VALOR
+ *
+ * Sem detalhe auxiliar comprimido dentro do card.
+ */
+.certidao-mensal-checklist
+.certidao-mensal-doc-row.is-doc-relacao-empregados
+.certidao-mensal-doc-row__metrics {
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+    gap: 0.38rem;
+    margin-top: 0.52rem;
+}
+
+.certidao-mensal-checklist
+.certidao-mensal-doc-row.is-doc-relacao-empregados
+.certidao-mensal-doc-row__metrics
+> span {
+    display: grid;
+    min-width: 0;
+    min-height: 44px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    align-content: center;
+    align-items: center;
+    justify-items: center;
+    gap: 0.17rem;
+    padding: 0.34rem 0.28rem;
+    text-align: center;
+}
+
+.certidao-mensal-checklist
+.certidao-mensal-doc-row.is-doc-relacao-empregados
+.certidao-mensal-doc-row__metrics
+small {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow: visible;
+    color: #708078;
+    font-size: 0.52rem;
+    font-weight: 800;
+    line-height: 1;
+    text-align: center;
+    text-overflow: clip;
+    white-space: nowrap;
+}
+
+.certidao-mensal-checklist
+.certidao-mensal-doc-row.is-doc-relacao-empregados
+.certidao-mensal-doc-row__metrics
+strong {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    margin: 0;
+    overflow: visible;
+    font-size: 0.76rem;
+    font-weight: 900;
+    line-height: 1.08;
+    text-align: center;
+    text-overflow: clip;
+    white-space: nowrap;
+}
+
+.certidao-mensal-checklist
+.certidao-mensal-doc-row.is-doc-relacao-empregados
+.certidao-mensal-doc-row__metrics
+> span:first-child
+strong {
+    font-size: 1rem;
+}
+
+.certidao-mensal-checklist
+.certidao-mensal-doc-row.is-doc-relacao-empregados
+.certidao-mensal-doc-row__metrics
+em {
+    display: none;
+}
+
+@media (max-width: 640px) {
+    .certidao-mensal-checklist
+    .certidao-mensal-doc-row.is-doc-relacao-empregados
+    .certidao-mensal-doc-row__metrics {
+        grid-template-columns: 1fr;
+    }
+}

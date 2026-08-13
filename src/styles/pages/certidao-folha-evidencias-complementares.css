@@ -1,0 +1,296 @@
+.certidao-folha-evidencias {
+    display: grid;
+    gap: 14px;
+    margin: 14px 0;
+    padding: 16px;
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 18px;
+    background: rgba(15, 23, 42, 0.025);
+}
+
+.certidao-folha-evidencias__header,
+.certidao-folha-evidencias__titulo,
+.certidao-folha-evidencias__grupo-header,
+.certidao-folha-evidencias__arquivo,
+.certidao-folha-evidencias__vazio,
+.certidao-folha-evidencias__aviso,
+.certidao-folha-evidencias__mensagem,
+.certidao-folha-evidencias__estado {
+    display: flex;
+    align-items: center;
+}
+
+.certidao-folha-evidencias__header {
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.certidao-folha-evidencias__titulo {
+    min-width: 0;
+    gap: 11px;
+}
+
+.certidao-folha-evidencias__titulo-icone,
+.certidao-folha-evidencias__grupo-icone,
+.certidao-folha-evidencias__arquivo-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+
+.certidao-folha-evidencias__titulo-icone {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: rgba(22, 163, 74, 0.12);
+}
+
+.certidao-folha-evidencias__titulo-icone svg {
+    width: 19px;
+    height: 19px;
+}
+
+.certidao-folha-evidencias__titulo > div,
+.certidao-folha-evidencias__grupo-header > div,
+.certidao-folha-evidencias__arquivo-info,
+.certidao-folha-evidencias__vazio > div,
+.certidao-folha-evidencias__aviso > div {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.certidao-folha-evidencias__titulo strong {
+    font-size: 0.94rem;
+}
+
+.certidao-folha-evidencias__titulo span,
+.certidao-folha-evidencias__grupo-header span,
+.certidao-folha-evidencias__vazio span,
+.certidao-folha-evidencias__aviso span {
+    font-size: 0.76rem;
+    line-height: 1.35;
+    opacity: 0.72;
+}
+
+.certidao-folha-evidencias__total,
+.certidao-folha-evidencias__contador {
+    flex: 0 0 auto;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.certidao-folha-evidencias__total {
+    padding: 7px 10px;
+    background: rgba(22, 163, 74, 0.1);
+}
+
+.certidao-folha-evidencias__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.certidao-folha-evidencias__grupo {
+    display: grid;
+    align-content: start;
+    gap: 11px;
+    min-width: 0;
+    padding: 13px;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 15px;
+    background: var(--certidao-card-bg, #fff);
+}
+
+.certidao-folha-evidencias__grupo-header {
+    gap: 9px;
+    min-width: 0;
+}
+
+.certidao-folha-evidencias__grupo-icone {
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+    background: rgba(59, 130, 246, 0.09);
+}
+
+.certidao-folha-evidencias__grupo-icone svg {
+    width: 17px;
+    height: 17px;
+}
+
+.certidao-folha-evidencias__grupo-header > div {
+    flex: 1 1 auto;
+}
+
+.certidao-folha-evidencias__grupo-header strong {
+    font-size: 0.84rem;
+}
+
+.certidao-folha-evidencias__contador {
+    padding: 5px 8px;
+    background: rgba(148, 163, 184, 0.13);
+}
+
+.certidao-folha-evidencias__lista {
+    display: grid;
+    gap: 7px;
+}
+
+.certidao-folha-evidencias__arquivo {
+    gap: 8px;
+    min-width: 0;
+    padding: 9px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 11px;
+}
+
+.certidao-folha-evidencias__arquivo-icone {
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    background: rgba(148, 163, 184, 0.1);
+}
+
+.certidao-folha-evidencias__arquivo-icone svg {
+    width: 15px;
+    height: 15px;
+}
+
+.certidao-folha-evidencias__arquivo-info {
+    flex: 1 1 auto;
+    overflow: hidden;
+}
+
+.certidao-folha-evidencias__arquivo-info strong {
+    overflow: hidden;
+    font-size: 0.76rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.certidao-folha-evidencias__arquivo-info span,
+.certidao-folha-evidencias__arquivo-info small {
+    overflow: hidden;
+    font-size: 0.66rem;
+    opacity: 0.67;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.certidao-folha-evidencias__abrir,
+.certidao-folha-evidencias__adicionar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.certidao-folha-evidencias__abrir {
+    flex: 0 0 auto;
+    padding: 6px 8px;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    background: transparent;
+    font-size: 0.68rem;
+}
+
+.certidao-folha-evidencias__abrir svg,
+.certidao-folha-evidencias__adicionar svg {
+    width: 14px;
+    height: 14px;
+}
+
+.certidao-folha-evidencias__adicionar {
+    width: 100%;
+    min-height: 36px;
+    padding: 8px 11px;
+    border: 1px dashed rgba(22, 163, 74, 0.44);
+    background: rgba(22, 163, 74, 0.07);
+    font-size: 0.74rem;
+}
+
+.certidao-folha-evidencias__abrir:disabled,
+.certidao-folha-evidencias__adicionar:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.certidao-folha-evidencias__vazio {
+    justify-content: center;
+    gap: 9px;
+    min-height: 70px;
+    padding: 10px;
+    border: 1px dashed rgba(148, 163, 184, 0.28);
+    border-radius: 11px;
+    text-align: left;
+}
+
+.certidao-folha-evidencias__vazio > svg {
+    width: 20px;
+    height: 20px;
+    opacity: 0.48;
+}
+
+.certidao-folha-evidencias__vazio strong {
+    font-size: 0.73rem;
+}
+
+.certidao-folha-evidencias__aviso,
+.certidao-folha-evidencias__mensagem,
+.certidao-folha-evidencias__estado {
+    gap: 9px;
+    padding: 9px 11px;
+    border-radius: 11px;
+    font-size: 0.73rem;
+}
+
+.certidao-folha-evidencias__aviso {
+    background: rgba(245, 158, 11, 0.09);
+}
+
+.certidao-folha-evidencias__mensagem.is-erro {
+    background: rgba(220, 38, 38, 0.08);
+}
+
+.certidao-folha-evidencias__mensagem.is-sucesso {
+    background: rgba(22, 163, 74, 0.08);
+}
+
+.certidao-folha-evidencias__estado {
+    justify-content: center;
+    opacity: 0.72;
+}
+
+.certidao-folha-evidencias__aviso > svg,
+.certidao-folha-evidencias__mensagem > svg,
+.certidao-folha-evidencias__estado > svg {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+}
+
+@media (max-width: 920px) {
+    .certidao-folha-evidencias__grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .certidao-folha-evidencias {
+        padding: 12px;
+    }
+
+    .certidao-folha-evidencias__header {
+        align-items: flex-start;
+    }
+
+    .certidao-folha-evidencias__arquivo {
+        align-items: flex-start;
+    }
+}

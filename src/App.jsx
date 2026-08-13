@@ -39,6 +39,7 @@ import {
     ClipboardCheck,
     Database,
     Eye,
+    FileCheck2,
     LayoutDashboard,
     Map,
     MapPinned,
@@ -1135,6 +1136,7 @@ export default function App() {
         { id: "colaboradores", label: "Colaboradores", icon: Users, grupo: "CADASTROS" },
         { id: "aniversariantes", label: "Aniversariantes", icon: CalendarClock, grupo: "CADASTROS" },
         { id: "treinamentos", label: "Treinamentos", icon: ClipboardCheck, grupo: "CADASTROS" },
+        { id: "certidaoMensalDocumental", label: "Certid├úo Mensal", icon: FileCheck2, grupo: "CADASTROS" },
         { id: "dds", label: "DDS Semanal", icon: ClipboardCheck, grupo: "DDS" },
         { id: "qr", label: "Consulta QR", icon: QrCode, grupo: "CADASTROS" },
 
@@ -1372,6 +1374,7 @@ export default function App() {
             >
                 <React.Suspense fallback={null}>
                     <AppContentRouter
+                        supabaseClient={supabase}
                         tela={tela}
                         colaboradores={colaboradores}
                         empresasBanco={empresasBanco}

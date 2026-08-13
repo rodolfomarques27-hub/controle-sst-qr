@@ -30,6 +30,7 @@ const Empresas = React.lazy(() => import("../components/empresas/EmpresasPage").
 const Colaboradores = React.lazy(() => import("../components/colaboradores/ColaboradoresPage").then((modulo) => ({ default: modulo.Colaboradores })));
 const Treinamentos = React.lazy(() => import("../components/treinamentos/TreinamentosPage").then((modulo) => ({ default: modulo.Treinamentos })));
 const DdsPage = React.lazy(() => import("../components/dds/DdsPage").then((modulo) => ({ default: modulo.DdsPage })));
+const CertidaoMensalDocumentalPage = React.lazy(() => import("../features/certidao-mensal-documental/pages/CertidaoMensalDocumentalPage").then((modulo) => ({ default: modulo.CertidaoMensalDocumentalPage })));
 const RelatorioAuditoria = React.lazy(() => import("../components/auditoria/RelatorioAuditoria").then((modulo) => ({ default: modulo.RelatorioAuditoria })));
 const DashboardAuditoriaCampo = React.lazy(() => import("../components/auditoria/DashboardAuditoriaCampo").then((modulo) => ({ default: modulo.DashboardAuditoriaCampo })));
 const NovaAuditoriaCampoDireta = React.lazy(() => import("../components/auditoria/NovaAuditoriaCampoDireta").then((modulo) => ({ default: modulo.NovaAuditoriaCampoDireta })));
@@ -352,6 +353,7 @@ function TrocaSenhaTemporariaObrigatoria({ usuario, permissao, onSenhaAtualizada
 }
 
 export function AppContentRouter({
+    supabaseClient,
     tela,
     colaboradores,
     empresasBanco,
@@ -770,6 +772,17 @@ export function AppContentRouter({
                     supabase={supabase}
                     colaboradores={colaboradores}
                     empresasBanco={empresasBanco}
+                    obrasEmpresasBanco={obrasEmpresasBanco}
+                    usuario={usuario}
+                />
+            )}
+
+            {tela === "certidaoMensalDocumental" && (
+                <CertidaoMensalDocumentalPage
+                    supabase={supabaseClient}
+                    empresasBanco={empresasBanco}
+                    colaboradores={colaboradores}
+                    documentosEmpresas={documentosEmpresas}
                     obrasEmpresasBanco={obrasEmpresasBanco}
                     usuario={usuario}
                 />

@@ -1,4 +1,5 @@
 import "../../styles/pages/empresas-hero.css";
+import "../../styles/pages/empresas-contrato-vigencia.css";
 import { useEffect, useMemo, useState } from "react";
 import {
     AlertTriangle,
@@ -20,6 +21,7 @@ import {
 import { Card, Header } from "../commonComponents";
 import { FileUploadAviso, validarArquivoAntesUpload } from "../FileUploadAviso";
 import ResultadoVerificacaoDocumento from "../documentos/ResultadoVerificacaoDocumento";
+import EmpresaCnpjsVinculados from "./EmpresaCnpjsVinculados";
 import { supabase } from "../../lib/supabaseClient";
 import { abrirArquivoStorage, obterUrlLogoEmpresa } from "../../services/supabaseServices";
 import {
@@ -2845,7 +2847,7 @@ export function Empresas({
                                                                     e.target.value,
                                                             })
                                                         }
-                                                        className="empresas-cadastro-aprovado__campo"
+                                                        className="empresas-cadastro-aprovado__campo empresas-contrato-data-centralizada"
                                                     />
                                                 </div>
 
@@ -2862,7 +2864,7 @@ export function Empresas({
                                                                     e.target.value,
                                                             })
                                                         }
-                                                        className="empresas-cadastro-aprovado__campo"
+                                                        className="empresas-cadastro-aprovado__campo empresas-contrato-data-centralizada"
                                                     />
                                                 </div>
 
@@ -3340,27 +3342,14 @@ export function Empresas({
                                     />
                                 </div>
 
-                                <div>
-                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">CNPJ</label>
-                                    <input
-                                        value={empresaEdicao.cnpj}
-                                        onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, cnpj: formatarCnpj(e.target.value) })}
-                                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                    />
-                                </div>
 
-                                <div>
-                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Status</label>
-                                    <select
-                                        value={normalizarStatusEmpresa(empresaEdicao.status)}
-                                        onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, status: e.target.value })}
-                                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                    >
-                                        <option>Empresa ativa</option>
-                                        <option>Empresa inativa</option>
-                                        <option>Empresa inapta</option>
-                                        <option>Empresa suspensa</option>
-                                    </select>
+                                <div className="md:col-span-2">
+                                    <EmpresaCnpjsVinculados
+                                        empresa={empresaEdicao}
+                                        onAlterarCnpjPrincipal={(cnpj) => setEmpresaEdicao((atual) => ({ ...atual, cnpj }))}
+                                        statusEmpresa={normalizarStatusEmpresa(empresaEdicao.status)}
+                                        onAlterarStatusEmpresa={(status) => setEmpresaEdicao((atual) => ({ ...atual, status }))}
+                                    />
                                 </div>
 
                                 <div className="md:col-span-2">
@@ -3559,7 +3548,7 @@ export function Empresas({
                                         type="date"
                                         value={empresaEdicao.dataInicioContrato}
                                         onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, dataInicioContrato: e.target.value })}
-                                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-center text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                        className="empresas-contrato-data-centralizada w-full rounded-2xl border border-slate-200 px-4 py-3 text-center text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                     />
                                 </div>
 
@@ -3569,7 +3558,7 @@ export function Empresas({
                                         type="date"
                                         value={empresaEdicao.dataFimContrato}
                                         onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, dataFimContrato: e.target.value })}
-                                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-center text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                        className="empresas-contrato-data-centralizada w-full rounded-2xl border border-slate-200 px-4 py-3 text-center text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                     />
                                 </div>
 
