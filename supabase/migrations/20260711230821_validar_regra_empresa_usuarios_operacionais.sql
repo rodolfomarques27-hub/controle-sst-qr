@@ -1,0 +1,1 @@
+alter table public.usuarios_permissoes_sistema validate constraint usuarios_operacionais_ativos_exigem_empresa;;
