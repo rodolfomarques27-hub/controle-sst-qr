@@ -589,8 +589,7 @@ function normalizarVersaoDocumento(
             100,
         ).toLowerCase();
 
-    let competencia =
-        "";
+    let competencia;
 
     const competenciaOriginal =
         versao.competenciaDocumento ||
