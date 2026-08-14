@@ -331,6 +331,123 @@ assert.deepEqual(
     "Nenhuma empresa fiscalizável pode desaparecer.",
 );
 
+const {
+    resolverContratanteCabecalhoRelatorioAnual,
+} = await import(
+    "../src/features/certidao-mensal-documental/services/certidaoMensalRelatorioAnualObrasService.js"
+);
+
+/*
+ * A marca institucional precisa vir da classificação canônica
+ * do cadastro, e não da posição da empresa ou da ordem das obras.
+ */
+const empresasCabecalho = [
+    {
+        id:
+            "empresa-terceirizada-01",
+
+        nome:
+            "EMPRESA TERCEIRIZADA",
+
+        tipo_empresa:
+            "Terceirizada",
+    },
+
+    {
+        id:
+            "empresa-idealiza",
+
+        nome:
+            "IDEALIZA CIDADES",
+
+        tipo_empresa:
+            "Contratante - Idealiza Cidades",
+
+        logo_url:
+            "https://exemplo.local/idealiza.png",
+    },
+
+    {
+        id:
+            "empresa-outra-contratante",
+
+        nome:
+            "OUTRA CONTRATANTE",
+
+        tipo_empresa:
+            "Contratante",
+    },
+];
+
+const cabecalhoA =
+    resolverContratanteCabecalhoRelatorioAnual({
+        empresasBanco:
+            empresasCabecalho,
+    });
+
+const cabecalhoB =
+    resolverContratanteCabecalhoRelatorioAnual({
+        empresasBanco:
+            [...empresasCabecalho]
+                .reverse(),
+    });
+
+assert.equal(
+    cabecalhoA?.id,
+    "empresa-idealiza",
+    "O cadastro Contratante - Idealiza Cidades deve definir a marca institucional.",
+);
+
+assert.equal(
+    cabecalhoB?.id,
+    "empresa-idealiza",
+    "A ordem de empresas ou obras não pode alterar a contratante institucional.",
+);
+
+const cabecalhoTipoNormalizado =
+    resolverContratanteCabecalhoRelatorioAnual({
+        empresasBanco: [
+            {
+                id:
+                    "empresa-idealiza-normalizada",
+
+                nome:
+                    "IDEALIZA CIDADES",
+
+                tipo_empresa:
+                    "  CONTRATANTE - IDEALIZA CIDADES  ",
+            },
+        ],
+    });
+
+assert.equal(
+    cabecalhoTipoNormalizado?.id,
+    "empresa-idealiza-normalizada",
+    "A classificação institucional deve tolerar diferenças de caixa e espaços.",
+);
+
+const semContratanteCanonica =
+    resolverContratanteCabecalhoRelatorioAnual({
+        empresasBanco: [
+            {
+                id:
+                    "empresa-comum",
+
+                nome:
+                    "EMPRESA COMUM",
+
+                tipo_empresa:
+                    "Terceirizada",
+            },
+        ],
+    });
+
+assert.equal(
+    semContratanteCanonica,
+    null,
+    "Sem cadastro institucional canônico, o resolver explícito deve retornar null.",
+);
+
 console.log(
     "CERTIDÃO MENSAL — AGRUPAMENTO ANUAL POR OBRA APROVADO",
 );

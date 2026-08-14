@@ -177,7 +177,7 @@ async function registrarAuditoriaSegura(
         await Promise.resolve(callback(dados));
     } catch (erro) {
         console.warn(
-            "Falha ao registrar auditoria da configuração de e-mail da Certidão Mensal.",
+            "Falha ao registrar auditoria da configuração de e-mail das Certidões Mensais.",
             erro,
         );
     }
@@ -806,12 +806,12 @@ export function CertidaoMensalEmailConfiguracoes({
                                 htmlFor="certidao-email-destinatarios"
                                 className="text-[11px] font-black uppercase tracking-wide text-slate-500"
                             >
-                                Destinatários da Certidão Mensal
+                                Destinatários das Certidões Mensais
                             </label>
 
                             <p className="mt-1 text-xs leading-relaxed text-slate-500">
                                 Informe um endereço por linha. Esta lista é
-                                exclusiva da Certidão Mensal e não utiliza
+                                exclusiva das Certidões Mensais e não utiliza
                                 os e-mails gerais cadastrados na empresa.
                             </p>
 
@@ -849,7 +849,7 @@ export function CertidaoMensalEmailConfiguracoes({
                             <p className="mt-1 text-xs leading-relaxed text-slate-500">
                                 Informe um endereço por linha. Não repita
                                 endereços informados em Destinatários da
-                                Certidão Mensal.
+                                Certidões Mensais.
                             </p>
 
                             <textarea
@@ -1002,12 +1002,12 @@ export function CertidaoMensalEmailConfiguracoes({
                         <div className="md:col-span-2">
                             <div className="mb-3">
                                 <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
-                                    Assinatura padrão da Certidão Mensal
+                                    Assinatura padrão das Certidões Mensais
                                 </p>
 
                                 <p className="mt-1 text-xs leading-relaxed text-slate-500">
                                     Imagem única utilizada nos envios da
-                                    Certidão Mensal de todas as empresas.
+                                    Certidões Mensais de todas as empresas.
                                 </p>
                             </div>
 
@@ -1018,7 +1018,7 @@ export function CertidaoMensalEmailConfiguracoes({
                                     tipo:
                                         "certidao_mensal_documental",
                                     nome:
-                                        "Certidão Mensal Documental",
+                                        "Certidões Mensais",
                                 }}
                                 podeAlterar={podeAlterar}
                                 mensagemBloqueio={

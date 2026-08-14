@@ -61,7 +61,7 @@ function criarErroPerfilDocumental(
             textoSeguro(
                 mensagem,
             ) ||
-            "Falha no perfil documental da Certidão Mensal.",
+            "Falha no perfil documental das Certidões Mensais.",
         );
 
     erro.name =

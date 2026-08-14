@@ -369,6 +369,120 @@ function localizarContratante({
     return null;
 }
 
+/*
+ * Classificação institucional definida pelo cadastro de empresas.
+ *
+ * Esta regra não depende da ordem das obras e não usa heurística
+ * baseada em quantidade de empresas fiscalizadas.
+ */
+const TIPO_CONTRATANTE_INSTITUCIONAL =
+    "Contratante - Idealiza Cidades";
+
+function normalizarTipoEmpresaInstitucional(
+    valor,
+) {
+    return textoSeguro(
+        valor,
+        300,
+    )
+        .normalize("NFD")
+        .replace(
+            /[\u0300-\u036f]/g,
+            "",
+        )
+        .replace(
+            /\s+/g,
+            " ",
+        )
+        .trim()
+        .toLocaleLowerCase(
+            "pt-BR",
+        );
+}
+
+export function resolverContratanteCabecalhoRelatorioAnual({
+    empresasBanco = [],
+} = {}) {
+    const tipoEsperado =
+        normalizarTipoEmpresaInstitucional(
+            TIPO_CONTRATANTE_INSTITUCIONAL,
+        );
+
+    const candidatas =
+        (
+            Array.isArray(
+                empresasBanco,
+            )
+                ? empresasBanco
+                : []
+        )
+            .filter(
+                (empresa) =>
+                    empresa &&
+                    typeof empresa ===
+                        "object",
+            )
+            .filter(
+                (empresa) =>
+                    normalizarTipoEmpresaInstitucional(
+                        empresa.tipo_empresa ||
+                        empresa.tipoEmpresa,
+                    ) ===
+                    tipoEsperado,
+            )
+            .sort(
+                (a, b) => {
+                    const nomeA =
+                        textoSeguro(
+                            a.nome,
+                            300,
+                        );
+
+                    const nomeB =
+                        textoSeguro(
+                            b.nome,
+                            300,
+                        );
+
+                    const porNome =
+                        nomeA.localeCompare(
+                            nomeB,
+                            "pt-BR",
+                        );
+
+                    if (porNome !== 0) {
+                        return porNome;
+                    }
+
+                    const idA =
+                        textoSeguro(
+                            obterEmpresaId(
+                                a,
+                            ),
+                            300,
+                        );
+
+                    const idB =
+                        textoSeguro(
+                            obterEmpresaId(
+                                b,
+                            ),
+                            300,
+                        );
+
+                    return idA.localeCompare(
+                        idB,
+                        "pt-BR",
+                    );
+                },
+            );
+
+    return (
+        candidatas[0] ||
+        null
+    );
+}
+
 export function agruparRelatorioAnualPorObras({
     relatorio = {},
     empresasBanco = [],

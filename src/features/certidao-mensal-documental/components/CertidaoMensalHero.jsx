@@ -73,7 +73,7 @@ export function CertidaoMensalHero({
                         </p>
 
                         <h2 className="certidao-mensal-hero__title">
-                            Certidão Mensal Documental
+                            Certidões Mensais
                         </h2>
 
                         <p className="certidao-mensal-hero__text">

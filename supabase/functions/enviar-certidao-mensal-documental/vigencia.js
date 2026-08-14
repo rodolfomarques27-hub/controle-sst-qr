@@ -90,7 +90,7 @@ export function classificarVigenciaContratual({
         return resultado(
             "EMPRESA_NAO_FISCALIZAVEL",
             false,
-            "A Certidão Mensal Documental é exclusiva para empresas terceirizadas ou subcontratadas.",
+            "O módulo Certidões Mensais é exclusivo para empresas terceirizadas ou subcontratadas.",
         );
     }
 

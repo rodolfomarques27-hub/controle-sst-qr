@@ -5869,3 +5869,970 @@ em {
         grid-template-columns: 1fr;
     }
 }
+
+/* D24.12.3B-13 — dois cards documentais sem scroll interno */
+
+.certidao-mensal-perfil-modal__selecao-cabecalho {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+    margin-bottom: 0.42rem;
+}
+
+.certidao-mensal-perfil-modal__selecao-cabecalho > span {
+    color: #354239;
+    font-size: 0.72rem;
+    font-weight: 850;
+}
+
+.certidao-mensal-perfil-modal__selecao-cabecalho > small {
+    display: inline-flex;
+    min-height: 22px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #eaf5ed;
+    padding: 0.1rem 0.52rem;
+    color: #2d673f;
+    font-size: 0.6rem;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+/*
+ * A lista não é mais uma caixa com scroll.
+ * Ela apenas organiza os dois cards independentes.
+ */
+.certidao-mensal-perfil-modal__selecao-lista {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+    width: 100%;
+    max-height: none;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+    scrollbar-gutter: auto;
+}
+
+/* ============================================================
+ * CARD — DOCUMENTOS EXIGIDOS
+ * ============================================================ */
+
+.certidao-mensal-perfil-modal__selecao-grupo {
+    overflow: hidden;
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #cfe0d4;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 2px 7px rgba(28, 61, 39, 0.045);
+}
+
+.certidao-mensal-perfil-modal__selecao-grupo
+    + .certidao-mensal-perfil-modal__selecao-grupo {
+    margin-top: 0;
+}
+
+.certidao-mensal-perfil-modal__selecao-grupo > header {
+    display: flex;
+    min-height: 32px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.55rem;
+    border-bottom: 1px solid #d8e7dd;
+    background: #eef7f1;
+    padding: 0.3rem 0.58rem;
+}
+
+.certidao-mensal-perfil-modal__selecao-grupo > header strong {
+    color: #31533d;
+    font-size: 0.6rem;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+}
+
+.certidao-mensal-perfil-modal__selecao-grupo > header > span {
+    display: grid;
+    min-width: 23px;
+    height: 23px;
+    place-items: center;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #51705b;
+    font-size: 0.59rem;
+    font-weight: 900;
+}
+
+/*
+ * Todos os documentos ficam visíveis.
+ * Nenhuma rolagem interna neste card.
+ */
+.certidao-mensal-perfil-modal__selecao-itens {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-rows: minmax(30px, auto);
+    align-items: stretch;
+    gap: 0.16rem 0.3rem;
+    padding: 0.42rem 0.48rem 0.5rem;
+}
+
+.certidao-mensal-perfil-modal__selecao-item {
+    display: block;
+    min-width: 0;
+    min-height: 30px;
+    margin: 0;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: #ffffff;
+    padding: 0.16rem 0.3rem;
+    cursor: pointer;
+    transition:
+        border-color 130ms ease,
+        background 130ms ease,
+        box-shadow 130ms ease;
+}
+
+/*
+ * A unidade visual é checkbox + número + título.
+ */
+.certidao-mensal-perfil-modal__selecao-linha {
+    display: flex !important;
+    flex-direction: row !important;
+    width: 100%;
+    min-width: 0;
+    min-height: 100%;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0.3rem;
+    margin: 0;
+    padding: 0;
+    direction: ltr;
+}
+
+.certidao-mensal-perfil-modal__selecao-linha
+    > input[type="checkbox"] {
+    display: block;
+    order: 0 !important;
+    width: 14px;
+    height: 14px;
+    flex: 0 0 14px;
+    margin: 0 !important;
+    padding: 0;
+    accent-color: #159447;
+    cursor: pointer;
+}
+
+.certidao-mensal-perfil-modal__selecao-conteudo {
+    display: block;
+    order: 1 !important;
+    min-width: 0;
+    flex: 1 1 auto;
+    margin: 0;
+    padding: 0;
+}
+
+.certidao-mensal-perfil-modal__selecao-conteudo > strong {
+    display: block;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    color: #253129;
+    font-size: 0.62rem;
+    font-weight: 850;
+    line-height: 1.08;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.certidao-mensal-perfil-modal__selecao-status {
+    display: none;
+}
+
+.certidao-mensal-perfil-modal__selecao-item:hover {
+    border-color: #bfd5c5;
+    background: #f8fbf9;
+}
+
+.certidao-mensal-perfil-modal__selecao-item.is-selected {
+    border-color: #74bf8b;
+    background: #edf8f0;
+    box-shadow: inset 2px 0 0 #159447;
+}
+
+/* ============================================================
+ * CARD — NÃO EXIGIDOS
+ * ============================================================ */
+
+.certidao-mensal-perfil-modal__selecao-grupo.is-nao {
+    border-color: #edc4bf;
+    background: #fffdfd;
+    box-shadow: 0 2px 7px rgba(160, 46, 36, 0.04);
+}
+
+.certidao-mensal-perfil-modal__selecao-grupo.is-nao > header {
+    border-bottom-color: #efd0cc;
+    background: #fff0ee;
+}
+
+.certidao-mensal-perfil-modal__selecao-grupo.is-nao > header strong {
+    color: #a62e24;
+}
+
+.certidao-mensal-perfil-modal__selecao-grupo.is-nao > header > span {
+    background: #ffffff;
+    color: #a62e24;
+}
+
+.certidao-mensal-perfil-modal__selecao-item.is-nao:hover {
+    border-color: #e6b8b3;
+    background: #fff8f7;
+}
+
+.certidao-mensal-perfil-modal__selecao-item.is-nao.is-selected {
+    border-color: #d78d86;
+    background: #fff0ef;
+    box-shadow: inset 2px 0 0 #c0392b;
+}
+
+.certidao-mensal-perfil-modal__selecao-item.is-nao
+    .certidao-mensal-perfil-modal__selecao-linha
+    > input[type="checkbox"] {
+    accent-color: #c0392b;
+}
+
+/* ============================================================
+ * RESPONSIVO
+ * ============================================================ */
+
+@media (max-width: 760px) {
+    .certidao-mensal-perfil-modal__selecao-itens {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 500px) {
+    .certidao-mensal-perfil-modal__selecao-itens {
+        grid-template-columns: 1fr;
+    }
+
+    .certidao-mensal-perfil-modal__selecao-grupo > header {
+        min-height: 30px;
+    }
+}
+/* ========================================================================== */
+/* D24.14.2 — PDF limpo e scroll simplificado                                */
+/* ========================================================================== */
+
+/*
+ * O visualizador PDF nativo fica isolado dentro do iframe.
+ * O recorte abaixo remove visualmente a toolbar superior e desloca
+ * a barra nativa do PDF para fora da área visível.
+ */
+.certidao-mensal-evidencia {
+    --certidao-pdf-toolbar-recorte: 56px;
+    --certidao-pdf-scrollbar-recorte: 18px;
+}
+
+.certidao-mensal-preview-real,
+.certidao-mensal-evidencia__arquivo--pdf {
+    position: relative;
+    overflow: hidden;
+}
+
+/*
+ * Prévia exibida na aba Dados extraídos.
+ */
+.certidao-mensal-preview-real__frame {
+    width:
+        calc(
+            100% +
+            var(--certidao-pdf-scrollbar-recorte)
+        );
+
+    height:
+        calc(
+            100% +
+            var(--certidao-pdf-toolbar-recorte)
+        );
+
+    max-width: none;
+
+    transform:
+        translateY(
+            calc(
+                0px -
+                var(--certidao-pdf-toolbar-recorte)
+            )
+        );
+}
+
+/*
+ * PDF exibido na aba Arquivo original.
+ * O botão "Abrir PDF completo" continua sendo o acesso ao
+ * visualizador integral do navegador.
+ */
+.certidao-mensal-evidencia__arquivo-frame {
+    width:
+        calc(
+            100% +
+            var(--certidao-pdf-scrollbar-recorte)
+        );
+
+    max-width: none;
+
+    height:
+        calc(
+            clamp(
+                620px,
+                72vh,
+                860px
+            ) +
+            var(--certidao-pdf-toolbar-recorte)
+        );
+
+    transform:
+        translateY(
+            calc(
+                0px -
+                var(--certidao-pdf-toolbar-recorte)
+            )
+        );
+}
+
+/*
+ * O painel deixa de ter uma barra independente em toda a lateral.
+ * Cabeçalho e abas permanecem fixos; somente o corpo útil rola.
+ */
+@media (min-width: 1481px) {
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        scrollbar-gutter: auto;
+    }
+
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia__body {
+        min-height: 0;
+        flex: 1 1 auto;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: auto;
+    }
+}
+
+/*
+ * Uma única linguagem visual para os scrolls internos do workspace:
+ * fino, neutro e sem trilho pesado.
+ */
+.certidao-mensal-workspace
+:where(
+    .certidao-mensal-empresas__lista,
+    .certidao-mensal-checklist__lista,
+    .certidao-mensal-evidencia__body,
+    .certidao-mensal-historico__lista
+) {
+    scrollbar-width: thin;
+    scrollbar-color:
+        #a5b3aa
+        transparent;
+}
+
+.certidao-mensal-workspace
+:where(
+    .certidao-mensal-empresas__lista,
+    .certidao-mensal-checklist__lista,
+    .certidao-mensal-evidencia__body,
+    .certidao-mensal-historico__lista
+)::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+
+.certidao-mensal-workspace
+:where(
+    .certidao-mensal-empresas__lista,
+    .certidao-mensal-checklist__lista,
+    .certidao-mensal-evidencia__body,
+    .certidao-mensal-historico__lista
+)::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.certidao-mensal-workspace
+:where(
+    .certidao-mensal-empresas__lista,
+    .certidao-mensal-checklist__lista,
+    .certidao-mensal-evidencia__body,
+    .certidao-mensal-historico__lista
+)::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #a5b3aa;
+}
+
+.certidao-mensal-workspace
+:where(
+    .certidao-mensal-empresas__lista,
+    .certidao-mensal-checklist__lista,
+    .certidao-mensal-evidencia__body,
+    .certidao-mensal-historico__lista
+)::-webkit-scrollbar-thumb:hover {
+    background: #7f9186;
+}
+
+@media (max-width: 760px) {
+    .certidao-mensal-evidencia__arquivo-frame {
+        height:
+            calc(
+                65vh +
+                var(--certidao-pdf-toolbar-recorte)
+            );
+
+        min-height:
+            calc(
+                520px +
+                var(--certidao-pdf-toolbar-recorte)
+            );
+    }
+}
+/* ========================================================================== */
+/* D24.14.3 — recorte das margens escuras do PDF                             */
+/* ========================================================================== */
+
+/*
+ * O Chromium mantém uma pequena área escura ao redor da página PDF,
+ * mesmo com a toolbar nativa ocultada.
+ *
+ * Não alteramos o conteúdo do PDF.
+ * Apenas recortamos visualmente as margens internas do viewer.
+ */
+.certidao-mensal-evidencia {
+    --certidao-pdf-borda-escura-lateral: 14px;
+    --certidao-pdf-borda-escura-topo: 4px;
+}
+
+.certidao-mensal-preview-real,
+.certidao-mensal-evidencia__arquivo--pdf {
+    background: #ffffff;
+}
+
+/*
+ * ABA — Dados extraídos
+ */
+.certidao-mensal-preview-real__frame {
+    width:
+        calc(
+            100% +
+            var(--certidao-pdf-scrollbar-recorte) +
+            var(--certidao-pdf-borda-escura-lateral) +
+            var(--certidao-pdf-borda-escura-lateral)
+        );
+
+    height:
+        calc(
+            100% +
+            var(--certidao-pdf-toolbar-recorte) +
+            var(--certidao-pdf-borda-escura-topo)
+        );
+
+    transform:
+        translate(
+            calc(
+                0px -
+                var(--certidao-pdf-borda-escura-lateral)
+            ),
+            calc(
+                0px -
+                var(--certidao-pdf-toolbar-recorte) -
+                var(--certidao-pdf-borda-escura-topo)
+            )
+        );
+
+    background: #ffffff;
+}
+
+/*
+ * ABA — Arquivo original
+ */
+.certidao-mensal-evidencia__arquivo-frame {
+    width:
+        calc(
+            100% +
+            var(--certidao-pdf-scrollbar-recorte) +
+            var(--certidao-pdf-borda-escura-lateral) +
+            var(--certidao-pdf-borda-escura-lateral)
+        );
+
+    height:
+        calc(
+            clamp(
+                620px,
+                72vh,
+                860px
+            ) +
+            var(--certidao-pdf-toolbar-recorte) +
+            var(--certidao-pdf-borda-escura-topo)
+        );
+
+    transform:
+        translate(
+            calc(
+                0px -
+                var(--certidao-pdf-borda-escura-lateral)
+            ),
+            calc(
+                0px -
+                var(--certidao-pdf-toolbar-recorte) -
+                var(--certidao-pdf-borda-escura-topo)
+            )
+        );
+
+    background: #ffffff;
+}
+
+@media (max-width: 760px) {
+    .certidao-mensal-evidencia__arquivo-frame {
+        height:
+            calc(
+                65vh +
+                var(--certidao-pdf-toolbar-recorte) +
+                var(--certidao-pdf-borda-escura-topo)
+            );
+
+        min-height:
+            calc(
+                520px +
+                var(--certidao-pdf-toolbar-recorte) +
+                var(--certidao-pdf-borda-escura-topo)
+            );
+    }
+}
+/* ========================================================================== */
+/* D24.14.3B — scroll funcional do Arquivo original                           */
+/* ========================================================================== */
+
+/*
+ * O visualizador nativo do navegador possui sua própria rolagem.
+ * Ela precisa permanecer acessível para que documentos de várias páginas
+ * possam chegar realmente ao final.
+ *
+ * A aba Dados extraídos permanece com o comportamento já aprovado.
+ */
+
+@media (min-width: 1481px) {
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia__arquivo--pdf {
+        display: flex;
+        height: auto;
+        min-height: 0;
+        flex: 1 1 auto;
+        align-items: stretch;
+        justify-content: stretch;
+        overflow: hidden;
+        padding: 0;
+        background: #ffffff;
+    }
+
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia__arquivo-frame {
+        display: block;
+        width:
+            calc(
+                100% +
+                var(--certidao-pdf-borda-escura-lateral)
+            );
+
+        height:
+            calc(
+                100% +
+                var(--certidao-pdf-toolbar-recorte) +
+                var(--certidao-pdf-borda-escura-topo)
+            );
+
+        min-height: 0;
+        max-width: none;
+        flex: 1 1 auto;
+        border: 0;
+
+        transform:
+            translate(
+                calc(
+                    0px -
+                    var(--certidao-pdf-borda-escura-lateral)
+                ),
+                calc(
+                    0px -
+                    var(--certidao-pdf-toolbar-recorte) -
+                    var(--certidao-pdf-borda-escura-topo)
+                )
+            );
+
+        background: #ffffff;
+    }
+}
+
+/*
+ * Em telas menores mantemos uma área mínima confortável,
+ * mas sem recortar a barra vertical do PDF.
+ */
+@media (max-width: 1480px) {
+    .certidao-mensal-evidencia__arquivo--pdf {
+        display: flex;
+        min-height:
+            clamp(
+                520px,
+                65vh,
+                720px
+            );
+
+        align-items: stretch;
+        overflow: hidden;
+        padding: 0;
+        background: #ffffff;
+    }
+
+    .certidao-mensal-evidencia__arquivo-frame {
+        display: block;
+        width:
+            calc(
+                100% +
+                var(--certidao-pdf-borda-escura-lateral)
+            );
+
+        height:
+            calc(
+                clamp(
+                    520px,
+                    65vh,
+                    720px
+                ) +
+                var(--certidao-pdf-toolbar-recorte) +
+                var(--certidao-pdf-borda-escura-topo)
+            );
+
+        min-height: 0;
+        max-width: none;
+        border: 0;
+
+        transform:
+            translate(
+                calc(
+                    0px -
+                    var(--certidao-pdf-borda-escura-lateral)
+                ),
+                calc(
+                    0px -
+                    var(--certidao-pdf-toolbar-recorte) -
+                    var(--certidao-pdf-borda-escura-topo)
+                )
+            );
+
+        background: #ffffff;
+    }
+}
+/* ========================================================================== */
+/* D24.14.3C — máscara visual da barra nativa                                */
+/* ========================================================================== */
+
+/*
+ * O scrollbar interno do visualizador PDF continua ativo.
+ * Ele NÃO é removido porque é responsável pela navegação real
+ * até o final do documento.
+ *
+ * Esta camada apenas cobre visualmente o trilho escuro do Chromium.
+ * pointer-events:none mantém roda do mouse e touchpad funcionando.
+ */
+.certidao-mensal-evidencia {
+    --certidao-pdf-scrollbar-mascara: 14px;
+}
+
+.certidao-mensal-evidencia__arquivo--pdf::after {
+    content: "";
+    position: absolute;
+    z-index: 5;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: var(--certidao-pdf-scrollbar-mascara);
+    background: #ffffff;
+    pointer-events: none;
+}
+
+/*
+ * Evita qualquer fresta escura entre o visualizador
+ * e a borda direita do painel.
+ */
+.certidao-mensal-evidencia__arquivo--pdf {
+    isolation: isolate;
+    background: #ffffff;
+}
+
+/*
+ * O iframe continua abaixo da máscara e mantém sua rolagem nativa.
+ */
+.certidao-mensal-evidencia__arquivo-frame {
+    position: relative;
+    z-index: 1;
+}
+/* ========================================================================== */
+/* D24.14.4 — viewer sem recorte físico                                       */
+/* ========================================================================== */
+
+/*
+ * CORREÇÃO DEFINITIVA DO RECORTE:
+ *
+ * A toolbar continua desabilitada pelo próprio parâmetro do PDF.
+ * Nenhum pedaço do iframe deve ser deslocado ou mascarado.
+ *
+ * Isso garante acesso visual à primeira e à última parte do documento.
+ */
+.certidao-mensal-evidencia {
+    --certidao-pdf-toolbar-recorte: 0px;
+    --certidao-pdf-scrollbar-recorte: 0px;
+    --certidao-pdf-borda-escura-lateral: 0px;
+    --certidao-pdf-borda-escura-topo: 0px;
+    --certidao-pdf-scrollbar-mascara: 0px;
+}
+
+/*
+ * Dados extraídos:
+ * ocupa exatamente o espaço disponível, sem translação.
+ */
+.certidao-mensal-preview-real__frame {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    margin: 0;
+    transform: none;
+    border: 0;
+    background: #ffffff;
+}
+
+/*
+ * Arquivo original:
+ * nenhuma margem lateral ou vertical do iframe é escondida.
+ */
+.certidao-mensal-evidencia__arquivo-frame {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    transform: none;
+    border: 0;
+    background: #ffffff;
+}
+
+/*
+ * Desativa qualquer máscara criada nas tentativas anteriores.
+ */
+.certidao-mensal-evidencia__arquivo--pdf::after {
+    display: none !important;
+    content: none !important;
+}
+
+/*
+ * O próprio viewer do PDF será a única região responsável
+ * pela rolagem na aba Arquivo original.
+ */
+@media (min-width: 1481px) {
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia__arquivo--pdf {
+        display: flex;
+        min-height: 0;
+        flex: 1 1 auto;
+        align-items: stretch;
+        overflow: hidden;
+        padding: 0;
+        background: #ffffff;
+    }
+
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia__arquivo-frame {
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        flex: 1 1 auto;
+        transform: none;
+    }
+}
+
+@media (max-width: 1480px) {
+    .certidao-mensal-evidencia__arquivo--pdf {
+        display: flex;
+        min-height:
+            clamp(
+                520px,
+                65vh,
+                720px
+            );
+        align-items: stretch;
+        overflow: hidden;
+        padding: 0;
+        background: #ffffff;
+    }
+
+    .certidao-mensal-evidencia__arquivo-frame {
+        width: 100%;
+        height:
+            clamp(
+                520px,
+                65vh,
+                720px
+            );
+        min-height: 0;
+        transform: none;
+    }
+}
+/* ========================================================================== */
+/* D24.14.5 — scrolls visuais padronizados                                    */
+/* ========================================================================== */
+
+/*
+ * PADRÃO ÚNICO DO MÓDULO:
+ *
+ * - cinza neutro;
+ * - fino;
+ * - sem trilho colorido;
+ * - cantos arredondados;
+ * - sem alterar dimensões ou recortes do PDF.
+ *
+ * O scrollbar interno do iframe PDF continua sendo controlado
+ * pelo visualizador nativo do navegador.
+ */
+
+.certidao-mensal-empresas__lista,
+.certidao-mensal-checklist__lista,
+.certidao-mensal-evidencia,
+.certidao-mensal-evidencia__body,
+.certidao-mensal-historico__lista,
+.certidao-mensal-competencia-menu__meses,
+.certidao-mensal-regularizacao-modal__lista,
+.certidao-mensal-perfil-modal
+    .certidao-mensal-reenvio-modal__body {
+    scrollbar-width: thin;
+    scrollbar-color:
+        #888e8a
+        transparent;
+}
+
+.certidao-mensal-empresas__lista::-webkit-scrollbar,
+.certidao-mensal-checklist__lista::-webkit-scrollbar,
+.certidao-mensal-evidencia::-webkit-scrollbar,
+.certidao-mensal-evidencia__body::-webkit-scrollbar,
+.certidao-mensal-historico__lista::-webkit-scrollbar,
+.certidao-mensal-competencia-menu__meses::-webkit-scrollbar,
+.certidao-mensal-regularizacao-modal__lista::-webkit-scrollbar,
+.certidao-mensal-perfil-modal
+    .certidao-mensal-reenvio-modal__body::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+}
+
+.certidao-mensal-empresas__lista::-webkit-scrollbar-track,
+.certidao-mensal-checklist__lista::-webkit-scrollbar-track,
+.certidao-mensal-evidencia::-webkit-scrollbar-track,
+.certidao-mensal-evidencia__body::-webkit-scrollbar-track,
+.certidao-mensal-historico__lista::-webkit-scrollbar-track,
+.certidao-mensal-competencia-menu__meses::-webkit-scrollbar-track,
+.certidao-mensal-regularizacao-modal__lista::-webkit-scrollbar-track,
+.certidao-mensal-perfil-modal
+    .certidao-mensal-reenvio-modal__body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.certidao-mensal-empresas__lista::-webkit-scrollbar-thumb,
+.certidao-mensal-checklist__lista::-webkit-scrollbar-thumb,
+.certidao-mensal-evidencia::-webkit-scrollbar-thumb,
+.certidao-mensal-evidencia__body::-webkit-scrollbar-thumb,
+.certidao-mensal-historico__lista::-webkit-scrollbar-thumb,
+.certidao-mensal-competencia-menu__meses::-webkit-scrollbar-thumb,
+.certidao-mensal-regularizacao-modal__lista::-webkit-scrollbar-thumb,
+.certidao-mensal-perfil-modal
+    .certidao-mensal-reenvio-modal__body::-webkit-scrollbar-thumb {
+    min-height: 36px;
+    border:
+        2px solid
+        transparent;
+    border-radius: 999px;
+    background:
+        #888e8a;
+    background-clip:
+        content-box;
+}
+
+.certidao-mensal-empresas__lista::-webkit-scrollbar-thumb:hover,
+.certidao-mensal-checklist__lista::-webkit-scrollbar-thumb:hover,
+.certidao-mensal-evidencia::-webkit-scrollbar-thumb:hover,
+.certidao-mensal-evidencia__body::-webkit-scrollbar-thumb:hover,
+.certidao-mensal-historico__lista::-webkit-scrollbar-thumb:hover,
+.certidao-mensal-competencia-menu__meses::-webkit-scrollbar-thumb:hover,
+.certidao-mensal-regularizacao-modal__lista::-webkit-scrollbar-thumb:hover,
+.certidao-mensal-perfil-modal
+    .certidao-mensal-reenvio-modal__body::-webkit-scrollbar-thumb:hover {
+    background:
+        #686e6a;
+    background-clip:
+        content-box;
+}
+/* ========================================================================== */
+/* D24.14.4 — scrollbar nativa PDF fina                                      */
+/* ========================================================================== */
+
+/*
+ * A scrollbar pertence ao visualizador PDF interno do Chromium
+ * e não pode receber o CSS da aplicação diretamente.
+ *
+ * Mantemos a rolagem nativa totalmente funcional e recortamos
+ * somente a extremidade direita do iframe.
+ *
+ * Resultado visual esperado:
+ * barra aparente com aproximadamente 5px, alinhada ao padrão
+ * das listas de Empresas e Documentos.
+ */
+
+.certidao-mensal-evidencia {
+    --certidao-pdf-scroll-recorte-fino: 8px;
+}
+
+.certidao-mensal-workspace
+.certidao-mensal-evidencia__arquivo-frame {
+    width:
+        calc(
+            100% +
+            var(--certidao-pdf-borda-escura-lateral) +
+            var(--certidao-pdf-scroll-recorte-fino)
+        );
+}
+/* ==========================================================================
+   D24.14.6 — scrollbar nativa do PDF visualmente fina
+   Não altera largura/altura/transform do iframe.
+   A máscara cobre apenas a extremidade direita da scrollbar do Chromium.
+   ========================================================================== */
+
+.certidao-mensal-evidencia {
+    --certidao-pdf-scroll-mask: 8px;
+}
+
+.certidao-mensal-evidencia__arquivo--pdf {
+    position: relative;
+    overflow: hidden;
+}
+
+.certidao-mensal-evidencia__arquivo--pdf::after {
+    content: "" !important;
+    display: block !important;
+    position: absolute;
+    z-index: 20;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: var(--certidao-pdf-scroll-mask);
+    background: #fff;
+    pointer-events: none;
+}

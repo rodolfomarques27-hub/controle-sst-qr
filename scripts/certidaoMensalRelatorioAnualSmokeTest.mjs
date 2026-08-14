@@ -688,8 +688,26 @@ assert.match(
 );
 assert.match(
     html,
-    /\.relatorio\s*\{[\s\S]*width:\s*min\(1180px,\s*100%\)/,
-    "A pré-visualização deve limitar a largura para manter a proporção de uma folha A4.",
+    /\.relatorio\s*\{[\s\S]*width:\s*min\(980px,\s*100%\)/,
+    "A pré-visualização deve usar largura compacta sem alterar a proporção da folha A4.",
+);
+
+assert.match(
+    html,
+    /\.marca-contratante\s*\{[\s\S]*width:\s*auto;[\s\S]*max-width:\s*104px;[\s\S]*height:\s*46px;[\s\S]*padding:\s*3px\s+5px;/,
+    "O fundo branco do logo deve acompanhar de perto a largura real da marca.",
+);
+
+assert.match(
+    html,
+    /\.marca-contratante \.empresa-logo__imagem\s*\{[\s\S]*width:\s*auto;[\s\S]*height:\s*100%;[\s\S]*max-width:\s*96px;/,
+    "O logo do cabeçalho deve preservar sua proporção original.",
+);
+
+assert.match(
+    html,
+    /@media print[\s\S]*\.marca-contratante\s*\{[\s\S]*width:\s*auto;[\s\S]*max-width:\s*27mm;[\s\S]*height:\s*11\.8mm;[\s\S]*padding:\s*0\.6mm\s+0\.8mm;/,
+    "Na impressão, a moldura branca também deve acompanhar a proporção do logo.",
 );
 assert.match(
     html,
@@ -908,8 +926,8 @@ assert.match(
 );
 assert.match(
     paginaFonte,
-    /empresas,\s*\n\s*colaboradores,/,
-    "O relatório anual deve receber todas as empresas e os colaboradores.",
+    /empresas:\s*\n\s*empresasVisiveisCompetencia,\s*\n\s*colaboradores,/,
+    "O relatório anual deve receber as empresas exigíveis da competência e os colaboradores.",
 );
 assert.match(
     paginaFonte,
@@ -977,6 +995,164 @@ assert.match(
     "As ações do cabeçalho devem manter o conteúdo centralizado.",
 );
 
+// D24.9 — recorte temporal das empresas no relatório anual
+const { default: assertVigenciaAnual } =
+    await import("node:assert/strict");
+
+const {
+    consolidarRelatorioAnualCertidaoMensal:
+        consolidarRelatorioAnualVigenciaEmpresas,
+} = await import(
+    "../src/features/certidao-mensal-documental/services/certidaoMensalRelatorioAnualDataService.js"
+);
+
+const empresasVigenciaAnual = [
+    {
+        id: "empresa-encerrada-2024",
+        nome: "ENCERRADA EM 2024",
+        tipo_empresa: "Contratada",
+        data_inicio_contrato: "2024-01-01",
+        data_fim_contrato: "2024-12-31",
+    },
+    {
+        id: "empresa-inicio-maio-2025",
+        nome: "INÍCIO EM MAIO DE 2025",
+        tipo_empresa: "Contratada",
+        data_inicio_contrato: "2025-05-01",
+        data_fim_contrato: "",
+    },
+    {
+        id: "empresa-parcial-2025",
+        nome: "ATIVA ATÉ MARÇO DE 2025",
+        tipo_empresa: "Contratada",
+        data_inicio_contrato: "2024-11-01",
+        data_fim_contrato: "2025-03-31",
+    },
+    {
+        id: "empresa-ano-2025-sem-documentos",
+        nome: "ATIVA EM 2025 SEM DOCUMENTOS",
+        tipo_empresa: "Contratada",
+        data_inicio_contrato: "2025-01-01",
+        data_fim_contrato: "2025-12-31",
+    },
+    {
+        id: "empresa-inicio-2026",
+        nome: "INÍCIO SOMENTE EM 2026",
+        tipo_empresa: "Contratada",
+        data_inicio_contrato: "2026-01-01",
+        data_fim_contrato: "",
+    },
+];
+
+const relatorioVigencia2025 =
+    consolidarRelatorioAnualVigenciaEmpresas({
+        ano: 2025,
+        empresas: empresasVigenciaAnual,
+        colaboradores: [],
+        competencias: [],
+        itens: [],
+        versoes: [],
+        regrasPerfil: [],
+        agora: new Date("2026-08-13T12:00:00-03:00"),
+    });
+
+assertVigenciaAnual.deepEqual(
+    relatorioVigencia2025.empresas.map(
+        (empresa) => empresa.id,
+    ),
+    [
+        "empresa-ano-2025-sem-documentos",
+        "empresa-parcial-2025",
+        "empresa-inicio-maio-2025",
+    ].sort((a, b) => {
+        const empresaA = empresasVigenciaAnual.find(
+            (empresa) => empresa.id === a,
+        );
+        const empresaB = empresasVigenciaAnual.find(
+            (empresa) => empresa.id === b,
+        );
+
+        return empresaA.nome.localeCompare(
+            empresaB.nome,
+            "pt-BR",
+            { sensitivity: "base" },
+        );
+    }),
+    "Somente empresas com ao menos uma competência contratualmente aplicável em 2025 devem permanecer no relatório.",
+);
+
+const empresaMaio2025 =
+    relatorioVigencia2025.empresas.find(
+        (empresa) =>
+            empresa.id ===
+            "empresa-inicio-maio-2025",
+    );
+
+assertVigenciaAnual.ok(
+    empresaMaio2025,
+    "Empresa iniciada em maio de 2025 deve aparecer no relatório de 2025.",
+);
+
+assertVigenciaAnual.equal(
+    empresaMaio2025.meses[3].exigivel,
+    false,
+    "ABR/2025 deve permanecer fora da vigência da empresa iniciada em maio.",
+);
+
+assertVigenciaAnual.equal(
+    empresaMaio2025.meses[4].exigivel,
+    true,
+    "MAI/2025 deve entrar na vigência da empresa.",
+);
+
+assertVigenciaAnual.equal(
+    empresaMaio2025.meses[3].pendentes,
+    null,
+    "ABR/2025 não pode gerar pendência antes do início do contrato.",
+);
+
+assertVigenciaAnual.ok(
+    Number(empresaMaio2025.meses[4].pendentes) > 0,
+    "MAI/2025 deve continuar cobrando os documentos aplicáveis quando não houver envio.",
+);
+
+const empresaSemDocumentos2025 =
+    relatorioVigencia2025.empresas.find(
+        (empresa) =>
+            empresa.id ===
+            "empresa-ano-2025-sem-documentos",
+    );
+
+assertVigenciaAnual.ok(
+    empresaSemDocumentos2025,
+    "Empresa vigente no ano deve permanecer mesmo sem nenhum documento enviado.",
+);
+
+const relatorioFuturo2026 =
+    consolidarRelatorioAnualVigenciaEmpresas({
+        ano: 2026,
+        empresas: [
+            {
+                id: "empresa-outubro-2026",
+                nome: "INÍCIO EM OUTUBRO DE 2026",
+                tipo_empresa: "Contratada",
+                data_inicio_contrato: "2026-10-01",
+                data_fim_contrato: "",
+            },
+        ],
+        colaboradores: [],
+        competencias: [],
+        itens: [],
+        versoes: [],
+        regrasPerfil: [],
+        agora: new Date("2026-08-13T12:00:00-03:00"),
+    });
+
+assertVigenciaAnual.equal(
+    relatorioFuturo2026.empresas.length,
+    0,
+    "Empresa cujo contrato começa apenas em competência futura ainda não deve aparecer no relatório anual corrente.",
+);
 console.log("CERTIDÃO MENSAL — RELATÓRIO ANUAL POR EMPRESA APROVADO");
 console.log(
     "Cenários validados: paginação sequencial para 20 empresas em 3 folhas (7 + 7 + 6), oito empresas em 7 + 1, sete faixas fixas sem esticar cards, título do cabeçalho em uma linha, quinze documentos externos, impressão A4 horizontal, janeiro a dezembro e Total.",

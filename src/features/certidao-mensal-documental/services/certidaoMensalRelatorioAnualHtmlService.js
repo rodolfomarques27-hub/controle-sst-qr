@@ -352,6 +352,44 @@ function montarLogoEmpresa(empresa) {
     `;
 }
 
+function montarMarcaContratante(contratante) {
+    if (
+        !contratante ||
+        typeof contratante !== "object"
+    ) {
+        return `
+            <div
+                class="marca-contratante marca-contratante--vazia"
+                aria-hidden="true"
+            ></div>
+        `;
+    }
+
+    const nome =
+        textoSeguro(
+            contratante.nome ||
+            contratante.razaoSocial ||
+            contratante.razao_social ||
+            "Contratante",
+            300,
+        );
+
+    const empresaVisual = {
+        ...contratante,
+        nome,
+    };
+
+    return `
+        <div
+            class="marca-contratante"
+            aria-label="Contratante: ${escaparHtml(nome)}"
+            title="Contratante: ${escaparHtml(nome)}"
+        >
+            ${montarLogoEmpresa(empresaVisual)}
+        </div>
+    `;
+}
+
 function montarCelulaGrade({
     conteudo,
     classes = "",
@@ -672,6 +710,7 @@ function montarPaginaHtml({
     percentualPendente,
     geradoEm,
     obra = null,
+    contratanteCabecalho = null,
 }) {
     const empresasHtml = empresas.length > 0
         ? empresas.map(montarEmpresaHtml).join("")
@@ -690,6 +729,11 @@ function montarPaginaHtml({
                     <h1>Relatório Anual de Pendências Documentais</h1>
                     <p>Visão anual por empresa</p>
                 </div>
+
+                ${montarMarcaContratante(
+                    contratanteCabecalho ||
+                    obra?.contratante,
+                )}
             </header>
 
             ${montarResumoHtml({
@@ -773,6 +817,7 @@ function montarPaginaMultiObraHtml({
     totalPaginas,
     ano,
     geradoEm,
+    contratanteCabecalho = null,
 }) {
     const listaBlocos =
         Array.isArray(blocos)
@@ -810,6 +855,10 @@ function montarPaginaMultiObraHtml({
                     <h1>Relatório Anual de Pendências Documentais</h1>
                     <p>Visão anual por empresa</p>
                 </div>
+
+                ${montarMarcaContratante(
+                    contratanteCabecalho,
+                )}
             </header>
 
             <section class="pagina-conteudo-obras">
@@ -855,6 +904,34 @@ export function gerarHtmlRelatorioAnualCertidaoMensal(dados) {
             : [];
 
     /*
+     * A identidade visual do cabeçalho pertence ao relatório
+     * inteiro, e não à página física atual.
+     *
+     * O chamador pode fornecer uma marca explícita no futuro.
+     * Na ausência dela, preservamos a primeira contratante válida
+     * resolvida no conjunto global de obras.
+     */
+    const contratanteCabecalho =
+        (
+            relatorio.contratanteCabecalho &&
+            typeof relatorio.contratanteCabecalho === "object"
+        )
+            ? relatorio.contratanteCabecalho
+            : (
+                obras
+                    .map(
+                        (obra) =>
+                            obra?.contratante,
+                    )
+                    .find(
+                        (contratante) =>
+                            contratante &&
+                            typeof contratante === "object",
+                    ) ||
+                null
+            );
+
+    /*
      * Sem agrupamento de obras:
      * mantém a paginação histórica do relatório.
      *
@@ -897,6 +974,7 @@ export function gerarHtmlRelatorioAnualCertidaoMensal(dados) {
                             ano,
                             geradoEm:
                                 relatorio.geradoEm,
+                            contratanteCabecalho,
                         }),
                 )
                 .join("")
@@ -930,6 +1008,7 @@ export function gerarHtmlRelatorioAnualCertidaoMensal(dados) {
                             geradoEm:
                                 relatorio.geradoEm,
                             obra: null,
+                            contratanteCabecalho,
                         });
                     },
                 )
@@ -968,7 +1047,7 @@ export function gerarHtmlRelatorioAnualCertidaoMensal(dados) {
         .relatorio {
             display: grid;
             gap: 18px;
-            width: min(1180px, 100%);
+            width: min(980px, 100%);
             margin: 0 auto;
         }
 
@@ -2040,7 +2119,482 @@ export function gerarHtmlRelatorioAnualCertidaoMensal(dados) {
                 min-height: 20mm;
             }
         }
-    </style>
+        /* ==================================================
+           D24.16.3 — CENTRALIZACAO FINAL DOS INDICADORES ANUAIS
+           Icone + rotulo + valor no centro real do card.
+           ================================================== */
+
+        .resumo-card--ano,
+        .resumo-card--conforme,
+        .resumo-card--pendente {
+            display: grid;
+            grid-template-columns:
+                auto
+                auto;
+            grid-template-rows:
+                auto;
+            align-items: center;
+            align-content: center;
+            justify-content: center;
+            justify-items: center;
+            column-gap: 8px;
+            text-align: center;
+        }
+
+        .resumo-card--ano > .resumo-card__icone,
+        .resumo-card--conforme > .resumo-card__icone,
+        .resumo-card--pendente > .resumo-card__icone {
+            position: static;
+            width: auto;
+            height: auto;
+            grid-column: auto;
+            grid-row: auto;
+            align-self: center;
+            justify-self: center;
+            margin: 0;
+            transform: none;
+        }
+
+        .resumo-card--ano > .resumo-card__texto,
+        .resumo-card--conforme > .resumo-card__texto,
+        .resumo-card--pendente > .resumo-card__texto {
+            display: flex;
+            width: auto;
+            max-width: 100%;
+            grid-column: auto;
+            grid-row: auto;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            align-self: center;
+            justify-self: center;
+            gap: 6px;
+            margin: 0;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .resumo-card--ano > .resumo-card__texto small,
+        .resumo-card--conforme > .resumo-card__texto small,
+        .resumo-card--pendente > .resumo-card__texto small {
+            display: inline-block;
+            margin: 0;
+            line-height: 1;
+            letter-spacing: 0.025em;
+            text-align: center;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .resumo-card--ano > .resumo-card__texto strong,
+        .resumo-card--conforme > .resumo-card__texto strong,
+        .resumo-card--pendente > .resumo-card__texto strong {
+            display: inline-block;
+            margin: 0;
+            line-height: 1;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        /* ==================================================
+           D24.16.6 — ICONE A ESQUERDA E CONTEUDO CENTRAL
+           O icone deixa de participar do calculo do centro.
+           Rotulo + valor permanecem centralizados no card.
+           ================================================== */
+
+        .resumo-card--ano,
+        .resumo-card--conforme,
+        .resumo-card--pendente {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .resumo-card--ano > .resumo-card__icone,
+        .resumo-card--conforme > .resumo-card__icone,
+        .resumo-card--pendente > .resumo-card__icone {
+            position: absolute;
+            top: 50%;
+            left: 12px;
+            display: flex;
+            width: auto;
+            height: auto;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            transform: translateY(-50%);
+        }
+
+        .resumo-card--ano > .resumo-card__texto,
+        .resumo-card--conforme > .resumo-card__texto,
+        .resumo-card--pendente > .resumo-card__texto {
+            display: flex;
+            width: 100%;
+            max-width: none;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin: 0;
+            padding: 0 34px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .resumo-card--ano > .resumo-card__texto small,
+        .resumo-card--conforme > .resumo-card__texto small,
+        .resumo-card--pendente > .resumo-card__texto small,
+        .resumo-card--ano > .resumo-card__texto strong,
+        .resumo-card--conforme > .resumo-card__texto strong,
+        .resumo-card--pendente > .resumo-card__texto strong {
+            margin: 0;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        /* ==================================================
+           D24.16.6 — MESMA ESCALA PARA ROTULO E NUMERO
+           Uma unica escala tipografica para tela e impressao.
+           ================================================== */
+
+        .resumo-card--ano > .resumo-card__texto,
+        .resumo-card--conforme > .resumo-card__texto,
+        .resumo-card--pendente > .resumo-card__texto {
+            font-size: 2.6mm;
+            line-height: 1;
+        }
+
+        .resumo-card--ano > .resumo-card__texto small,
+        .resumo-card--conforme > .resumo-card__texto small,
+        .resumo-card--pendente > .resumo-card__texto small,
+        .resumo-card--ano > .resumo-card__texto strong,
+        .resumo-card--conforme > .resumo-card__texto strong,
+        .resumo-card--pendente > .resumo-card__texto strong {
+            font-size: 1em;
+            line-height: 1;
+        }
+
+
+        /* ==================================================
+           D24.17.8 — LOGO DINÂMICO DA CONTRATANTE
+           O logo vem do cadastro da empresa contratante.
+           ================================================== */
+
+        .cabecalho-relatorio {
+            display: grid;
+            grid-template-columns:
+                104px
+                minmax(0, 1fr)
+                104px;
+            align-items: center;
+        }
+
+        .cabecalho-relatorio > .marca-safescan {
+            justify-self: start;
+        }
+
+        .cabecalho-relatorio > .titulo-relatorio {
+            min-width: 0;
+            justify-self: stretch;
+            text-align: center;
+        }
+
+        .marca-contratante {
+            display: flex;
+            width: auto;
+            max-width: 104px;
+            height: 46px;
+            min-width: 0;
+            align-items: center;
+            justify-content: center;
+            justify-self: end;
+            overflow: hidden;
+            padding: 3px 5px;
+            border: 1px solid rgba(217, 226, 236, 0.78);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.96);
+        }
+
+        .marca-contratante .empresa-logo__imagem {
+            display: block;
+            width: auto;
+            height: 100%;
+            max-width: 96px;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .marca-contratante .empresa-logo__iniciais {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            align-items: center;
+            justify-content: center;
+            color: #0b5f33;
+            font-size: 18px;
+            font-weight: 900;
+            letter-spacing: 0.04em;
+            text-align: center;
+        }
+
+        .marca-contratante--vazia {
+            visibility: hidden;
+        }
+
+        @media print {
+            .cabecalho-relatorio {
+                grid-template-columns:
+                    27mm
+                    minmax(0, 1fr)
+                    27mm;
+            }
+
+            .marca-contratante {
+                width: auto;
+                max-width: 27mm;
+                height: 11.8mm;
+                padding: 0.6mm 0.8mm;
+                border-width: 0.2mm;
+                border-radius: 1.5mm;
+            }
+
+            .marca-contratante .empresa-logo__imagem {
+                max-width: 25mm;
+            }
+
+            .marca-contratante .empresa-logo__iniciais {
+                font-size: 4mm;
+            }
+        }
+
+        /* Legibilidade do cabeçalho no preview desktop. */
+@media screen and (min-width: 901px) {
+    .titulo-relatorio {
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .titulo-relatorio h1 {
+        max-width: 100%;
+        margin: 0;
+        font-size: clamp(16px, 1.85vw, 20px);
+        line-height: 1.05;
+        letter-spacing: -0.35px;
+        white-space: nowrap;
+    }
+}
+
+/* Layout final do card Ano de referência em tela e impressão. */
+
+        /*
+         * Ajuste definitivo do card Ano de referência.
+         * Remove qualquer grid/posição anterior que possa causar
+         * sobreposição entre ícone, rótulo e ano.
+         */
+        @media screen and (min-width: 901px) {
+            .resumo-card--ano {
+                display: flex !important;
+                grid-template-columns: none !important;
+                grid-template-rows: none !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 7px !important;
+                padding-left: 10px !important;
+                padding-right: 10px !important;
+                white-space: nowrap !important;
+            }
+
+            .resumo-card--ano > * {
+                position: static !important;
+                inset: auto !important;
+                transform: none !important;
+            }
+
+            .resumo-card--ano > svg,
+            .resumo-card--ano > :first-child {
+                flex: 0 0 14px !important;
+                width: 14px !important;
+                min-width: 14px !important;
+                max-width: 14px !important;
+                height: 14px !important;
+                margin: 0 !important;
+            }
+
+            .resumo-card--ano svg {
+                display: block !important;
+                width: 13px !important;
+                height: 13px !important;
+                min-width: 13px !important;
+                max-width: 13px !important;
+                margin: 0 !important;
+            }
+
+            /*
+             * Se small/strong estiverem dentro de um wrapper,
+             * o wrapper também vira uma linha horizontal.
+             */
+            .resumo-card--ano > div,
+            .resumo-card--ano > span {
+                display: flex !important;
+                align-items: baseline !important;
+                justify-content: center !important;
+                gap: 5px !important;
+                min-width: 0 !important;
+                width: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .resumo-card--ano small,
+            .resumo-card--ano strong {
+                display: inline-block !important;
+                position: static !important;
+                inset: auto !important;
+                transform: none !important;
+                width: auto !important;
+                min-width: 0 !important;
+                max-width: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                line-height: 1 !important;
+                white-space: nowrap !important;
+                text-align: left !important;
+            }
+
+            .resumo-card--ano small {
+                font-size: 7px !important;
+                letter-spacing: -0.1px !important;
+            }
+
+            .resumo-card--ano strong {
+                font-size: 9px !important;
+                letter-spacing: 0 !important;
+            }
+        }
+
+        /*
+         * Mesma proteção na impressão, sem alterar A4.
+         */
+        @media print {
+            .resumo-card--ano {
+                display: flex !important;
+                grid-template-columns: none !important;
+                grid-template-rows: none !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 1.6mm !important;
+                padding-left: 2mm !important;
+                padding-right: 2mm !important;
+                white-space: nowrap !important;
+            }
+
+            .resumo-card--ano > * {
+                position: static !important;
+                inset: auto !important;
+                transform: none !important;
+            }
+
+            .resumo-card--ano > div,
+            .resumo-card--ano > span {
+                display: flex !important;
+                align-items: baseline !important;
+                justify-content: center !important;
+                gap: 1mm !important;
+                width: auto !important;
+                min-width: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .resumo-card--ano small,
+            .resumo-card--ano strong {
+                display: inline-block !important;
+                position: static !important;
+                transform: none !important;
+                width: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                white-space: nowrap !important;
+                line-height: 1 !important;
+            }
+
+            .resumo-card--ano small {
+                font-size: 6pt !important;
+            }
+
+            .resumo-card--ano strong {
+                font-size: 7pt !important;
+            }
+        }
+
+        /* Preview multiobra cresce verticalmente para evitar recorte de conteúdo. */
+
+        /*
+         * O A4 físico continua determinando a paginação.
+         *
+         * Na tela, a proporção 297/210 permanece como tamanho
+         * preferencial da folha. Porém, quando os blocos exigirem
+         * mais altura, a página visual pode crescer em vez de
+         * comprimir ou esconder conteúdo.
+         */
+        @media screen and (min-width: 901px) {
+            .pagina-relatorio[data-modo="multiobra"] {
+                height: auto;
+                min-height: max-content;
+                grid-template-rows:
+                    88px
+                    max-content
+                    24px;
+            }
+
+            .pagina-relatorio[data-modo="multiobra"]
+            .pagina-conteudo-obras {
+                gap: 7px;
+                overflow: visible;
+            }
+
+            .pagina-relatorio[data-modo="multiobra"]
+            .obra-bloco {
+                gap: 4px;
+            }
+
+            .pagina-relatorio[data-modo="multiobra"]
+            .obra-bloco
+            .resumo-anual--com-obra {
+                height: 42px;
+                min-height: 42px;
+            }
+
+            .pagina-relatorio[data-modo="multiobra"]
+            .obra-bloco
+            .resumo-anual--com-obra
+            .resumo-card {
+                box-sizing: border-box;
+                height: 42px;
+                min-height: 42px;
+            }
+
+            .pagina-relatorio[data-modo="multiobra"]
+            .obra-bloco
+            .empresas {
+                grid-template-rows: none;
+                grid-auto-rows: 72px;
+                align-content: start;
+                gap: 4px;
+            }
+
+            .pagina-relatorio[data-modo="multiobra"]
+            .obra-bloco
+            .empresa-card {
+                box-sizing: border-box;
+                height: 72px;
+                min-height: 72px;
+            }
+        }
+
+</style>
 </head>
 <body>
     <main class="relatorio">

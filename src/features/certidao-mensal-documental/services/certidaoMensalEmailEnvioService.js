@@ -86,7 +86,7 @@ function criarErroEnvio(
             textoSeguro(
                 mensagem,
             ) ||
-            "Não foi possível enviar a certidão mensal.",
+            "Não foi possível enviar as Certidões Mensais.",
         );
 
     erro.name =
@@ -165,7 +165,7 @@ function validarClienteSupabase(
             "function"
     ) {
         throw new Error(
-            "Cliente Supabase inválido para envio da certidão mensal.",
+            "Cliente Supabase inválido para envio das Certidões Mensais.",
         );
     }
 
@@ -578,7 +578,7 @@ export function criarCertidaoMensalEmailEnvioService({
         }
         catch (error) {
             throw criarErroEnvio(
-                "Não foi possível acessar o serviço de envio da certidão mensal.",
+                "Não foi possível acessar o serviço de envio das Certidões Mensais.",
                 {
                     causa:
                         error,

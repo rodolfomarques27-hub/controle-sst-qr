@@ -165,6 +165,31 @@ export function PerfilDocumentalConfigModal({
         );
 
     const [
+        tiposDocumentoSelecionados,
+        setTiposDocumentoSelecionados,
+    ] =
+        useState(
+            () =>
+                documentoInicialId
+                    ? [documentoInicialId]
+                    : [],
+        );
+
+    const quantidadeDocumentosSelecionados =
+        tiposDocumentoSelecionados.length;
+
+    const idsDocumentosSelecionados =
+        useMemo(
+            () =>
+                new Set(
+                    tiposDocumentoSelecionados,
+                ),
+            [
+                tiposDocumentoSelecionados,
+            ],
+        );
+
+    const [
         exigido,
         setExigido,
     ] =
@@ -303,26 +328,59 @@ export function PerfilDocumentalConfigModal({
             onCancelar?.();
         };
 
-    const aoTrocarDocumento =
-        (evento) => {
+    const alternarDocumentoSelecionado =
+        (documentoId) => {
             const novoId =
-                evento.target.value;
+                String(
+                    documentoId ||
+                    "",
+                ).trim();
 
-            setTipoDocumento(
-                novoId,
-            );
+            if (!novoId) {
+                return;
+            }
 
-            const novoDocumento =
-                documentosValidos.find(
-                    (documento) =>
-                        documento.id ===
-                        novoId,
+            const jaSelecionado =
+                idsDocumentosSelecionados.has(
+                    novoId,
                 );
 
-            setExigido(
-                novoDocumento?.exigido !==
-                    false,
+            const proximosSelecionados =
+                jaSelecionado
+                    ? tiposDocumentoSelecionados.filter(
+                        (item) =>
+                            item !==
+                            novoId,
+                    )
+                    : [
+                        ...tiposDocumentoSelecionados,
+                        novoId,
+                    ];
+
+            setTiposDocumentoSelecionados(
+                proximosSelecionados,
             );
+
+            if (!jaSelecionado) {
+                setTipoDocumento(
+                    novoId,
+                );
+
+                return;
+            }
+
+            if (
+                tipoDocumento ===
+                novoId
+            ) {
+                setTipoDocumento(
+                    proximosSelecionados[
+                        proximosSelecionados.length -
+                        1
+                    ] ||
+                    "",
+                );
+            }
         };
 
     async function salvarRegra() {
@@ -368,9 +426,12 @@ export function PerfilDocumentalConfigModal({
                 "",
             ).trim();
 
-        if (!tipoDocumento) {
+        if (
+            tiposDocumentoSelecionados.length ===
+            0
+        ) {
             setErroSalvar(
-                "Selecione um documento.",
+                "Selecione ao menos um documento.",
             );
 
             return;
@@ -413,6 +474,8 @@ export function PerfilDocumentalConfigModal({
 
         try {
             await onSalvar({
+                tiposDocumento:
+                    tiposDocumentoSelecionados.slice(),
                 tipoDocumento,
                 exigido,
                 competenciaInicio:
@@ -591,42 +654,201 @@ export function PerfilDocumentalConfigModal({
                     </div>
 
                     <div className="certidao-mensal-perfil-modal__grid">
-                        <label className="certidao-mensal-perfil-modal__campo is-wide">
-                            <span>
-                                Documento
-                            </span>
+                        <div className="certidao-mensal-perfil-modal__campo is-wide">
+                            <div className="certidao-mensal-perfil-modal__selecao-cabecalho">
+                                <span>
+                                    Documentos
+                                </span>
 
-                            <select
-                                value={
-                                    tipoDocumento
-                                }
-                                onChange={
-                                    aoTrocarDocumento
-                                }
+                                <small>
+                                    {quantidadeDocumentosSelecionados}{" "}
+                                    {quantidadeDocumentosSelecionados ===
+                                    1
+                                        ? "selecionado"
+                                        : "selecionados"}
+                                </small>
+                            </div>
+
+                            <div
+                                className="certidao-mensal-perfil-modal__selecao-lista"
+                                role="group"
+                                aria-label="Selecionar documentos"
                             >
-                                {documentosValidos.map(
-                                    (documento) => (
-                                        <option
-                                            key={
-                                                documento.id
-                                            }
-                                            value={
-                                                documento.id
-                                            }
-                                        >
-                                            {documento.numero}.{" "}
-                                            {documento.titulo}
-                                        </option>
-                                    ),
+                                {documentosValidos.some(
+                                    (documento) =>
+                                        documento?.exigido !==
+                                        false,
+                                ) && (
+                                    <section className="certidao-mensal-perfil-modal__selecao-grupo">
+                                        <header>
+                                            <strong>
+                                                DOCUMENTOS EXIGIDOS
+                                            </strong>
+
+                                            <span>
+                                                {
+                                                    documentosValidos.filter(
+                                                        (documento) =>
+                                                            documento
+                                                                ?.exigido !==
+                                                            false,
+                                                    ).length
+                                                }
+                                            </span>
+                                        </header>
+
+                                        <div className="certidao-mensal-perfil-modal__selecao-itens">
+                                            {documentosValidos
+                                                .filter(
+                                                    (documento) =>
+                                                        documento
+                                                            ?.exigido !==
+                                                        false,
+                                                )
+                                                .map(
+                                                    (
+                                                        documento,
+                                                    ) => (
+                                                        <label
+                                                            key={
+                                                                documento.id
+                                                            }
+                                                            className={
+                                                                idsDocumentosSelecionados.has(
+                                                                    documento.id,
+                                                                )
+                                                                    ? "certidao-mensal-perfil-modal__selecao-item is-selected"
+                                                                    : "certidao-mensal-perfil-modal__selecao-item"
+                                                            }
+                                                        >
+                                                            <span className="certidao-mensal-perfil-modal__selecao-linha">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={
+                                                                        idsDocumentosSelecionados.has(
+                                                                            documento.id,
+                                                                        )
+                                                                    }
+                                                                    onChange={() =>
+                                                                        alternarDocumentoSelecionado(
+                                                                            documento.id,
+                                                                        )
+                                                                    }
+                                                                />
+
+                                                                <span className="certidao-mensal-perfil-modal__selecao-conteudo">
+                                                                    <strong>
+                                                                        {
+                                                                            documento.numero
+                                                                        }
+                                                                        .{" "}
+                                                                        {
+                                                                            documento.titulo
+                                                                        }
+                                                                    </strong>
+                                                                </span>
+                                                            </span>
+
+                                                            <span className="certidao-mensal-perfil-modal__selecao-status is-sim">
+                                                                Exigido
+                                                            </span>
+                                                        </label>
+                                                    ),
+                                                )}
+                                        </div>
+                                    </section>
                                 )}
-                            </select>
+
+                                {documentosValidos.some(
+                                    (documento) =>
+                                        documento?.exigido ===
+                                        false,
+                                ) && (
+                                    <section className="certidao-mensal-perfil-modal__selecao-grupo is-nao">
+                                        <header>
+                                            <strong>
+                                                NÃO EXIGIDOS PARA ESTE CONTRATO
+                                            </strong>
+
+                                            <span>
+                                                {
+                                                    documentosValidos.filter(
+                                                        (documento) =>
+                                                            documento
+                                                                ?.exigido ===
+                                                            false,
+                                                    ).length
+                                                }
+                                            </span>
+                                        </header>
+
+                                        <div className="certidao-mensal-perfil-modal__selecao-itens">
+                                            {documentosValidos
+                                                .filter(
+                                                    (documento) =>
+                                                        documento
+                                                            ?.exigido ===
+                                                        false,
+                                                )
+                                                .map(
+                                                    (
+                                                        documento,
+                                                    ) => (
+                                                        <label
+                                                            key={
+                                                                documento.id
+                                                            }
+                                                            className={
+                                                                idsDocumentosSelecionados.has(
+                                                                    documento.id,
+                                                                )
+                                                                    ? "certidao-mensal-perfil-modal__selecao-item is-selected is-nao"
+                                                                    : "certidao-mensal-perfil-modal__selecao-item is-nao"
+                                                            }
+                                                        >
+                                                            <span className="certidao-mensal-perfil-modal__selecao-linha">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={
+                                                                        idsDocumentosSelecionados.has(
+                                                                            documento.id,
+                                                                        )
+                                                                    }
+                                                                    onChange={() =>
+                                                                        alternarDocumentoSelecionado(
+                                                                            documento.id,
+                                                                        )
+                                                                    }
+                                                                />
+
+                                                                <span className="certidao-mensal-perfil-modal__selecao-conteudo">
+                                                                    <strong>
+                                                                        {
+                                                                            documento.numero
+                                                                        }
+                                                                        .{" "}
+                                                                        {
+                                                                            documento.titulo
+                                                                        }
+                                                                    </strong>
+                                                                </span>
+                                                            </span>
+
+                                                            <span className="certidao-mensal-perfil-modal__selecao-status is-nao">
+                                                                Não exigido
+                                                            </span>
+                                                        </label>
+                                                    ),
+                                                )}
+                                        </div>
+                                    </section>
+                                )}
+                            </div>
 
                             <small>
-                                {documentoAtual?.subtitulo ||
-                                    "Documento do catálogo mensal"}
+                                Marque um ou mais documentos. A situação, o período e o motivo serão aplicados a todos os selecionados.
                             </small>
-                        </label>
-
+                        </div>
                         <fieldset className="certidao-mensal-perfil-modal__campo">
                             <legend>
                                 {modoAnual
@@ -907,7 +1129,8 @@ export function PerfilDocumentalConfigModal({
                             salvando ||
                             carregando ||
                             Boolean(erro) ||
-                            !tipoDocumento ||
+                            quantidadeDocumentosSelecionados ===
+                                0 ||
                             typeof onSalvar !==
                                 "function"
                         }

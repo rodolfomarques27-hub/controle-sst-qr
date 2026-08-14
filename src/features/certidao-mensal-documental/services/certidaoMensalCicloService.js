@@ -314,7 +314,7 @@ function validarClienteSupabase(
             "function"
     ) {
         throw new Error(
-            "Cliente Supabase inválido para o ciclo da Certidão Mensal.",
+            "Cliente Supabase inválido para o ciclo das Certidões Mensais.",
         );
     }
 

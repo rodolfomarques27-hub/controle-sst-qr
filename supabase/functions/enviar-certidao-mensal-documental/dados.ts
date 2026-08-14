@@ -410,7 +410,7 @@ function resolverConfiguracao(
     ) {
         throw new ErroHttp(
             409,
-            "O envio da Certidão Mensal está desativado.",
+            "O envio das Certidões Mensais está desativado.",
         );
     }
 

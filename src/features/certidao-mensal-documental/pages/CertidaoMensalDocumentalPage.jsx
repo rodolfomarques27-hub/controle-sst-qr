@@ -1497,7 +1497,7 @@ export function CertidaoMensalDocumentalPage({
                 }
 
                 console.error(
-                    "[Certidão Mensal] Falha ao carregar resumo documental.",
+                    "[Certidões Mensais] Falha ao carregar resumo documental.",
                     erro
                 );
 
@@ -1776,7 +1776,6 @@ export function CertidaoMensalDocumentalPage({
             );
         }
 
-
         const empresaId =
             String(
                 empresaSelecionada?.id ||
@@ -1789,16 +1788,61 @@ export function CertidaoMensalDocumentalPage({
             );
         }
 
-        await salvarRegraPerfilDocumentalCertidaoMensal(
-            {
-                ...dadosRegra,
-                empresaId,
-            },
-            {
-                clienteSupabase:
-                    supabase,
-            },
-        );
+        const tiposDocumento =
+            Array.from(
+                new Set(
+                    (
+                        Array.isArray(
+                            dadosRegra
+                                ?.tiposDocumento,
+                        )
+                            ? dadosRegra
+                                .tiposDocumento
+                            : [
+                                dadosRegra
+                                    ?.tipoDocumento,
+                            ]
+                    )
+                        .map(
+                            (valor) =>
+                                String(
+                                    valor ||
+                                    "",
+                                ).trim(),
+                        )
+                        .filter(Boolean),
+                ),
+            );
+
+        if (tiposDocumento.length === 0) {
+            throw new Error(
+                "Selecione ao menos um documento antes de salvar a exigibilidade documental.",
+            );
+        }
+
+        const dadosBase = {
+            ...dadosRegra,
+        };
+
+        delete dadosBase.tiposDocumento;
+        delete dadosBase.tipoDocumento;
+
+        for (
+            const tipoDocumento of
+            tiposDocumento
+        ) {
+            await salvarRegraPerfilDocumentalCertidaoMensal(
+                {
+                    ...dadosBase,
+                    tipoDocumento,
+                    empresaId,
+                },
+                {
+                    clienteSupabase:
+                        supabase,
+                },
+            );
+        }
 
         const regras =
             await listarRegrasPerfilDocumentalCertidaoMensal(
@@ -1818,9 +1862,12 @@ export function CertidaoMensalDocumentalPage({
                 "",
         });
 
-        return true;
+        return {
+            totalSalvo:
+                tiposDocumento.length,
+            tiposDocumento,
+        };
     }
-
     useEffect(() => {
         const empresaId =
             String(
@@ -3227,7 +3274,7 @@ Deseja salvar as alterações?`
             }
             catch (erro) {
                 console.error(
-                    "[Certidão Mensal] Falha ao confirmar a Relação de Empregados histórica.",
+                    "[Certidões Mensais] Falha ao confirmar a Relação de Empregados histórica.",
                     erro
                 );
 
@@ -3339,7 +3386,7 @@ Deseja salvar as alterações?`
             }
             catch (erro) {
                 console.error(
-                    "[Certidão Mensal] Falha ao persistir os itens automáticos 14 e 15.",
+                    "[Certidões Mensais] Falha ao persistir os itens automáticos 14 e 15.",
                     erro
                 );
 
@@ -5261,6 +5308,31 @@ return {
                                 : [],
                     });
 
+                /*
+                 * OBRA NO RELATÓRIO MENSAL — reutiliza o agrupamento já resolvido pelo relatório anual
+                 * Reutiliza o agrupamento de obras já usado pelo anual.
+                 */
+                const obrasRelatorioMensal =
+                    (
+                        Array.isArray(
+                            agrupamentoMensal
+                        )
+                            ? agrupamentoMensal
+                            : []
+                    )
+                        .filter(
+                            (obra) =>
+                                obra &&
+                                typeof obra ===
+                                    "object" &&
+                                obra.semVinculo !==
+                                    true &&
+                                String(
+                                    obra.id ||
+                                    ""
+                                ).trim() !==
+                                    "__sem_obra__"
+                        );
                 const contratantesEncontradas =
                     [];
 
@@ -5388,6 +5460,9 @@ return {
                     contratante:
                         contratanteRelatorioMensal,
 
+                    obras:
+                        obrasRelatorioMensal,
+
                     competenciaAtual:
                         cicloMensal.competenciaAtual,
                     historicoAnual:
@@ -5489,7 +5564,8 @@ return {
                     janela:
                         janelaRelatorio,
                     ano,
-                    empresas,
+                    empresas:
+                        empresasVisiveisCompetencia,
                     colaboradores,
                     empresasBanco:
                         empresasBanco.map((empresa) => {
@@ -5550,7 +5626,7 @@ return {
         >
             <Header
                 className="hero-integrated-page-header hero-header--certidao-mensal"
-                titulo="Certidão Mensal Documental"
+                titulo="Certidões Mensais"
                 subtitulo={null}
             />
 

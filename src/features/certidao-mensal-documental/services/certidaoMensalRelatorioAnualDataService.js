@@ -1194,12 +1194,22 @@ export function consolidarRelatorioAnualCertidaoMensal({
         };
     });
 
-    const totalConformes = empresasRelatorio.reduce(
+    const empresasRelatorioComVigenciaNoPeriodo =
+        empresasRelatorio.filter(
+            (empresa) =>
+                empresa.meses.some(
+                    (mes) =>
+                        mes?.exigivel === true &&
+                        mes?.futura !== true,
+                ),
+        );
+
+    const totalConformes = empresasRelatorioComVigenciaNoPeriodo.reduce(
         (total, empresa) =>
             total + (empresa.totalConformes ?? 0),
         0,
     );
-    const totalPendentes = empresasRelatorio.reduce(
+    const totalPendentes = empresasRelatorioComVigenciaNoPeriodo.reduce(
         (total, empresa) =>
             total + (empresa.totalPendentes ?? 0),
         0,
@@ -1216,7 +1226,7 @@ export function consolidarRelatorioAnualCertidaoMensal({
     return {
         ano: anoNormalizado,
         geradoEm: criarDataReferencia(agora).toISOString(),
-        empresas: empresasRelatorio,
+        empresas: empresasRelatorioComVigenciaNoPeriodo,
         totais: {
             conformes: totalConformes,
             pendentes: totalPendentes,

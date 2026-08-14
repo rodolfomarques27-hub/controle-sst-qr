@@ -231,7 +231,7 @@ export function normalizarCodigoTipoDocumentoCertidaoMensal(
 
     if (!codigo) {
         throw new Error(
-            "O tipo documental da Certidão Mensal é obrigatório."
+            "O tipo documental das Certidões Mensais é obrigatório."
         );
     }
 

@@ -882,6 +882,7 @@ export function imprimirRelatorioCertidaoMensal({
     competencia,
     empresa,
     contratante = null,
+    obras = [],
     competenciaAtual,
     historicoAnual = [],
     documentos,
@@ -945,6 +946,79 @@ export function imprimirRelatorioCertidaoMensal({
         empresa.cnpj ||
         "CNPJ não informado";
 
+    const obrasRelatorioMensal =
+        (
+            Array.isArray(obras)
+                ? obras
+                : []
+        )
+            .filter(
+                (obra) =>
+                    obra &&
+                    typeof obra === "object" &&
+                    obra.semVinculo !== true &&
+                    String(
+                        obra.id ||
+                        ""
+                    ).trim() !==
+                        "__sem_obra__"
+            );
+
+    const identificacoesObras =
+        obrasRelatorioMensal
+            .map(
+                (obra) => {
+                    const nomeObra =
+                        String(
+                            obra.nome ||
+                            obra.nomeObra ||
+                            obra.nome_obra ||
+                            ""
+                        ).trim();
+
+                    const numeroObra =
+                        String(
+                            obra.numeroObra ||
+                            obra.numero_obra ||
+                            ""
+                        ).trim();
+
+                    if (!nomeObra) {
+                        return "";
+                    }
+
+                    return numeroObra
+                        ? (
+                            nomeObra +
+                            " • Nº " +
+                            numeroObra
+                        )
+                        : nomeObra;
+                }
+            )
+            .filter(Boolean);
+
+    const identificacaoObras =
+        identificacoesObras.join(
+            " | "
+        );
+
+    const rotuloObras =
+        identificacoesObras.length > 1
+            ? "OBRAS"
+            : "OBRA";
+
+    const obraHtmlMensal =
+        identificacaoObras
+            ? [
+                '<small class="empresa-obra-mensal">',
+                escaparHtml(rotuloObras) + ":",
+                escaparHtml(identificacaoObras),
+                "</small>",
+            ].join(
+                " "
+            )
+            : "";
     const linhas =
         itens
             .map(montarLinhaDocumento)
@@ -968,7 +1042,7 @@ export function imprimirRelatorioCertidaoMensal({
     <meta charset="utf-8">
 
     <title>
-        Certidão Mensal Documental -
+        Certidões Mensais -
         ${escaparHtml(empresaNome)}
     </title>
 
@@ -1554,7 +1628,7 @@ export function imprimirRelatorioCertidaoMensal({
                 minmax(0, 1fr);
             align-items: center;
             gap: 9px;
-            min-height: 54px;
+            min-height: 64px;
             overflow: hidden;
             border: 1px solid #cddbd3;
             border-left: 3px solid #0b8a45;
@@ -1641,6 +1715,17 @@ export function imprimirRelatorioCertidaoMensal({
             white-space: nowrap;
         }
 
+        .empresa-dados-mensal > .empresa-obra-mensal {
+            display: block;
+            margin-top: 2px;
+            overflow: visible;
+            color: #315345;
+            font-size: 7px;
+            font-weight: 800;
+            line-height: 1.12;
+            text-overflow: clip;
+            white-space: normal;
+        }
         .campo.competencia-mensal {
             display: flex;
             min-width: 0;
@@ -2224,6 +2309,115 @@ export function imprimirRelatorioCertidaoMensal({
         .rodape {
             margin-top: auto;
         }
+        /* ==================================================
+           D24.13.3 — tabela documental unificada
+           Título, cabeçalho e corpo formam uma única grade.
+           ================================================== */
+
+        .tabela-area {
+            padding:
+                0
+                14px
+                12px;
+        }
+
+        .tabela-area > table {
+            width: 100%;
+            overflow: hidden;
+            border:
+                1.35px solid
+                #9eafa5;
+            border-collapse: separate;
+            border-spacing: 0;
+            border-radius: 9px;
+            background: #ffffff;
+            box-shadow:
+                0
+                4px
+                14px
+                rgba(
+                    8,
+                    60,
+                    43,
+                    0.06
+                );
+        }
+
+        .tabela-area thead .tabela-titulo-row th {
+            min-height: 32px;
+            padding:
+                8px
+                12px;
+            border: 0;
+            border-bottom:
+                1.35px solid
+                #9eafa5;
+            color: #123c2d;
+            background:
+                linear-gradient(
+                    180deg,
+                    #f7fbf8,
+                    #e9f2ed
+                );
+            font-size: 11.5px;
+            font-weight: 950;
+            letter-spacing: 0;
+            line-height: 1.2;
+            text-align: center;
+            text-transform: none;
+            vertical-align: middle;
+        }
+
+        .tabela-area thead .tabela-colunas-row th {
+            padding:
+                7px
+                6px;
+            border: 0;
+            border-right:
+                1px solid
+                #acbbb2;
+            border-bottom:
+                1.2px solid
+                #9eafa5;
+            color: #244438;
+            background: #e4ede8;
+            font-size: 7.7px;
+            font-weight: 950;
+            letter-spacing: 0.065em;
+            line-height: 1.2;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        .tabela-area thead .tabela-colunas-row th:last-child {
+            border-right: 0;
+        }
+
+        .tabela-area tbody td {
+            border: 0;
+            border-right:
+                1px solid
+                #b6c3bb;
+            border-bottom:
+                1px solid
+                #b6c3bb;
+        }
+
+        .tabela-area tbody td:last-child {
+            border-right: 0;
+        }
+
+        .tabela-area tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .tabela-area tbody tr:nth-child(even) {
+            background: #f9fbfa;
+        }
+
+        .tabela-area tbody tr:nth-child(odd) {
+            background: #ffffff;
+        }
         @media print {
             body {
                 padding: 0;
@@ -2233,6 +2427,65 @@ export function imprimirRelatorioCertidaoMensal({
                 max-width: none;
                 border: 0;
                 border-radius: 0;
+            }
+
+            .tabela-area > table {
+                border:
+                    1.4px solid
+                    #788980 !important;
+                box-shadow: none !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .tabela-area thead .tabela-titulo-row th {
+                border-bottom:
+                    1.4px solid
+                    #788980 !important;
+                background: #e7efea !important;
+                color: #123c2d !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .tabela-area thead .tabela-colunas-row th {
+                border-right:
+                    1px solid
+                    #87988e !important;
+                border-bottom:
+                    1.25px solid
+                    #788980 !important;
+                background: #dce7e0 !important;
+                color: #203a30 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .tabela-area thead .tabela-colunas-row th:last-child {
+                border-right: 0 !important;
+            }
+
+            .tabela-area tbody td {
+                border-right:
+                    1px solid
+                    #98a89e !important;
+                border-bottom:
+                    1px solid
+                    #98a89e !important;
+            }
+
+            .tabela-area tbody td:last-child {
+                border-right: 0 !important;
+            }
+
+            .tabela-area tbody tr:last-child td {
+                border-bottom: 0 !important;
+            }
+
+            .tabela-area tbody tr:nth-child(even) {
+                background: #f7f9f8 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
         }
     </style>
@@ -2244,7 +2497,7 @@ export function imprimirRelatorioCertidaoMensal({
             ${montarMarcaSafeScanMensal()}
 
             <div class="titulo-relatorio-mensal">
-                <h1>Certidão Mensal Documental</h1>
+                <h1>Certidões Mensais</h1>
 
                 <p>
                     Visão mensal por empresa
@@ -2268,6 +2521,7 @@ export function imprimirRelatorioCertidaoMensal({
                     <small>
                         CNPJ ${escaparHtml(empresaCnpj)}
                     </small>
+                    ${obraHtmlMensal}
                 </div>
             </div>
 
@@ -2316,11 +2570,6 @@ export function imprimirRelatorioCertidaoMensal({
         </section>
 
         <section class="tabela-area">
-            <h2>
-                Documentos da competência —
-                conformidade ${conformidade}%
-            </h2>
-
             <table>
                 <colgroup>
                     <col style="width: 5%">
@@ -2330,7 +2579,14 @@ export function imprimirRelatorioCertidaoMensal({
                 </colgroup>
 
                 <thead>
-                    <tr>
+                    <tr class="tabela-titulo-row">
+                        <th colspan="4">
+                            Documentos da competência —
+                            conformidade ${conformidade}%
+                        </th>
+                    </tr>
+
+                    <tr class="tabela-colunas-row">
                         <th>Nº</th>
                         <th>Documento</th>
                         <th>Situação atual</th>

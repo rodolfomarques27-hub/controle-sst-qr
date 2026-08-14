@@ -6,6 +6,7 @@ import {
 } from "./certidaoMensalRelatorioAnualHtmlService.js";
 import {
     agruparRelatorioAnualPorObras,
+    resolverContratanteCabecalhoRelatorioAnual,
 } from "./certidaoMensalRelatorioAnualObrasService.js";
 
 function escreverDocumentoJanela(janela, html) {
@@ -73,13 +74,25 @@ export async function imprimirRelatorioAnualCertidaoMensal({
         agora,
     });
 
+    const obras =
+        agruparRelatorioAnualPorObras({
+            relatorio:
+                dados,
+
+            empresasBanco,
+
+            obrasEmpresasBanco,
+        });
+
+    const contratanteCabecalho =
+        resolverContratanteCabecalhoRelatorioAnual({
+            empresasBanco,
+        });
+
     const dadosComObras = {
         ...dados,
-        obras: agruparRelatorioAnualPorObras({
-            relatorio: dados,
-            empresasBanco,
-            obrasEmpresasBanco,
-        }),
+        obras,
+        contratanteCabecalho,
     };
 
     escreverDocumentoJanela(

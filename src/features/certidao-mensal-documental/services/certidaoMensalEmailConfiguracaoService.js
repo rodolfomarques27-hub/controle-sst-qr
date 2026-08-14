@@ -293,7 +293,7 @@ function validarConfiguracaoParaSalvar(dados) {
     ) {
         throw criarErroConfiguracaoEmail(
             null,
-            `Remova os endereços repetidos entre "Destinatários da Certidão Mensal" e "Cópia (CC)": ${emailsRepetidosEntreParaECopia.join(", ")}.`,
+            `Remova os endereços repetidos entre "Destinatários das Certidões Mensais" e "Cópia (CC)": ${emailsRepetidosEntreParaECopia.join(", ")}.`,
         );
     }
 
@@ -405,7 +405,7 @@ export async function listarConfiguracoesEmailCertidaoMensal() {
     if (error) {
         throw criarErroConfiguracaoEmail(
             error,
-            "Não foi possível carregar as configurações de e-mail da Certidão Mensal.",
+            "Não foi possível carregar as configurações de e-mail das Certidões Mensais.",
         );
     }
 
@@ -465,7 +465,7 @@ export async function salvarConfiguracaoEmailCertidaoMensal(
     if (error) {
         throw criarErroConfiguracaoEmail(
             error,
-            "Não foi possível salvar a configuração de e-mail da Certidão Mensal.",
+            "Não foi possível salvar a configuração de e-mail das Certidões Mensais.",
         );
     }
 

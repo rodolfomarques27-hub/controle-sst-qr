@@ -211,12 +211,14 @@ assert.ok(
     html.includes(
         "Página 1 de 2",
     ),
+    "A primeira página deve existir.",
 );
 
 assert.ok(
     html.includes(
         "Página 2 de 2",
     ),
+    "A segunda página deve existir.",
 );
 
 assert.equal(
@@ -224,7 +226,7 @@ assert.equal(
         "Página 3 de",
     ),
     false,
-    "O cenário deve gerar apenas duas páginas.",
+    "O cenário deve utilizar somente duas páginas físicas.",
 );
 
 const paginas =
@@ -237,20 +239,48 @@ const paginas =
 assert.equal(
     paginas.length,
     2,
-    "O cenário deve possuir duas páginas físicas.",
+    "A paginação deve aproveitar o espaço físico disponível.",
 );
 
-const quantidadeCabecalhos =
-    (
-        html.match(
-            /<h1>Relatório Anual de Pendências Documentais<\/h1>/g,
-        ) || []
-    ).length;
+const cabecalhos =
+    Array.from(
+        html.matchAll(
+            /<header class="cabecalho-relatorio">([\s\S]*?)<\/header>/g,
+        ),
+        (resultado) =>
+            resultado[1],
+    );
 
 assert.equal(
-    quantidadeCabecalhos,
+    cabecalhos.length,
     2,
-    "Cada página deve possuir um único cabeçalho geral.",
+    "Cada página deve possuir um cabeçalho geral.",
+);
+
+cabecalhos.forEach(
+    (cabecalho) => {
+        assert.ok(
+            cabecalho.includes(
+                "CONTRATANTE ALFA",
+            ),
+            "A marca institucional deve permanecer fixa em todos os cabeçalhos.",
+        );
+
+        assert.ok(
+            cabecalho.includes(
+                "https://exemplo.local/logo-alfa.png",
+            ),
+            "O mesmo logo institucional deve aparecer em todas as páginas.",
+        );
+
+        assert.equal(
+            cabecalho.includes(
+                "https://exemplo.local/logo-beta.png",
+            ),
+            false,
+            "A marca do cabeçalho não deve mudar por causa do bloco seguinte.",
+        );
+    },
 );
 
 assert.ok(
@@ -263,6 +293,7 @@ assert.ok(
     paginas[0].includes(
         "EMPRESA ALFA 7",
     ),
+    "A sétima empresa deve permanecer na primeira página porque 7 empresas ocupam 160,4 mm dentro dos 165 mm físicos disponíveis.",
 );
 
 assert.equal(
@@ -270,22 +301,22 @@ assert.equal(
         "EMPRESA ALFA 8",
     ),
     false,
-    "A oitava empresa não deve caber na primeira página.",
+    "A oitava empresa deve continuar na segunda página.",
 );
 
 assert.equal(
-    paginas[0].includes(
-        "OBRA BETA",
+    paginas[1].includes(
+        "EMPRESA ALFA 7",
     ),
     false,
-    "A primeira folha deve estar ocupada pela primeira obra.",
+    "A sétima empresa não deve ser deslocada desnecessariamente para a segunda página.",
 );
 
 assert.ok(
     paginas[1].includes(
         "EMPRESA ALFA 8",
     ),
-    "A oitava empresa deve iniciar a continuação.",
+    "Somente a oitava empresa deve iniciar a continuação da primeira obra.",
 );
 
 assert.ok(
@@ -299,14 +330,21 @@ assert.ok(
     paginas[1].includes(
         "OBRA BETA",
     ),
-    "A segunda obra deve aproveitar o espaço remanescente.",
+    "A segunda obra deve aproveitar o espaço físico restante.",
 );
 
 assert.ok(
     paginas[1].includes(
         "EMPRESA BETA 1",
     ),
-    "A empresa Beta deve compartilhar a segunda página.",
+    "A empresa Beta deve compartilhar a segunda folha quando houver capacidade.",
+);
+
+assert.ok(
+    paginas[1].includes(
+        "CONTRATANTE BETA",
+    ),
+    "A identificação da Contratante Beta deve permanecer no bloco da própria obra.",
 );
 
 assert.equal(
@@ -336,7 +374,7 @@ console.log(
 );
 
 console.log(
-    "Cenário validado: obra com 8 empresas em 7 + 1, continuação identificada e segunda obra aproveitando a mesma segunda folha.",
+    "Cenário validado: obra com 8 empresas em 7 + 1, capacidade física real de 165 mm preservada e segunda obra aproveitando o espaço restante da folha.",
 );
 
 console.log(

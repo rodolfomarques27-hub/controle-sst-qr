@@ -972,7 +972,7 @@ export function EvidenciaConferenciaPanel({
                             {urlDocumento ? (
                                 <iframe
                                     className="certidao-mensal-preview-real__frame"
-                                    src={urlDocumento}
+                                    src={`${urlDocumento}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
                                     title={
                                         "Prévia de " +
                                         (
@@ -1187,7 +1187,7 @@ export function EvidenciaConferenciaPanel({
                     {urlDocumento ? (
                         <iframe
                             className="certidao-mensal-evidencia__arquivo-frame"
-                            src={urlDocumento}
+                            src={`${urlDocumento}#toolbar=0&navpanes=0&view=FitH`}
                             title={
                                 "Visualização de " +
                                 (

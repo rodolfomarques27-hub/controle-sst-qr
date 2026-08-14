@@ -1136,7 +1136,7 @@ export default function App() {
         { id: "colaboradores", label: "Colaboradores", icon: Users, grupo: "CADASTROS" },
         { id: "aniversariantes", label: "Aniversariantes", icon: CalendarClock, grupo: "CADASTROS" },
         { id: "treinamentos", label: "Treinamentos", icon: ClipboardCheck, grupo: "CADASTROS" },
-        { id: "certidaoMensalDocumental", label: "Certid├úo Mensal", icon: FileCheck2, grupo: "CADASTROS" },
+        { id: "certidaoMensalDocumental", label: "Certidões Mensais", icon: FileCheck2, grupo: "CADASTROS" },
         { id: "dds", label: "DDS Semanal", icon: ClipboardCheck, grupo: "DDS" },
         { id: "qr", label: "Consulta QR", icon: QrCode, grupo: "CADASTROS" },
 

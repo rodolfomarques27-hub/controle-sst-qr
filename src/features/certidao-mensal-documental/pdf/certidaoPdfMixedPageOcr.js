@@ -497,7 +497,7 @@ export async function complementarPdfMistoCertidao({
                     "."
                 ),
                 "A camada textual original foi preservada.",
-                "O OCR complementar pertence exclusivamente ao módulo Certidão Mensal Documental.",
+                "O OCR complementar pertence exclusivamente ao módulo Certidões Mensais.",
             ],
         };
     }

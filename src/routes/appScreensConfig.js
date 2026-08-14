@@ -48,7 +48,7 @@ export const ROTULOS_TELAS_ACESSO_BLOQUEADO = Object.freeze({
     colaboradores: "Colaboradores",
     aniversariantes: "Aniversariantes",
     treinamentos: "Treinamentos",
-    certidaoMensalDocumental: "Certidão Mensal Documental",
+    certidaoMensalDocumental: "Certidões Mensais",
     dds: "DDS",
     qr: "QR Code",
     auditoria: "Auditoria do Sistema",
