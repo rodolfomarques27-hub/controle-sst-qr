@@ -214,4 +214,3 @@ grant execute on function public.corrigir_inativacao_legada_colaborador(uuid, da
 notify pgrst, 'reload schema';
 
 commit;
-

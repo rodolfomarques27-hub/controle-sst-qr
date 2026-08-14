@@ -1903,7 +1903,7 @@ export function gerarHtmlRelatorioAnualCertidaoMensal(dados) {
                 font-size: 1.9mm;
             }
         }
-    
+
         /* =======================================================
            CONTEXTO DA OBRA / EMPRESA CONTRATANTE
            ======================================================= */
