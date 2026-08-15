@@ -1,18 +1,24 @@
-import React, { useMemo, useState } from "react";
-import { Upload } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { BriefcaseBusiness, Upload } from "lucide-react";
 import { FileUploadAviso, validarArquivoAntesUpload } from "../FileUploadAviso";
 import {
-    STATUS_CLASSIFICACAO_COLABORADOR,
     treinamentosBase,
     treinamentoExclusivamenteManual,
 } from "../../constants/sstConstants";
 import {
-    obterStatusInicialColaborador,
     obterMatrizFuncao,
     treinamentosObrigatoriosFuncao,
     obterTreinamento,
 } from "../../services/colaboradorDocumentosService";
 import { classNames } from "../../utils/sstUtils";
+import { supabase } from "../../lib/supabaseClient";
+import {
+    desligarColaboradorOperacao,
+    demitirColaborador,
+    remobilizarColaborador,
+    readmitirColaborador,
+    obterMensagemErroMovimentacaoColaborador,
+} from "../../services/colaboradoresMovimentacoesService";
 
 function apenasDigitosColaborador(valor = "") {
     return String(valor || "").replace(/\D/g, "");
@@ -84,8 +90,18 @@ export function ModalRevisaoColaborador({
     empresasBanco = [],
     funcoesSugeridas = [],
     onAtualizarColaborador,
+    podeEditar = false,
+    onAtualizarBanco = null,
 }) {
     const [salvandoEdicaoColaborador, setSalvandoEdicaoColaborador] = useState(false);
+    const [acaoCiclo, setAcaoCiclo] = useState("");
+    const [dataEventoCiclo, setDataEventoCiclo] = useState("");
+    const [motivoCiclo, setMotivoCiclo] = useState("");
+    const [observacaoCiclo, setObservacaoCiclo] = useState("");
+    const [statusMobilizacaoNovoCiclo, setStatusMobilizacaoNovoCiclo] = useState("Em análise");
+    const [salvandoCiclo, setSalvandoCiclo] = useState(false);
+    const [erroCiclo, setErroCiclo] = useState("");
+    const [sucessoCiclo, setSucessoCiclo] = useState("");
 
     const idsBaseEdicao = useMemo(() => {
         if (!colaboradorEdicao?.funcao) return [];
@@ -119,7 +135,182 @@ export function ModalRevisaoColaborador({
         [idsAplicadosEdicao]
     );
 
+    useEffect(() => {
+        let cancelado = false;
+
+        const hidratarDemissaoFormalParaReadmissao = async () => {
+            const colaboradorId =
+                String(colaboradorEdicao?.id || "").trim();
+
+            const statusAtual =
+                String(colaboradorEdicao?.status || "")
+                    .trim()
+                    .toLocaleLowerCase("pt-BR");
+
+            const situacaoAtual =
+                String(colaboradorEdicao?.statusMobilizacao || "")
+                    .trim()
+                    .toLocaleLowerCase("pt-BR");
+
+            const dataDemissaoAtual =
+                String(colaboradorEdicao?.dataDemissao || "").trim();
+
+            const precisaConsultar =
+                Boolean(colaboradorId) &&
+                statusAtual === "inativo" &&
+                situacaoAtual === "desmobilizado" &&
+                !dataDemissaoAtual;
+
+            if (!precisaConsultar) return;
+
+            const { data, error } =
+                await supabase
+                    .from("colaboradores")
+                    .select(
+                        "id, status, status_mobilizacao, data_admissao, data_desligamento, data_demissao"
+                    )
+                    .eq("id", colaboradorId)
+                    .maybeSingle();
+
+            if (cancelado) return;
+
+            if (error) {
+                setErroCiclo(
+                    error.message ||
+                    "Não foi possível confirmar a demissão formal deste colaborador."
+                );
+                return;
+            }
+
+            if (!data) {
+                setErroCiclo(
+                    "Não foi possível localizar o vínculo profissional deste colaborador."
+                );
+                return;
+            }
+
+            const dataDemissaoBanco =
+                String(data.data_demissao || "").trim();
+
+            if (!dataDemissaoBanco) {
+                setErroCiclo(
+                    "Readmissão indisponível: este vínculo não possui uma demissão formal registrada."
+                );
+                return;
+            }
+
+            setErroCiclo("");
+
+            setColaboradorEdicao((atual) => {
+                if (!atual) return atual;
+
+                if (String(atual.id || "") !== colaboradorId) {
+                    return atual;
+                }
+
+                return {
+                    ...atual,
+                    status:
+                        data.status ||
+                        atual.status ||
+                        "Inativo",
+                    statusMobilizacao:
+                        data.status_mobilizacao ||
+                        atual.statusMobilizacao ||
+                        "Desmobilizado",
+                    dataAdmissao:
+                        data.data_admissao ||
+                        atual.dataAdmissao ||
+                        "",
+                    dataDesligamento:
+                        data.data_desligamento ||
+                        "",
+                    dataDemissao:
+                        dataDemissaoBanco,
+                };
+            });
+        };
+
+        hidratarDemissaoFormalParaReadmissao();
+
+        return () => {
+            cancelado = true;
+        };
+    }, [
+        colaboradorEdicao?.id,
+        colaboradorEdicao?.status,
+        colaboradorEdicao?.statusMobilizacao,
+        colaboradorEdicao?.dataDemissao,
+        setColaboradorEdicao,
+    ]);
     if (!colaboradorEdicao) return null;
+
+    const statusVinculo = colaboradorEdicao.status || "Ativo";
+    const statusMobilizacao = colaboradorEdicao.statusMobilizacao || "-";
+
+    const statusVinculoChave =
+        String(statusVinculo)
+            .trim()
+            .toLocaleLowerCase("pt-BR");
+
+    const statusMobilizacaoChave =
+        String(statusMobilizacao)
+            .trim()
+            .toLocaleLowerCase("pt-BR");
+
+    const possuiDemissaoFormal =
+        Boolean(
+            String(colaboradorEdicao.dataDemissao || "").trim()
+        );
+
+    const vinculoAtivo =
+        statusVinculoChave === "ativo";
+
+    const estaDesmobilizado =
+        statusMobilizacaoChave === "desmobilizado";
+
+    const podeDesmobilizar =
+        vinculoAtivo &&
+        !estaDesmobilizado &&
+        !possuiDemissaoFormal;
+
+    const podeRemobilizar =
+        vinculoAtivo &&
+        estaDesmobilizado &&
+        !possuiDemissaoFormal;
+
+    const podeDemitir =
+        vinculoAtivo &&
+        !possuiDemissaoFormal;
+
+    const podeReadmitir =
+        statusVinculoChave === "inativo" &&
+        estaDesmobilizado &&
+        possuiDemissaoFormal;
+
+    const configuracaoAcaoCiclo =
+        {
+            DESMOBILIZAR: {
+                titulo: "Desmobilizar da obra",
+                rotuloData: "Data da desmobilização",
+                exigeStatusNovo: false,
+            },
+            REMOBILIZAR: {
+                titulo: "Remobilizar",
+                rotuloData: "Data da remobilização",
+                exigeStatusNovo: true,
+            },
+            DEMITIR: {
+                titulo: "Registrar demissão",
+                rotuloData: "Data da demissão",
+                exigeStatusNovo: false,
+            },
+            READMITIR: {
+                titulo: "Readmitir",
+                rotuloData: "Nova data de admissão",
+                exigeStatusNovo: true,
+            },
+        }[acaoCiclo] || null;
 
     const fechar = () => {
         setColaboradorEdicao(null);
@@ -164,8 +355,177 @@ export function ModalRevisaoColaborador({
         });
     };
 
-    const salvarRevisaoColaborador = async () => {
-        if (!colaboradorEdicao?.nome?.trim() || !colaboradorEdicao?.empresaNome?.trim() || !colaboradorEdicao?.funcao?.trim()) {
+    const abrirAcaoCiclo = (acao) => {
+        setAcaoCiclo(acao);
+        setDataEventoCiclo("");
+        setMotivoCiclo("");
+        setObservacaoCiclo("");
+        setStatusMobilizacaoNovoCiclo("Em análise");
+        setErroCiclo("");
+        setSucessoCiclo("");
+    };
+
+    const cancelarAcaoCiclo = () => {
+        if (salvandoCiclo) return;
+
+        setAcaoCiclo("");
+        setDataEventoCiclo("");
+        setMotivoCiclo("");
+        setObservacaoCiclo("");
+        setStatusMobilizacaoNovoCiclo("Em análise");
+        setErroCiclo("");
+    };
+
+    const executarAcaoCiclo = async () => {
+        setErroCiclo("");
+        setSucessoCiclo("");
+
+        if (!podeEditar) {
+            setErroCiclo("Seu usuário não possui permissão para movimentar este colaborador.");
+            return;
+        }
+
+        const acaoPermitida =
+            {
+                DESMOBILIZAR: podeDesmobilizar,
+                REMOBILIZAR: podeRemobilizar,
+                DEMITIR: podeDemitir,
+                READMITIR: podeReadmitir,
+            }[acaoCiclo] === true;
+
+        if (!acaoPermitida) {
+            setErroCiclo("Esta movimentação não é compatível com o estado atual do colaborador.");
+            return;
+        }
+
+        if (!dataEventoCiclo) {
+            setErroCiclo("Informe a data da movimentação.");
+            return;
+        }
+
+        if (motivoCiclo.trim().length < 3) {
+            setErroCiclo("Informe um motivo com pelo menos 3 caracteres.");
+            return;
+        }
+
+        if (
+            configuracaoAcaoCiclo?.exigeStatusNovo &&
+            !statusMobilizacaoNovoCiclo
+        ) {
+            setErroCiclo("Informe a nova situação na obra.");
+            return;
+        }
+
+        setSalvandoCiclo(true);
+
+        try {
+            const parametrosBase = {
+                supabase,
+                colaboradorId: colaboradorEdicao.id,
+                dataEvento: dataEventoCiclo,
+                motivo: motivoCiclo,
+                observacao: observacaoCiclo,
+            };
+
+            let resultado;
+
+            if (acaoCiclo === "DESMOBILIZAR") {
+                resultado =
+                    await desligarColaboradorOperacao(
+                        parametrosBase
+                    );
+            }
+            else if (acaoCiclo === "REMOBILIZAR") {
+                resultado =
+                    await remobilizarColaborador({
+                        ...parametrosBase,
+                        statusMobilizacaoNovo: statusMobilizacaoNovoCiclo,
+                    });
+            }
+            else if (acaoCiclo === "DEMITIR") {
+                resultado =
+                    await demitirColaborador(
+                        parametrosBase
+                    );
+            }
+            else if (acaoCiclo === "READMITIR") {
+                resultado =
+                    await readmitirColaborador({
+                        ...parametrosBase,
+                        statusMobilizacaoNovo: statusMobilizacaoNovoCiclo,
+                        dataDemissao: colaboradorEdicao.dataDemissao || "",
+                    });
+            }
+            else {
+                throw new Error("Ação de ciclo profissional inválida.");
+            }
+
+            const colaboradorBanco =
+                resultado?.colaborador || {};
+
+            setColaboradorEdicao((atual) => {
+                if (!atual) return atual;
+
+                return {
+                    ...atual,
+                    status:
+                        colaboradorBanco.status ??
+                        atual.status,
+                    statusMobilizacao:
+                        colaboradorBanco.status_mobilizacao ??
+                        atual.statusMobilizacao,
+                    dataAdmissao:
+                        colaboradorBanco.data_admissao ??
+                        atual.dataAdmissao ??
+                        "",
+                    dataDesligamento:
+                        colaboradorBanco.data_desligamento ??
+                        "",
+                    dataDemissao:
+                        colaboradorBanco.data_demissao ??
+                        "",
+                };
+            });
+
+            const mensagemSucesso =
+                {
+                    DESMOBILIZAR: "Colaborador desmobilizado da obra com sucesso.",
+                    REMOBILIZAR: "Colaborador remobilizado com sucesso.",
+                    DEMITIR: "Demissão registrada com sucesso.",
+                    READMITIR: "Readmissão registrada com sucesso.",
+                }[acaoCiclo] ||
+                "Movimentação registrada com sucesso.";
+
+            setAcaoCiclo("");
+            setDataEventoCiclo("");
+            setMotivoCiclo("");
+            setObservacaoCiclo("");
+            setStatusMobilizacaoNovoCiclo("Em análise");
+            setSucessoCiclo(mensagemSucesso);
+
+            if (typeof onAtualizarBanco === "function") {
+                try {
+                    await onAtualizarBanco();
+                }
+                catch {
+                    setSucessoCiclo(
+                        `${mensagemSucesso} A lista geral não foi atualizada automaticamente; feche e reabra a tela.`
+                    );
+                }
+            }
+        }
+        catch (erro) {
+            setErroCiclo(
+                obterMensagemErroMovimentacaoColaborador(
+                    erro
+                )
+            );
+        }
+        finally {
+            setSalvandoCiclo(false);
+        }
+    };
+    const salvarRevisaoColaborador = async () => {        if (!colaboradorEdicao?.nome?.trim() || !colaboradorEdicao?.empresaNome?.trim() || !colaboradorEdicao?.funcao?.trim()) {
             alert("Preencha nome, empresa e função.");
             return;
         }
@@ -186,8 +546,6 @@ export function ModalRevisaoColaborador({
             dataAdmissao: converterDataColaboradorParaIso(colaboradorEdicao.dataAdmissao),
             dataNascimento: converterDataColaboradorParaIso(colaboradorEdicao.dataNascimento),
             mostrarAniversarioDashboard: colaboradorEdicao.mostrarAniversarioDashboard !== false,
-            status: colaboradorEdicao.status || "Ativo",
-            statusMobilizacao: colaboradorEdicao.statusMobilizacao || obterStatusInicialColaborador(),
             treinamentosRemovidos: colaboradorEdicao.treinamentosRemovidos || [],
             treinamentosAdicionais: colaboradorEdicao.treinamentosAdicionais || [],
             codigoFuncionario: colaboradorEdicao.codigoFuncionarioOriginal || colaboradorEdicao.codigoFuncionario,
@@ -272,31 +630,235 @@ export function ModalRevisaoColaborador({
                             />
                         </div>
 
-                        <div>
-                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Status</label>
-                            <select
-                                value={colaboradorEdicao.status}
-                                onChange={(e) => atualizarEdicao({ status: e.target.value })}
-                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                            >
-                                <option>Ativo</option>
-                                <option>Inativo</option>
-                                <option>Bloqueado</option>
-                            </select>
-                        </div>
+                        <section className="md:col-span-2 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                            <div className="flex items-start gap-3">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white">
+                                    <BriefcaseBusiness className="h-4 w-4" />
+                                </div>
 
-                        <div>
-                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Situação na obra</label>
-                            <select
-                                value={colaboradorEdicao.statusMobilizacao}
-                                onChange={(e) => atualizarEdicao({ statusMobilizacao: e.target.value })}
-                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                            >
-                                {STATUS_CLASSIFICACAO_COLABORADOR.map((status) => (
-                                    <option key={status}>{status}</option>
-                                ))}
-                            </select>
-                        </div>
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                                        Situação profissional
+                                    </p>
+                                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                                        O vínculo profissional é controlado separadamente dos dados cadastrais.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                                        Vínculo
+                                    </p>
+                                    <p className="mt-1 text-sm font-bold text-slate-900">
+                                        {statusVinculo}
+                                    </p>
+                                </div>
+
+                                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                                        Situação na obra
+                                    </p>
+                                    <p className="mt-1 text-sm font-bold text-slate-900">
+                                        {statusMobilizacao}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                                    Ações do ciclo profissional
+                                </p>
+                                <p className="mt-1 text-xs leading-5 text-slate-500">
+                                    Somente as movimentações compatíveis com o estado atual ficam disponíveis.
+                                </p>
+
+                                {!podeEditar ? (
+                                    <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+                                        Seu usuário possui acesso somente para consulta destas movimentações.
+                                    </p>
+                                ) : null}
+
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    {podeDesmobilizar ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => abrirAcaoCiclo("DESMOBILIZAR")}
+                                            disabled={!podeEditar || salvandoCiclo}
+                                            className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            Desmobilizar da obra
+                                        </button>
+                                    ) : null}
+
+                                    {podeRemobilizar ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => abrirAcaoCiclo("REMOBILIZAR")}
+                                            disabled={!podeEditar || salvandoCiclo}
+                                            className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            Remobilizar
+                                        </button>
+                                    ) : null}
+
+                                    {podeDemitir ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => abrirAcaoCiclo("DEMITIR")}
+                                            disabled={!podeEditar || salvandoCiclo}
+                                            className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            Registrar demissão
+                                        </button>
+                                    ) : null}
+
+                                    {podeReadmitir ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => abrirAcaoCiclo("READMITIR")}
+                                            disabled={!podeEditar || salvandoCiclo}
+                                            className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            Readmitir
+                                        </button>
+                                    ) : null}
+                                </div>
+
+                                {!podeDesmobilizar &&
+                                !podeRemobilizar &&
+                                !podeDemitir &&
+                                !podeReadmitir ? (
+                                    <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500">
+                                        Nenhuma movimentação está disponível para este estado.
+                                    </p>
+                                ) : null}
+
+                                {erroCiclo ? (
+                                    <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">
+                                        {erroCiclo}
+                                    </p>
+                                ) : null}
+
+                                {sucessoCiclo ? (
+                                    <p className="mt-3 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
+                                        {sucessoCiclo}
+                                    </p>
+                                ) : null}
+
+                                {configuracaoAcaoCiclo ? (
+                                    <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                        <p className="text-sm font-bold text-slate-900">
+                                            {configuracaoAcaoCiclo.titulo}
+                                        </p>
+
+                                        <p className="mt-1 text-xs leading-5 text-slate-500">
+                                            Ao confirmar, esta movimentação será gravada no histórico do colaborador.
+                                        </p>
+
+                                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                                            <div>
+                                                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                    {configuracaoAcaoCiclo.rotuloData}
+                                                </label>
+                                                <input
+                                                    type="date"
+                                                    value={dataEventoCiclo}
+                                                    onChange={(e) => setDataEventoCiclo(e.target.value)}
+                                                    disabled={salvandoCiclo}
+                                                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                                />
+                                            </div>
+
+                                            {configuracaoAcaoCiclo.exigeStatusNovo ? (
+                                                <div>
+                                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                        Nova situação na obra
+                                                    </label>
+                                                    <select
+                                                        value={statusMobilizacaoNovoCiclo}
+                                                        onChange={(e) => setStatusMobilizacaoNovoCiclo(e.target.value)}
+                                                        disabled={salvandoCiclo}
+                                                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                                    >
+                                                        <option value="Em análise">Em análise</option>
+                                                        <option value="Liberado">Liberado</option>
+                                                        <option value="Com pendência">Com pendência</option>
+                                                        <option value="Bloqueado">Bloqueado</option>
+                                                    </select>
+                                                </div>
+                                            ) : null}
+                                        </div>
+
+                                        <div className="mt-3">
+                                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                Motivo
+                                            </label>
+                                            <input
+                                                value={motivoCiclo}
+                                                onChange={(e) => setMotivoCiclo(e.target.value)}
+                                                disabled={salvandoCiclo}
+                                                maxLength={500}
+                                                placeholder="Informe o motivo da movimentação"
+                                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                            />
+                                        </div>
+
+                                        <div className="mt-3">
+                                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                Observação
+                                            </label>
+                                            <textarea
+                                                value={observacaoCiclo}
+                                                onChange={(e) => setObservacaoCiclo(e.target.value)}
+                                                disabled={salvandoCiclo}
+                                                maxLength={2000}
+                                                rows={3}
+                                                placeholder="Opcional"
+                                                className="w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                            />
+                                        </div>
+
+                                        {acaoCiclo === "READMITIR" && colaboradorEdicao.dataDemissao ? (
+                                            <p className="mt-3 text-xs font-semibold text-slate-500">
+                                                Demissão anterior: {formatarDataColaboradorCampo(colaboradorEdicao.dataDemissao)}. A nova admissão deve ser posterior a essa data.
+                                            </p>
+                                        ) : null}
+
+                                        <div className="mt-4 flex flex-wrap justify-end gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={cancelarAcaoCiclo}
+                                                disabled={salvandoCiclo}
+                                                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                Cancelar
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={executarAcaoCiclo}
+                                                disabled={
+                                                    salvandoCiclo ||
+                                                    !dataEventoCiclo ||
+                                                    motivoCiclo.trim().length < 3
+                                                }
+                                                className="rounded-xl bg-slate-950 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                {salvandoCiclo
+                                                    ? "Registrando..."
+                                                    : `Confirmar ${configuracaoAcaoCiclo.titulo.toLowerCase()}`}
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : null}
+                            </div>
+
+                            <p className="mt-4 text-xs font-semibold leading-5 text-slate-500">
+                                O botão Salvar alterações continua restrito aos dados cadastrais e não altera o ciclo profissional.
+                            </p>
+                        </section>
 
                         <div>
                             <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Data de nascimento</label>

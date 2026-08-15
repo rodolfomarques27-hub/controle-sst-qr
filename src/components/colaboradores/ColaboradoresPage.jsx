@@ -421,6 +421,26 @@ export function Colaboradores({
         };
     }, [colaboradores]);
 
+    const resumoStatusEmpresaSelecionada = useMemo(() => {
+        const baseEmpresa =
+            empresa === "Todas"
+                ? colaboradores
+                : colaboradores.filter((c) => c.empresa === empresa);
+
+        const classificacoes =
+            baseEmpresa.map((c) => statusGeral(c).texto);
+
+        return {
+            total: baseEmpresa.length,
+            liberados: classificacoes.filter((status) => status === "Liberado").length,
+            comPendencia: classificacoes.filter((status) => status === "Com pendência").length,
+            bloqueados: classificacoes.filter((status) => status === "Bloqueado").length,
+            emAnalise: classificacoes.filter((status) => status === "Em análise").length,
+            desmobilizados: classificacoes.filter((status) => status === "Desmobilizado").length,
+            inativos: classificacoes.filter((status) => status === "Inativo").length,
+        };
+    }, [colaboradores, empresa]);
+
     const obterEmpresaRelatorio = (colaborador = {}) => {
         const empresaId = String(colaborador.empresaId || colaborador.empresa_id || "").trim();
         const empresaNome = normalizarTextoBusca(colaborador.empresa || colaborador.empresaNome || "");
@@ -941,6 +961,8 @@ ${erros.slice(0, 8).join("\n")}`
             contatoEmergenciaParentesco: colaborador.contatoEmergenciaParentesco || "",
             contatoEmergenciaTelefone: colaborador.contatoEmergenciaTelefone || "",
             dataAdmissao: colaborador.dataAdmissao || "",
+            dataDesligamento: colaborador.dataDesligamento || "",
+            dataDemissao: colaborador.dataDemissao || "",
             dataNascimento: colaborador.dataNascimento || "",
             mostrarAniversarioDashboard: colaborador.mostrarAniversarioDashboard !== false,
             codigoFuncionario: colaborador.codigoFuncionario || "",
@@ -1424,31 +1446,31 @@ ${erros.slice(0, 8).join("\n")}`
                     <div className="colaboradores-status-grid colaboradores-status-grid--premium mb-4">
                         <div className="colaborador-status-card flex min-h-[92px] flex-col items-center justify-center rounded-2xl bg-slate-50 p-3 text-center">
                             <p className="text-xs font-medium text-slate-500">Total</p>
-                            <p className="text-2xl font-bold text-slate-950">{colaboradores.length}</p>
+                            <p className="text-2xl font-bold text-slate-950">{resumoStatusEmpresaSelecionada.total}</p>
                         </div>
                         <div className="colaborador-status-card flex min-h-[92px] flex-col items-center justify-center rounded-2xl bg-emerald-50 p-3 text-center">
                             <p className="text-xs font-medium text-emerald-700">Liberados</p>
-                            <p className="text-2xl font-bold text-emerald-700">{resumoTreinamentos.liberados}</p>
+                            <p className="text-2xl font-bold text-emerald-700">{resumoStatusEmpresaSelecionada.liberados}</p>
                         </div>
                         <div className="colaborador-status-card flex min-h-[92px] flex-col items-center justify-center rounded-2xl bg-blue-50 p-3 text-center">
                             <p className="text-xs font-medium text-blue-700">Com pendência</p>
-                            <p className="text-2xl font-bold text-blue-700">{resumoTreinamentos.comPendencia}</p>
+                            <p className="text-2xl font-bold text-blue-700">{resumoStatusEmpresaSelecionada.comPendencia}</p>
                         </div>
                         <div className="colaborador-status-card flex min-h-[92px] flex-col items-center justify-center rounded-2xl bg-red-50 p-3 text-center">
                             <p className="text-xs font-medium text-red-700">Bloqueados</p>
-                            <p className="text-2xl font-bold text-red-700">{resumoTreinamentos.bloqueados}</p>
+                            <p className="text-2xl font-bold text-red-700">{resumoStatusEmpresaSelecionada.bloqueados}</p>
                         </div>
                         <div className="colaborador-status-card flex min-h-[92px] flex-col items-center justify-center rounded-2xl bg-violet-50 p-3 text-center">
                             <p className="text-xs font-medium text-violet-700">Em análise</p>
-                            <p className="text-2xl font-bold text-violet-700">{resumoTreinamentos.emAnalise}</p>
+                            <p className="text-2xl font-bold text-violet-700">{resumoStatusEmpresaSelecionada.emAnalise}</p>
                         </div>
                         <div className="colaborador-status-card flex min-h-[92px] flex-col items-center justify-center rounded-2xl bg-slate-100 p-3 text-center">
                             <p className="text-xs font-medium text-slate-700">Desmobilizados</p>
-                            <p className="text-2xl font-bold text-slate-700">{resumoTreinamentos.desmobilizados}</p>
+                            <p className="text-2xl font-bold text-slate-700">{resumoStatusEmpresaSelecionada.desmobilizados}</p>
                         </div>
                         <div className="colaborador-status-card flex min-h-[92px] flex-col items-center justify-center rounded-2xl bg-slate-50 p-3 text-center ring-1 ring-slate-200">
                             <p className="text-xs font-medium text-slate-700">Inativos</p>
-                            <p className="text-2xl font-bold text-slate-700">{resumoTreinamentos.inativos}</p>
+                            <p className="text-2xl font-bold text-slate-700">{resumoStatusEmpresaSelecionada.inativos}</p>
                         </div>
                     </div>
 
@@ -1747,6 +1769,7 @@ ${erros.slice(0, 8).join("\n")}`
                                                     Revisar dados
                                                 </button>
 
+
                                                 <button
                                                     onClick={() => enviarTreinamentoColaboradorSeguro(c)}
                                                     disabled={!podeUploadColaboradoresSistema}
@@ -1850,12 +1873,16 @@ ${erros.slice(0, 8).join("\n")}`
                 onAtualizado={() => setVersaoFuncoes((valor) => valor + 1)}
             />
 
+
             <ModalRevisaoColaborador
+                key={colaboradorEdicao?.id || "sem-colaborador"}
                 colaboradorEdicao={colaboradorEdicao}
                 setColaboradorEdicao={setColaboradorEdicao}
                 empresasBanco={empresasBanco}
                 funcoesSugeridas={funcoesSugeridas}
                 onAtualizarColaborador={atualizarColaboradorSeguro}
+                podeEditar={podeEditarColaboradoresSistema}
+                onAtualizarBanco={onAtualizarBanco}
             />
         </div>
     );

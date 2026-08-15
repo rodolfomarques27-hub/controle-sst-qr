@@ -23,9 +23,20 @@ export function obterStatusInicialColaborador() {
 }
 
 export function obterSituacaoHistoricaTreinamentosColaborador(colaborador = {}) {
-    const textoSituacao = normalizarTextoBusca(
-        `${colaborador?.status || ""} ${colaborador?.statusMobilizacao || ""} ${colaborador?.status_mobilizacao || ""}`
+    const statusVinculoClassificacao = normalizarTextoBusca(
+        colaborador?.status || ""
     );
+
+    const vinculoFormalInativo =
+        statusVinculoClassificacao.includes("inativo") ||
+        statusVinculoClassificacao.includes("inativa");
+
+    const textoSituacao =
+        vinculoFormalInativo
+            ? statusVinculoClassificacao
+            : normalizarTextoBusca(
+                `${colaborador?.status || ""} ${colaborador?.statusMobilizacao || ""} ${colaborador?.status_mobilizacao || ""}`
+            );
 
     if (textoSituacao.includes("desmobilizado") || textoSituacao.includes("desmobilizada")) {
         return "Desmobilizado";
@@ -302,6 +313,8 @@ export function normalizarColaborador(item) {
         contatoEmergenciaParentesco: item.contato_emergencia_parentesco || item.contatoEmergenciaParentesco || "",
         contatoEmergenciaTelefone: formatarTelefoneColaboradorDocumento(item.contato_emergencia_telefone || item.contatoEmergenciaTelefone || ""),
         dataAdmissao: item.data_admissao || item.dataAdmissao || "",
+        dataDesligamento: item.data_desligamento || item.dataDesligamento || "",
+        dataDemissao: item.data_demissao || item.dataDemissao || "",
         codigoFuncionario: item.codigo_funcionario || item.codigoFuncionario || `COL-${String(item.id).slice(0, 8).toUpperCase()}`,
         fotoUrl: item.foto_url || item.fotoUrl || "",
         fotoNome: item.foto_nome || item.fotoNome || "",
@@ -1443,7 +1456,20 @@ export function classeClassificacaoColaborador(status) {
 
 export function statusGeral(colaborador) {
     const avaliacao = avaliarTreinamentosColaborador(colaborador);
-    const textoSituacao = normalizarTextoBusca(`${colaborador?.status || ""} ${colaborador?.statusMobilizacao || ""} ${colaborador?.status_mobilizacao || ""}`);
+    const statusVinculoClassificacao = normalizarTextoBusca(
+        colaborador?.status || ""
+    );
+
+    const vinculoFormalInativo =
+        statusVinculoClassificacao.includes("inativo") ||
+        statusVinculoClassificacao.includes("inativa");
+
+    const textoSituacao =
+        vinculoFormalInativo
+            ? statusVinculoClassificacao
+            : normalizarTextoBusca(
+                `${colaborador?.status || ""} ${colaborador?.statusMobilizacao || ""} ${colaborador?.status_mobilizacao || ""}`
+            );
 
     if (textoSituacao.includes("desmobilizado") || textoSituacao.includes("desmobilizada")) {
         return {

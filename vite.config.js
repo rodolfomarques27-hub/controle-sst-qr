@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => {
     return {
         plugins: [react(), tailwindcss()],
         define: {
-            "import.meta.env.VITE_APP_VERSION": JSON.stringify(process.env.npm_package_version || "1.0.8"),
+            "import.meta.env.VITE_APP_VERSION": JSON.stringify(process.env.npm_package_version || "1.0.9"),
             "import.meta.env.VITE_APK_VERSION": JSON.stringify("1.0.8"),
             "import.meta.env.VITE_APP_BUILD_DATE": JSON.stringify(dataBuild.toISOString()),
             "import.meta.env.VITE_APP_BUILD_ID": JSON.stringify(idBuild),
