@@ -16,7 +16,7 @@
     "check:database": "node scripts/databaseSecurityCheck.mjs",
     "check:bundle": "node scripts/bundleBudgetCheck.mjs .verify-dist",
     "check": "npm run lint:quiet && npm run test:smoke && npm run check:security && npm run check:database",
-    "verify": "npm run check && npm run build -- --configLoader runner --outDir .verify-dist && npm run check:bundle",
+    "verify": "npm run check && npm run build -- --configLoader runner --outDir .verify-dist --manifest && npm run check:bundle",
     "check:build": "npm run build -- --configLoader runner",
     "preview": "vite preview"
   },
