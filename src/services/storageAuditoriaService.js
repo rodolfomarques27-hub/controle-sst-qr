@@ -18,6 +18,13 @@ const ATIVOS_SISTEMA_STORAGE = Object.freeze({
         origemTipo: "Sistema / Aparência do login",
         tabelaOrigem: "configuracoes_publicas_sistema",
     }),
+    "logos-empresas:configuracoes/login/logo-contratante.png": Object.freeze({
+        id: "logo-contratante-login-global",
+        tipo: "Logo da contratante na tela de login",
+        origemRegistro: "Configuração global do sistema",
+        origemTipo: "Sistema / Aparência do login",
+        tabelaOrigem: "Storage global do login",
+    }),
     "logos-empresas:configuracoes/qrcode/logo-qrcode.png": Object.freeze({
         id: "logo-qrcode-global",
         tipo: "Logo global dos QR Codes",

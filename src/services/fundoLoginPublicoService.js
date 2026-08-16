@@ -1,5 +1,6 @@
 const BUCKET_FUNDO_LOGIN = "logos-empresas";
 const CAMINHO_FUNDO_LOGIN = "configuracoes/login/fundo-login.jpg";
+const CAMINHO_LOGO_CONTRATANTE_LOGIN = "configuracoes/login/logo-contratante.png";
 
 const AJUSTE_FUNDO_LOGIN_PADRAO = Object.freeze({
     size: "cover",
@@ -69,6 +70,18 @@ function montarUrlPublicaStorage(supabase, caminho, versao = "") {
     } catch {
         return "";
     }
+}
+
+export function obterUrlLogoContratanteLoginPublicoService({ supabase, versao = "" }) {
+    if (!supabase) return "";
+
+    const versaoFinal = String(versao || Date.now());
+
+    return montarUrlPublicaStorage(
+        supabase,
+        CAMINHO_LOGO_CONTRATANTE_LOGIN,
+        versaoFinal
+    );
 }
 
 export async function carregarFundoLoginPublicoService({ supabase }) {

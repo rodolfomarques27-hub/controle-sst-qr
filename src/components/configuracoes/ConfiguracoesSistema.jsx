@@ -213,6 +213,8 @@ const CHAVE_ORDEM_BLOCOS_CONFIGURACOES = "configuracoesSistemaOrdemBlocos";
 const CHAVE_TAMANHOS_BLOCOS_CONFIGURACOES = "configuracoesSistemaTamanhosBlocos";
 const BUCKET_FUNDO_LOGIN_CONFIGURACOES = "logos-empresas";
 const CAMINHO_FUNDO_LOGIN_CONFIGURACOES = "configuracoes/login/fundo-login.jpg";
+const CAMINHO_LOGO_CONTRATANTE_LOGIN_CONFIGURACOES = "configuracoes/login/logo-contratante.png";
+const LIMITE_LOGO_CONTRATANTE_LOGIN_BYTES = 2 * 1024 * 1024;
 
 const CHAVE_VERSAO_FUNDO_LOGIN_CONFIGURACOES = "controleSstQrFundoLoginVersao";
 
@@ -289,6 +291,13 @@ function montarUrlPublicaConfiguracoesStorage(caminho, versao = "") {
 
 function montarUrlFundoLoginConfiguracoes(versao = "") {
     return montarUrlPublicaConfiguracoesStorage(CAMINHO_FUNDO_LOGIN_CONFIGURACOES, versao);
+}
+
+function montarUrlLogoContratanteLoginConfiguracoes(versao = "") {
+    return montarUrlPublicaConfiguracoesStorage(
+        CAMINHO_LOGO_CONTRATANTE_LOGIN_CONFIGURACOES,
+        versao
+    );
 }
 
 
@@ -519,6 +528,15 @@ export function ConfiguracoesSistema({
     const [salvandoFundoLogin, setSalvandoFundoLogin] = useState(false);
     const [ajusteFundoLogin, setAjusteFundoLogin] = useState(() => AJUSTE_FUNDO_LOGIN_PADRAO_CONFIGURACOES);
     const [ajusteFundoLoginAlterado, setAjusteFundoLoginAlterado] = useState(false);
+
+    const [arquivoLogoContratanteLogin, setArquivoLogoContratanteLogin] = useState(null);
+    const [previewLogoContratanteLoginUrl, setPreviewLogoContratanteLoginUrl] = useState(() =>
+        montarUrlLogoContratanteLoginConfiguracoes(Date.now())
+    );
+    const [mensagemLogoContratanteLogin, setMensagemLogoContratanteLogin] = useState(
+        "Envie a logo da empresa contratante em PNG transparente, com até 2 MiB."
+    );
+    const [salvandoLogoContratanteLogin, setSalvandoLogoContratanteLogin] = useState(false);
 
     const [mostrarOrganizacaoCards, setMostrarOrganizacaoCards] = useState(false);
     const [filtroPainelConfiguracoes, setFiltroPainelConfiguracoes] = useState("todos");
@@ -1962,6 +1980,172 @@ export function ConfiguracoesSistema({
         }
     };
 
+    const restaurarPreviewLogoContratanteLoginConfiguracoes = (versao = "") => {
+        setPreviewLogoContratanteLoginUrl(
+            montarUrlLogoContratanteLoginConfiguracoes(versao)
+        );
+    };
+
+    const selecionarArquivoLogoContratanteLogin = (arquivo) => {
+        if (String(previewLogoContratanteLoginUrl || "").startsWith("blob:")) {
+            URL.revokeObjectURL(previewLogoContratanteLoginUrl);
+        }
+
+        setArquivoLogoContratanteLogin(null);
+
+        if (!arquivo) {
+            restaurarPreviewLogoContratanteLoginConfiguracoes();
+            setMensagemLogoContratanteLogin("Nenhum arquivo selecionado.");
+            return;
+        }
+
+        if (String(arquivo.type || "").toLowerCase() !== "image/png") {
+            restaurarPreviewLogoContratanteLoginConfiguracoes();
+            setMensagemLogoContratanteLogin("Arquivo inválido. A logo da contratante deve estar em formato PNG.");
+            return;
+        }
+
+        if (Number(arquivo.size || 0) > LIMITE_LOGO_CONTRATANTE_LOGIN_BYTES) {
+            restaurarPreviewLogoContratanteLoginConfiguracoes();
+            setMensagemLogoContratanteLogin("A imagem excede o limite de 2 MiB.");
+            return;
+        }
+
+        setArquivoLogoContratanteLogin(arquivo);
+        setPreviewLogoContratanteLoginUrl(URL.createObjectURL(arquivo));
+        setMensagemLogoContratanteLogin(`Logo selecionada: ${arquivo.name}. Confira a prévia e clique em Salvar logo da contratante.`);
+    };
+
+    const salvarLogoContratanteLogin = async () => {
+        if (bloquearConfiguracaoCriticaSeNecessario(setMensagemLogoContratanteLogin)) return;
+
+        if (!arquivoLogoContratanteLogin) {
+            setMensagemLogoContratanteLogin("Selecione um arquivo PNG antes de salvar.");
+            return;
+        }
+
+        if (String(arquivoLogoContratanteLogin.type || "").toLowerCase() !== "image/png") {
+            setMensagemLogoContratanteLogin("Arquivo inválido. A logo da contratante deve estar em formato PNG.");
+            return;
+        }
+
+        if (Number(arquivoLogoContratanteLogin.size || 0) > LIMITE_LOGO_CONTRATANTE_LOGIN_BYTES) {
+            setMensagemLogoContratanteLogin("A imagem excede o limite de 2 MiB.");
+            return;
+        }
+
+        if (!confirmarAcaoCriticaConfiguracoes(
+            "Substituir a logo da empresa contratante exibida na tela de login?",
+            setMensagemLogoContratanteLogin
+        )) {
+            return;
+        }
+
+        setSalvandoLogoContratanteLogin(true);
+        setMensagemLogoContratanteLogin("Salvando logo PNG da contratante no Storage...");
+
+        try {
+            const { error } = await supabase.storage
+                .from(BUCKET_FUNDO_LOGIN_CONFIGURACOES)
+                .upload(
+                    CAMINHO_LOGO_CONTRATANTE_LOGIN_CONFIGURACOES,
+                    arquivoLogoContratanteLogin,
+                    {
+                        upsert: true,
+                        cacheControl: "60",
+                        contentType: "image/png",
+                    }
+                );
+
+            if (error) {
+                throw error;
+            }
+
+            if (String(previewLogoContratanteLoginUrl || "").startsWith("blob:")) {
+                URL.revokeObjectURL(previewLogoContratanteLoginUrl);
+            }
+
+            const versao = String(
+                arquivoLogoContratanteLogin.lastModified
+                || arquivoLogoContratanteLogin.size
+                || ""
+            );
+
+            setArquivoLogoContratanteLogin(null);
+            restaurarPreviewLogoContratanteLoginConfiguracoes(versao);
+            setMensagemLogoContratanteLogin("Logo da contratante atualizada no Storage.");
+
+            await registrarLogConfiguracoesSistema(
+                "CONFIGURACAO_RESTAURADA",
+                "Logo da contratante da tela de login atualizada nas Configurações.",
+                {
+                    tipo: "aparencia_login_logo_contratante",
+                    bucket: BUCKET_FUNDO_LOGIN_CONFIGURACOES,
+                    caminho: CAMINHO_LOGO_CONTRATANTE_LOGIN_CONFIGURACOES,
+                    imagemPublica: true,
+                    formato: "image/png",
+                },
+                "aparencia-login"
+            );
+        } catch (error) {
+            setMensagemLogoContratanteLogin(
+                error?.message || "Não foi possível salvar a logo da contratante."
+            );
+        } finally {
+            setSalvandoLogoContratanteLogin(false);
+        }
+    };
+
+    const removerLogoContratanteLogin = async () => {
+        if (bloquearConfiguracaoCriticaSeNecessario(setMensagemLogoContratanteLogin)) return;
+
+        if (!confirmarAcaoCriticaConfiguracoes(
+            "Remover a logo da empresa contratante da tela de login?",
+            setMensagemLogoContratanteLogin
+        )) {
+            return;
+        }
+
+        setSalvandoLogoContratanteLogin(true);
+        setMensagemLogoContratanteLogin("Removendo logo da contratante...");
+
+        try {
+            const { error } = await supabase.storage
+                .from(BUCKET_FUNDO_LOGIN_CONFIGURACOES)
+                .remove([CAMINHO_LOGO_CONTRATANTE_LOGIN_CONFIGURACOES]);
+
+            if (error) {
+                throw error;
+            }
+
+            if (String(previewLogoContratanteLoginUrl || "").startsWith("blob:")) {
+                URL.revokeObjectURL(previewLogoContratanteLoginUrl);
+            }
+
+            setArquivoLogoContratanteLogin(null);
+            setPreviewLogoContratanteLoginUrl("");
+            setMensagemLogoContratanteLogin("Logo da contratante removida.");
+
+            await registrarLogConfiguracoesSistema(
+                "CONFIGURACAO_RESTAURADA",
+                "Logo da contratante da tela de login removida nas Configurações.",
+                {
+                    tipo: "aparencia_login_logo_contratante",
+                    bucket: BUCKET_FUNDO_LOGIN_CONFIGURACOES,
+                    caminho: CAMINHO_LOGO_CONTRATANTE_LOGIN_CONFIGURACOES,
+                    restauradoPadrao: true,
+                },
+                "aparencia-login"
+            );
+        } catch (error) {
+            setMensagemLogoContratanteLogin(
+                error?.message || "Não foi possível remover a logo da contratante."
+            );
+        } finally {
+            setSalvandoLogoContratanteLogin(false);
+        }
+    };
+
     const carregarConfiguracao = async () => {
         setCarregandoConfig(true);
         setMensagemConfig("Carregando configuração dos eventos...");
@@ -3123,10 +3307,10 @@ export function ConfiguracoesSistema({
                             <div>
                                 <div className="flex items-center gap-2">
                                     <ImagePlus className="h-5 w-5 text-slate-500" />
-                                    <h2 id="config-login-visual" className="scroll-mt-24 text-lg font-black text-slate-950">Imagem de fundo do login</h2>
+                                    <h2 id="config-login-visual" className="scroll-mt-24 text-lg font-black text-slate-950">Aparência do login</h2>
                                 </div>
                                 <p className="mt-1 text-sm text-slate-500">
-                                    Personalize o fundo da tela de acesso sem alterar o fluxo de login, senha temporária ou permissões.
+                                    Personalize o fundo e a identidade da empresa contratante sem alterar autenticação, senha temporária ou permissões.
                                 </p>
                             </div>
                             <button
@@ -3229,6 +3413,128 @@ export function ConfiguracoesSistema({
                                 <p className="mt-3 text-xs font-semibold leading-relaxed text-blue-100">
                                     A prévia usa o mesmo enquadramento aplicado no login. Se a imagem falhar, o fundo azul padrão permanece.
                                 </p>
+                            </div>
+                        </div>
+
+                        <div className="mt-5 border-t border-slate-100 pt-5">
+                            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <ImagePlus className="h-5 w-5 text-slate-500" />
+                                        <h3 className="text-base font-black text-slate-950">
+                                            Logo da contratante
+                                        </h3>
+                                    </div>
+
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        Imagem exibida no painel institucional do login, junto à marca SafeScan.
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={removerLogoContratanteLogin}
+                                    disabled={!podeAlterarConfiguracoesCriticasSistema || salvandoLogoContratanteLogin}
+                                    title={podeAlterarConfiguracoesCriticasSistema ? "Remover logo da contratante" : mensagemBloqueioConfiguracoesCriticasSistema}
+                                    className="inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                                >
+                                    <RotateCcw className="h-3.5 w-3.5" />
+                                    Remover logo
+                                </button>
+                            </div>
+
+                            <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)]">
+                                <div className="rounded-2xl bg-slate-50 px-4 py-4 ring-1 ring-slate-100">
+                                    <label className="block text-sm font-black text-slate-800">
+                                        Arquivo da logo
+                                    </label>
+
+                                    <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
+                                        Use somente PNG, preferencialmente com fundo transparente. Limite de 2 MiB.
+                                    </p>
+
+                                    <input
+                                        key={arquivoLogoContratanteLogin ? `${arquivoLogoContratanteLogin.name}-${arquivoLogoContratanteLogin.lastModified}` : "logo-contratante-vazia"}
+                                        type="file"
+                                        accept="image/png,.png"
+                                        disabled={!podeAlterarConfiguracoesCriticasSistema || salvandoLogoContratanteLogin}
+                                        onChange={(evento) => selecionarArquivoLogoContratanteLogin(evento.target.files?.[0] || null)}
+                                        className="mt-4 w-full rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-xs font-semibold text-slate-600 file:mr-3 file:rounded-xl file:border-0 file:bg-slate-950 file:px-3 file:py-2 file:text-xs file:font-black file:text-white disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                                    />
+
+                                    <div className="mt-4 flex flex-wrap gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={salvarLogoContratanteLogin}
+                                            disabled={!podeAlterarConfiguracoesCriticasSistema || salvandoLogoContratanteLogin || !arquivoLogoContratanteLogin}
+                                            className="rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                                        >
+                                            {salvandoLogoContratanteLogin ? "Salvando..." : "Salvar logo da contratante"}
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => selecionarArquivoLogoContratanteLogin(null)}
+                                            disabled={salvandoLogoContratanteLogin}
+                                            className="rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-60"
+                                        >
+                                            Limpar seleção
+                                        </button>
+                                    </div>
+
+                                    <div
+                                        className={classNames(
+                                            "mt-4 rounded-2xl px-4 py-3 text-xs font-semibold leading-relaxed ring-1",
+                                            mensagemLogoContratanteLogin.includes("atualizada") || mensagemLogoContratanteLogin.includes("removida")
+                                                ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                                : mensagemLogoContratanteLogin.includes("inválido")
+                                                    || mensagemLogoContratanteLogin.includes("excede")
+                                                    || mensagemLogoContratanteLogin.includes("Não foi")
+                                                    ? "bg-red-50 text-red-700 ring-red-200"
+                                                    : "bg-blue-50 text-blue-700 ring-blue-200"
+                                        )}
+                                    >
+                                        {mensagemLogoContratanteLogin}
+                                    </div>
+                                </div>
+
+                                <div className="rounded-2xl bg-slate-950 p-4 text-white shadow-inner">
+                                    <p className="text-xs font-black uppercase tracking-wide text-emerald-100">
+                                        Prévia da logo
+                                    </p>
+
+                                    <div className="mt-3 flex min-h-[190px] items-center justify-center overflow-hidden rounded-2xl bg-slate-900 p-5 ring-1 ring-white/10">
+                                        {
+                                            previewLogoContratanteLoginUrl
+                                                ? (
+                                                    <img
+                                                        src={previewLogoContratanteLoginUrl}
+                                                        alt="Prévia da logo da contratante"
+                                                        className="max-h-[145px] max-w-full object-contain"
+                                                        onError={() => {
+                                                            if (!String(previewLogoContratanteLoginUrl || "").startsWith("blob:")) {
+                                                                setPreviewLogoContratanteLoginUrl("");
+                                                            }
+                                                        }}
+                                                    />
+                                                )
+                                                : (
+                                                    <div className="text-center">
+                                                        <p className="text-sm font-black text-white/75">
+                                                            Nenhuma logo configurada
+                                                        </p>
+                                                        <p className="mt-1 text-[11px] font-semibold text-white/40">
+                                                            O login usará o fallback até uma imagem ser salva.
+                                                        </p>
+                                                    </div>
+                                                )
+                                        }
+                                    </div>
+
+                                    <p className="mt-3 text-xs font-semibold leading-relaxed text-emerald-100/70">
+                                        O arquivo é armazenado sem conversão para preservar transparência e proporção.
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </Card>
