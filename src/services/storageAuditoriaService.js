@@ -186,7 +186,7 @@ export async function listarArquivosCertificadosStorageService({
         }
     };
 
-    const totalEtapasProgresso = bucketsAuditados.length + 6;
+    const totalEtapasProgresso = bucketsAuditados.length + 7;
     informarProgresso({ etapa: "storage", atual: 0, total: totalEtapasProgresso, mensagem: "Consultando áreas do Storage..." });
     let bucketsConcluidos = 0;
     await Promise.all(bucketsAuditados.map(async (bucketInfo) => {
@@ -201,6 +201,7 @@ export async function listarArquivosCertificadosStorageService({
     }));
 
     let certificados = [];
+    let certificadosHistorico = [];
     let documentosEmpresaBanco = [];
     let usuariosPermissoesBanco = [];
     let auditoriasCampoBanco = [];
@@ -221,12 +222,48 @@ export async function listarArquivosCertificadosStorageService({
         }
     };
 
-    [certificados, documentosEmpresaBanco, usuariosPermissoesBanco, auditoriasCampoBanco, desviosAuditoriaBanco] = await Promise.all([
-        consultarVinculo(() => buscarTodosRegistrosSupabase("certificados", "*"), "Certificados", true),
-        consultarVinculo(() => buscarTodosRegistrosSupabase("documentos_empresas", "*"), "Documentos de empresas", true),
-        consultarVinculo(() => buscarTodosRegistrosSupabase("usuarios_permissoes_sistema", "*"), "Usuários do App", true),
-        consultarVinculo(() => buscarTodosRegistrosSupabase("auditorias_campo", "id, empresa_id, numero_auditoria, titulo, empresa_nome, foto_antes_url, foto_depois_url"), "Auditorias"),
-        consultarVinculo(() => buscarTodosRegistrosSupabase("auditoria_campo_desvios", "id, auditoria_id, empresa_id, categoria, descricao, foto_antes_url, foto_depois_url"), "Desvios"),
+    [
+        certificados,
+        certificadosHistorico,
+        documentosEmpresaBanco,
+        usuariosPermissoesBanco,
+        auditoriasCampoBanco,
+        desviosAuditoriaBanco,
+    ] = await Promise.all([
+        consultarVinculo(
+            () => buscarTodosRegistrosSupabase("certificados", "*"),
+            "Certificados",
+            true
+        ),
+        consultarVinculo(
+            () => buscarTodosRegistrosSupabase("certificados_historico", "*"),
+            "Histórico de certificados",
+            true
+        ),
+        consultarVinculo(
+            () => buscarTodosRegistrosSupabase("documentos_empresas", "*"),
+            "Documentos de empresas",
+            true
+        ),
+        consultarVinculo(
+            () => buscarTodosRegistrosSupabase("usuarios_permissoes_sistema", "*"),
+            "Usuários do App",
+            true
+        ),
+        consultarVinculo(
+            () => buscarTodosRegistrosSupabase(
+                "auditorias_campo",
+                "id, empresa_id, numero_auditoria, titulo, empresa_nome, foto_antes_url, foto_depois_url"
+            ),
+            "Auditorias"
+        ),
+        consultarVinculo(
+            () => buscarTodosRegistrosSupabase(
+                "auditoria_campo_desvios",
+                "id, auditoria_id, empresa_id, categoria, descricao, foto_antes_url, foto_depois_url"
+            ),
+            "Desvios"
+        ),
     ]);
 
     informarProgresso({ etapa: "finalizando", atual: totalEtapasProgresso, total: totalEtapasProgresso, mensagem: `Organizando ${coletados.length} arquivo(s)...` });
@@ -265,6 +302,25 @@ export async function listarArquivosCertificadosStorageService({
 
         return acc;
     }, {});
+
+    const certificadosHistoricoPorCaminho =
+        (certificadosHistorico || []).reduce(
+            (acc, item) => {
+                const caminhoArquivo = extrairCaminhoStorage(
+                    "certificados-treinamentos",
+                    item.url_do_arquivo || item.arquivo_url
+                );
+
+                if (caminhoArquivo) {
+                    acc[
+                        `certificados-treinamentos:${caminhoArquivo}`
+                    ] = item;
+                }
+
+                return acc;
+            },
+            {}
+        );
 
     const documentosEmpresaPorCaminho = (documentosEmpresaBanco || []).reduce((acc, item) => {
         const caminhoArquivo = extrairCaminhoStorage(
@@ -382,22 +438,78 @@ export async function listarArquivosCertificadosStorageService({
             let origemIdentificacao = "";
 
             if (arquivo.bucket === "certificados-treinamentos") {
-                const certificadoVinculado = certificadosPorCaminho[chave] || null;
-                const colaboradorVinculado = certificadoVinculado
-                    ? colaboradoresPorId[certificadoVinculado.colaborador_id]
-                    : null;
-                const colaboradorPelaPasta = colaboradoresPorPasta[primeiraPasta] || null;
-                const colaboradorArquivo = colaboradorVinculado || colaboradorPelaPasta || null;
-                const treinamento = obterTreinamento(Number(segundaPasta));
+                const certificadoVinculado =
+                    certificadosPorCaminho[chave] ||
+                    null;
 
-                emUso = Boolean(certificadoVinculado);
-                origemRegistro = certificadoVinculado ? "Base de certificados" : colaboradorPelaPasta ? "Pasta do Storage" : "";
-                registroId = certificadoVinculado?.id || "";
-                colaboradorNome = colaboradorArquivo?.nome || "";
-                colaboradorCodigo = colaboradorArquivo?.codigoFuncionario || "";
-                colaboradorEmpresa = colaboradorArquivo?.empresaExibicao || colaboradorArquivo?.empresa || "";
-                treinamentoNome = certificadoVinculado?.nome_treinamento || treinamento?.nome || "";
-                origemIdentificacao = origemRegistro;
+                const certificadoHistoricoVinculado =
+                    certificadosHistoricoPorCaminho[chave] ||
+                    null;
+
+                const certificadoReferencia =
+                    certificadoVinculado ||
+                    certificadoHistoricoVinculado ||
+                    null;
+
+                const colaboradorVinculado =
+                    certificadoReferencia
+                        ? colaboradoresPorId[
+                            certificadoReferencia.colaborador_id
+                        ]
+                        : null;
+
+                const colaboradorPelaPasta =
+                    colaboradoresPorPasta[primeiraPasta] ||
+                    null;
+
+                const colaboradorArquivo =
+                    colaboradorVinculado ||
+                    colaboradorPelaPasta ||
+                    null;
+
+                const treinamento =
+                    obterTreinamento(
+                        Number(segundaPasta)
+                    );
+
+                emUso =
+                    Boolean(
+                        certificadoReferencia
+                    );
+
+                origemRegistro =
+                    certificadoVinculado
+                        ? "Base de certificados"
+                        : certificadoHistoricoVinculado
+                            ? "Histórico de certificados"
+                            : colaboradorPelaPasta
+                                ? "Pasta do Storage"
+                                : "";
+
+                registroId =
+                    certificadoReferencia?.id ||
+                    "";
+
+                colaboradorNome =
+                    colaboradorArquivo?.nome ||
+                    "";
+
+                colaboradorCodigo =
+                    colaboradorArquivo?.codigoFuncionario ||
+                    "";
+
+                colaboradorEmpresa =
+                    colaboradorArquivo?.empresaExibicao ||
+                    colaboradorArquivo?.empresa ||
+                    "";
+
+                treinamentoNome =
+                    certificadoReferencia?.nome_treinamento ||
+                    treinamento?.nome ||
+                    "";
+
+                origemIdentificacao =
+                    origemRegistro;
             }
 
             if (arquivo.bucket === "documentos-empresas") {

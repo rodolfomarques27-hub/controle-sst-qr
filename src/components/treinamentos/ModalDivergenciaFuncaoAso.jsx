@@ -51,9 +51,29 @@ export function ModalDivergenciaFuncaoAso({
         colaborador.funcao ||
         "Não informada";
 
-    const funcaoDocumento =
+    const funcaoDocumentoBruta =
+        comparacao.funcaoDocumentoOriginal ||
         comparacao.funcaoDocumento ||
+        "";
+
+    const funcaoDocumentoCanonica =
+        comparacao.funcaoDocumentoCanonica ||
+        "";
+
+    const funcaoDocumento =
+        funcaoDocumentoCanonica ||
+        funcaoDocumentoBruta ||
         "Não localizada";
+
+    const mostrarTextoBruto =
+        Boolean(
+            funcaoDocumentoCanonica &&
+            funcaoDocumentoBruta &&
+            funcaoDocumentoCanonica
+                .toLocaleUpperCase("pt-BR") !==
+                funcaoDocumentoBruta
+                    .toLocaleUpperCase("pt-BR")
+        );
 
     const confianca = String(
         comparacao.confianca ||
@@ -61,11 +81,13 @@ export function ModalDivergenciaFuncaoAso({
     ).toLowerCase();
 
     const textoConfianca =
-        confianca === "alta"
-            ? "Leitura com alta confiança"
-            : confianca === "media"
-                ? "Leitura com confiança média"
-                : "Leitura documental";
+        funcaoDocumentoCanonica
+            ? "Função reconhecida no catálogo SafeScan"
+            : confianca === "alta"
+                ? "Leitura OCR com alta confiança"
+                : confianca === "media"
+                    ? "Leitura OCR com confiança média"
+                    : "Leitura documental";
 
     const arquivoNome =
         dados.arquivoNome ||
@@ -190,6 +212,12 @@ export function ModalDivergenciaFuncaoAso({
                             <p className="mt-2 text-base font-black leading-snug text-emerald-950">
                                 {funcaoDocumento}
                             </p>
+
+                            {mostrarTextoBruto && (
+                                <p className="mt-2 text-[11px] font-semibold leading-4 text-emerald-800/75">
+                                    Texto lido no ASO: {funcaoDocumentoBruta}
+                                </p>
+                            )}
                         </div>
                     </div>
 

@@ -40,3 +40,10 @@ export {
 export {
     baixarRelatorioColaboradoresTreinamentosPDF,
 } from "./exportacao/relatorioColaboradoresTreinamentosService";
+export {
+    baixarRelatorioControleFichasEpiPDF,
+} from "./exportacao/relatorioControleFichasEpiService";
+
+export {
+    baixarRelatorioPendenciasCadastraisPDF,
+} from "./exportacao/relatorioPendenciasCadastraisService";

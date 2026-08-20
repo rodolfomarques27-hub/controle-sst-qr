@@ -1,6 +1,5 @@
 import {
     enviarArquivoCertificado,
-    removerArquivoCertificadoStorage,
 } from "./certificadosStorageService";
 import { enviarFotoColaboradorStorage } from "./arquivosCadastroService";
 import {
@@ -169,6 +168,7 @@ export async function carregarColaboradoresAppService({
           foto_url,
           foto_nome,
           token_qr,
+          qr_ultima_impressao_em,
           status,
           empresa_id,
           empresas (
@@ -365,12 +365,12 @@ export async function salvarCertificadosEmMassaColaboradorAppService({
             throw new Error(`Erro ao salvar ${item.arquivo.name}: ${error.message}`);
         }
 
-        if ((existente?.url_do_arquivo || existente?.arquivo_url) && (existente.url_do_arquivo || existente.arquivo_url) !== arquivo.arquivoUrl) {
-            await removerArquivoCertificadoStorage({
-                supabase,
-                caminho: existente.url_do_arquivo || existente.arquivo_url,
-            });
-        }
+        /*
+         * CERT-HIST-G1-R2-F1
+         *
+         * Em substituições, manter o objeto físico anterior.
+         * O trigger registra o snapshot OLD no histórico.
+         */
     }
 
     return {

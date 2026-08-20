@@ -793,6 +793,9 @@ export function AppContentRouter({
                     colaborador={colaboradorSelecionado}
                     colaboradores={colaboradores}
                     onSelecionarColaborador={onSelecionarColaboradorQr}
+                    supabaseClient={supabaseClient}
+                    onAtualizarBanco={onAtualizarBanco}
+                    onRegistrarAuditoria={onRegistrarAuditoria}
                 />
             )}
 

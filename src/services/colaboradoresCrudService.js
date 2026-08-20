@@ -76,6 +76,7 @@ const SELECT_COLABORADOR_COMPLETO = `
   foto_url,
   foto_nome,
   token_qr,
+  qr_ultima_impressao_em,
   status,
   empresa_id,
   empresas (
@@ -109,6 +110,7 @@ const SELECT_COLABORADOR_COM_FOTO = `
   foto_url,
   foto_nome,
   token_qr,
+  qr_ultima_impressao_em,
   status,
   empresa_id,
   empresas (

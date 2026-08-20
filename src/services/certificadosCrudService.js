@@ -482,15 +482,18 @@ export async function salvarCertificadoTreinamentoCrud({
         throw new Error(`Erro ao salvar certificado na tabela certificados: ${error.message}`);
     }
 
-    const caminhoAnterior = existente?.url_do_arquivo || existente?.arquivo_url;
-
-    if (caminhoAnterior && caminhoAnterior !== arquivo.arquivoUrl) {
-        await removerArquivoCertificadoStorage({
-            supabase,
-            caminho: caminhoAnterior,
-        });
-    }
-
+    /*
+     * CERT-HIST-G1-R2-F1
+     *
+     * Substituir um certificado não remove mais o objeto físico
+     * anterior.
+     *
+     * A versão OLD será registrada por trigger em
+     * public.certificados_historico.
+     *
+     * A exclusão explícita continua separada em
+     * excluirCertificadoTreinamentoCrud.
+     */
     return normalizarCertificado(data);
 }
 

@@ -1,7 +1,8 @@
 import "../../styles/pages/colaboradores-hero.css";
 import "../../styles/pages/heroes-aniversariantes-colaboradores-data.css";
 /* eslint-disable no-unused-vars */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { supabase } from "../../lib/supabaseClient";
 import {
     AlertTriangle,
     CalendarClock,
@@ -52,7 +53,18 @@ import {
     treinamentosBaseObra,
     STATUS_CLASSIFICACAO_COLABORADOR,
 } from "../../constants/treinamentosConstants";
-import { baixarRelatorioColaboradoresTreinamentosPDF, baixarRelatorioPendenciasTreinamentosPDF } from "../../services/exportacaoService";
+import { RelatorioPendenciasCadastraisModal } from "./RelatorioPendenciasCadastraisModal";
+import { RelatorioControleFichasEpiFiltrosModal } from "./RelatorioControleFichasEpiFiltrosModal";
+import { RelatorioColaboradoresFiltrosModal } from "./RelatorioColaboradoresFiltrosModal";
+import { RelatorioPendenciasTreinamentosFiltrosModal } from "./RelatorioPendenciasTreinamentosFiltrosModal";
+import {
+    baixarRelatorioColaboradoresTreinamentosPDF,
+    baixarRelatorioControleFichasEpiPDF,
+    baixarRelatorioPendenciasTreinamentosPDF,
+} from "../../services/exportacaoService";
+import {
+    listarHistoricoCertificadosEmLoteService,
+} from "../../services/certificadosHistoricoConsultaService";
 import { obterUrlLogoEmpresa } from "../../services/supabaseServices";
 import { normalizarTextoBusca, formatDate, classNames } from "../../utils/sstUtils";
 import {
@@ -65,8 +77,6 @@ import {
 const CHAVE_NOVO_COLABORADOR_RECOLHIDO = "controleSstColaboradoresNovoColaboradorRecolhido";
 const CHAVE_INFO_COLABORADORES_RECOLHIDA = "controleSstColaboradoresInformacoesRecolhidas";
 const CHAVE_CADASTRO_MASSA_RECOLHIDO = "controleSstColaboradoresCadastroMassaRecolhido";
-const CHAVE_FILTROS_PENDENCIAS_TREINAMENTOS = "controle-sst-qr:pendencias-treinamentos:filtros-salvos:v1";
-const CHAVE_FILTROS_COLABORADORES_TREINAMENTOS = "controle-sst-qr:colaboradores-treinamentos:filtros-salvos:v1";
 
 
 function carregarPreferenciaPainelBoolean(chave, padrao = false) {
@@ -90,78 +100,6 @@ function salvarPreferenciaPainelBoolean(chave, valor) {
     return normalizado;
 }
 
-function obterFiltrosPadraoPendenciasTreinamentos() {
-    return {
-        busca: "",
-        empresa: "Todas",
-        filtroClassificacao: "Todos",
-    };
-}
-
-function normalizarFiltroSalvoPendenciasTreinamentos(valor, fallback = "") {
-    const texto = String(valor ?? "").trim();
-    return texto || fallback;
-}
-
-function carregarFiltrosSalvosPendenciasTreinamentos() {
-    if (typeof window === "undefined" || !window.localStorage) return null;
-
-    try {
-        const bruto = window.localStorage.getItem(CHAVE_FILTROS_PENDENCIAS_TREINAMENTOS);
-        if (!bruto) return null;
-
-        const dados = JSON.parse(bruto);
-        if (!dados || typeof dados !== "object") return null;
-
-        const padrao = obterFiltrosPadraoPendenciasTreinamentos();
-
-        return {
-            busca: normalizarFiltroSalvoPendenciasTreinamentos(dados.busca, padrao.busca),
-            empresa: normalizarFiltroSalvoPendenciasTreinamentos(dados.empresa, padrao.empresa),
-            filtroClassificacao: normalizarFiltroSalvoPendenciasTreinamentos(dados.filtroClassificacao, padrao.filtroClassificacao),
-        };
-    } catch (error) {
-        console.error("Erro ao carregar filtros salvos de pendências de treinamentos:", error);
-        return null;
-    }
-}
-
-function obterFiltrosPadraoColaboradoresTreinamentos() {
-    return {
-        busca: "",
-        empresa: "Todas",
-        filtroClassificacao: "Todos",
-    };
-}
-
-function normalizarFiltroSalvoColaboradoresTreinamentos(valor, fallback = "") {
-    const texto = String(valor ?? "").trim();
-    return texto || fallback;
-}
-
-function carregarFiltrosSalvosColaboradoresTreinamentos() {
-    if (typeof window === "undefined" || !window.localStorage) return null;
-
-    try {
-        const bruto = window.localStorage.getItem(CHAVE_FILTROS_COLABORADORES_TREINAMENTOS);
-        if (!bruto) return null;
-
-        const dados = JSON.parse(bruto);
-        if (!dados || typeof dados !== "object") return null;
-
-        const padrao = obterFiltrosPadraoColaboradoresTreinamentos();
-
-        return {
-            busca: normalizarFiltroSalvoColaboradoresTreinamentos(dados.busca, padrao.busca),
-            empresa: normalizarFiltroSalvoColaboradoresTreinamentos(dados.empresa, padrao.empresa),
-            filtroClassificacao: normalizarFiltroSalvoColaboradoresTreinamentos(dados.filtroClassificacao, padrao.filtroClassificacao),
-        };
-    } catch (error) {
-        console.error("Erro ao carregar filtros salvos do relat\u00f3rio de colaboradores e treinamentos:", error);
-        return null;
-    }
-}
-
 export function Colaboradores({
     colaboradores,
     empresasBanco,
@@ -177,7 +115,51 @@ export function Colaboradores({
 }) {
     const [busca, setBusca] = useState("");
     const [empresa, setEmpresa] = useState("Todas");
+    const [filtroFuncao, setFiltroFuncao] = useState("Todas");
     const [filtroClassificacao, setFiltroClassificacao] = useState("Todos");
+
+    /*
+     * G2-C10D-F1
+     *
+     * Filtro rápido acionado pelos KPIs superiores.
+     *
+     * null:
+     * mantém o comportamento histórico da tela.
+     *
+     * "Total":
+     * mostra a base completa da empresa, inclusive
+     * Desmobilizados e Inativos.
+     *
+     * Demais valores:
+     * usam exatamente statusGeral(c).texto.
+     */
+    const [filtroStatusRapidoAtivo, setFiltroStatusRapidoAtivo] =
+        useState(null);
+
+    const aplicarFiltroStatusRapido =
+        (status) => {
+            const statusSelecionado =
+                String(
+                    status ||
+                    "Total"
+                );
+
+            setFiltroStatusRapidoAtivo(
+                statusSelecionado
+            );
+
+            /*
+             * Aproveita o motor funcional já existente
+             * da classificação.
+             */
+            setFiltroClassificacao(
+                ["Total", "A vencer"].includes(
+                    statusSelecionado
+                )
+                    ? "Todos"
+                    : statusSelecionado
+            );
+        };
     const [ordenacaoFuncionarios, setOrdenacaoFuncionarios] = useState("nome_az");
     const [agoraHeroColaboradores, setAgoraHeroColaboradores] = useState(() => new Date());
 
@@ -197,19 +179,50 @@ export function Colaboradores({
             window.clearInterval(intervaloRelogioHeroColaboradores);
         };
     }, []);
-    const [versaoFiltroSalvoPendenciasTreinamentos, setVersaoFiltroSalvoPendenciasTreinamentos] = useState(0);
-
-    const filtrosSalvosPendenciasTreinamentosDisponiveis = useMemo(
-        () => Boolean(carregarFiltrosSalvosPendenciasTreinamentos()),
-        [versaoFiltroSalvoPendenciasTreinamentos]
-    );
-    const [versaoFiltroSalvoColaboradoresTreinamentos, setVersaoFiltroSalvoColaboradoresTreinamentos] = useState(0);
-
-    const filtrosSalvosColaboradoresTreinamentosDisponiveis = useMemo(
-        () => Boolean(carregarFiltrosSalvosColaboradoresTreinamentos()),
-        [versaoFiltroSalvoColaboradoresTreinamentos]
-    );
     const [salvando, setSalvando] = useState(false);
+
+    /*
+     * G2-C10D-E1
+     * Estado visual + trava síncrona exclusiva
+     * do PDF de colaboradores.
+     */
+    const [exportandoPdfColaboradores, setExportandoPdfColaboradores] =
+        useState(false);
+
+    const exportandoPdfColaboradoresRef =
+        useRef(false);
+
+    const exportandoPdfEpiRef =
+        useRef(false);
+
+    /*
+     * G2-C10D-G2
+     *
+     * A geração do novo relatório será conectada somente
+     * depois de validarmos a matriz de dados faltantes.
+     */
+    const [
+        relatorioPendenciasCadastraisAberto,
+        setRelatorioPendenciasCadastraisAberto,
+    ] =
+        useState(false);
+
+    const [
+        relatorioControleFichasEpiFiltrosAberto,
+        setRelatorioControleFichasEpiFiltrosAberto,
+    ] =
+        useState(false);
+    const [
+        relatorioColaboradoresFiltrosAberto,
+        setRelatorioColaboradoresFiltrosAberto,
+    ] =
+        useState(false);
+
+    const [
+        relatorioPendenciasTreinamentosFiltrosAberto,
+        setRelatorioPendenciasTreinamentosFiltrosAberto,
+    ] =
+        useState(false);
     const [importandoMassa, setImportandoMassa] = useState(false);
     const [importandoFotosMassa, setImportandoFotosMassa] = useState(false);
     const [colaboradorEdicao, setColaboradorEdicao] = useState(null);
@@ -263,114 +276,134 @@ export function Colaboradores({
     };
     const empresasFiltro = ["Todas", ...Array.from(new Set(colaboradores.map((c) => c.empresa).filter(Boolean)))];
 
+    const funcoesFiltro = [
+        "Todas",
+        ...Array.from(
+            new Map(
+                colaboradores
+                    .filter(
+                        (colaborador) =>
+                            empresa === "Todas" ||
+                            colaborador?.empresa ===
+                                empresa
+                    )
+                    .map(
+                        (colaborador) =>
+                            String(
+                                colaborador?.funcao ||
+                                    ""
+                            ).trim()
+                    )
+                    .filter(Boolean)
+                    .map(
+                        (funcao) => [
+                            normalizarTextoBusca(
+                                funcao
+                            ),
+                            funcao,
+                        ]
+                    )
+            ).values()
+        ).sort(
+            (a, b) =>
+                a.localeCompare(
+                    b,
+                    "pt-BR",
+                    {
+                        sensitivity:
+                            "base",
+                    }
+                )
+        ),
+    ];
+
     const filtrados = colaboradores
         .filter((c) => {
             const avaliacao = avaliarTreinamentosColaborador(c);
             const geral = statusGeral(c);
             const texto = normalizarTextoBusca(`${c.nome} ${c.empresa} ${c.empresaExibicao} ${c.empresaPaiNome} ${c.funcao} ${c.matricula} ${c.codigoFuncionario} ${c.statusMobilizacao} ${geral.texto} ${avaliacao.matriz.rotulo}`);
             const bateBusca = texto.includes(normalizarTextoBusca(busca));
-            const bateEmpresa = empresa === "Todas" || c.empresa === empresa;
+
+            const bateEmpresa =
+                empresa === "Todas" ||
+                c.empresa === empresa;
+
+            const bateFuncao =
+                filtroFuncao === "Todas" ||
+                normalizarTextoBusca(
+                    c.funcao
+                ) ===
+                    normalizarTextoBusca(
+                        filtroFuncao
+                    );
+            /*
+             * G2-C10D-F4-R1 — TOTAL SEM DESMOBILIZADOS
+             *
+             * Visualização padrão:
+             * - Desmobilizado oculto;
+             * - Inativo oculto.
+             *
+             * KPI Total:
+             * - Desmobilizado continua oculto;
+             * - Inativo passa a ser exibido.
+             *
+             * Cards específicos:
+             * - Desmobilizado e Inativo continuam acessíveis
+             *   por seus próprios filtros.
+             */
+            /*
+             * G2-C10D-F6 — TOTAL = SOMENTE ATIVOS
+             *
+             * Quando a classificação está em "Todos":
+             * - Desmobilizados ficam fora;
+             * - Inativos ficam fora.
+             *
+             * Os cards específicos continuam funcionando,
+             * pois alteram filtroClassificacao para o status
+             * correspondente.
+             */
             const statusOcultoNaVisualizacaoPadrao =
                 filtroClassificacao === "Todos" &&
-                ["Desmobilizado", "Inativo"].includes(geral.texto);
+                [
+                    "Desmobilizado",
+                    "Inativo",
+                ].includes(
+                    geral.texto
+                );
 
-            const bateClassificacao = filtroClassificacao === "Todos" || geral.texto === filtroClassificacao;
+            const bateClassificacao =
+                filtroClassificacao === "Todos" ||
+                geral.texto === filtroClassificacao;
 
-            return !statusOcultoNaVisualizacaoPadrao && bateBusca && bateEmpresa && bateClassificacao;
+            /*
+             * G2-C10D-F2
+             *
+             * A vencer é condição de treinamento,
+             * não statusGeral do colaborador.
+             */
+            const bateAVencer =
+                filtroStatusRapidoAtivo !== "A vencer" ||
+                (
+                    Array.isArray(
+                        avaliacao.vencendo
+                    ) &&
+                    avaliacao.vencendo.length > 0
+                );
+
+            return (
+                !statusOcultoNaVisualizacaoPadrao &&
+                bateBusca &&
+                bateEmpresa &&
+                bateFuncao &&
+                bateClassificacao &&
+                bateAVencer
+            );
         })
         .sort((a, b) => {
             const comparacao = String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR", { sensitivity: "base" });
             return ordenacaoFuncionarios === "nome_za" ? -comparacao : comparacao;
         });
 
-    const filtrosAtuaisPendenciasTreinamentos = useMemo(
-        () => ({
-            busca: busca.trim(),
-            empresa,
-            filtroClassificacao,
-        }),
-        [busca, empresa, filtroClassificacao]
-    );
-
-    const salvarFiltrosPendenciasTreinamentos = () => {
-        if (typeof window === "undefined" || !window.localStorage) return;
-
-        try {
-            window.localStorage.setItem(CHAVE_FILTROS_PENDENCIAS_TREINAMENTOS, JSON.stringify(filtrosAtuaisPendenciasTreinamentos));
-            setVersaoFiltroSalvoPendenciasTreinamentos((valor) => valor + 1);
-            alert("Filtros de pendências de treinamentos salvos.");
-        } catch (error) {
-            console.error("Erro ao salvar filtros de pendências de treinamentos:", error);
-            alert("Não foi possível salvar os filtros de pendências de treinamentos.");
-        }
-    };
-
-    const aplicarFiltrosSalvosPendenciasTreinamentos = () => {
-        const filtrosSalvos = carregarFiltrosSalvosPendenciasTreinamentos();
-
-        if (!filtrosSalvos) {
-            alert("Nenhum filtro salvo encontrado para pendências de treinamentos.");
-            return;
-        }
-
-        setBusca(filtrosSalvos.busca || "");
-        setEmpresa(filtrosSalvos.empresa || "Todas");
-        setFiltroClassificacao(filtrosSalvos.filtroClassificacao || "Todos");
-        alert("Filtros salvos aplicados em pendências de treinamentos.");
-    };
-
-    const limparFiltrosSalvosPendenciasTreinamentos = () => {
-        if (typeof window === "undefined" || !window.localStorage) return;
-
-        window.localStorage.removeItem(CHAVE_FILTROS_PENDENCIAS_TREINAMENTOS);
-        setVersaoFiltroSalvoPendenciasTreinamentos((valor) => valor + 1);
-        alert("Filtros salvos de pendências de treinamentos removidos.");
-    };
-
-
-    const filtrosAtuaisColaboradoresTreinamentos = useMemo(
-        () => ({
-            busca: busca.trim(),
-            empresa,
-            filtroClassificacao,
-        }),
-        [busca, empresa, filtroClassificacao]
-    );
-
-    const salvarFiltrosColaboradoresTreinamentos = () => {
-        if (typeof window === "undefined" || !window.localStorage) return;
-
-        try {
-            window.localStorage.setItem(CHAVE_FILTROS_COLABORADORES_TREINAMENTOS, JSON.stringify(filtrosAtuaisColaboradoresTreinamentos));
-            setVersaoFiltroSalvoColaboradoresTreinamentos((valor) => valor + 1);
-            alert("Filtros do relat\u00f3rio de colaboradores e treinamentos salvos.");
-        } catch (error) {
-            console.error("Erro ao salvar filtros do relat\u00f3rio de colaboradores e treinamentos:", error);
-            alert("N\u00e3o foi poss\u00edvel salvar os filtros do relat\u00f3rio de colaboradores e treinamentos.");
-        }
-    };
-
-    const aplicarFiltrosSalvosColaboradoresTreinamentos = () => {
-        const filtrosSalvos = carregarFiltrosSalvosColaboradoresTreinamentos();
-
-        if (!filtrosSalvos) {
-            alert("Nenhum filtro salvo encontrado para o relat\u00f3rio de colaboradores e treinamentos.");
-            return;
-        }
-
-        setBusca(filtrosSalvos.busca || "");
-        setEmpresa(filtrosSalvos.empresa || "Todas");
-        setFiltroClassificacao(filtrosSalvos.filtroClassificacao || "Todos");
-        alert("Filtros salvos aplicados no relat\u00f3rio de colaboradores e treinamentos.");
-    };
-
-    const limparFiltrosSalvosColaboradoresTreinamentos = () => {
-        if (typeof window === "undefined" || !window.localStorage) return;
-
-        window.localStorage.removeItem(CHAVE_FILTROS_COLABORADORES_TREINAMENTOS);
-        setVersaoFiltroSalvoColaboradoresTreinamentos((valor) => valor + 1);
-        alert("Filtros salvos do relat\u00f3rio de colaboradores e treinamentos removidos.");
-    };
     const dataHoraHeroColaboradores = useMemo(() => {
         const formatarDiaSemana = (valor = "") =>
             String(valor)
@@ -430,14 +463,60 @@ export function Colaboradores({
         const classificacoes =
             baseEmpresa.map((c) => statusGeral(c).texto);
 
+        const avaliacoes =
+            baseEmpresa.map(
+                avaliarTreinamentosColaborador
+            );
+
+        /*
+         * O KPI representa colaboradores,
+         * e não quantidade de certificados.
+         */
+        const colaboradoresAVencer =
+            avaliacoes.filter(
+                (
+                    avaliacao,
+                    indice
+                ) => {
+                    const classificacao =
+                        classificacoes[indice];
+
+                    const foraDaOperacao =
+                        [
+                            "Desmobilizado",
+                            "Inativo",
+                        ].includes(
+                            classificacao
+                        );
+
+                    return (
+                        !foraDaOperacao &&
+                        Array.isArray(
+                            avaliacao.vencendo
+                        ) &&
+                        avaliacao.vencendo.length > 0
+                    );
+                }
+            ).length;
+
         return {
-            total: baseEmpresa.length,
+            total:
+                classificacoes.filter(
+                    (status) =>
+                        ![
+                            "Desmobilizado",
+                            "Inativo",
+                        ].includes(
+                            status
+                        )
+                ).length,
             liberados: classificacoes.filter((status) => status === "Liberado").length,
             comPendencia: classificacoes.filter((status) => status === "Com pendência").length,
             bloqueados: classificacoes.filter((status) => status === "Bloqueado").length,
             emAnalise: classificacoes.filter((status) => status === "Em análise").length,
             desmobilizados: classificacoes.filter((status) => status === "Desmobilizado").length,
             inativos: classificacoes.filter((status) => status === "Inativo").length,
+            aVencer: colaboradoresAVencer,
         };
     }, [colaboradores, empresa]);
 
@@ -452,15 +531,143 @@ export function Colaboradores({
         );
     };
 
-    const baixarRelatorioColaboradores = async () => {
+    const baixarRelatorioColaboradores = async (filtrosRelatorio = {}) => {
         if (!podeExportarColaboradoresSistema) {
             if (typeof window !== "undefined") window.alert(mensagemBloqueioExportacaoColaboradores);
             return;
         }
 
-        const colaboradoresFiltradosRelatorio = filtroClassificacao === "Todos"
-            ? filtrados.filter((colaborador) => !["Desmobilizado", "Inativo"].includes(statusGeral(colaborador).texto))
-            : filtrados;
+        /*
+         * A ref bloqueia um segundo clique imediatamente,
+         * sem depender do ciclo de renderização do React.
+         */
+        if (exportandoPdfColaboradoresRef.current) {
+            return;
+        }
+
+        const buscaRelatorio =
+            normalizarTextoBusca(
+                filtrosRelatorio?.busca ||
+                    ""
+            );
+
+        const empresaRelatorio =
+            String(
+                filtrosRelatorio?.empresa ||
+                    "Todas"
+            ).trim() ||
+            "Todas";
+
+        const classificacaoRelatorio =
+            String(
+                filtrosRelatorio?.classificacao ||
+                    "Todos"
+            ).trim() ||
+            "Todos";
+
+        const empresaNormalizada =
+            normalizarTextoBusca(
+                empresaRelatorio
+            );
+
+        const classificacaoNormalizada =
+            normalizarTextoBusca(
+                classificacaoRelatorio
+            );
+
+        const colaboradoresFiltradosRelatorio =
+            colaboradores.filter(
+                (colaborador) => {
+                    const avaliacao =
+                        avaliarTreinamentosColaborador(
+                            colaborador
+                        );
+
+                    const geral =
+                        statusGeral(
+                            colaborador
+                        );
+
+                    const empresaDireta =
+                        typeof colaborador?.empresa ===
+                        "string"
+                            ? colaborador.empresa
+                            : colaborador?.empresa?.nome;
+
+                    const empresasColaborador =
+                        [
+                            empresaDireta,
+                            colaborador?.empresaNome,
+                            colaborador?.empresaExibicao,
+                            colaborador?.empresaPaiNome,
+                        ]
+                            .filter(Boolean)
+                            .map(
+                                (valor) =>
+                                    normalizarTextoBusca(
+                                        valor
+                                    )
+                            );
+
+                    const textoBusca =
+                        normalizarTextoBusca(
+                            [
+                                colaborador?.nome,
+                                empresaDireta,
+                                colaborador?.empresaNome,
+                                colaborador?.empresaExibicao,
+                                colaborador?.empresaPaiNome,
+                                colaborador?.funcao,
+                                colaborador?.matricula,
+                                colaborador?.codigoFuncionario,
+                                colaborador?.statusMobilizacao,
+                                geral?.texto,
+                                avaliacao?.matriz?.rotulo,
+                            ]
+                                .filter(Boolean)
+                                .join(" ")
+                        );
+
+                    const bateBusca =
+                        !buscaRelatorio ||
+                        textoBusca.includes(
+                            buscaRelatorio
+                        );
+
+                    const bateEmpresa =
+                        empresaNormalizada ===
+                            "todas" ||
+                        empresasColaborador.includes(
+                            empresaNormalizada
+                        );
+
+                    const bateClassificacao =
+                        classificacaoNormalizada ===
+                            "todos"
+                            ? ![
+                                  "Desmobilizado",
+                                  "Inativo",
+                              ].includes(
+                                  geral.texto
+                              )
+                            : normalizarTextoBusca(
+                                  geral.texto
+                              ) ===
+                              classificacaoNormalizada;
+
+                    return (
+                        bateBusca &&
+                        bateEmpresa &&
+                        bateClassificacao
+                    );
+                }
+            );
+
+        if (
+            !colaboradoresFiltradosRelatorio.length
+        ) {
+            return false;
+        }
         const colaboradoresRelatorio = colaboradoresFiltradosRelatorio.map((c) => {
             const avaliacao = avaliarTreinamentosColaborador(c);
             const geral = statusGeral(c);
@@ -495,30 +702,591 @@ export function Colaboradores({
         });
 
         const relatorioColaboradoresTreinamentosFiltrosAplicados = {
-            busca: busca.trim() || "-",
-            empresa,
-            classificacao: filtroClassificacao,
-            colaboradoresFiltrados: `${colaboradoresFiltradosRelatorio.length} colaborador(es)`,
+            busca:
+                String(
+                    filtrosRelatorio?.busca ||
+                        ""
+                ).trim() ||
+                "-",
+
+            empresa:
+                empresaRelatorio,
+
+            classificacao:
+                classificacaoRelatorio,
+
+            colaboradoresFiltrados:
+                `${colaboradoresFiltradosRelatorio.length} colaborador(es)`,
         };
 
-        await baixarRelatorioColaboradoresTreinamentosPDF({
-            nomeArquivo: "relatorio-colaboradores-treinamentos.pdf",
-            titulo: "Relat\u00f3rio de colaboradores e treinamentos",
-            colaboradores: colaboradoresRelatorio,
-            filtros: relatorioColaboradoresTreinamentosFiltrosAplicados,
-        });
+        /*
+         * O estado começa imediatamente antes da operação
+         * assíncrona pesada e permanece ativo até ela terminar,
+         * inclusive em caso de erro.
+         */
+        exportandoPdfColaboradoresRef.current =
+            true;
+
+        setExportandoPdfColaboradores(
+            true
+        );
+
+        try {
+            const resultado =
+                await baixarRelatorioColaboradoresTreinamentosPDF({
+                    contratanteCabecalho: obterContratanteIdealizaRelatorio(),
+                    nomeArquivo: "relatorio-colaboradores-treinamentos.pdf",
+                    titulo: "Relat\u00f3rio de colaboradores e treinamentos",
+                    colaboradores: colaboradoresRelatorio,
+                    filtros: relatorioColaboradoresTreinamentosFiltrosAplicados,
+                });
+
+            return resultado !== false;
+        } finally {
+            exportandoPdfColaboradoresRef.current =
+                false;
+
+            setExportandoPdfColaboradores(
+                false
+            );
+        }
     };
 
-    const baixarRelatorioPendencias = async () => {
+    const obterContratanteIdealizaRelatorio = () => {
+        const TIPO_CONTRATANTE_INSTITUCIONAL =
+            "Contratante - Idealiza Cidades";
+
+        const tipoEsperado =
+            normalizarTextoBusca(
+                TIPO_CONTRATANTE_INSTITUCIONAL
+            );
+
+        const candidatas =
+            (
+                Array.isArray(empresasBanco)
+                    ? empresasBanco
+                    : []
+            )
+                .filter(
+                    (item) =>
+                        item &&
+                        typeof item === "object"
+                )
+                .filter((item) => {
+                    const tipo =
+                        normalizarTextoBusca(
+                            item.tipo_empresa ||
+                            item.tipoEmpresa ||
+                            ""
+                        );
+
+                    return tipo === tipoEsperado;
+                })
+                .sort((a, b) => {
+                    const nomeA =
+                        String(
+                            a.nome ||
+                            a.razao_social ||
+                            a.razaoSocial ||
+                            ""
+                        );
+
+                    const nomeB =
+                        String(
+                            b.nome ||
+                            b.razao_social ||
+                            b.razaoSocial ||
+                            ""
+                        );
+
+                    const porNome =
+                        nomeA.localeCompare(
+                            nomeB,
+                            "pt-BR"
+                        );
+
+                    if (porNome !== 0) {
+                        return porNome;
+                    }
+
+                    return String(
+                        a.id ||
+                        ""
+                    ).localeCompare(
+                        String(
+                            b.id ||
+                            ""
+                        ),
+                        "pt-BR"
+                    );
+                });
+
+        const idealiza =
+            candidatas[0] ||
+            null;
+
+        if (!idealiza) {
+            return null;
+        }
+
+        const logoRaw =
+            idealiza.logo_url ||
+            idealiza.logoUrl ||
+            idealiza.logo ||
+            idealiza.logo_path ||
+            idealiza.logoPath ||
+            "";
+
+        return {
+            id:
+                idealiza.id ||
+                "",
+
+            nome:
+                idealiza.nome ||
+                idealiza.razao_social ||
+                idealiza.razaoSocial ||
+                "Idealiza Cidades",
+
+            razaoSocial:
+                idealiza.razao_social ||
+                idealiza.razaoSocial ||
+                "",
+
+            cnpj:
+                idealiza.cnpj ||
+                "",
+
+            logoUrl:
+                logoRaw
+                    ? obterUrlLogoEmpresa(
+                        logoRaw
+                    )
+                    : "",
+        };
+    };
+
+    const baixarRelatorioControleFichasEpi = async (filtrosEpi = {}) => {
+        if (!podeExportarColaboradoresSistema) {
+            if (
+                typeof window !==
+                "undefined"
+            ) {
+                window.alert(
+                    mensagemBloqueioExportacaoColaboradores
+                );
+            }
+
+            return;
+        }
+
+        if (
+            exportandoPdfEpiRef.current
+        ) {
+            return;
+        }
+
+        const colaboradoresFiltradosRelatorio =
+            colaboradores.filter(
+                (colaborador) =>
+                    ![
+                        "Desmobilizado",
+                        "Inativo",
+                    ].includes(
+                        statusGeral(
+                            colaborador
+                        ).texto
+                    )
+            );
+        const colaboradoresEpi =
+            colaboradoresFiltradosRelatorio.map(
+                (c) => {
+                    const empresaBase =
+                        obterEmpresaRelatorio(
+                            c
+                        );
+
+                    /*
+                     * DOCUMENTO:
+                     * ID 14 = NR-06 Ficha de EPIs atualizada.
+                     *
+                     * Não confundir com:
+                     * ID 8 = NR-06 Uso Correto de EPIs.
+                     */
+                    const fichaEpi =
+                        (
+                            Array.isArray(
+                                c.treinamentos
+                            )
+                                ? c.treinamentos
+                                : []
+                        ).find(
+                            (item) =>
+                                Number(
+                                    item?.treinamentoId ??
+                                        item?.treinamento_id ??
+                                        item?.treinamentoCodigo ??
+                                        item?.treinamento_codigo ??
+                                        0
+                                ) === 14
+                        ) ||
+                        null;
+
+                    /*
+                     * DATA DOCUMENTAL:
+                     *
+                     * realizado é normalizado a partir
+                     * de data_realizacao.
+                     *
+                     * NÃO utilizar createdAt.
+                     */
+                    const dataFichaEpi =
+                        String(
+                            fichaEpi?.realizado ||
+                                fichaEpi?.data_realizacao ||
+                                fichaEpi?.dataRealizacao ||
+                                ""
+                        ).trim();
+
+                    /*
+                     * EVIDÊNCIA FÍSICA:
+                     *
+                     * Registro sem arquivo não pode ser
+                     * apresentado como ficha conforme.
+                     */
+                    const arquivoFichaEpi =
+                        fichaEpi?.arquivoUrl ||
+                        fichaEpi?.arquivo_url ||
+                        fichaEpi?.urlArquivo ||
+                        fichaEpi?.url_arquivo ||
+                        fichaEpi?.documentoUrl ||
+                        fichaEpi?.documento_url ||
+                        fichaEpi?.arquivo ||
+                        fichaEpi?.url ||
+                        "";
+
+                    const possuiRegistroFichaEpi =
+                        Boolean(
+                            fichaEpi
+                        );
+
+                    const possuiArquivoFichaEpi =
+                        Boolean(
+                            typeof arquivoFichaEpi ===
+                                "string"
+                                ? arquivoFichaEpi.trim()
+                                : arquivoFichaEpi
+                        );
+
+                    return {
+                        colaboradorId:
+                            c.id,
+
+                        nome:
+                            c.nome,
+
+                        funcao:
+                            c.funcao,
+
+                        empresaId:
+                            c.empresaId ||
+                            empresaBase.id ||
+                            c.empresa,
+
+                        empresaNome:
+                            empresaBase.nome ||
+                            c.empresa ||
+                            "Empresa não informada",
+
+                        empresaExibicao:
+                            c.empresaExibicao ||
+                            empresaBase.nome ||
+                            c.empresa ||
+                            "",
+
+                        fichaEpi,
+
+                        possuiRegistroFichaEpi,
+
+                        possuiArquivoFichaEpi,
+
+                        dataFichaEpi,
+                    };
+                }
+            );
+
+        if (
+            !colaboradoresEpi.length
+        ) {
+            return false;
+        }
+        exportandoPdfEpiRef.current =
+            true;
+
+        try {
+            /*
+             * EPI-B5-R1-R1-A
+             *
+             * O histórico é carregado em uma única consulta.
+             * A lista chega ordenada por arquivado_em DESC.
+             *
+             * Assim, o primeiro registro encontrado para cada
+             * certificado_origem_id representa a versão anterior
+             * genuína mais recente.
+             *
+             * Não existe fallback para created_at.
+             */
+            const idsFichasEpi =
+                Array.from(
+                    new Set(
+                        colaboradoresEpi
+                            .map(
+                                (item) =>
+                                    String(
+                                        item?.fichaEpi?.id ||
+                                            ""
+                                    ).trim()
+                            )
+                            .filter(Boolean)
+                    )
+                );
+
+            const historicoFichasEpi =
+                await listarHistoricoCertificadosEmLoteService({
+                    supabase,
+                    certificadoIds:
+                        idsFichasEpi,
+                });
+
+            const historicoAnteriorPorCertificado =
+                new Map();
+
+            historicoFichasEpi.forEach(
+                (registro) => {
+                    const certificadoOrigemId =
+                        String(
+                            registro?.certificado_origem_id ||
+                                ""
+                        ).trim();
+
+                    if (
+                        !certificadoOrigemId ||
+                        historicoAnteriorPorCertificado.has(
+                            certificadoOrigemId
+                        )
+                    ) {
+                        return;
+                    }
+
+                    historicoAnteriorPorCertificado.set(
+                        certificadoOrigemId,
+                        registro
+                    );
+                }
+            );
+
+            const colaboradoresEpiComHistorico =
+                colaboradoresEpi.map(
+                    (item) => {
+                        const certificadoId =
+                            String(
+                                item?.fichaEpi?.id ||
+                                    ""
+                            ).trim();
+
+                        const anterior =
+                            certificadoId
+                                ? historicoAnteriorPorCertificado.get(
+                                    certificadoId
+                                )
+                                : null;
+
+                        return {
+                            ...item,
+
+                            /*
+                             * Data documental da versão anterior.
+                             *
+                             * Ausência de histórico = string vazia.
+                             * O renderer exibirá "-" no próximo gate.
+                             */
+                            dataFichaEpiAnterior:
+                                anterior?.data_realizacao ||
+                                "",
+                        };
+                    }
+                );
+
+            return await baixarRelatorioControleFichasEpiPDF({
+                nomeArquivo:
+                    "relatorio-controle-fichas-epi.pdf",
+
+                titulo:
+                    "Relatório de Controle de Fichas de EPI",
+
+                contratanteCabecalho:
+                    obterContratanteIdealizaRelatorio(),
+
+                colaboradores:
+                    colaboradoresEpiComHistorico,
+
+                filtros: {
+                    busca:
+                        String(
+                            filtrosEpi?.busca ||
+                                ""
+                        ).trim(),
+
+                    empresa:
+                        String(
+                            filtrosEpi?.empresa ||
+                                "Todas"
+                        ).trim() ||
+                        "Todas",
+
+                    classificacaoEpi:
+                        String(
+                            filtrosEpi?.classificacaoEpi ||
+                                "Todos"
+                        ).trim() ||
+                        "Todos",
+                },
+            });
+        }
+        finally {
+            exportandoPdfEpiRef.current =
+                false;
+        }
+    };
+
+    const baixarRelatorioPendencias = async (filtrosRelatorio = {}) => {
         if (!podeExportarColaboradoresSistema) {
             if (typeof window !== "undefined") window.alert(mensagemBloqueioExportacaoColaboradores);
             return;
         }
 
+        const buscaRelatorio =
+            normalizarTextoBusca(
+                filtrosRelatorio?.busca ||
+                    ""
+            );
+
+        const empresaRelatorio =
+            String(
+                filtrosRelatorio?.empresa ||
+                    "Todas"
+            ).trim() ||
+            "Todas";
+
+        const classificacaoRelatorio =
+            String(
+                filtrosRelatorio?.classificacao ||
+                    "Todos"
+            ).trim() ||
+            "Todos";
+
+        const empresaNormalizada =
+            normalizarTextoBusca(
+                empresaRelatorio
+            );
+
+        const classificacaoNormalizada =
+            normalizarTextoBusca(
+                classificacaoRelatorio
+            );
+
+        const colaboradoresFiltradosRelatorio =
+            colaboradores.filter(
+                (colaborador) => {
+                    const avaliacao =
+                        avaliarTreinamentosColaborador(
+                            colaborador
+                        );
+
+                    const geral =
+                        statusGeral(
+                            colaborador
+                        );
+
+                    const empresaDireta =
+                        typeof colaborador?.empresa === "string"
+                            ? colaborador.empresa
+                            : colaborador?.empresa?.nome;
+
+                    const empresasColaborador =
+                        [
+                            empresaDireta,
+                            colaborador?.empresaNome,
+                            colaborador?.empresaExibicao,
+                            colaborador?.empresaPaiNome,
+                        ]
+                            .filter(Boolean)
+                            .map(
+                                (valor) =>
+                                    normalizarTextoBusca(
+                                        valor
+                                    )
+                            );
+
+                    const textoBusca =
+                        normalizarTextoBusca(
+                            [
+                                colaborador?.nome,
+                                empresaDireta,
+                                colaborador?.empresaNome,
+                                colaborador?.empresaExibicao,
+                                colaborador?.empresaPaiNome,
+                                colaborador?.funcao,
+                                colaborador?.matricula,
+                                colaborador?.codigoFuncionario,
+                                colaborador?.statusMobilizacao,
+                                geral?.texto,
+                                avaliacao?.matriz?.rotulo,
+                            ]
+                                .filter(Boolean)
+                                .join(" ")
+                        );
+
+                    const bateBusca =
+                        !buscaRelatorio ||
+                        textoBusca.includes(
+                            buscaRelatorio
+                        );
+
+                    const bateEmpresa =
+                        empresaNormalizada === "todas" ||
+                        empresasColaborador.includes(
+                            empresaNormalizada
+                        );
+
+                    const bateClassificacao =
+                        classificacaoNormalizada === "todos"
+                            ? ![
+                                  "Desmobilizado",
+                                  "Inativo",
+                              ].includes(
+                                  geral.texto
+                              )
+                            : normalizarTextoBusca(
+                                  geral.texto
+                              ) ===
+                              classificacaoNormalizada;
+
+                    return (
+                        bateBusca &&
+                        bateEmpresa &&
+                        bateClassificacao
+                    );
+                }
+            );
+
+        if (
+            !colaboradoresFiltradosRelatorio.length
+        ) {
+            return false;
+        }
+
         const pendencias = [];
-        const colaboradoresFiltradosRelatorio = filtroClassificacao === "Todos"
-            ? filtrados.filter((colaborador) => !["Desmobilizado", "Inativo"].includes(statusGeral(colaborador).texto))
-            : filtrados;
 
         colaboradoresFiltradosRelatorio.forEach((c) => {
             const avaliacao = avaliarTreinamentosColaborador(c);
@@ -549,18 +1317,39 @@ export function Colaboradores({
                 });
         });
 
-        await baixarRelatorioPendenciasTreinamentosPDF({
-            nomeArquivo: "relatorio-pendencias-treinamentos.pdf",
-            titulo: "Relatório de pendências de treinamentos",
-            pendencias,
-            filtros: {
-                busca: busca.trim() || "-",
-                empresa,
-                classificacao: filtroClassificacao,
-                colaboradoresFiltrados: `${colaboradoresFiltradosRelatorio.length} colaborador(es)`,
-                pendenciasEncontradas: `${pendencias.length} pendência(s)`,
-            },
-        });
+        if (!pendencias.length) {
+            return false;
+        }
+
+        const resultado =
+            await baixarRelatorioPendenciasTreinamentosPDF({
+                nomeArquivo: "relatorio-pendencias-treinamentos.pdf",
+                titulo: "Relatório de pendências de treinamentos",
+                contratanteCabecalho: obterContratanteIdealizaRelatorio(),
+                pendencias,
+                filtros: {
+                    busca:
+                        String(
+                            filtrosRelatorio?.busca ||
+                                ""
+                        ).trim() ||
+                        "-",
+
+                    empresa:
+                        empresaRelatorio,
+
+                    classificacao:
+                        classificacaoRelatorio,
+
+                    colaboradoresFiltrados:
+                        `${colaboradoresFiltradosRelatorio.length} colaborador(es)`,
+
+                    pendenciasEncontradas:
+                        `${pendencias.length} pendência(s)`,
+                },
+            });
+
+        return resultado !== false;
     };
 
     const adicionar = async () => {
@@ -1137,7 +1926,19 @@ ${erros.slice(0, 8).join("\n")}`
                     <div className="colaboradores-hero-banner__stats">
                         <div className="colaboradores-hero-banner__stat">
                             <Users className="h-4 w-4 text-emerald-300" />
-                            <span>{colaboradores.length} colaboradores</span>
+                            <span>{
+    colaboradores.filter(
+        (colaborador) =>
+            ![
+                "Desmobilizado",
+                "Inativo",
+            ].includes(
+                statusGeral(
+                    colaborador
+                ).texto
+            )
+    ).length
+} colaboradores</span>
                         </div>
                         <div className="colaboradores-hero-banner__stat">
                             <ShieldCheck className="h-4 w-4 text-emerald-300" />
@@ -1408,7 +2209,15 @@ ${erros.slice(0, 8).join("\n")}`
                             <Filter className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                             <select
                                 value={empresa}
-                                onChange={(e) => setEmpresa(e.target.value)}
+                                onChange={(e) => {
+                                    setEmpresa(
+                                        e.target.value
+                                    );
+
+                                    setFiltroFuncao(
+                                        "Todas"
+                                    );
+                                }}
                                 className="w-full appearance-none rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                             >
                                 {empresasFiltro.map((e) => (
@@ -1418,10 +2227,45 @@ ${erros.slice(0, 8).join("\n")}`
                         </div>
 
                         <div className="relative min-w-56">
+                            <Filter className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                            <select
+                                value={filtroFuncao}
+                                onChange={(e) =>
+                                    setFiltroFuncao(
+                                        e.target.value
+                                    )
+                                }
+                                aria-label="Filtrar por função"
+                                className="w-full appearance-none rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            >
+                                {funcoesFiltro.map(
+                                    (funcao) => (
+                                        <option
+                                            key={funcao}
+                                            value={funcao}
+                                        >
+                                            {funcao === "Todas"
+                                                ? "Todas as funções"
+                                                : funcao}
+                                        </option>
+                                    )
+                                )}
+                            </select>
+                        </div>
+
+                        <div className="relative min-w-56">
                             <ShieldCheck className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                             <select
                                 value={filtroClassificacao}
-                                onChange={(e) => setFiltroClassificacao(e.target.value)}
+                                onChange={(e) => {
+                                    setFiltroStatusRapidoAtivo(
+                                        null
+                                    );
+
+                                    setFiltroClassificacao(
+                                        e.target.value
+                                    );
+                                }}
                                 className="w-full appearance-none rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                             >
                                 <option value="Todos">Todos os status</option>
@@ -1444,144 +2288,374 @@ ${erros.slice(0, 8).join("\n")}`
                     </div>
 
                     <div className="colaboradores-status-grid colaboradores-status-grid--premium mb-4">
-                        <div className="colaborador-status-card flex min-h-[92px] flex-col items-center justify-center rounded-2xl bg-slate-50 p-3 text-center">
-                            <p className="text-xs font-medium text-slate-500">Total</p>
-                            <p className="text-2xl font-bold text-slate-950">{resumoStatusEmpresaSelecionada.total}</p>
-                        </div>
-                        <div className="colaborador-status-card flex min-h-[92px] flex-col items-center justify-center rounded-2xl bg-emerald-50 p-3 text-center">
-                            <p className="text-xs font-medium text-emerald-700">Liberados</p>
-                            <p className="text-2xl font-bold text-emerald-700">{resumoStatusEmpresaSelecionada.liberados}</p>
-                        </div>
-                        <div className="colaborador-status-card flex min-h-[92px] flex-col items-center justify-center rounded-2xl bg-blue-50 p-3 text-center">
-                            <p className="text-xs font-medium text-blue-700">Com pendência</p>
-                            <p className="text-2xl font-bold text-blue-700">{resumoStatusEmpresaSelecionada.comPendencia}</p>
-                        </div>
-                        <div className="colaborador-status-card flex min-h-[92px] flex-col items-center justify-center rounded-2xl bg-red-50 p-3 text-center">
-                            <p className="text-xs font-medium text-red-700">Bloqueados</p>
-                            <p className="text-2xl font-bold text-red-700">{resumoStatusEmpresaSelecionada.bloqueados}</p>
-                        </div>
-                        <div className="colaborador-status-card flex min-h-[92px] flex-col items-center justify-center rounded-2xl bg-violet-50 p-3 text-center">
-                            <p className="text-xs font-medium text-violet-700">Em análise</p>
-                            <p className="text-2xl font-bold text-violet-700">{resumoStatusEmpresaSelecionada.emAnalise}</p>
-                        </div>
-                        <div className="colaborador-status-card flex min-h-[92px] flex-col items-center justify-center rounded-2xl bg-slate-100 p-3 text-center">
-                            <p className="text-xs font-medium text-slate-700">Desmobilizados</p>
-                            <p className="text-2xl font-bold text-slate-700">{resumoStatusEmpresaSelecionada.desmobilizados}</p>
-                        </div>
-                        <div className="colaborador-status-card flex min-h-[92px] flex-col items-center justify-center rounded-2xl bg-slate-50 p-3 text-center ring-1 ring-slate-200">
-                            <p className="text-xs font-medium text-slate-700">Inativos</p>
-                            <p className="text-2xl font-bold text-slate-700">{resumoStatusEmpresaSelecionada.inativos}</p>
-                        </div>
-                    </div>
+                        <button
+                            type="button"
+                            onClick={() => aplicarFiltroStatusRapido("Total")}
+                            aria-pressed={filtroStatusRapidoAtivo === "Total"}
+                            title="Mostrar todos os colaboradores"
+                            className={classNames(
+                                "colaborador-status-card flex min-h-[92px] cursor-pointer flex-col items-center justify-center rounded-2xl bg-slate-50 p-3 text-center transition duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-600 focus-visible:ring-offset-2",
+                                filtroStatusRapidoAtivo === "Total" &&
+                                    "ring-2 ring-slate-600 ring-offset-2 shadow-md"
+                            )}
+                        >
+                            <p className="text-xs font-medium text-slate-500">
+                                Total
+                            </p>
 
-                    <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-3">
-                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                            <div>
-                                <p className="text-xs font-black uppercase tracking-wide text-slate-500">{"Filtros salvos do relat\u00f3rio de colaboradores e treinamentos"}</p>
-                                <p className="mt-1 text-xs font-semibold text-slate-500">{"Salve busca, empresa e classifica\u00e7\u00e3o para reutilizar no PDF de colaboradores e treinamentos."}</p>
-                            </div>
-                            <div className="flex flex-col gap-2 sm:flex-row">
-                                <button
-                                    type="button"
-                                    onClick={salvarFiltrosColaboradoresTreinamentos}
-                                    className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-wide text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-100"
-                                >
-                                    Salvar filtro
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={aplicarFiltrosSalvosColaboradoresTreinamentos}
-                                    disabled={!filtrosSalvosColaboradoresTreinamentosDisponiveis}
-                                    className={classNames(
-                                        "rounded-2xl border px-4 py-2 text-xs font-black uppercase tracking-wide shadow-sm transition",
-                                        filtrosSalvosColaboradoresTreinamentosDisponiveis
-                                            ? "border-slate-900 bg-slate-900 text-white hover:bg-slate-800"
-                                            : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
-                                    )}
-                                >
-                                    Aplicar filtro salvo
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={limparFiltrosSalvosColaboradoresTreinamentos}
-                                    disabled={!filtrosSalvosColaboradoresTreinamentosDisponiveis}
-                                    className={classNames(
-                                        "rounded-2xl border px-4 py-2 text-xs font-black uppercase tracking-wide shadow-sm transition",
-                                        filtrosSalvosColaboradoresTreinamentosDisponiveis
-                                            ? "border-red-100 bg-white text-red-600 hover:bg-red-50"
-                                            : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
-                                    )}
-                                >
-                                    Limpar filtro salvo
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                            <p className="text-2xl font-bold text-slate-950">
+                                {resumoStatusEmpresaSelecionada.total}
+                            </p>
+                        </button>
 
-                    <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-3">
-                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                            <div>
-                                <p className="text-xs font-black uppercase tracking-wide text-slate-500">Filtros salvos do relatório de pendências</p>
-                                <p className="mt-1 text-xs font-semibold text-slate-500">Salve busca, empresa e classificação para reutilizar no PDF de pendências de treinamentos.</p>
-                            </div>
-                            <div className="flex flex-col gap-2 sm:flex-row">
-                                <button
-                                    type="button"
-                                    onClick={salvarFiltrosPendenciasTreinamentos}
-                                    className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-wide text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-100"
-                                >
-                                    Salvar filtro
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={aplicarFiltrosSalvosPendenciasTreinamentos}
-                                    disabled={!filtrosSalvosPendenciasTreinamentosDisponiveis}
-                                    className={classNames(
-                                        "rounded-2xl border px-4 py-2 text-xs font-black uppercase tracking-wide shadow-sm transition",
-                                        filtrosSalvosPendenciasTreinamentosDisponiveis
-                                            ? "border-slate-900 bg-slate-900 text-white hover:bg-slate-800"
-                                            : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
-                                    )}
-                                >
-                                    Aplicar filtro salvo
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={limparFiltrosSalvosPendenciasTreinamentos}
-                                    disabled={!filtrosSalvosPendenciasTreinamentosDisponiveis}
-                                    className={classNames(
-                                        "rounded-2xl border px-4 py-2 text-xs font-black uppercase tracking-wide shadow-sm transition",
-                                        filtrosSalvosPendenciasTreinamentosDisponiveis
-                                            ? "border-red-100 bg-white text-red-600 hover:bg-red-50"
-                                            : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
-                                    )}
-                                >
-                                    Limpar filtro salvo
-                                </button>
-                            </div>
-                        </div>
+                        <button
+                            type="button"
+                            onClick={() => aplicarFiltroStatusRapido("Liberado")}
+                            aria-pressed={filtroStatusRapidoAtivo === "Liberado"}
+                            title="Mostrar somente colaboradores liberados"
+                            className={classNames(
+                                "colaborador-status-card flex min-h-[92px] cursor-pointer flex-col items-center justify-center rounded-2xl bg-emerald-50 p-3 text-center transition duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2",
+                                filtroStatusRapidoAtivo === "Liberado" &&
+                                    "ring-2 ring-emerald-600 ring-offset-2 shadow-md"
+                            )}
+                        >
+                            <p className="text-xs font-medium text-emerald-700">
+                                Liberados
+                            </p>
+
+                            <p className="text-2xl font-bold text-emerald-700">
+                                {resumoStatusEmpresaSelecionada.liberados}
+                            </p>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => aplicarFiltroStatusRapido("Com pendência")}
+                            aria-pressed={filtroStatusRapidoAtivo === "Com pendência"}
+                            title="Mostrar somente colaboradores com pendência"
+                            className={classNames(
+                                "colaborador-status-card flex min-h-[92px] cursor-pointer flex-col items-center justify-center rounded-2xl bg-blue-50 p-3 text-center transition duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2",
+                                filtroStatusRapidoAtivo === "Com pendência" &&
+                                    "ring-2 ring-blue-600 ring-offset-2 shadow-md"
+                            )}
+                        >
+                            <p className="text-xs font-medium text-blue-700">
+                                Com pendência
+                            </p>
+
+                            <p className="text-2xl font-bold text-blue-700">
+                                {resumoStatusEmpresaSelecionada.comPendencia}
+                            </p>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => aplicarFiltroStatusRapido("Bloqueado")}
+                            aria-pressed={filtroStatusRapidoAtivo === "Bloqueado"}
+                            title="Mostrar somente colaboradores bloqueados"
+                            className={classNames(
+                                "colaborador-status-card flex min-h-[92px] cursor-pointer flex-col items-center justify-center rounded-2xl bg-red-50 p-3 text-center transition duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2",
+                                filtroStatusRapidoAtivo === "Bloqueado" &&
+                                    "ring-2 ring-red-600 ring-offset-2 shadow-md"
+                            )}
+                        >
+                            <p className="text-xs font-medium text-red-700">
+                                Bloqueados
+                            </p>
+
+                            <p className="text-2xl font-bold text-red-700">
+                                {resumoStatusEmpresaSelecionada.bloqueados}
+                            </p>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => aplicarFiltroStatusRapido("Em análise")}
+                            aria-pressed={filtroStatusRapidoAtivo === "Em análise"}
+                            title="Mostrar somente colaboradores em análise"
+                            className={classNames(
+                                "colaborador-status-card flex min-h-[92px] cursor-pointer flex-col items-center justify-center rounded-2xl bg-violet-50 p-3 text-center transition duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 focus-visible:ring-offset-2",
+                                filtroStatusRapidoAtivo === "Em análise" &&
+                                    "ring-2 ring-violet-600 ring-offset-2 shadow-md"
+                            )}
+                        >
+                            <p className="text-xs font-medium text-violet-700">
+                                Em análise
+                            </p>
+
+                            <p className="text-2xl font-bold text-violet-700">
+                                {resumoStatusEmpresaSelecionada.emAnalise}
+                            </p>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => aplicarFiltroStatusRapido("Desmobilizado")}
+                            aria-pressed={filtroStatusRapidoAtivo === "Desmobilizado"}
+                            title="Mostrar somente colaboradores desmobilizados"
+                            className={classNames(
+                                "colaborador-status-card flex min-h-[92px] cursor-pointer flex-col items-center justify-center rounded-2xl bg-slate-100 p-3 text-center transition duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-600 focus-visible:ring-offset-2",
+                                filtroStatusRapidoAtivo === "Desmobilizado" &&
+                                    "ring-2 ring-slate-600 ring-offset-2 shadow-md"
+                            )}
+                        >
+                            <p className="text-xs font-medium text-slate-700">
+                                Desmobilizados
+                            </p>
+
+                            <p className="text-2xl font-bold text-slate-700">
+                                {resumoStatusEmpresaSelecionada.desmobilizados}
+                            </p>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => aplicarFiltroStatusRapido("Inativo")}
+                            aria-pressed={filtroStatusRapidoAtivo === "Inativo"}
+                            title="Mostrar somente colaboradores inativos"
+                            className={classNames(
+                                "colaborador-status-card flex min-h-[92px] cursor-pointer flex-col items-center justify-center rounded-2xl bg-slate-50 p-3 text-center ring-1 ring-slate-200 transition duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700 focus-visible:ring-offset-2",
+                                filtroStatusRapidoAtivo === "Inativo" &&
+                                    "ring-2 ring-slate-700 ring-offset-2 shadow-md"
+                            )}
+                        >
+                            <p className="text-xs font-medium text-slate-700">
+                                Inativos
+                            </p>
+
+                            <p className="text-2xl font-bold text-slate-700">
+                                {resumoStatusEmpresaSelecionada.inativos}
+                            </p>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => aplicarFiltroStatusRapido("A vencer")}
+                            aria-pressed={filtroStatusRapidoAtivo === "A vencer"}
+                            title="Mostrar colaboradores com treinamentos a vencer"
+                            className={classNames(
+                                "colaborador-status-card colaborador-status-card--a-vencer flex min-h-[92px] cursor-pointer flex-col items-center justify-center rounded-2xl bg-amber-50 p-3 text-center transition duration-150 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2",
+                                filtroStatusRapidoAtivo === "A vencer" &&
+                                    "ring-2 ring-amber-600 ring-offset-2 shadow-md"
+                            )}
+                        >
+                            <p className="text-xs font-medium text-amber-700">
+                                A vencer
+                            </p>
+
+                            <p className="text-2xl font-bold text-amber-700">
+                                {resumoStatusEmpresaSelecionada.aVencer}
+                            </p>
+                        </button>
                     </div>
 
                     <div className="mb-4 flex flex-wrap justify-center gap-2 border-b border-slate-200 pb-4">
                         <button
-                            onClick={baixarRelatorioColaboradores}
+                            onClick={() =>
+                                setRelatorioColaboradoresFiltrosAberto(
+                                    true
+                                )
+                            }
                             disabled={!podeExportarColaboradoresSistema}
-                            title={podeExportarColaboradoresSistema ? "Baixar PDF colaboradores" : mensagemBloqueioExportacaoColaboradores}
-                            className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                            title={
+                                exportandoPdfColaboradores
+                                    ? "Gerando PDF de colaboradores..."
+                                    : podeExportarColaboradoresSistema
+                                        ? "Baixar PDF colaboradores"
+                                        : mensagemBloqueioExportacaoColaboradores
+                            }
+                            aria-busy={exportandoPdfColaboradores}
+                            className="inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                            <Download className="h-4 w-4" />
+                            {exportandoPdfColaboradores ? (
+                                <RefreshCw
+                                    className="h-4 w-4 animate-spin"
+                                    aria-hidden="true"
+                                />
+                            ) : (
+                                <Download
+                                    className="h-4 w-4"
+                                    aria-hidden="true"
+                                />
+                            )}
                             Baixar PDF colaboradores
                         </button>
                         <button
-                            onClick={baixarRelatorioPendencias}
+                            onClick={() =>
+                                setRelatorioPendenciasTreinamentosFiltrosAberto(
+                                    true
+                                )
+                            }
                             disabled={!podeExportarColaboradoresSistema}
                             title={podeExportarColaboradoresSistema ? "Baixar PDF pendências" : mensagemBloqueioExportacaoColaboradores}
-                            className="inline-flex items-center gap-2 rounded-2xl bg-orange-50 px-4 py-2.5 text-xs font-semibold text-orange-700 ring-1 ring-orange-200 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-orange-50 px-4 py-2.5 text-xs font-semibold text-orange-700 ring-1 ring-orange-200 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             <AlertTriangle className="h-4 w-4" />
                             Baixar PDF pendências
                         </button>
+
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setRelatorioControleFichasEpiFiltrosAberto(
+                                    true
+                                )
+                            }
+                            disabled={!podeExportarColaboradoresSistema}
+                            title={
+                                podeExportarColaboradoresSistema
+                                    ? "Baixar controle de Fichas de EPI"
+                                    : mensagemBloqueioExportacaoColaboradores
+                            }
+                            className="inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-emerald-50 px-4 py-2.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <FileText className="h-4 w-4" />
+                            Controle Fichas EPI
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setRelatorioPendenciasCadastraisAberto(
+                                    true
+                                )
+                            }
+                            disabled={!podeExportarColaboradoresSistema}
+                            title={
+                                podeExportarColaboradoresSistema
+                                    ? "Conferir informações não preenchidas do cadastro"
+                                    : mensagemBloqueioExportacaoColaboradores
+                            }
+                            className="inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-blue-50 px-4 py-2.5 text-xs font-semibold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <Users className="h-4 w-4" />
+                            Relatório cadastral
+                        </button>
                     </div>
+
+                    {relatorioColaboradoresFiltrosAberto && (
+                        <RelatorioColaboradoresFiltrosModal
+                            empresas={
+                                empresasFiltro
+                            }
+                            classificacoes={[
+                                "Liberado",
+                                "Em análise",
+                                "Com pendência",
+                                "A vencer",
+                                "Bloqueado",
+                                "Desmobilizado",
+                                "Inativo",
+                            ]}
+                            onFechar={() =>
+                                setRelatorioColaboradoresFiltrosAberto(
+                                    false
+                                )
+                            }
+                            onGerar={
+                                baixarRelatorioColaboradores
+                            }
+                        />
+                    )}
+                    {relatorioPendenciasTreinamentosFiltrosAberto && (
+                        <RelatorioPendenciasTreinamentosFiltrosModal
+                            empresas={empresasFiltro}
+                            classificacoes={[
+                                "Liberado",
+                                "Em análise",
+                                "Com pendência",
+                                "A vencer",
+                                "Bloqueado",
+                                "Desmobilizado",
+                                "Inativo",
+                            ]}
+                            onFechar={() =>
+                                setRelatorioPendenciasTreinamentosFiltrosAberto(
+                                    false
+                                )
+                            }
+                            onGerar={
+                                baixarRelatorioPendencias
+                            }
+                        />
+                    )}
+                    {relatorioControleFichasEpiFiltrosAberto && (
+                        <RelatorioControleFichasEpiFiltrosModal
+                            aberto={true}
+                            empresas={
+                                Array.from(
+                                    new Set(
+                                        colaboradores
+                                            .filter(
+                                                (colaborador) =>
+                                                    ![
+                                                        "Desmobilizado",
+                                                        "Inativo",
+                                                    ].includes(
+                                                        statusGeral(
+                                                            colaborador
+                                                        ).texto
+                                                    )
+                                            )
+                                            .map(
+                                                (colaborador) =>
+                                                    String(
+                                                        colaborador?.empresaNome ||
+                                                            colaborador?.empresa?.nome ||
+                                                            (
+                                                                typeof colaborador?.empresa ===
+                                                                "string"
+                                                                    ? colaborador.empresa
+                                                                    : ""
+                                                            ) ||
+                                                            ""
+                                                    ).trim()
+                                            )
+                                            .filter(Boolean)
+                                    )
+                                ).sort(
+                                    (a, b) =>
+                                        a.localeCompare(
+                                            b,
+                                            "pt-BR",
+                                            {
+                                                sensitivity:
+                                                    "base",
+                                            }
+                                        )
+                                )
+                            }
+                            onFechar={() =>
+                                setRelatorioControleFichasEpiFiltrosAberto(
+                                    false
+                                )
+                            }
+                            onGerar={
+                                baixarRelatorioControleFichasEpi
+                            }
+                        />
+                    )}
+                    {relatorioPendenciasCadastraisAberto && (
+                        <RelatorioPendenciasCadastraisModal
+                            colaboradores={filtrados}
+                            contratanteCabecalho={obterContratanteIdealizaRelatorio()}
+                            filtros={{
+                                busca:
+                                    busca.trim(),
+                                empresa,
+                                classificacao:
+                                    filtroClassificacao,
+                                filtroRapido:
+                                    filtroStatusRapidoAtivo ||
+                                    "",
+                            }}
+                            onClose={() =>
+                                setRelatorioPendenciasCadastraisAberto(
+                                    false
+                                )
+                            }
+                        />
+                    )}
 
                     {carregandoBanco && (
                         <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">

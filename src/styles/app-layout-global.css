@@ -677,7 +677,7 @@
 
   .colaboradores-status-grid {
     display: grid;
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-columns: repeat(8, minmax(0, 1fr));
     gap: 0.65rem;
     align-items: stretch;
   }
@@ -17091,5 +17091,1538 @@
     display: flex !important;
     padding: 0 0.8rem !important;
     border-radius: 999px !important;
+  }
+}
+
+
+/* ============================================================
+   G2-C10D-F2 — KPI A VENCER
+   ============================================================ */
+
+.colaboradores-status-grid--premium
+.colaborador-status-card--a-vencer::before {
+    background: #f59e0b !important;
+}
+
+/* ============================================================
+   G2-C10D-F3-R1 — ORDEM FINAL DOS KPIs
+
+   Somente posição visual.
+   Nenhuma regra funcional é alterada.
+
+   Ordem:
+   Total
+   Liberados
+   Em análise
+   Com pendência
+   A vencer
+   Bloqueados
+   Desmobilizados
+   Inativos
+   ============================================================ */
+
+.colaboradores-status-grid--premium
+> .colaborador-status-card:nth-child(1) {
+    order: 1;
+}
+
+.colaboradores-status-grid--premium
+> .colaborador-status-card:nth-child(2) {
+    order: 2;
+}
+
+.colaboradores-status-grid--premium
+> .colaborador-status-card:nth-child(5) {
+    order: 3;
+}
+
+.colaboradores-status-grid--premium
+> .colaborador-status-card:nth-child(3) {
+    order: 4;
+}
+
+.colaboradores-status-grid--premium
+> .colaborador-status-card:nth-child(8) {
+    order: 5;
+}
+
+/* Bloqueados */
+.colaboradores-status-grid--premium
+> .colaborador-status-card:nth-child(4) {
+    order: 6;
+}
+
+/* Desmobilizados */
+.colaboradores-status-grid--premium
+> .colaborador-status-card:nth-child(6) {
+    order: 7;
+}
+
+/* Inativos */
+.colaboradores-status-grid--premium
+> .colaborador-status-card:nth-child(7) {
+    order: 8;
+}
+/* ============================================================
+ * CERT-HIST-UI-G1-R1-F3
+ *
+ * Histórico de versões na Base de Certificados.
+ *
+ * A coluna externa permanece 150px.
+ * O histórico compartilha horizontalmente a linha Rever data.
+ * Abrir e Excluir permanecem nas duas linhas seguintes.
+ * ============================================================ */
+
+.treinamentos-certificados-acoes-documento__linha-superior {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 2.15rem !important;
+  align-items: stretch !important;
+  gap: 0.4rem !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.treinamentos-certificados-acoes-documento__linha-superior > .treinamentos-certificados-acao {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.treinamentos-certificados-acoes-documento__linha-superior > .treinamentos-certificados-acao--rever {
+  padding-left: 0.45rem !important;
+  padding-right: 0.45rem !important;
+  white-space: nowrap !important;
+}
+
+.treinamentos-certificados-acao--historico {
+  width: 2.15rem !important;
+  min-width: 2.15rem !important;
+  max-width: 2.15rem !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  justify-self: end !important;
+}
+
+.treinamentos-certificados-acao--historico svg {
+  width: 0.92rem !important;
+  height: 0.92rem !important;
+  flex: 0 0 auto !important;
+}
+/* ============================================================
+ * CERT-HIST-UI-G1-R2-F1
+ *
+ * Coluna de ações ampliada para 190px.
+ *
+ * [ Rever data ][ Histórico ]
+ * [       Abrir documento    ]
+ * [          Excluir         ]
+ *
+ * O drawer permanece fora do fluxo.
+ * ============================================================ */
+
+.treinamentos-certificados-acoes-documento__linha-superior {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 0.4rem !important;
+}
+
+.treinamentos-certificados-acoes-documento__linha-superior
+  > .treinamentos-certificados-acao--rever,
+.treinamentos-certificados-acoes-documento__linha-superior
+  > .treinamentos-certificados-acao--historico {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  justify-self: stretch !important;
+  padding-left: 0.42rem !important;
+  padding-right: 0.42rem !important;
+  gap: 0.22rem !important;
+  white-space: nowrap !important;
+  font-size: 0.68rem !important;
+}
+
+.treinamentos-certificados-acao--historico svg {
+  width: 0.78rem !important;
+  height: 0.78rem !important;
+  flex: 0 0 auto !important;
+}
+
+.treinamentos-certificados-acao--historico span {
+  display: inline !important;
+  min-width: 0 !important;
+}
+/* ============================================================
+ * CERT-HIST-UI-G1-R3
+ *
+ * Refinamento visual das ações da Base de Certificados.
+ *
+ * Azul     = revisão de data
+ * Verde    = histórico
+ * Marinho  = abertura do documento
+ * Vermelho = exclusão
+ * ============================================================ */
+
+/* ------------------------------------------------------------
+ * PRIMEIRA LINHA — 50 / 50
+ * ------------------------------------------------------------ */
+
+.treinamentos-certificados-acoes-documento__linha-superior {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 0.45rem !important;
+  width: 100% !important;
+  align-items: stretch !important;
+}
+
+/* ------------------------------------------------------------
+ * TAMANHO BASE
+ * ------------------------------------------------------------ */
+
+.treinamentos-certificados-acoes-documento
+  .treinamentos-certificados-acao {
+  min-height: 2.55rem !important;
+  height: 2.55rem !important;
+  border-radius: 0.85rem !important;
+  font-size: 0.73rem !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 100ms ease !important;
+}
+
+.treinamentos-certificados-acoes-documento
+  .treinamentos-certificados-acao:active {
+  transform: translateY(1px) !important;
+}
+
+/* ------------------------------------------------------------
+ * REVER DATA — AZUL
+ * ------------------------------------------------------------ */
+
+.treinamentos-certificados-acoes-documento__linha-superior
+  > .treinamentos-certificados-acao--rever {
+  width: 100% !important;
+  min-width: 0 !important;
+
+  padding-left: 0.55rem !important;
+  padding-right: 0.55rem !important;
+
+  gap: 0.3rem !important;
+
+  color: #1d4ed8 !important;
+  background: #eff6ff !important;
+
+  border: 1px solid #bfdbfe !important;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.06) !important;
+}
+
+.treinamentos-certificados-acoes-documento__linha-superior
+  > .treinamentos-certificados-acao--rever:hover {
+  color: #1e40af !important;
+  background: #dbeafe !important;
+  border-color: #93c5fd !important;
+}
+
+.treinamentos-certificados-acoes-documento__linha-superior
+  > .treinamentos-certificados-acao--rever svg {
+  width: 0.78rem !important;
+  height: 0.78rem !important;
+  stroke-width: 2.4 !important;
+}
+
+/* ------------------------------------------------------------
+ * HISTÓRICO — VERDE
+ * ------------------------------------------------------------ */
+
+.treinamentos-certificados-acoes-documento__linha-superior
+  > .treinamentos-certificados-acao--historico {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+
+  padding-left: 0.55rem !important;
+  padding-right: 0.55rem !important;
+
+  gap: 0.3rem !important;
+
+  color: #047857 !important;
+  background: #ecfdf5 !important;
+
+  border: 1px solid #a7f3d0 !important;
+  box-shadow: 0 1px 2px rgba(5, 150, 105, 0.06) !important;
+
+  justify-self: stretch !important;
+}
+
+.treinamentos-certificados-acoes-documento__linha-superior
+  > .treinamentos-certificados-acao--historico:hover {
+  color: #065f46 !important;
+  background: #d1fae5 !important;
+  border-color: #6ee7b7 !important;
+}
+
+.treinamentos-certificados-acoes-documento__linha-superior
+  > .treinamentos-certificados-acao--historico svg {
+  width: 0.78rem !important;
+  height: 0.78rem !important;
+  stroke-width: 2.4 !important;
+}
+
+.treinamentos-certificados-acoes-documento__linha-superior
+  > .treinamentos-certificados-acao--historico span {
+  display: inline-block !important;
+  overflow: visible !important;
+  white-space: nowrap !important;
+}
+
+/* ------------------------------------------------------------
+ * ABRIR DOCUMENTO — AÇÃO PRINCIPAL
+ * ------------------------------------------------------------ */
+
+.treinamentos-certificados-acoes-documento
+  > .treinamentos-certificados-acao--abrir {
+  width: 100% !important;
+
+  min-height: 2.7rem !important;
+  height: 2.7rem !important;
+
+  border-radius: 0.9rem !important;
+
+  color: #ffffff !important;
+  background: #0f172a !important;
+  border: 1px solid #0f172a !important;
+
+  font-size: 0.76rem !important;
+  font-weight: 850 !important;
+
+  box-shadow:
+    0 3px 8px rgba(15, 23, 42, 0.13) !important;
+}
+
+.treinamentos-certificados-acoes-documento
+  > .treinamentos-certificados-acao--abrir:hover {
+  background: #1e293b !important;
+  border-color: #1e293b !important;
+
+  box-shadow:
+    0 4px 10px rgba(15, 23, 42, 0.18) !important;
+}
+
+/* ------------------------------------------------------------
+ * EXCLUIR — PERIGO
+ * ------------------------------------------------------------ */
+
+.treinamentos-certificados-acoes-documento
+  > .treinamentos-certificados-acao--excluir {
+  width: 100% !important;
+
+  min-height: 2.55rem !important;
+  height: 2.55rem !important;
+
+  border-radius: 0.85rem !important;
+
+  color: #dc2626 !important;
+  background: #fff7f7 !important;
+  border: 1px solid #fecaca !important;
+
+  font-size: 0.73rem !important;
+  font-weight: 800 !important;
+}
+
+.treinamentos-certificados-acoes-documento
+  > .treinamentos-certificados-acao--excluir:hover {
+  color: #b91c1c !important;
+  background: #fee2e2 !important;
+  border-color: #fca5a5 !important;
+}
+/* ============================================================
+ * CERT-HIST-UI-G1-R4
+ *
+ * Refinamento geométrico final das ações.
+ *
+ * - área de ações = 240px
+ * - menor espaço até o conteúdo à esquerda
+ * - topo 50/50 sem corte de texto
+ * ============================================================ */
+
+/* Aproxima a coluna de ações do conteúdo principal */
+[class*="lg:grid-cols-[1fr_240px]"] {
+  column-gap: 0.35rem !important;
+}
+
+/* Dois botões superiores exatamente iguais */
+.treinamentos-certificados-acoes-documento__linha-superior {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  column-gap: 0.35rem !important;
+  width: 100% !important;
+}
+
+/* Rever data */
+.treinamentos-certificados-acao--rever {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+
+  padding-left: 0.65rem !important;
+  padding-right: 0.65rem !important;
+
+  gap: 0.32rem !important;
+
+  font-size: 0.75rem !important;
+  white-space: nowrap !important;
+
+  color: #1d4ed8 !important;
+  background-color: #eff6ff !important;
+  border-color: #bfdbfe !important;
+}
+
+/* Histórico */
+.treinamentos-certificados-acao--historico {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+
+  padding-left: 0.65rem !important;
+  padding-right: 0.65rem !important;
+
+  gap: 0.32rem !important;
+
+  font-size: 0.75rem !important;
+  white-space: nowrap !important;
+
+  justify-self: stretch !important;
+
+  color: #047857 !important;
+  background-color: #ecfdf5 !important;
+  border-color: #a7f3d0 !important;
+}
+
+.treinamentos-certificados-acao--rever svg,
+.treinamentos-certificados-acao--historico svg {
+  width: 0.82rem !important;
+  height: 0.82rem !important;
+  flex: 0 0 auto !important;
+}
+
+.treinamentos-certificados-acao--historico span {
+  display: inline-block !important;
+  overflow: visible !important;
+  white-space: nowrap !important;
+}
+/* ============================================================
+ * CERT-HIST-UI-G1-R5
+ *
+ * Override visual final do grupo de ações.
+ *
+ * CORREÇÃO PRINCIPAL:
+ * o próprio container de ações passa a preencher integralmente
+ * a coluna de 240px.
+ * ============================================================ */
+
+/* ------------------------------------------------------------
+ * CONTAINER DAS AÇÕES
+ *
+ * Esta é a correção que faltava.
+ * ------------------------------------------------------------ */
+
+.treinamentos-certificados-acoes-documento {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+
+  margin-left: auto !important;
+  margin-right: 0 !important;
+
+  justify-self: stretch !important;
+  align-self: start !important;
+
+  box-sizing: border-box !important;
+}
+
+/* ------------------------------------------------------------
+ * PRIMEIRA LINHA
+ * ------------------------------------------------------------ */
+
+.treinamentos-certificados-acoes-documento
+  .treinamentos-certificados-acoes-documento__linha-superior {
+  display: grid !important;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 1fr) !important;
+
+  width: 100% !important;
+  min-width: 0 !important;
+
+  gap: 0.5rem !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  box-sizing: border-box !important;
+}
+
+/* ------------------------------------------------------------
+ * REVER DATA
+ * Azul realmente visível
+ * ------------------------------------------------------------ */
+
+.treinamentos-certificados-acoes-documento
+  .treinamentos-certificados-acoes-documento__linha-superior
+  .treinamentos-certificados-acao--rever {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+
+  height: 2.55rem !important;
+
+  margin: 0 !important;
+
+  padding-left: 0.7rem !important;
+  padding-right: 0.7rem !important;
+
+  gap: 0.35rem !important;
+
+  border: 1px solid #60a5fa !important;
+  border-radius: 0.85rem !important;
+
+  background: #dbeafe !important;
+  background-color: #dbeafe !important;
+
+  color: #1d4ed8 !important;
+
+  box-shadow:
+    0 2px 5px rgba(37, 99, 235, 0.12) !important;
+
+  font-size: 0.76rem !important;
+  font-weight: 800 !important;
+
+  white-space: nowrap !important;
+  overflow: visible !important;
+
+  box-sizing: border-box !important;
+}
+
+.treinamentos-certificados-acoes-documento
+  .treinamentos-certificados-acoes-documento__linha-superior
+  .treinamentos-certificados-acao--rever:hover {
+  background: #bfdbfe !important;
+  background-color: #bfdbfe !important;
+
+  color: #1e40af !important;
+
+  border-color: #3b82f6 !important;
+}
+
+/* ------------------------------------------------------------
+ * HISTÓRICO
+ * Verde realmente visível
+ * ------------------------------------------------------------ */
+
+.treinamentos-certificados-acoes-documento
+  .treinamentos-certificados-acoes-documento__linha-superior
+  .treinamentos-certificados-acao--historico {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+
+  height: 2.55rem !important;
+
+  margin: 0 !important;
+
+  padding-left: 0.7rem !important;
+  padding-right: 0.7rem !important;
+
+  gap: 0.35rem !important;
+
+  border: 1px solid #34d399 !important;
+  border-radius: 0.85rem !important;
+
+  background: #d1fae5 !important;
+  background-color: #d1fae5 !important;
+
+  color: #047857 !important;
+
+  box-shadow:
+    0 2px 5px rgba(5, 150, 105, 0.12) !important;
+
+  font-size: 0.76rem !important;
+  font-weight: 800 !important;
+
+  white-space: nowrap !important;
+  overflow: visible !important;
+
+  box-sizing: border-box !important;
+
+  justify-self: stretch !important;
+}
+
+.treinamentos-certificados-acoes-documento
+  .treinamentos-certificados-acoes-documento__linha-superior
+  .treinamentos-certificados-acao--historico:hover {
+  background: #a7f3d0 !important;
+  background-color: #a7f3d0 !important;
+
+  color: #065f46 !important;
+
+  border-color: #10b981 !important;
+}
+
+/* ------------------------------------------------------------
+ * ÍCONES DOS DOIS SUPERIORES
+ * ------------------------------------------------------------ */
+
+.treinamentos-certificados-acoes-documento
+  .treinamentos-certificados-acoes-documento__linha-superior
+  .treinamentos-certificados-acao--rever svg,
+.treinamentos-certificados-acoes-documento
+  .treinamentos-certificados-acoes-documento__linha-superior
+  .treinamentos-certificados-acao--historico svg {
+  width: 0.84rem !important;
+  height: 0.84rem !important;
+
+  flex: 0 0 auto !important;
+
+  stroke-width: 2.4 !important;
+}
+
+.treinamentos-certificados-acoes-documento
+  .treinamentos-certificados-acao--historico span {
+  display: inline !important;
+
+  white-space: nowrap !important;
+  overflow: visible !important;
+}
+
+/* ------------------------------------------------------------
+ * ABRIR DOCUMENTO
+ *
+ * Agora também ocupa integralmente os 240px.
+ * ------------------------------------------------------------ */
+
+.treinamentos-certificados-acoes-documento
+  .treinamentos-certificados-acao--abrir {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+
+  height: 2.65rem !important;
+
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+
+  border-radius: 0.85rem !important;
+
+  background: #0f172a !important;
+  background-color: #0f172a !important;
+
+  color: #ffffff !important;
+
+  box-sizing: border-box !important;
+}
+
+/* ------------------------------------------------------------
+ * EXCLUIR
+ *
+ * Também preenche integralmente a coluna.
+ * ------------------------------------------------------------ */
+
+.treinamentos-certificados-acoes-documento
+  .treinamentos-certificados-acao--excluir {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+
+  height: 2.55rem !important;
+
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+
+  border: 1px solid #fca5a5 !important;
+  border-radius: 0.85rem !important;
+
+  background: #fee2e2 !important;
+  background-color: #fee2e2 !important;
+
+  color: #dc2626 !important;
+
+  box-sizing: border-box !important;
+}
+
+/* ------------------------------------------------------------
+ * GARANTIA DE ESPAÇAMENTO VERTICAL
+ * ------------------------------------------------------------ */
+
+.treinamentos-certificados-acoes-documento {
+  gap: 0.48rem !important;
+}
+/* ============================================================
+ * CERT-HIST-UI-G1-R6
+ *
+ * Ajuste exclusivo dos botões:
+ * Rever data + Histórico.
+ *
+ * Abrir documento e Excluir NÃO participam deste override.
+ * ============================================================ */
+
+@media (min-width: 1024px) {
+
+  /*
+   * A linha superior fica um pouco maior que o bloco inferior
+   * e deslocada para a direita.
+   */
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior {
+
+    display: grid !important;
+
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(0, 1fr) !important;
+
+    /*
+     * +34px de largura somente no topo.
+     */
+    width: calc(100% + 2.125rem) !important;
+
+    /*
+     * Deslocamento visual para direita.
+     */
+    transform: translateX(0.75rem) !important;
+
+    gap: 0.42rem !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow: visible !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /*
+   * Os dois botões ficam rigorosamente iguais.
+   */
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior
+    > .treinamentos-certificados-acao--rever,
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior
+    > .treinamentos-certificados-acao--historico {
+
+    display: inline-flex !important;
+
+    align-items: center !important;
+    justify-content: center !important;
+
+    width: 100% !important;
+
+    min-width: 0 !important;
+    max-width: none !important;
+
+    padding-left: 0.65rem !important;
+    padding-right: 0.65rem !important;
+
+    gap: 0.32rem !important;
+
+    white-space: nowrap !important;
+
+    overflow: visible !important;
+    text-overflow: clip !important;
+
+    font-size: 0.75rem !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /*
+   * Texto jamais deve quebrar ou sumir.
+   */
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior
+    > .treinamentos-certificados-acao--rever span,
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior
+    > .treinamentos-certificados-acao--historico span {
+
+    display: inline-block !important;
+
+    min-width: max-content !important;
+
+    white-space: nowrap !important;
+
+    overflow: visible !important;
+
+    text-overflow: clip !important;
+  }
+
+  /*
+   * Ícones compactos para sobrar largura para o texto.
+   */
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior
+    > .treinamentos-certificados-acao--rever svg,
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior
+    > .treinamentos-certificados-acao--historico svg {
+
+    width: 0.78rem !important;
+    height: 0.78rem !important;
+
+    flex: 0 0 auto !important;
+  }
+}
+/* ============================================================
+ * CERT-HIST-UI-G1-R7
+ *
+ * Geometria final:
+ *
+ *       [ Rever data ][ Histórico ]
+ *       [     Abrir documento     ]
+ *       [         Excluir         ]
+ *
+ * Primeira linha alinhada pela direita.
+ * ============================================================ */
+
+@media (min-width: 1024px) {
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior {
+
+    /*
+     * Mais estreita que Abrir/Excluir,
+     * porém alinhada exatamente pela direita.
+     */
+    width: calc(100% - 0.75rem) !important;
+
+    margin-left: auto !important;
+    margin-right: 0 !important;
+
+    transform: none !important;
+
+    display: grid !important;
+
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(0, 1fr) !important;
+
+    gap: 0.4rem !important;
+
+    overflow: visible !important;
+
+    box-sizing: border-box !important;
+  }
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior
+    > .treinamentos-certificados-acao--rever,
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior
+    > .treinamentos-certificados-acao--historico {
+
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+
+    height: 2.55rem !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    padding-left: 0.72rem !important;
+    padding-right: 0.72rem !important;
+
+    gap: 0.3rem !important;
+
+    font-size: 0.75rem !important;
+    font-weight: 800 !important;
+
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+
+    box-sizing: border-box !important;
+  }
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior
+    > .treinamentos-certificados-acao--rever svg,
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior
+    > .treinamentos-certificados-acao--historico svg {
+
+    width: 0.78rem !important;
+    height: 0.78rem !important;
+
+    flex: 0 0 auto !important;
+  }
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acao--historico span {
+
+    display: inline-block !important;
+
+    white-space: nowrap !important;
+    overflow: visible !important;
+  }
+}
+/* ============================================================
+ * CERT-HIST-UI-G1-R8
+ *
+ * Primeira linha definitiva:
+ *
+ * [      Rever data      ][       Histórico       ]
+ *              [ Abrir documento ]
+ *              [     Excluir     ]
+ *
+ * O topo cresce 32px exclusivamente para a esquerda.
+ * A borda direita permanece alinhada às linhas inferiores.
+ * ============================================================ */
+
+@media (min-width: 1024px) {
+
+  /* ----------------------------------------------------------
+   * LINHA SUPERIOR
+   * ---------------------------------------------------------- */
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior {
+
+    display: grid !important;
+
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(0, 1fr) !important;
+
+    /*
+     * Aumenta 32px em relação ao bloco inferior.
+     */
+    width: calc(100% + 2rem) !important;
+
+    /*
+     * Compensa os mesmos 32px para a esquerda.
+     *
+     * Resultado:
+     * a borda direita NÃO muda.
+     */
+    margin-left: -2rem !important;
+    margin-right: 0 !important;
+
+    transform: none !important;
+
+    gap: 0.45rem !important;
+
+    padding: 0 !important;
+
+    overflow: visible !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* ----------------------------------------------------------
+   * BASE COMUM DOS DOIS BOTÕES
+   * ---------------------------------------------------------- */
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior
+    > .treinamentos-certificados-acao--rever,
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior
+    > .treinamentos-certificados-acao--historico {
+
+    display: inline-flex !important;
+
+    align-items: center !important;
+    justify-content: center !important;
+
+    width: 100% !important;
+
+    min-width: 0 !important;
+    max-width: none !important;
+
+    height: 2.55rem !important;
+    min-height: 2.55rem !important;
+
+    margin: 0 !important;
+
+    padding-left: 0.7rem !important;
+    padding-right: 0.7rem !important;
+
+    gap: 0.35rem !important;
+
+    border-radius: 0.85rem !important;
+
+    font-size: 0.75rem !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+
+    white-space: nowrap !important;
+
+    overflow: hidden !important;
+    text-overflow: clip !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* ----------------------------------------------------------
+   * REVER DATA — AZUL VISÍVEL
+   * ---------------------------------------------------------- */
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior
+    > .treinamentos-certificados-acao--rever {
+
+    color: #1e40af !important;
+
+    background: #bfdbfe !important;
+    background-color: #bfdbfe !important;
+
+    border: 1px solid #60a5fa !important;
+
+    box-shadow:
+      0 2px 5px rgba(37, 99, 235, 0.14) !important;
+  }
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior
+    > .treinamentos-certificados-acao--rever:hover {
+
+    color: #1e3a8a !important;
+
+    background: #93c5fd !important;
+    background-color: #93c5fd !important;
+
+    border-color: #3b82f6 !important;
+  }
+
+  /* ----------------------------------------------------------
+   * HISTÓRICO — VERDE VISÍVEL
+   * ---------------------------------------------------------- */
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior
+    > .treinamentos-certificados-acao--historico {
+
+    color: #065f46 !important;
+
+    background: #bbf7d0 !important;
+    background-color: #bbf7d0 !important;
+
+    border: 1px solid #4ade80 !important;
+
+    box-shadow:
+      0 2px 5px rgba(22, 163, 74, 0.14) !important;
+  }
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior
+    > .treinamentos-certificados-acao--historico:hover {
+
+    color: #064e3b !important;
+
+    background: #86efac !important;
+    background-color: #86efac !important;
+
+    border-color: #22c55e !important;
+  }
+
+  /* ----------------------------------------------------------
+   * ÍCONES
+   * ---------------------------------------------------------- */
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior
+    > .treinamentos-certificados-acao--rever svg,
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior
+    > .treinamentos-certificados-acao--historico svg {
+
+    width: 0.8rem !important;
+    height: 0.8rem !important;
+
+    min-width: 0.8rem !important;
+
+    flex: 0 0 0.8rem !important;
+
+    stroke-width: 2.5 !important;
+  }
+
+  /* ----------------------------------------------------------
+   * TEXTO
+   * ---------------------------------------------------------- */
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior
+    > .treinamentos-certificados-acao--rever span,
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior
+    > .treinamentos-certificados-acao--historico span {
+
+    display: inline-block !important;
+
+    min-width: max-content !important;
+
+    white-space: nowrap !important;
+
+    overflow: visible !important;
+
+    text-overflow: clip !important;
+  }
+}
+/* ============================================================
+ * CERT-HIST-UI-G1-R9
+ *
+ * Refinamento final:
+ *
+ * [    Alterar data    ][     Histórico     ]
+ * [          Abrir documento                ]
+ * [              Excluir                    ]
+ * ============================================================ */
+
+@media (min-width: 1024px) {
+
+  /* ----------------------------------------------------------
+   * PRIMEIRA LINHA
+   *
+   * R8 = +32px.
+   * R9 = +48px.
+   *
+   * Ganho adicional = 16px total / 8px por botão.
+   * Cresce somente para a esquerda.
+   * ---------------------------------------------------------- */
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior {
+
+    display: grid !important;
+
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(0, 1fr) !important;
+
+    width: calc(100% + 3rem) !important;
+
+    margin-left: -3rem !important;
+    margin-right: 0 !important;
+
+    transform: none !important;
+
+    gap: 0.45rem !important;
+
+    overflow: visible !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* ----------------------------------------------------------
+   * ALTERAR DATA + HISTÓRICO
+   * ---------------------------------------------------------- */
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior
+    > .treinamentos-certificados-acao--rever,
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acoes-documento__linha-superior
+    > .treinamentos-certificados-acao--historico {
+
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+
+    height: 2.6rem !important;
+    min-height: 2.6rem !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    padding-left: 0.72rem !important;
+    padding-right: 0.72rem !important;
+
+    gap: 0.34rem !important;
+
+    white-space: nowrap !important;
+
+    font-size: 0.75rem !important;
+    font-weight: 800 !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* ----------------------------------------------------------
+   * ABRIR DOCUMENTO + EXCLUIR
+   *
+   * Geometria rigorosamente idêntica.
+   * ---------------------------------------------------------- */
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acao--abrir,
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acao--excluir {
+
+    display: inline-flex !important;
+
+    align-items: center !important;
+    justify-content: center !important;
+
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+
+    height: 2.65rem !important;
+    min-height: 2.65rem !important;
+    max-height: 2.65rem !important;
+
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+
+    border-radius: 0.9rem !important;
+
+    font-size: 0.76rem !important;
+    font-weight: 800 !important;
+
+    line-height: 1 !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* Abrir preserva identidade principal */
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acao--abrir {
+
+    color: #ffffff !important;
+
+    background: #0f172a !important;
+    background-color: #0f172a !important;
+
+    border: 1px solid #0f172a !important;
+  }
+
+  /* Excluir preserva identidade destrutiva */
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acao--excluir {
+
+    color: #dc2626 !important;
+
+    background: #fee2e2 !important;
+    background-color: #fee2e2 !important;
+
+    border: 1px solid #fca5a5 !important;
+  }
+}
+/* ============================================================
+ * CERT-HIST-UI-G1-R10
+ *
+ * Alinhamento dos botões inferiores à primeira linha.
+ *
+ * [ Alterar data ][ Histórico ]
+ * [      Abrir documento      ]
+ * [          Excluir          ]
+ *
+ * Abrir/Excluir crescem 48px SOMENTE para esquerda.
+ * A borda direita permanece no ponto atual.
+ * ============================================================ */
+
+@media (min-width: 1024px) {
+
+  /* ----------------------------------------------------------
+   * ABRIR DOCUMENTO
+   * ---------------------------------------------------------- */
+
+  .treinamentos-certificados-acoes-documento
+    > .treinamentos-certificados-acao--abrir {
+
+    /*
+     * +48px em relação à largura atual.
+     */
+    width: calc(100% + 3rem) !important;
+
+    min-width: calc(100% + 3rem) !important;
+    max-width: calc(100% + 3rem) !important;
+
+    /*
+     * Expande somente para esquerda.
+     * Borda direita permanece exatamente onde está.
+     */
+    margin-left: -3rem !important;
+    margin-right: 0 !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /* ----------------------------------------------------------
+   * EXCLUIR
+   * ---------------------------------------------------------- */
+
+  .treinamentos-certificados-acoes-documento
+    > .treinamentos-certificados-acao--excluir {
+
+    width: calc(100% + 3rem) !important;
+
+    min-width: calc(100% + 3rem) !important;
+    max-width: calc(100% + 3rem) !important;
+
+    margin-left: -3rem !important;
+    margin-right: 0 !important;
+
+    box-sizing: border-box !important;
+  }
+}
+/* ============================================================
+ * CERT-HIST-UI-G1-R11
+ *
+ * Corrige especificamente o espaço branco:
+ *
+ * [       Alterar data       ][        Histórico        ]
+ * [                 Abrir documento                     ]
+ * [                     Excluir                         ]
+ *
+ * A primeira linha NÃO é alterada.
+ *
+ * Abrir e Excluir recebem a mesma largura total da linha
+ * superior, expandindo somente para a esquerda.
+ * ============================================================ */
+
+@media (min-width: 1024px) {
+
+  /*
+   * IMPORTANTE:
+   *
+   * Não usamos ">" aqui.
+   * O botão é localizado pela própria classe,
+   * independentemente do wrapper existente no JSX.
+   */
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acao--abrir,
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acao--excluir {
+
+    /*
+     * Linha superior = largura normal + 48px.
+     *
+     * Portanto os inferiores recebem exatamente
+     * o mesmo ganho.
+     */
+    width: calc(100% + 3rem) !important;
+
+    min-width: calc(100% + 3rem) !important;
+    max-width: calc(100% + 3rem) !important;
+
+    /*
+     * Cresce para esquerda.
+     *
+     * A borda direita permanece no mesmo lugar.
+     */
+    position: relative !important;
+
+    left: -3rem !important;
+
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+
+    /*
+     * Mantém ambos rigorosamente iguais.
+     */
+    height: 2.65rem !important;
+    min-height: 2.65rem !important;
+    max-height: 2.65rem !important;
+
+    display: flex !important;
+
+    align-items: center !important;
+    justify-content: center !important;
+
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+
+    border-radius: 0.9rem !important;
+
+    box-sizing: border-box !important;
+  }
+
+  /*
+   * Abrir documento mantém a aparência aprovada.
+   */
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acao--abrir {
+
+    background: #0f172a !important;
+    background-color: #0f172a !important;
+
+    color: #ffffff !important;
+
+    border: 1px solid #0f172a !important;
+  }
+
+  /*
+   * Excluir mantém a aparência aprovada.
+   */
+
+  .treinamentos-certificados-acoes-documento
+    .treinamentos-certificados-acao--excluir {
+
+    background: #fee2e2 !important;
+    background-color: #fee2e2 !important;
+
+    color: #dc2626 !important;
+
+    border: 1px solid #fca5a5 !important;
+  }
+}
+/* ============================================================
+ * CERT-HIST-UI-G1-R12
+ *
+ * Correção definitiva da largura de:
+ *
+ * - Abrir documento
+ * - Excluir
+ *
+ * A regra antiga:
+ *
+ * .treinamentos-layout-card button.treinamentos-certificados-acao
+ *
+ * possui width/min-width/max-width = 100% !important.
+ *
+ * Portanto usamos aqui um seletor intencionalmente mais
+ * específico para que o calc(100% + 3rem) realmente prevaleça.
+ *
+ * A linha superior permanece intacta.
+ * ============================================================ */
+
+@media (min-width: 1024px) {
+
+  /*
+   * IMPORTANTE:
+   *
+   * Esta combinação:
+   *
+   * .treinamentos-layout-card
+   * .treinamentos-certificados-acoes-documento
+   * button.treinamentos-certificados-acao
+   * .treinamentos-certificados-acao--abrir/excluir
+   *
+   * supera em especificidade a regra antiga que limita
+   * max-width a 100%.
+   */
+
+  .treinamentos-layout-card
+    .treinamentos-certificados-acoes-documento
+    button.treinamentos-certificados-acao.treinamentos-certificados-acao--abrir,
+
+  .treinamentos-layout-card
+    .treinamentos-certificados-acoes-documento
+    button.treinamentos-certificados-acao.treinamentos-certificados-acao--excluir {
+
+    /*
+     * Linha superior R9:
+     *
+     * width = 100% + 3rem
+     * deslocamento = -3rem
+     *
+     * Aplicamos exatamente a mesma geometria aos dois
+     * botões inferiores.
+     */
+
+    width: calc(100% + 3rem) !important;
+    min-width: calc(100% + 3rem) !important;
+    max-width: calc(100% + 3rem) !important;
+
+    /*
+     * Mantém a borda esquerda exatamente na posição
+     * em que o R11 já colocou.
+     *
+     * Como a largura agora deixa de ser limitada a 100%,
+     * o ganho restante aparece para a direita e elimina
+     * o espaço branco.
+     */
+
+    position: relative !important;
+    left: -3rem !important;
+
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+
+    box-sizing: border-box !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+
+    border-radius: 0.9rem !important;
+
+    white-space: nowrap !important;
+  }
+
+  /*
+   * GEOMETRIA IGUAL.
+   */
+
+  .treinamentos-layout-card
+    .treinamentos-certificados-acoes-documento
+    button.treinamentos-certificados-acao.treinamentos-certificados-acao--abrir {
+
+    height: 2.65rem !important;
+    min-height: 2.65rem !important;
+    max-height: 2.65rem !important;
+
+    background: #0f172a !important;
+    background-color: #0f172a !important;
+
+    color: #ffffff !important;
+
+    border: 1px solid #0f172a !important;
+  }
+
+  .treinamentos-layout-card
+    .treinamentos-certificados-acoes-documento
+    button.treinamentos-certificados-acao.treinamentos-certificados-acao--excluir {
+
+    height: 2.65rem !important;
+    min-height: 2.65rem !important;
+    max-height: 2.65rem !important;
+
+    background: #fee2e2 !important;
+    background-color: #fee2e2 !important;
+
+    color: #dc2626 !important;
+
+    border: 1px solid #fca5a5 !important;
   }
 }

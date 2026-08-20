@@ -4,6 +4,10 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarClock, CheckCircle2, Clock3, Eye, EyeOff, GripVertical, RotateCcw, Search, SlidersHorizontal, TriangleAlert, Upload } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import {
+    criarUrlHistoricoCertificadoService,
+    listarHistoricoCertificadoService,
+} from "../../services/certificadosHistoricoConsultaService";
+import {
     ACOES_PERMISSAO_SISTEMA,
     MODULOS_PERMISSAO_SISTEMA,
     usuarioPodeExecutarAcaoSistema,
@@ -13,6 +17,7 @@ import { Card, Header } from "../commonComponents";
 import { validarArquivoAntesUpload, validarListaArquivosAntesUpload } from "../FileUploadAviso";
 import { AlertasTstTreinamentos } from "./AlertasTstTreinamentos";
 import { BaseCertificadosTreinamentos } from "./BaseCertificadosTreinamentos";
+import { HistoricoCertificadoDrawer } from "./HistoricoCertificadoDrawer";
 import { FormularioLancamentoCertificado } from "./FormularioLancamentoCertificado";
 import { ModalDivergenciaFuncaoAso } from "./ModalDivergenciaFuncaoAso";
 import VerificadorListaPresenca from "../VerificadorListaPresenca";
@@ -307,6 +312,13 @@ export function Treinamentos({
     const [layoutCardsTreinamentos, setLayoutCardsTreinamentos] = useState(carregarCardsTreinamentosLayout);
     const [mostrarPersonalizarTreinamentos, setMostrarPersonalizarTreinamentos] = useState(false);
     const [agoraHeroTreinamentos, setAgoraHeroTreinamentos] = useState(() => new Date());
+    const [historicoCertificadoDrawer, setHistoricoCertificadoDrawer] = useState({
+        aberto: false,
+        documento: null,
+        itens: [],
+        carregando: false,
+        erro: "",
+    });
 
     useEffect(() => {
         const atualizarRelogioHeroTreinamentos = () => {
@@ -1604,6 +1616,103 @@ export function Treinamentos({
         return onExcluirCertificado?.(...args);
     };
 
+    const fecharHistoricoCertificado = () => {
+        setHistoricoCertificadoDrawer((atual) => ({
+            ...atual,
+            aberto: false,
+            carregando: false,
+        }));
+    };
+
+    const abrirHistoricoCertificado = async (documento) => {
+        const certificadoId = String(
+            documento?.id ||
+            ""
+        ).trim();
+
+        setHistoricoCertificadoDrawer({
+            aberto: true,
+            documento,
+            itens: [],
+            carregando: Boolean(certificadoId),
+            erro: certificadoId
+                ? ""
+                : "Certificado sem identificador para consulta do histórico.",
+        });
+
+        if (!certificadoId) {
+            return;
+        }
+
+        try {
+            const itens =
+                await listarHistoricoCertificadoService({
+                    supabase,
+                    certificadoId,
+                });
+
+            setHistoricoCertificadoDrawer((atual) => {
+                const idAtual = String(
+                    atual?.documento?.id ||
+                    ""
+                ).trim();
+
+                if (idAtual !== certificadoId) {
+                    return atual;
+                }
+
+                return {
+                    ...atual,
+                    itens,
+                    carregando: false,
+                    erro: "",
+                };
+            });
+        } catch (erroHistorico) {
+            setHistoricoCertificadoDrawer((atual) => {
+                const idAtual = String(
+                    atual?.documento?.id ||
+                    ""
+                ).trim();
+
+                if (idAtual !== certificadoId) {
+                    return atual;
+                }
+
+                return {
+                    ...atual,
+                    itens: [],
+                    carregando: false,
+                    erro:
+                        erroHistorico?.message ||
+                        "Não foi possível carregar o histórico.",
+                };
+            });
+        }
+    };
+
+    const abrirVersaoHistoricaCertificado = async (registro) => {
+        const url =
+            await criarUrlHistoricoCertificadoService({
+                supabase,
+                registro,
+                expiresIn: 300,
+            });
+
+        if (
+            typeof window !== "undefined" &&
+            url
+        ) {
+            window.open(
+                url,
+                "_blank",
+                "noopener,noreferrer"
+            );
+        }
+
+        return url;
+    };
+
     const valoresRevisao = (doc) => ({
         realizado: datasRevisao[doc.id]?.realizado ?? doc.realizado ?? "",
         vencimento: datasRevisao[doc.id]?.vencimento ?? doc.vencimento ?? "",
@@ -2094,6 +2203,7 @@ export function Treinamentos({
                                     enviarDocumentoPendente={enviarDocumentoPendente}
                                     enviarDocumentosPendentesEmLote={enviarDocumentosPendentesEmLote}
                                       onVisualizarCertificado={onVisualizarCertificado}
+                                    onAbrirHistoricoCertificado={abrirHistoricoCertificado}
                                     onExcluirCertificado={excluirCertificadoSeguro}
                                     recolhido={cardsTreinamentosRecolhidos.base}
                                     onAlternarRecolhido={() => alternarCardTreinamento("base")}
@@ -2112,6 +2222,21 @@ export function Treinamentos({
                 processando={resolvendoDivergenciaFuncaoAso}
                 onConfirmar={confirmarAtualizacaoFuncaoAso}
                 onCancelar={cancelarDivergenciaFuncaoAso}
+            />
+
+            <HistoricoCertificadoDrawer
+                aberto={historicoCertificadoDrawer.aberto}
+                documento={historicoCertificadoDrawer.documento}
+                historico={historicoCertificadoDrawer.itens}
+                carregando={historicoCertificadoDrawer.carregando}
+                erro={historicoCertificadoDrawer.erro}
+                onFechar={fecharHistoricoCertificado}
+                onAbrirAtual={() =>
+                    onVisualizarCertificado?.(
+                        historicoCertificadoDrawer.documento
+                    )
+                }
+                onAbrirHistorico={abrirVersaoHistoricaCertificado}
             />
         </div>
     );

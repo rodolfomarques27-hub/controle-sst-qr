@@ -325,6 +325,10 @@ export function normalizarColaborador(item) {
         treinamentosRemovidos: item.treinamentos_removidos || item.treinamentosRemovidos || [],
         treinamentosAdicionais: item.treinamentos_adicionais || item.treinamentosAdicionais || [],
         token: item.token_qr || item.token || `SST-${String(item.id).slice(0, 8)}`,
+        qrUltimaImpressaoEm:
+            item.qr_ultima_impressao_em ||
+            item.qrUltimaImpressaoEm ||
+            "",
         treinamentos: item.treinamentos || [],
     };
 }

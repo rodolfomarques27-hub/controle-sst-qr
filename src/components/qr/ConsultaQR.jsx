@@ -1,4 +1,5 @@
 import "../../styles/pages/consulta-qr-responsivo.css";
+import { registrarImpressaoQrColaboradores } from "../../services/colaboradoresQrImpressoesService";
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
@@ -513,7 +514,14 @@ function precarregarFotoConsultaQr(item = {}) {
     );
 }
 
-function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColaborador }) {
+function ConsultaQRDesktop({
+    colaborador,
+    colaboradores = [],
+    onSelecionarColaborador,
+    supabaseClient,
+    onAtualizarBanco,
+    onRegistrarAuditoria,
+}) {
     const [busca, setBusca] = useState("");
     const [idColaboradorConsultaSelecionado, setIdColaboradorConsultaSelecionado] = useState("");
     const [filtrosConsultaQrAbertos, setFiltrosConsultaQrAbertos] = useState(() => {
@@ -1075,6 +1083,214 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
         }
     };
 
+    const confirmarRegistroImpressaoQr = async ({
+        colaboradoresImpressos = [],
+        origem = "INDIVIDUAL",
+    } = {}) => {
+        const ids = [
+            ...new Set(
+                colaboradoresImpressos
+                    .map((item) =>
+                        String(
+                            item?.id || ""
+                        ).trim()
+                    )
+                    .filter(Boolean)
+            ),
+        ];
+
+        if (!ids.length) {
+            window.alert(
+                "Não foi possível identificar o colaborador para registrar a impressão."
+            );
+
+            return;
+        }
+
+        const origemNormalizada =
+            origem === "LOTE"
+                ? "LOTE"
+                : "INDIVIDUAL";
+
+        const nomeColaborador =
+            String(
+                colaboradoresImpressos[0]?.nome ||
+                "colaborador"
+            ).trim();
+
+        const mensagem =
+            origemNormalizada === "LOTE"
+                ? `Os ${ids.length} QR Codes selecionados foram impressos corretamente?
+
+Somente confirme se a impressão realmente foi concluída.`
+                : `O QR Code de ${nomeColaborador} foi impresso corretamente?
+
+Somente confirme se a impressão realmente foi concluída.`;
+
+        const confirmado =
+            window.confirm(
+                mensagem
+            );
+
+        if (!confirmado) {
+            return;
+        }
+
+        let registros = [];
+
+        try {
+            registros =
+                await registrarImpressaoQrColaboradores({
+                    supabaseClient,
+                    colaboradorIds: ids,
+                    origem: origemNormalizada,
+                });
+        } catch (error) {
+            console.error(
+                "Erro ao registrar impressão do QR:",
+                error
+            );
+
+            window.alert(
+                `Não foi possível registrar a impressão no SafeScan.
+
+${error?.message || "Erro desconhecido."}`
+            );
+
+            return;
+        }
+
+        const primeiroRegistro =
+            registros[0] || {};
+
+        const loteId =
+            primeiroRegistro.lote_id ||
+            primeiroRegistro.loteId ||
+            null;
+
+        /*
+         * A tabela histórica da RPC é a evidência principal.
+         * A auditoria do sistema é complementar e não pode
+         * invalidar uma impressão que já foi gravada.
+         */
+        if (
+            typeof onRegistrarAuditoria ===
+            "function"
+        ) {
+            try {
+                await onRegistrarAuditoria(
+                    "IMPRESSAO_QR_CONFIRMADA",
+                    "colaboradores_qr_impressoes",
+                    origemNormalizada === "LOTE"
+                        ? `Impressão em lote confirmada para ${ids.length} colaborador(es).`
+                        : `Impressão do QR Code confirmada para ${nomeColaborador}.`,
+                    origemNormalizada === "LOTE"
+                        ? loteId
+                        : ids[0],
+                    {
+                        origem:
+                            origemNormalizada,
+                        colaborador_ids:
+                            ids,
+                        lote_id:
+                            loteId,
+                        total_colaboradores:
+                            ids.length,
+                    }
+                );
+            } catch (error) {
+                console.warn(
+                    "Impressão registrada, mas a auditoria complementar falhou:",
+                    error
+                );
+            }
+        }
+
+        /*
+         * Recarrega o array mestre para trazer
+         * qrUltimaImpressaoEm imediatamente.
+         */
+        if (
+            typeof onAtualizarBanco ===
+            "function"
+        ) {
+            try {
+                await onAtualizarBanco();
+            } catch (error) {
+                console.warn(
+                    "Impressão registrada, mas o refresh dos colaboradores falhou:",
+                    error
+                );
+
+                window.alert(
+                    "A impressão foi registrada no banco, mas não foi possível atualizar a tela. Recarregue o SafeScan para visualizar o novo estado."
+                );
+            }
+        }
+
+        console.info(
+            "Impressão de QR confirmada e registrada.",
+            {
+                origem:
+                    origemNormalizada,
+                colaboradorIds:
+                    ids,
+                loteId,
+            }
+        );
+    };
+
+    const vincularConfirmacaoPosImpressao = (
+        janela,
+        contexto
+    ) => {
+        if (
+            !janela ||
+            typeof janela.addEventListener !==
+                "function"
+        ) {
+            return;
+        }
+
+        let confirmacaoSolicitada =
+            false;
+
+        const solicitarConfirmacao =
+            () => {
+                if (
+                    confirmacaoSolicitada
+                ) {
+                    return;
+                }
+
+                confirmacaoSolicitada =
+                    true;
+
+                window.setTimeout(
+                    () => {
+                        void confirmarRegistroImpressaoQr(
+                            contexto
+                        );
+                    },
+                    150
+                );
+            };
+
+        /*
+         * afterprint ocorre ao encerrar a experiência
+         * de impressão/preview.
+         *
+         * Mesmo assim, não assumimos que imprimiu:
+         * a confirmação humana continua obrigatória.
+         */
+        janela.addEventListener(
+            "afterprint",
+            solicitarConfirmacao,
+            {
+                once: true,
+            }
+        );
+    };
     const idImpressaoQrColaborador = `qr-colaborador-impressao-${colaboradorAtual.id || colaboradorAtual.token}`;
     const idImpressaoCrachaColaborador = `cracha-colaborador-impressao-${colaboradorAtual.id || colaboradorAtual.token}`;
     const idImpressaoLoteColaboradores = "qr-colaboradores-lote-impressao";
@@ -1088,6 +1304,17 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
         janela.document.write(`<!doctype html><html><head><title>QR Code ${colaboradorAtual.nome || "Colaborador"}</title><style>${QR_CODE_PRINT_STYLES}</style></head><body>${elemento.innerHTML}</body></html>`);
         janela.document.close();
         janela.focus();
+
+        vincularConfirmacaoPosImpressao(
+            janela,
+            {
+                colaboradoresImpressos: [
+                    colaboradorAtual,
+                ],
+                origem: "INDIVIDUAL",
+            }
+        );
+
         janela.print();
     };
 
@@ -1108,7 +1335,21 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
         janela.document.write(`<!doctype html><html><head><title>${titulo}</title><style>${QR_CODE_PRINT_STYLES}</style></head><body>${elemento.innerHTML}</body></html>`);
         janela.document.close();
         janela.focus();
-        setTimeout(() => janela.print(), 700);
+
+        vincularConfirmacaoPosImpressao(
+            janela,
+            {
+                colaboradoresImpressos:
+                    selecionadosElegiveis,
+                origem: "LOTE",
+            }
+        );
+
+        setTimeout(
+            () =>
+                janela.print(),
+            700
+        );
     };
     const imprimirCrachaColaborador = () => {
         const elemento = document.getElementById(idImpressaoCrachaColaborador);

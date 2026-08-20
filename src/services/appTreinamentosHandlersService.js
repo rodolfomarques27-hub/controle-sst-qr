@@ -951,8 +951,14 @@ async function atualizarFuncaoColaboradorPeloAso({
         ""
     ).trim();
 
+    /*
+     * G4-D-R1-R1:
+     * funcaoDocumento preserva o OCR bruto.
+     * O banco recebe SOMENTE a função canônica
+     * reconhecida pelo catálogo do SafeScan.
+     */
     const novaFuncao = String(
-        comparacao?.funcaoDocumento ||
+        comparacao?.funcaoDocumentoCanonica ||
         ""
     ).trim();
 
@@ -962,9 +968,13 @@ async function atualizarFuncaoColaboradorPeloAso({
         );
     }
 
-    if (!novaFuncao) {
+    if (
+        !novaFuncao ||
+        comparacao?.funcaoDocumentoReconhecida !== true ||
+        comparacao?.bloqueiaAtualizacao === true
+    ) {
         throw new Error(
-            "A função indicada no ASO não está disponível para atualização."
+            "A função lida no ASO não possui correspondência segura e inequívoca no catálogo do SafeScan. O cadastro não foi alterado."
         );
     }
 
@@ -1005,8 +1015,22 @@ async function atualizarFuncaoColaboradorPeloAso({
                     origem: "ASO",
                     funcaoAnterior,
                     funcaoNova: novaFuncao,
+
+                    funcaoDocumentoOriginal:
+                        comparacao?.funcaoDocumentoOriginal ||
+                        comparacao?.funcaoDocumento ||
+                        "",
+
+                    funcaoDocumentoCanonica:
+                        comparacao?.funcaoDocumentoCanonica ||
+                        "",
+
                     funcaoDocumentoNormalizada:
                         comparacao?.funcaoDocumentoNormalizada ||
+                        "",
+
+                    reconhecimentoCanonico:
+                        comparacao?.reconhecimentoCanonico ||
                         "",
                     confiancaLeitura:
                         comparacao?.confianca ||

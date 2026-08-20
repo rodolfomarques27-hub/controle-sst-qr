@@ -30,6 +30,7 @@ import {
     classificarTipoDocumentoTreinamentoEtapa2,
 } from "./classificadorDocumentoTreinamentoService";
 import { compararFuncaoAsoComCadastro } from "./asoFuncaoService";
+import { obterTodasMatrizesFuncao } from "./colaboradorDocumentosService";
 
 let moduloOcrDocumentalPromise = null;
 
@@ -2906,6 +2907,15 @@ export async function analisarCertificadoLocal({
                 colaborador.cargo ||
                 colaborador.cargo_funcao ||
                 "",
+
+            /*
+             * G4-D-R1-R1:
+             * o comparador ASO é puro e recebe aqui o
+             * catálogo efetivamente ativo no SafeScan:
+             * base + remotas + personalizadas.
+             */
+            matrizesFuncao:
+                obterTodasMatrizesFuncao(),
         });
 
     const comparacaoFuncaoAso = {

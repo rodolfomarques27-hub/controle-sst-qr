@@ -5,6 +5,7 @@ import {
     ChevronUp,
     FileText,
     Filter,
+    History,
     Upload,
 } from "lucide-react";
 import { Card, StatusPill } from "../commonComponents";
@@ -355,6 +356,7 @@ export function BaseCertificadosTreinamentos({
     enviarDocumentoPendente,
     enviarDocumentosPendentesEmLote,
     onVisualizarCertificado,
+    onAbrirHistoricoCertificado,
     onExcluirCertificado,
     recolhido = false,
     onAlternarRecolhido,
@@ -872,7 +874,7 @@ export function BaseCertificadosTreinamentos({
                                                 key={itemKey}
                                                 className="treinamentos-base-certificados-card__certificado rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100"
                                             >
-                                                <div className="grid gap-3 lg:grid-cols-[1fr_150px] lg:items-start">
+                                                <div className="grid gap-3 lg:grid-cols-[1fr_240px] lg:items-start">
                                                     <div className="min-w-0">
                                                         <div className="flex flex-wrap items-center gap-2">
                                                             <StatusPill status={statusAtual} small />
@@ -902,34 +904,50 @@ export function BaseCertificadosTreinamentos({
                                                     </div>
 
                                                     <div className="treinamentos-certificados-acoes-documento">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            setCertificadosAbertos((atual) => ({
-                                                                ...atual,
-                                                                [itemKey]: !atual[itemKey],
-                                                            }))
-                                                        }
-                                                        className="treinamentos-certificados-acao treinamentos-certificados-acao--rever bg-white text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50"
-                                                    >
-                                                        {aberto ? (
-                                                            <>
-                                                                <ChevronUp className="h-4 w-4" />
-                                                                Ocultar data
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <ChevronDown className="h-4 w-4" />
-                                                                Rever data
-                                                            </>
-                                                        )}
-                                                    </button>
+                                                    <div className="treinamentos-certificados-acoes-documento__linha-superior">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setCertificadosAbertos((atual) => ({
+                                                                    ...atual,
+                                                                    [itemKey]: !atual[itemKey],
+                                                                }))
+                                                            }
+                                                            className="treinamentos-certificados-acao treinamentos-certificados-acao--rever bg-white text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50"
+                                                        >
+                                                            {aberto ? (
+                                                                <>
+                                                                    <ChevronUp className="h-4 w-4" />
+                                                                    Ocultar data
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <ChevronDown className="h-4 w-4" />
+                                                                    Alterar data
+                                                                </>
+                                                            )}
+                                                        </button>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={(evento) => {
+                                                                evento.stopPropagation();
+                                                                onAbrirHistoricoCertificado?.(d);
+                                                            }}
+                                                            className="treinamentos-certificados-acao treinamentos-certificados-acao--historico bg-white text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50"
+                                                            aria-label={`Histórico de versões de ${d?.treinamento?.nome || "documento"}`}
+                                                            title="Histórico de versões"
+                                                        >
+                                                            <History className="h-4 w-4" />
+                                                            <span>Histórico</span>
+                                                        </button>
+                                                    </div>
 
                                                     <button
                                                         onClick={() => onVisualizarCertificado(d)}
                                                         className="treinamentos-certificados-acao treinamentos-certificados-acao--abrir bg-slate-950 text-white hover:bg-slate-800"
                                                     >
-                                                        Abrir
+                                                        Abrir documento
                                                     </button>
 
                                                     <button

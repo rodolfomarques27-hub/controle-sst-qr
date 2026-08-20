@@ -210,13 +210,36 @@ export async function enviarArquivoCertificado({ supabase, arquivo, colaborador,
         throw new Error("Treinamento/documento inválido para organizar o certificado no Storage.");
     }
 
-    const caminho = `${codigoPasta}/${treinamentoIdSeguro}/${Date.now()}-${nomeSeguro}`;
+    /*
+     * CERT-HIST-G1-R2-F1
+     *
+     * Todos os certificados/documentos persistidos em
+     * public.certificados recebem identidade física imutável.
+     *
+     * timestamp + randomUUID:
+     * - evita reutilização do caminho;
+     * - permite coexistência das versões.
+     *
+     * upsert:false:
+     * - impede sobrescrita silenciosa.
+     */
+    const identificadorVersao =
+        globalThis.crypto?.randomUUID?.();
+
+    if (!identificadorVersao) {
+        throw new Error(
+            "O navegador não disponibiliza crypto.randomUUID para versionar o certificado/documento."
+        );
+    }
+
+    const caminho =
+        `${codigoPasta}/${treinamentoIdSeguro}/${Date.now()}-${identificadorVersao}-${nomeSeguro}`;
 
     const { error } = await supabase.storage
         .from(BUCKET_CERTIFICADOS_TREINAMENTOS)
         .upload(caminho, arquivoUpload, {
             cacheControl: "3600",
-            upsert: true,
+            upsert: false,
             contentType: arquivoUpload.type || "application/pdf",
         });
 
