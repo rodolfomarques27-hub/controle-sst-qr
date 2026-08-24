@@ -7388,9 +7388,9 @@ export function DdsPage({
 
     {cardDdsAberto("historicoMaoObra") && (
         <>
-        <div className="flex w-full flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-3 xl:flex-nowrap" onClick={(evento) => evento.stopPropagation()}>
-            <div className="flex min-w-0 flex-1 flex-wrap items-end gap-2 xl:flex-none xl:flex-nowrap">
-            <label className="block w-full sm:w-[290px] xl:w-[290px]">
+        <div className="flex w-full flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-3 xl:grid xl:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_130px_auto_auto_auto_auto] xl:gap-2" onClick={(evento) => evento.stopPropagation()}>
+            <div className="flex min-w-0 flex-[1_1_900px] flex-wrap items-end gap-2 xl:contents">
+            <label className="block w-full sm:w-[290px] xl:w-auto xl:min-w-0">
                 <span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500">
                     Empresa
                 </span>
@@ -7411,7 +7411,7 @@ export function DdsPage({
                 </select>
             </label>
 
-            <label className="block w-full sm:w-[320px] xl:w-[300px]">
+            <label className="block w-full sm:w-[320px] xl:w-auto xl:min-w-0">
                 <span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500">
                     Obra
                 </span>
@@ -7438,7 +7438,7 @@ export function DdsPage({
                 </select>
             </label>
 
-            <label className="block w-full sm:w-[130px]">
+            <label className="block w-full sm:w-[130px] xl:w-auto xl:min-w-0">
                 <span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500">
                     Mês/Ano
                 </span>
@@ -7453,18 +7453,18 @@ export function DdsPage({
                 type="button"
                 onClick={buscarHistoricoMensalMaoDeObraDds}
                 disabled={carregandoHistoricoMensalMaoDeObraDds || !empresaHistoricoSelecionadaDds}
-                className="h-8 min-w-[170px] shrink-0 whitespace-nowrap rounded-xl bg-slate-950 px-4 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-8 min-w-[170px] shrink-0 whitespace-nowrap rounded-xl bg-slate-950 px-4 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 xl:min-w-0 xl:px-3 xl:text-[11px]"
             >
                 {carregandoHistoricoMensalMaoDeObraDds ? "Buscando..." : "Buscar DDS do mês"}
             </button>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 xl:flex-nowrap">
+            <div className="flex w-full max-w-full flex-wrap items-center gap-2 lg:ml-auto lg:w-auto lg:justify-end xl:contents">
             <button
                 type="button"
                 onClick={gerarAvaliacaoMensalDds}
                 disabled={!historicoMensalMaoDeObraDds.length}
-                className="h-8 min-w-[180px] shrink-0 whitespace-nowrap rounded-xl bg-indigo-600 px-4 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-indigo-600/20 transition hover:-translate-y-0.5 hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-40"
+                className="h-8 min-w-[180px] shrink-0 whitespace-nowrap rounded-xl bg-indigo-600 px-4 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-indigo-600/20 transition hover:-translate-y-0.5 hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-40 xl:min-w-0 xl:px-3 xl:text-[11px]"
             >
                 Gerar avaliação mensal
             </button>
@@ -7472,7 +7472,7 @@ export function DdsPage({
             <button
                 type="button"
                 onClick={imprimirHistoricoMensalMaoDeObraDds}
-                className="h-8 min-w-[180px] shrink-0 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 text-xs font-black uppercase tracking-wide text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
+                className="h-8 min-w-[180px] shrink-0 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 text-xs font-black uppercase tracking-wide text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 xl:min-w-0 xl:px-3 xl:text-[11px]"
             >
                 Imprimir PDF mensal
             </button>
@@ -7480,7 +7480,7 @@ export function DdsPage({
             <button
                 type="button"
                 onClick={exportarHistoricoMensalMaoDeObraDds}
-                className="h-8 min-w-[190px] shrink-0 whitespace-nowrap rounded-xl bg-emerald-600 px-4 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-emerald-600/20 transition hover:-translate-y-0.5 hover:bg-emerald-700"
+                className="h-8 min-w-[190px] shrink-0 whitespace-nowrap rounded-xl bg-emerald-600 px-4 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-emerald-600/20 transition hover:-translate-y-0.5 hover:bg-emerald-700 xl:min-w-0 xl:px-3 xl:text-[11px]"
             >
                 Exportar Excel mensal
             </button>
