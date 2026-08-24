@@ -301,6 +301,32 @@ export default function criarSuporteDds() {
     function obterNomeEmpresaColaboradorDds(colaborador = null) {
         if (!colaborador || typeof colaborador !== "object") return "";
 
+        const empresaExibicao = obterValorTextoDds(
+            colaborador?.empresaExibicao,
+            colaborador?.empresa_exibicao
+        );
+
+        if (empresaExibicao) {
+            const partesSubcontratada =
+                String(empresaExibicao).split(
+                    /\bsubcontratada\s*:/i
+                );
+
+            if (partesSubcontratada.length > 1) {
+                const nomeSubcontratada =
+                    String(
+                        partesSubcontratada[
+                            partesSubcontratada.length - 1
+                        ] ||
+                        ""
+                    ).trim();
+
+                if (nomeSubcontratada) {
+                    return nomeSubcontratada;
+                }
+            }
+        }
+
         if (colaborador.empresa && typeof colaborador.empresa === "object") {
             return obterNomeEmpresaObjetoDds(colaborador.empresa);
         }
@@ -337,15 +363,34 @@ export default function criarSuporteDds() {
         const idEmpresa = obterIdEmpresaObjetoDds(empresa);
         const idColaboradorEmpresa = obterIdEmpresaColaboradorDds(colaborador);
 
-        if (idEmpresa && idColaboradorEmpresa && String(idEmpresa) === String(idColaboradorEmpresa)) {
-            return true;
+        const nomeEmpresa =
+            normalizarComparacaoDds(
+                obterNomeEmpresaObjetoDds(empresa)
+            );
+
+        const nomeEmpresaColaborador =
+            normalizarComparacaoDds(
+                obterNomeEmpresaColaboradorDds(colaborador)
+            );
+
+        if (
+            nomeEmpresa &&
+            nomeEmpresaColaborador
+        ) {
+            return (
+                nomeEmpresa ===
+                nomeEmpresaColaborador
+            );
         }
 
-        const nomeEmpresa = normalizarComparacaoDds(obterNomeEmpresaObjetoDds(empresa));
-        const nomeEmpresaColaborador = normalizarComparacaoDds(obterNomeEmpresaColaboradorDds(colaborador));
-
-        if (nomeEmpresa && nomeEmpresaColaborador && nomeEmpresa === nomeEmpresaColaborador) {
-            return true;
+        if (
+            idEmpresa &&
+            idColaboradorEmpresa
+        ) {
+            return (
+                String(idEmpresa) ===
+                String(idColaboradorEmpresa)
+            );
         }
 
         return false;

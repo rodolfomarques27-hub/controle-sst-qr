@@ -2459,6 +2459,7 @@ export function DdsPage({
     const [carregandoScannerDds, setCarregandoScannerDds] = useState(false);
     const [erroScannerDds, setErroScannerDds] = useState("");
     const [registrosDisponiveisDds, setRegistrosDisponiveisDds] = useState([]);
+    const [documentosSalvosDds, setDocumentosSalvosDds] = useState(null);
     const [carregandoRegistrosDisponiveisDds, setCarregandoRegistrosDisponiveisDds] = useState(false);
     const [erroListaRegistrosDds, setErroListaRegistrosDds] = useState("");
     const [empresaFiltroRegistrosDds, setEmpresaFiltroRegistrosDds] = useState("");
@@ -3366,6 +3367,81 @@ export function DdsPage({
         );
     }, [registrosDisponiveisDds]);
 
+    const registroIdsComDocumentoDds = useMemo(() => {
+        if (!Array.isArray(documentosSalvosDds)) {
+            return null;
+        }
+
+        return new Set(
+            documentosSalvosDds
+                .map((documento) =>
+                    String(
+                        documento?.registro_id ||
+                        documento?.registroId ||
+                        ""
+                    ).trim()
+                )
+                .filter(Boolean)
+        );
+    }, [documentosSalvosDds]);
+
+    const registroSelecionadoStatusDocumentoDds = useMemo(() => {
+        const codigo =
+            String(
+                codigoConferenciaDds ||
+                ""
+            )
+                .trim()
+                .toUpperCase();
+
+        if (!codigo) {
+            return null;
+        }
+
+        return (
+            registrosDisponiveisDds.find(
+                (registro) =>
+                    String(
+                        registro?.codigo ||
+                        ""
+                    )
+                        .trim()
+                        .toUpperCase() ===
+                    codigo
+            ) ||
+            null
+        );
+    }, [
+        codigoConferenciaDds,
+        registrosDisponiveisDds,
+    ]);
+
+    const corStatusCodigoConferenciaDds = (() => {
+        if (
+            !codigoConferenciaDds ||
+            registroIdsComDocumentoDds === null ||
+            !registroSelecionadoStatusDocumentoDds
+        ) {
+            return undefined;
+        }
+
+        const registroId =
+            String(
+                registroSelecionadoStatusDocumentoDds?.id ||
+                ""
+            ).trim();
+
+        if (!registroId) {
+            return undefined;
+        }
+
+        return registroIdsComDocumentoDds.has(
+            registroId
+        )
+            ? "#15803d"
+            : "#b91c1c";
+    })();
+
     const registrosFiltradosDds = useMemo(() => {
         const empresaSelecionada =
             String(
@@ -3863,9 +3939,38 @@ export function DdsPage({
     ]);
 
     const colaboradoresCadastradosConferenciaDds = useMemo(() => {
-        const listaColaboradores = Array.isArray(colaboradores)
-            ? colaboradores
-            : [];
+        const empresaIdConferenciaDds =
+            obterValorTextoDds(
+                registroScannerDds?.empresaId,
+                registroScannerDds?.empresa_id,
+                registroScannerDds?.dados?.empresaId,
+                registroScannerDds?.dados?.empresa_id
+            );
+
+        const empresaNomeConferenciaDds =
+            obterValorTextoDds(
+                registroScannerDds?.empresaNome,
+                registroScannerDds?.empresa_nome,
+                registroScannerDds?.dados?.empresaNome,
+                registroScannerDds?.dados?.empresa_nome
+            );
+
+        const empresaReferenciaConferenciaDds =
+            (
+                empresaIdConferenciaDds ||
+                empresaNomeConferenciaDds
+            )
+                ? {
+                    id: empresaIdConferenciaDds,
+                    nome: empresaNomeConferenciaDds,
+                }
+                : empresaSelecionadaDds;
+
+        const listaColaboradores =
+            filtrarColaboradoresPorEmpresaDds(
+                colaboradores,
+                empresaReferenciaConferenciaDds
+            );
 
         const codigosJaIncluidosDds = new Set(
             participantesRegistroScannerDds
@@ -4022,7 +4127,9 @@ export function DdsPage({
         );
     }, [
         colaboradores,
+        empresaSelecionadaDds,
         participantesRegistroScannerDds,
+        registroScannerDds,
     ]);
 
     const funcoesCadastradasConferenciaDds = useMemo(() => {
@@ -5995,9 +6102,18 @@ export function DdsPage({
                                             setErroLeituraArquivoScannerDds("");
                                             setMensagemDocumentoPersistidoDds(null);
                                         }}
+                                        style={{
+                                            color:
+                                                corStatusCodigoConferenciaDds,
+                                        }}
                                         className="mt-2 h-10 w-full min-w-0 rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 text-sm font-black text-slate-800 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
                                     >
-                                        <option value="">
+                                        <option
+                                            value=""
+                                            style={{
+                                                color: "#1e293b",
+                                            }}
+                                        >
                                             {carregandoRegistrosDisponiveisDds
                                                 ? "Carregando DDS cadastrados..."
                                                 : registrosFiltradosDds.length > 0
@@ -6019,6 +6135,11 @@ export function DdsPage({
                                             ) && (
                                                 <option
                                                     value={codigoConferenciaDds}
+                                                    style={{
+                                                        color:
+                                                            corStatusCodigoConferenciaDds ||
+                                                            "#1e293b",
+                                                    }}
                                                 >
                                                     {codigoConferenciaDds} — código atual
                                                 </option>
@@ -6032,6 +6153,19 @@ export function DdsPage({
                                                         registro.codigo
                                                     }
                                                     value={registro.codigo}
+                                                    style={{
+                                                        color:
+                                                            registroIdsComDocumentoDds === null
+                                                                ? "#1e293b"
+                                                                : registroIdsComDocumentoDds.has(
+                                                                    String(
+                                                                        registro?.id ||
+                                                                        ""
+                                                                    ).trim()
+                                                                )
+                                                                    ? "#15803d"
+                                                                    : "#b91c1c",
+                                                    }}
                                                 >
                                                     {registro.codigo}
                                                     {" — "}
@@ -7799,6 +7933,7 @@ export function DdsPage({
                 supabase={supabase}
                 aberto={cardDdsAberto("historicoPdfs")}
                 onAlternar={() => alternarCardDds("historicoPdfs")}
+                onDocumentosChange={setDocumentosSalvosDds}
             />
 
             <section className="dds-no-print min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-sky-500 bg-white p-4 shadow-sm">

@@ -1239,7 +1239,33 @@ export default function DdsConferenciaAssistidaSection({
                                                         Preenchimento manual
                                                     </option>
 
-                                                    {colaboradoresCadastradosConferenciaDds.map(
+                                                    {colaboradoresCadastradosConferenciaDds
+                                                        .filter((colaborador) => {
+                                                            const chaveColaborador =
+                                                                String(
+                                                                    colaborador?.chaveCadastro ||
+                                                                    ""
+                                                                ).trim();
+
+                                                            if (!chaveColaborador) {
+                                                                return true;
+                                                            }
+
+                                                            return !participantesAdicionaisConferenciaDds.some(
+                                                                (
+                                                                    participanteOutraLinha,
+                                                                    indiceOutraLinha
+                                                                ) =>
+                                                                    indiceOutraLinha !== indice &&
+                                                                    String(
+                                                                        participanteOutraLinha
+                                                                            ?.colaboradorCadastroChave ||
+                                                                        ""
+                                                                    ).trim() ===
+                                                                        chaveColaborador
+                                                            );
+                                                        })
+                                                        .map(
                                                         (colaborador) => (
                                                             <option
                                                                 key={colaborador.chaveCadastro}
