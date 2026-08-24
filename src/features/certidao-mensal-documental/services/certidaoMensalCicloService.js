@@ -549,6 +549,119 @@ export function criarServicoCicloCertidaoMensal({
             clienteSupabase,
         );
 
+    async function obterCompetenciaExistente({
+        empresaId,
+        competencia,
+    } = {}) {
+        const empresaIdNormalizado =
+            normalizarUuid(
+                empresaId,
+                "Identificador da empresa",
+            );
+
+        const competenciaNormalizada =
+            normalizarCompetenciaCiclo(
+                competencia,
+            );
+
+        if (
+            typeof cliente.from !==
+            "function"
+        ) {
+            throw new Error(
+                "Cliente Supabase sem suporte à leitura da competência.",
+            );
+        }
+
+        const resposta =
+            await cliente
+                .from(
+                    "certidao_mensal_competencias",
+                )
+                .select(
+                    [
+                        "id",
+                        "empresa_id",
+                        "competencia",
+                        "status",
+                        "contrato_versao",
+                        "fechado_em",
+                        "fechado_por",
+                        "atualizado_em",
+                    ].join(","),
+                )
+                .eq(
+                    "empresa_id",
+                    empresaIdNormalizado,
+                )
+                .eq(
+                    "competencia",
+                    competenciaNormalizada,
+                )
+                .maybeSingle();
+
+        if (resposta?.error) {
+            throw resposta.error;
+        }
+
+        const registro =
+            resposta?.data ||
+            null;
+
+        if (!registro?.id) {
+            return null;
+        }
+
+        return {
+            competenciaId:
+                textoSeguro(
+                    registro.id,
+                    60,
+                ),
+
+            empresaId:
+                textoSeguro(
+                    registro.empresa_id,
+                    60,
+                ),
+
+            competencia:
+                textoSeguro(
+                    registro.competencia,
+                    30,
+                ),
+
+            status:
+                textoSeguro(
+                    registro.status,
+                    40,
+                ),
+
+            contratoVersao:
+                Number(
+                    registro.contrato_versao,
+                ) || 0,
+
+            criada:
+                false,
+
+            reutilizada:
+                true,
+
+            fechadoEm:
+                registro.fechado_em ||
+                null,
+
+            fechadoPor:
+                registro.fechado_por ||
+                null,
+
+            atualizadoEm:
+                registro.atualizado_em ||
+                null,
+        };
+    }
+
     async function obterOuCriarCompetencia({
         empresaId,
         competencia,
@@ -854,6 +967,7 @@ export function criarServicoCicloCertidaoMensal({
     }
 
     return Object.freeze({
+        obterCompetenciaExistente,
         obterOuCriarCompetencia,
         listarItensAutomaticos,
         consolidarRelacaoEmpregados,

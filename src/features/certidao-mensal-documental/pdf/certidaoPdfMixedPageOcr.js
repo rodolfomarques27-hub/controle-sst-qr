@@ -305,6 +305,252 @@ async function executarOcrPagina({
     };
 }
 
+// ============================================================
+// SAFE_SCAN_OCR_CAMADA_SUSPEITA_CERTIDAO_V1
+//
+// OCR corretivo exclusivo da Certidão Mensal.
+// Não altera OCR compartilhado e não altera o PDF original.
+// ============================================================
+
+export async function repararCamadaTextualSuspeitaCertidao({
+    arquivo,
+} = {}) {
+    const base = {
+        aplicada: false,
+        texto: "",
+        paginasOcr: [],
+        totalPaginas: 0,
+        confiancaOcr: null,
+        avisos: [],
+    };
+
+    if (
+        !arquivo ||
+        typeof arquivo.arrayBuffer !==
+            "function"
+    ) {
+        return base;
+    }
+
+    if (
+        typeof document ===
+        "undefined"
+    ) {
+        return {
+            ...base,
+            avisos: [
+                "O reparo OCR de camada textual suspeita exige execução no navegador.",
+            ],
+        };
+    }
+
+    let tarefaPdf =
+        null;
+
+    try {
+        const pdfjsLib =
+            await carregarPdfJsDocumental();
+
+        const buffer =
+            await arquivo.arrayBuffer();
+
+        tarefaPdf =
+            pdfjsLib.getDocument({
+                data:
+                    new Uint8Array(
+                        buffer.slice(0)
+                    ),
+                disableFontFace:
+                    true,
+                useSystemFonts:
+                    true,
+                verbosity:
+                    0,
+            });
+
+        const pdf =
+            await tarefaPdf.promise;
+
+        const totalPaginas =
+            Number(
+                pdf?.numPages ||
+                0
+            );
+
+        if (!totalPaginas) {
+            return {
+                ...base,
+                avisos: [
+                    "O reparo OCR exclusivo da Certidão não encontrou páginas no PDF.",
+                ],
+            };
+        }
+
+        if (
+            totalPaginas >
+            2
+        ) {
+            return {
+                ...base,
+                totalPaginas,
+                avisos: [
+                    (
+                        "A camada textual parece suspeita, mas a substituição integral por OCR " +
+                        "foi bloqueada porque o PDF possui mais de 2 páginas."
+                    ),
+                    (
+                        "O bloqueio evita substituir documento extenso por leitura OCR parcial."
+                    ),
+                ],
+            };
+        }
+
+        const textos =
+            [];
+
+        const paginasOcr =
+            [];
+
+        const confiancas =
+            [];
+
+        for (
+            let numeroPagina = 1;
+            numeroPagina <= totalPaginas;
+            numeroPagina += 1
+        ) {
+            const leituraPagina =
+                await executarOcrPagina({
+                    pdf,
+                    numeroPagina,
+                });
+
+            if (
+                !leituraPagina.texto
+            ) {
+                continue;
+            }
+
+            textos.push(
+                (
+                    "Página " +
+                    numeroPagina +
+                    ": " +
+                    leituraPagina.texto
+                )
+            );
+
+            paginasOcr.push(
+                numeroPagina
+            );
+
+            if (
+                Number.isFinite(
+                    leituraPagina.confianca
+                ) &&
+                leituraPagina.confianca >
+                    0
+            ) {
+                confiancas.push(
+                    leituraPagina.confianca
+                );
+            }
+        }
+
+        if (
+            textos.length !==
+            totalPaginas
+        ) {
+            return {
+                ...base,
+                totalPaginas,
+                paginasOcr,
+                avisos: [
+                    (
+                        "O OCR exclusivo da Certidão não conseguiu obter texto utilizável " +
+                        "em todas as páginas do PDF suspeito."
+                    ),
+                    (
+                        "A camada textual original foi mantida para conferência humana."
+                    ),
+                ],
+            };
+        }
+
+        const confiancaOcr =
+            confiancas.length
+                ? Math.round(
+                    confiancas.reduce(
+                        (
+                            soma,
+                            valor
+                        ) =>
+                            soma +
+                            valor,
+                        0
+                    ) /
+                    confiancas.length
+                )
+                : null;
+
+        return {
+            aplicada: true,
+
+            texto:
+                textos
+                    .join(" ")
+                    .trim(),
+
+            paginasOcr,
+
+            totalPaginas,
+
+            confiancaOcr,
+
+            avisos: [
+                (
+                    "OCR corretivo exclusivo da Certidão executado em " +
+                    paginasOcr.length +
+                    " página(s)."
+                ),
+                (
+                    "O PDF original não foi alterado; somente a camada técnica de leitura " +
+                    "foi substituída quando o OCR apresentou texto utilizável."
+                ),
+            ],
+        };
+    }
+    catch (error) {
+        return {
+            ...base,
+            avisos: [
+                (
+                    "Falha no reparo OCR exclusivo da Certidão: " +
+                    String(
+                        error?.message ||
+                        "erro desconhecido"
+                    ) +
+                    "."
+                ),
+            ],
+        };
+    }
+    finally {
+        if (
+            tarefaPdf &&
+            typeof tarefaPdf.destroy ===
+                "function"
+        ) {
+            try {
+                await tarefaPdf.destroy();
+            }
+            catch {
+                // Liberação sem interferir na leitura.
+            }
+        }
+    }
+}
+
 export async function complementarPdfMistoCertidao({
     arquivo,
     textoExtraido = "",

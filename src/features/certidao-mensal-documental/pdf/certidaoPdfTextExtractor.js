@@ -9,6 +9,7 @@ import {
 } from "../../../services/documentosOcrPdfJsService.js";
 import {
     complementarPdfMistoCertidao,
+    repararCamadaTextualSuspeitaCertidao,
 } from "./certidaoPdfMixedPageOcr.js";
 
 async function extrairTextoEstruturalGfdPdfJs(
@@ -183,6 +184,237 @@ function normalizarAvisos(avisos = []) {
     ];
 }
 
+// SAFE_SCAN_QUALIDADE_TEXTO_CERTIDAO_V1_BEGIN
+function avaliarQualidadeTextoCertidao(
+    texto = ""
+) {
+    const normalizado =
+        String(
+            texto ||
+            ""
+        )
+            .normalize("NFD")
+            .replace(
+                /[\u0300-\u036f]/g,
+                ""
+            )
+            .toUpperCase()
+            .replace(
+                /\s+/g,
+                " "
+            )
+            .trim();
+
+    const semEspacos =
+        normalizado.replace(
+            /\s+/g,
+            ""
+        );
+
+    if (!semEspacos) {
+        return {
+            suspeita: false,
+            quantidadeCaracteres: 0,
+            quantidadeUnidades: 0,
+            palavrasLongas: 0,
+            palavrasComVogal: 0,
+            marcadoresSemanticos: 0,
+            proporcaoAlfanumerica: 0,
+            proporcaoSimbolos: 0,
+            proporcaoUnidadesCurtas: 0,
+            proporcaoPalavrasComVogal: 0,
+        };
+    }
+
+    const alfanumericos =
+        (
+            semEspacos.match(
+                /[A-Z0-9]/g
+            ) ||
+            []
+        ).length;
+
+    const simbolos =
+        Math.max(
+            0,
+            semEspacos.length -
+                alfanumericos
+        );
+
+    const unidades =
+        normalizado
+            .split(" ")
+            .filter(Boolean);
+
+    const palavras =
+        normalizado.match(
+            /\b[A-Z]{3,}\b/g
+        ) ||
+        [];
+
+    const palavrasComVogal =
+        palavras.filter(
+            (palavra) =>
+                /[AEIOU]/.test(
+                    palavra
+                )
+        );
+
+    const unidadesCurtas =
+        unidades.filter(
+            (unidade) =>
+                unidade
+                    .replace(
+                        /[^A-Z0-9]/g,
+                        ""
+                    )
+                    .length <=
+                2
+        );
+
+    const marcadores =
+        [
+            "CERTIDAO",
+            "CNPJ",
+            "CPF",
+            "EMPRESA",
+            "PAGAMENTO",
+            "SALARIO",
+            "FOLHA",
+            "COMPETENCIA",
+            "BANCO",
+            "VALOR",
+            "FGTS",
+            "INSS",
+            "TRABALH",
+            "VALIDADE",
+            "EMISSAO",
+            "SISPAG",
+            "TRANSFERENCIA",
+            "CONTA",
+            "BENEFICIARIO",
+            "FAVORECIDO",
+        ];
+
+    const marcadoresSemanticos =
+        marcadores.filter(
+            (marcador) =>
+                normalizado.includes(
+                    marcador
+                )
+        ).length;
+
+    const proporcaoAlfanumerica =
+        semEspacos.length
+            ? alfanumericos /
+                semEspacos.length
+            : 0;
+
+    const proporcaoSimbolos =
+        semEspacos.length
+            ? simbolos /
+                semEspacos.length
+            : 0;
+
+    const proporcaoUnidadesCurtas =
+        unidades.length
+            ? unidadesCurtas.length /
+                unidades.length
+            : 0;
+
+    const proporcaoPalavrasComVogal =
+        palavras.length
+            ? palavrasComVogal.length /
+                palavras.length
+            : 0;
+
+    const possuiVolumeMinimo =
+        normalizado.length >=
+        80;
+
+    const poucaSemantica =
+        marcadoresSemanticos <
+        2;
+
+    const estruturaSuspeita =
+        (
+            proporcaoAlfanumerica <
+            0.62
+        ) ||
+        (
+            proporcaoSimbolos >
+            0.30
+        ) ||
+        (
+            unidades.length >=
+                24 &&
+            palavras.length <
+                8
+        ) ||
+        (
+            unidades.length >=
+                24 &&
+            proporcaoUnidadesCurtas >
+                0.55 &&
+            palavras.length <
+                12
+        ) ||
+        (
+            palavras.length >=
+                8 &&
+            proporcaoPalavrasComVogal <
+                0.35
+        );
+
+    return {
+        suspeita:
+            Boolean(
+                possuiVolumeMinimo &&
+                poucaSemantica &&
+                estruturaSuspeita
+            ),
+
+        quantidadeCaracteres:
+            normalizado.length,
+
+        quantidadeUnidades:
+            unidades.length,
+
+        palavrasLongas:
+            palavras.length,
+
+        palavrasComVogal:
+            palavrasComVogal.length,
+
+        marcadoresSemanticos,
+
+        proporcaoAlfanumerica:
+            Number(
+                proporcaoAlfanumerica
+                    .toFixed(4)
+            ),
+
+        proporcaoSimbolos:
+            Number(
+                proporcaoSimbolos
+                    .toFixed(4)
+            ),
+
+        proporcaoUnidadesCurtas:
+            Number(
+                proporcaoUnidadesCurtas
+                    .toFixed(4)
+            ),
+
+        proporcaoPalavrasComVogal:
+            Number(
+                proporcaoPalavrasComVogal
+                    .toFixed(4)
+            ),
+    };
+}
+// SAFE_SCAN_QUALIDADE_TEXTO_CERTIDAO_V1_END
+
 function classificarMetodoLeitura(
     tipoLeitura = ""
 ) {
@@ -243,8 +475,6 @@ export async function extrairTextoCertidaoPdfLocal(
                 validacao.nomeOriginal,
             mimeType:
                 validacao.mimeType,
-            usarOcrQuandoTextoPdfSuspeito:
-                true,
         });
 
     const textoExtraidoOriginal =
@@ -313,16 +543,113 @@ export async function extrairTextoCertidaoPdfLocal(
         }
     }
 
-    const textoExtraido =
+    const textoAntesCorrecao =
         String(
             decodificacaoGfd?.texto ||
             textoExtraidoComComplemento
         ).trim();
 
-    const tipoLeitura =
+    const qualidadeAntesCorrecao =
+        avaliarQualidadeTextoCertidao(
+            textoAntesCorrecao
+        );
+
+    let reparoCamadaSuspeita =
+        null;
+
+    const tipoLeituraOriginal =
         String(
-            leitura?.tipoLeitura || ""
+            leitura?.tipoLeitura ||
+            ""
+        )
+            .trim()
+            .toLowerCase();
+
+    if (
+        tipoLeituraOriginal ===
+            "pdf_texto_local" &&
+        !decodificacaoGfd?.aplicada &&
+        qualidadeAntesCorrecao
+            .suspeita
+    ) {
+        reparoCamadaSuspeita =
+            await repararCamadaTextualSuspeitaCertidao({
+                arquivo,
+            });
+    }
+
+    const textoOcrCorretivo =
+        String(
+            reparoCamadaSuspeita
+                ?.texto ||
+            ""
         ).trim();
+
+    const qualidadeOcrCorretivo =
+        avaliarQualidadeTextoCertidao(
+            textoOcrCorretivo
+        );
+
+    const reparoOcrAceito =
+        Boolean(
+            reparoCamadaSuspeita
+                ?.aplicada &&
+            textoOcrCorretivo &&
+            !qualidadeOcrCorretivo
+                .suspeita &&
+            qualidadeOcrCorretivo
+                .palavrasLongas >=
+                4
+        );
+
+    const textoExtraido =
+        reparoOcrAceito
+            ? textoOcrCorretivo
+            : textoAntesCorrecao;
+
+    const tipoLeitura =
+        reparoOcrAceito
+            ? "ocr_imagem_local"
+            : String(
+                leitura?.tipoLeitura ||
+                ""
+            ).trim();
+
+    const avisosQualidade =
+        [];
+
+    if (
+        qualidadeAntesCorrecao
+            .suspeita
+    ) {
+        avisosQualidade.push(
+            (
+                "A Certidão detectou uma camada textual não vazia, porém semanticamente suspeita " +
+                "e tentou um fallback OCR local isolado deste módulo."
+            )
+        );
+    }
+
+    if (reparoOcrAceito) {
+        avisosQualidade.push(
+            (
+                "O OCR corretivo apresentou estrutura textual superior à camada PDF.js suspeita " +
+                "e passou a ser usado somente para a análise técnica."
+            )
+        );
+    }
+    else if (
+        qualidadeAntesCorrecao
+            .suspeita &&
+        reparoCamadaSuspeita
+    ) {
+        avisosQualidade.push(
+            (
+                "O fallback OCR não apresentou texto suficientemente melhor; " +
+                "a leitura original foi mantida e o documento continua sujeito à revisão."
+            )
+        );
+    }
 
     const erro =
         String(
@@ -339,6 +666,9 @@ export async function extrairTextoCertidaoPdfLocal(
                 ?.avisos || []),
             ...(decodificacaoGfd
                 ?.avisos || []),
+            ...(reparoCamadaSuspeita
+                ?.avisos || []),
+            ...avisosQualidade,
         ]);
 
     return {
@@ -351,11 +681,13 @@ export async function extrairTextoCertidaoPdfLocal(
             Boolean(leitura?.executado),
         tipoLeitura,
         metodo:
-            complementoPdfMisto?.aplicada
-                ? "pdf_ocr_misto_local"
-                : classificarMetodoLeitura(
-                    tipoLeitura
-                ),
+            reparoOcrAceito
+                ? "ocr_local_tesseract"
+                : complementoPdfMisto?.aplicada
+                    ? "pdf_ocr_misto_local"
+                    : classificarMetodoLeitura(
+                        tipoLeitura
+                    ),
         arquivoNome:
             validacao.nomeOriginal,
         mimeType:
@@ -364,6 +696,7 @@ export async function extrairTextoCertidaoPdfLocal(
             validacao.extensao,
         textoExtraido,
         textoPrevia:
+            reparoOcrAceito ||
             decodificacaoGfd?.aplicada
                 ? textoExtraido
                 : String(
@@ -372,56 +705,107 @@ export async function extrairTextoCertidaoPdfLocal(
                     ""
                 ).trim(),
         resumo:
-            String(
-                leitura?.resumo || ""
-            ).trim(),
+            reparoOcrAceito
+                ? ""
+                : String(
+                    leitura?.resumo ||
+                    ""
+                ).trim(),
         resumoTextual:
-            String(
-                leitura?.resumoTextual || ""
-            ).trim(),
+            reparoOcrAceito
+                ? ""
+                : String(
+                    leitura?.resumoTextual ||
+                    ""
+                ).trim(),
         camposExtraidos:
-            Array.isArray(
-                leitura?.camposExtraidos
-            )
-                ? leitura.camposExtraidos
-                : [],
+            reparoOcrAceito
+                ? []
+                : Array.isArray(
+                    leitura?.camposExtraidos
+                )
+                    ? leitura.camposExtraidos
+                    : [],
         datasEncontradas:
-            Array.isArray(
-                leitura?.datasEncontradas
-            )
-                ? leitura.datasEncontradas
-                : [],
+            reparoOcrAceito
+                ? []
+                : Array.isArray(
+                    leitura?.datasEncontradas
+                )
+                    ? leitura.datasEncontradas
+                    : [],
         datasRelevantesClassificadas:
-            Array.isArray(
-                leitura
-                    ?.datasRelevantesClassificadas
-            )
-                ? leitura
-                    .datasRelevantesClassificadas
-                : [],
+            reparoOcrAceito
+                ? []
+                : Array.isArray(
+                    leitura
+                        ?.datasRelevantesClassificadas
+                )
+                    ? leitura
+                        .datasRelevantesClassificadas
+                    : [],
         paginasLidas:
-            Number(
-                leitura?.paginasLidas || 0
-            ),
+            reparoOcrAceito
+                ? Number(
+                    reparoCamadaSuspeita
+                        ?.paginasOcr
+                        ?.length ||
+                    0
+                )
+                : Number(
+                    leitura?.paginasLidas ||
+                    0
+                ),
         totalPaginas:
-            Number(
-                leitura?.totalPaginas || 0
-            ),
+            reparoOcrAceito
+                ? Number(
+                    reparoCamadaSuspeita
+                        ?.totalPaginas ||
+                    0
+                )
+                : Number(
+                    leitura?.totalPaginas ||
+                    0
+                ),
         confianca:
-            Number(
-                leitura?.confianca || 0
-            ),
+            reparoOcrAceito
+                ? Number(
+                    reparoCamadaSuspeita
+                        ?.confiancaOcr ||
+                    0
+                )
+                : Number(
+                    leitura?.confianca ||
+                    0
+                ),
         textoLimitado:
-            Boolean(
-                leitura?.textoLimitado
-            ),
+            reparoOcrAceito
+                ? false
+                : Boolean(
+                    leitura?.textoLimitado
+                ),
         comparacaoDatasPermitida:
-            Boolean(
-                leitura
-                    ?.comparacaoDatasPermitida
-            ),
+            reparoOcrAceito
+                ? false
+                : Boolean(
+                    leitura
+                        ?.comparacaoDatasPermitida
+                ),
         quantidadeCaracteres:
             textoExtraido.length,
+        qualidadeTexto: {
+            camadaSuspeitaDetectada:
+                qualidadeAntesCorrecao
+                    .suspeita,
+            correcaoOcrAplicada:
+                reparoOcrAceito,
+            antes:
+                qualidadeAntesCorrecao,
+            depois:
+                reparoOcrAceito
+                    ? qualidadeOcrCorretivo
+                    : qualidadeAntesCorrecao,
+        },
         avisos,
         erro,
         custoExterno: false,

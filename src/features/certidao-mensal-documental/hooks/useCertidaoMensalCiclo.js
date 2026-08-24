@@ -251,9 +251,9 @@ export async function carregarContextoCicloCertidaoMensal({
     }
 
     if (
-        resultado.vigenciaContratual.exigivel &&
+        resultado.competenciaAtual !==
+            null &&
         (
-            !resultado.competenciaAtual ||
             typeof resultado.competenciaAtual !==
                 "object" ||
             Array.isArray(
@@ -262,7 +262,7 @@ export async function carregarContextoCicloCertidaoMensal({
         )
     ) {
         throw new Error(
-            "A competência atual não foi retornada pelo controlador.",
+            "A competência atual retornada pelo controlador é inválida.",
         );
     }
 
@@ -568,24 +568,61 @@ export function useCertidaoMensalCiclo({
                     );
                 }
 
-                const competenciaId =
+                const controlador =
+                    await obterControladorPadrao();
+
+                if (
+                    !controlador ||
+                    typeof controlador
+                        .iniciarCompetencia !==
+                        "function" ||
+                    typeof controlador
+                        .consolidarRelacaoEmpregados !==
+                        "function"
+                ) {
+                    throw new Error(
+                        "O controlador mensal não disponibiliza as operações necessárias para consolidar a Relação de Empregados.",
+                    );
+                }
+
+                let competenciaAtual =
+                    estadoExposto
+                        .competenciaAtual;
+
+                let competenciaId =
                     String(
-                        estadoExposto
-                            .competenciaAtual
+                        competenciaAtual
                             ?.competenciaId ||
                         "",
                     ).trim();
 
                 if (!competenciaId) {
-                    throw new Error(
-                        "A competência atual não possui identificador para consolidar a Relação de Empregados.",
-                    );
+                    competenciaAtual =
+                        await controlador
+                            .iniciarCompetencia({
+                                empresaId:
+                                    contexto.empresaId,
+                                competencia:
+                                    contexto.competencia,
+                            });
+
+                    competenciaId =
+                        String(
+                            competenciaAtual
+                                ?.competenciaId ||
+                            "",
+                        ).trim();
+
+                    if (!competenciaId) {
+                        throw new Error(
+                            "Não foi possível materializar a competência para consolidar a Relação de Empregados.",
+                        );
+                    }
                 }
 
                 const statusCompetencia =
                     String(
-                        estadoExposto
-                            .competenciaAtual
+                        competenciaAtual
                             ?.status ||
                         "",
                     )
@@ -598,20 +635,6 @@ export function useCertidaoMensalCiclo({
                 ) {
                     throw new Error(
                         "A competência está fechada e não permite nova consolidação da Relação de Empregados.",
-                    );
-                }
-
-                const controlador =
-                    await obterControladorPadrao();
-
-                if (
-                    !controlador ||
-                    typeof controlador
-                        .consolidarRelacaoEmpregados !==
-                        "function"
-                ) {
-                    throw new Error(
-                        "O controlador mensal não disponibiliza a consolidação isolada da Relação de Empregados.",
                     );
                 }
 
@@ -654,24 +677,61 @@ export function useCertidaoMensalCiclo({
                     );
                 }
 
-                const competenciaId =
+                const controlador =
+                    await obterControladorPadrao();
+
+                if (
+                    !controlador ||
+                    typeof controlador
+                        .iniciarCompetencia !==
+                        "function" ||
+                    typeof controlador
+                        .consolidarItensAutomaticos !==
+                        "function"
+                ) {
+                    throw new Error(
+                        "O controlador mensal não disponibiliza as operações necessárias para consolidar os itens automáticos.",
+                    );
+                }
+
+                let competenciaAtual =
+                    estadoExposto
+                        .competenciaAtual;
+
+                let competenciaId =
                     String(
-                        estadoExposto
-                            .competenciaAtual
+                        competenciaAtual
                             ?.competenciaId ||
                         "",
                     ).trim();
 
                 if (!competenciaId) {
-                    throw new Error(
-                        "A competência atual não possui identificador para consolidar os itens automáticos.",
-                    );
+                    competenciaAtual =
+                        await controlador
+                            .iniciarCompetencia({
+                                empresaId:
+                                    contexto.empresaId,
+                                competencia:
+                                    contexto.competencia,
+                            });
+
+                    competenciaId =
+                        String(
+                            competenciaAtual
+                                ?.competenciaId ||
+                            "",
+                        ).trim();
+
+                    if (!competenciaId) {
+                        throw new Error(
+                            "Não foi possível materializar a competência para consolidar os itens automáticos.",
+                        );
+                    }
                 }
 
                 const statusCompetencia =
                     String(
-                        estadoExposto
-                            .competenciaAtual
+                        competenciaAtual
                             ?.status ||
                         "",
                     )
@@ -684,20 +744,6 @@ export function useCertidaoMensalCiclo({
                 ) {
                     throw new Error(
                         "A competência está fechada e não permite nova consolidação dos itens automáticos.",
-                    );
-                }
-
-                const controlador =
-                    await obterControladorPadrao();
-
-                if (
-                    !controlador ||
-                    typeof controlador
-                        .consolidarItensAutomaticos !==
-                        "function"
-                ) {
-                    throw new Error(
-                        "O controlador mensal não disponibiliza a consolidação dos itens automáticos.",
                     );
                 }
 

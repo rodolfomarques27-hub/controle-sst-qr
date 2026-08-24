@@ -71,6 +71,20 @@ const carregarConsultaPublicaQrHandlers = () => import("./services/consultaPubli
 const carregarEmpresaDocumentosHandlers = () => import("./services/empresaDocumentosService");
 const carregarObrasEmpresasService = () => import("./services/obrasService");
 
+const CertidaoUploadMassaJobProvider =
+    React.lazy(
+        () =>
+            import(
+                "./features/certidao-mensal-documental/contexts/CertidaoUploadMassaJobContext.jsx"
+            ).then(
+                (modulo) => ({
+                    default:
+                        modulo
+                            .CertidaoUploadMassaJobProvider,
+                })
+            )
+    );
+
 const hoje = new Date();
 const CHAVE_SIDEBAR_COLAPSADA = "safescan:sidebar:collapsed";
 const CHAVE_SIDEBAR_ANTIGA = "menuLateralAbertoSST";
@@ -1360,7 +1374,10 @@ export default function App() {
 
     return (
         <React.Suspense fallback={<AppTransicaoInterna />}>
-            <AppLayout
+            <CertidaoUploadMassaJobProvider
+                supabase={supabase}
+            >
+                <AppLayout
                 nav={nav}
                 tela={tela}
                 menuLateralAberto={menuLateralAberto}
@@ -1455,7 +1472,8 @@ export default function App() {
                         onRedirecionarTelaPermitida={setTela}
                     />
                 </React.Suspense>
-            </AppLayout>
+                </AppLayout>
+            </CertidaoUploadMassaJobProvider>
         </React.Suspense>
     );
 }

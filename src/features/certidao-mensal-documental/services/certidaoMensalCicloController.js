@@ -7,6 +7,7 @@ const UUID_PATTERN =
 
 const METODOS_OBRIGATORIOS =
     Object.freeze([
+        "obterCompetenciaExistente",
         "obterOuCriarCompetencia",
         "listarItensAutomaticos",
         "consolidarRelacaoEmpregados",
@@ -240,12 +241,13 @@ export function criarControladorCicloCertidaoMensal({
 
         const competenciaAtual =
             vigenciaContratual.exigivel
-                ? await iniciarCompetencia({
-                    empresaId:
-                        empresaIdNormalizado,
-                    competencia:
-                        competenciaNormalizada,
-                })
+                ? await servico
+                    .obterCompetenciaExistente({
+                        empresaId:
+                            empresaIdNormalizado,
+                        competencia:
+                            competenciaNormalizada,
+                    })
                 : null;
 
         const itensAutomaticos =

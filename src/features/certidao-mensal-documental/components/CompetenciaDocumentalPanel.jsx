@@ -822,6 +822,7 @@ export function CompetenciaDocumentalPanel({
                                         </select>
                                     )}
 
+                                    <div className="certidao-mensal-doc-row__action-primary">
                                     <button
                                         type="button"
                                         className="certidao-mensal-doc-row__upload"
@@ -861,6 +862,13 @@ export function CompetenciaDocumentalPanel({
                                                         ? "Definir aplicabilidade"
                                                         : documento.acaoLabel}
                                     </button>
+
+                                        {documento.prazoDocumental && (
+                                            <small className="certidao-mensal-doc-row__prazo-documental">
+                                                Prazo: {documento.prazoDocumental}
+                                            </small>
+                                        )}
+                                    </div>
                                 </div>
                             )}
                         </article>

@@ -369,6 +369,7 @@ function validarParametrosEvidencia({
     empresaId,
     competencia,
     tipoEvidencia,
+    colaboradorId = null,
     diagnostico = {},
     payload = {},
     evidenciaSubstituidaId = null,
@@ -400,6 +401,15 @@ function validarParametrosEvidencia({
             tipoEvidencia
         );
 
+    // SAFE_SCAN_EVIDENCIA_COLABORADOR_D2_R1P_R2
+    const colaboradorIdSeguro =
+        colaboradorId
+            ? validarUuid(
+                colaboradorId,
+                "Colaborador"
+            )
+            : null;
+
     const evidenciaSubstituidaIdSeguro =
         evidenciaSubstituidaId
             ? validarUuid(
@@ -422,6 +432,9 @@ function validarParametrosEvidencia({
 
         tipoEvidencia:
             tipoSeguro,
+
+        colaboradorId:
+            colaboradorIdSeguro,
 
         nomeOriginal:
             dadosArquivo
@@ -634,6 +647,9 @@ function criarParametrosRpc({
 
         p_evidencia_substituida_id:
             dados.evidenciaSubstituidaId,
+
+        p_colaborador_id:
+            dados.colaboradorId,
     };
 }
 
@@ -674,6 +690,7 @@ export function criarCertidaoMensalEvidenciaPersistenceService({
         empresaId,
         competencia,
         tipoEvidencia,
+        colaboradorId = null,
         diagnostico = {},
         payload = {},
         evidenciaSubstituidaId = null,
@@ -685,6 +702,7 @@ export function criarCertidaoMensalEvidenciaPersistenceService({
                 empresaId,
                 competencia,
                 tipoEvidencia,
+                colaboradorId,
                 diagnostico,
                 payload,
                 evidenciaSubstituidaId,
@@ -921,6 +939,7 @@ export async function listarEvidenciasAtivasCertidaoMensal({
                 [
                     "id",
                     "item_id",
+                    "colaborador_id",
                     "tipo_evidencia",
                     "bucket_id",
                     "caminho_storage",
@@ -986,6 +1005,11 @@ export async function listarEvidenciasAtivasCertidaoMensal({
             itemId:
                 textoSeguro(
                     registro?.item_id
+                ),
+
+            colaboradorId:
+                textoSeguro(
+                    registro?.colaborador_id
                 ),
 
             tipoEvidencia:

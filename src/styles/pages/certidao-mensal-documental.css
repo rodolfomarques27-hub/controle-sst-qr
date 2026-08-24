@@ -4932,6 +4932,7 @@ em {
 
 .certidao-mensal-perfil-modal__campo select,
 .certidao-mensal-perfil-modal__campo input[type="month"],
+.certidao-mensal-perfil-modal__campo input[type="number"],
 .certidao-mensal-perfil-modal__campo textarea {
     width: 100%;
     box-sizing: border-box;
@@ -4945,7 +4946,8 @@ em {
 }
 
 .certidao-mensal-perfil-modal__campo select,
-.certidao-mensal-perfil-modal__campo input[type="month"] {
+.certidao-mensal-perfil-modal__campo input[type="month"],
+.certidao-mensal-perfil-modal__campo input[type="number"] {
     min-height: 42px;
     padding: 0 0.7rem;
 }
@@ -4959,6 +4961,7 @@ em {
 
 .certidao-mensal-perfil-modal__campo select:focus,
 .certidao-mensal-perfil-modal__campo input[type="month"]:focus,
+.certidao-mensal-perfil-modal__campo input[type="number"]:focus,
 .certidao-mensal-perfil-modal__campo textarea:focus {
     border-color: #159447;
     box-shadow: 0 0 0 3px rgba(21, 148, 71, 0.12);
@@ -6835,4 +6838,1364 @@ em {
     width: var(--certidao-pdf-scroll-mask);
     background: #fff;
     pointer-events: none;
+}
+/* ==========================================================================
+   SafeScan: layout aprovado evidencias complementares
+
+   Mantém somente o comportamento visual validado:
+   - scroll vertical do painel inteiro para Folha de Pagamento;
+   - cabeçalho superior sticky;
+   - Evidências com respiro simétrico;
+   - abas, PDF, dados e regras participam do mesmo fluxo vertical.
+
+   Nenhuma regra de iframe/PDF pertence a este bloco.
+   ========================================================================== */
+
+@media (min-width: 1481px) {
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia:has(> .certidao-folha-evidencias) {
+        display: flex;
+        flex-direction: column;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+        scrollbar-color: #9fb0a5 transparent;
+        scrollbar-width: thin;
+    }
+
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia:has(> .certidao-folha-evidencias)
+    > .certidao-mensal-evidencia__header {
+        position: sticky;
+        z-index: 12;
+        top: 0;
+        flex: 0 0 auto;
+        background: rgba(255, 255, 255, 0.98);
+    }
+
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia:has(> .certidao-folha-evidencias)
+    > .certidao-folha-evidencias {
+        flex: 0 0 auto;
+        margin-inline: 8px;
+    }
+
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia:has(> .certidao-folha-evidencias)
+    > .certidao-mensal-evidencia__tabs,
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia:has(> .certidao-folha-evidencias)
+    > .certidao-mensal-evidencia__toolbar,
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia:has(> .certidao-folha-evidencias)
+    > .certidao-mensal-evidencia__body {
+        flex: 0 0 auto;
+    }
+
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia:has(> .certidao-folha-evidencias)
+    > .certidao-mensal-evidencia__body {
+        min-height: auto;
+        overflow: visible;
+        overscroll-behavior: auto;
+        scrollbar-gutter: auto;
+    }
+
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia:has(> .certidao-folha-evidencias)
+    ::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia:has(> .certidao-folha-evidencias)
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia:has(> .certidao-folha-evidencias)
+    ::-webkit-scrollbar-thumb {
+        border-radius: 999px;
+        background: #9fb0a5;
+    }
+
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia:has(> .certidao-folha-evidencias)
+    ::-webkit-scrollbar-thumb:hover {
+        background: #7f9185;
+    }
+}
+
+/* ======================================================================
+   SafeScan: preview PDF passivo sem scroll concorrente
+
+   O visualizador PDF nativo do navegador possui scroll próprio.
+   Um iframe não propaga seu wheel para o painel React externo.
+
+   Por isso, o PDF embutido funciona somente como prévia visual.
+   A navegação integral é feita por Abrir PDF completo.
+
+   IMPORTANTE:
+   - nenhuma máscara;
+   - nenhum recorte;
+   - nenhum deslocamento;
+   - nenhuma alteração de largura ou zoom.
+   ====================================================================== */
+
+.certidao-mensal-preview-real__frame,
+.certidao-mensal-evidencia__arquivo-frame {
+    pointer-events: none;
+}
+
+.certidao-mensal-preview-real,
+.certidao-mensal-evidencia__arquivo--pdf {
+    cursor: default;
+}
+
+/* ==========================================================================
+   SafeScan: viewer PDF.js definitivo sem iframe
+
+   O PDF passa a ser renderizado em canvas pelo PDF.js.
+   Portanto:
+   - não existe scrollbar interna do Chromium;
+   - não existe iframe concorrendo com o scroll do painel;
+   - não existe máscara lateral;
+   - não existe recorte de scrollbar;
+   - não existe deslocamento artificial do PDF.
+   ========================================================================== */
+
+.certidao-mensal-workspace
+.certidao-mensal-preview-real {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: #f3f5f4;
+}
+
+.certidao-mensal-workspace
+.certidao-mensal-evidencia__arquivo--pdf {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    flex: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    background: #f3f5f4;
+}
+
+.certidao-pdfjs-preview {
+    position: relative;
+    display: block;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    overflow: visible;
+    background: #f3f5f4;
+}
+
+.certidao-pdfjs-preview__paginas {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 8px;
+    box-sizing: border-box;
+}
+
+.certidao-pdfjs-preview__pagina {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    box-sizing: border-box;
+    background: #ffffff;
+    border: 1px solid #dce4df;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(18, 39, 27, 0.08);
+}
+
+.certidao-pdfjs-preview__canvas {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    margin: 0;
+    background: #ffffff;
+}
+
+.certidao-pdfjs-preview.is-resumo
+.certidao-pdfjs-preview__paginas {
+    gap: 0;
+    padding: 0;
+}
+
+.certidao-pdfjs-preview.is-resumo
+.certidao-pdfjs-preview__pagina {
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.certidao-pdfjs-preview__estado {
+    display: flex;
+    width: 100%;
+    min-height: 220px;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 24px;
+    color: #627066;
+    background: #f5f7f6;
+    text-align: center;
+}
+
+.certidao-pdfjs-preview__estado.is-erro {
+    flex-direction: column;
+}
+
+.certidao-pdfjs-preview__estado.is-erro svg {
+    width: 24px;
+    height: 24px;
+}
+
+.certidao-pdfjs-preview__estado.is-erro span {
+    max-width: 460px;
+}
+
+/*
+ * Os iframes foram removidos do JSX.
+ * Estas classes ficam neutralizadas até a limpeza técnica posterior.
+ */
+.certidao-mensal-preview-real__frame,
+.certidao-mensal-evidencia__arquivo-frame {
+    display: none !important;
+}
+
+/* ============================================================
+   SafeScan: hero modal + accordions config documental 2026-08-20
+   ============================================================ */
+
+.certidao-mensal-perfil-modal .certidao-mensal-perfil-modal__hero {
+    position: relative;
+    overflow: hidden;
+    min-height: 104px;
+    align-items: center;
+    border-bottom: 0;
+    background:
+        radial-gradient(
+            circle at 86% -20%,
+            rgba(52, 211, 113, 0.22),
+            transparent 42%
+        ),
+        linear-gradient(
+            128deg,
+            #0b2619 0%,
+            #103b27 58%,
+            #174f34 100%
+        );
+    padding: 1rem 1.15rem 1.08rem;
+    box-shadow:
+        inset 0 -1px 0
+        rgba(255, 255, 255, 0.08);
+}
+
+.certidao-mensal-perfil-modal .certidao-mensal-perfil-modal__hero::after {
+    position: absolute;
+    right: 1.15rem;
+    bottom: 0;
+    left: 5.05rem;
+    height: 3px;
+    border-radius: 999px 999px 0 0;
+    background:
+        linear-gradient(
+            90deg,
+            #30c96b 0%,
+            rgba(48, 201, 107, 0.12) 52%,
+            transparent 88%
+        );
+    content: "";
+}
+
+.certidao-mensal-perfil-modal .certidao-mensal-perfil-modal__hero
+> .certidao-mensal-perfil-modal__icone {
+    border: 1px solid rgba(143, 232, 174, 0.22);
+    background: rgba(255, 255, 255, 0.1);
+    color: #84e8a8;
+    box-shadow:
+        0 10px 24px
+        rgba(0, 0, 0, 0.12);
+}
+
+.certidao-mensal-perfil-modal .certidao-mensal-perfil-modal__hero > div > p {
+    color: #77dda0;
+    font-size: 0.64rem;
+    font-weight: 950;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
+.certidao-mensal-perfil-modal .certidao-mensal-perfil-modal__hero > div > h2 {
+    margin-top: 0.14rem;
+    color: #fff;
+    font-size: 1.08rem;
+    font-weight: 950;
+    letter-spacing: -0.02em;
+}
+
+.certidao-mensal-perfil-modal .certidao-mensal-perfil-modal__hero > div > span {
+    display: block;
+    margin-top: 0.24rem;
+    color: rgba(234, 247, 239, 0.78);
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.certidao-mensal-perfil-modal .certidao-mensal-perfil-modal__hero
+> .certidao-mensal-reenvio-modal__fechar {
+    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.08);
+    color: #f3faf5;
+}
+
+.certidao-mensal-perfil-modal .certidao-mensal-perfil-modal__hero
+> .certidao-mensal-reenvio-modal__fechar:hover {
+    border-color: rgba(255, 255, 255, 0.34);
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.certidao-mensal-perfil-modal__orientacao {
+    margin: 0 0 0.85rem;
+    border-left: 3px solid #2daf61;
+    border-radius: 0 9px 9px 0;
+    background: #f5faf6;
+    padding: 0.62rem 0.78rem;
+    color: #607067;
+    font-size: 0.7rem;
+    font-weight: 650;
+    line-height: 1.45;
+}
+
+.certidao-mensal-perfil-modal__selecao-grupo > header {
+    padding: 0;
+}
+
+.certidao-mensal-perfil-modal__selecao-toggle {
+    display: grid;
+    width: 100%;
+    min-height: 42px;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 0.55rem;
+    border: 0;
+    background: transparent;
+    padding: 0.55rem 0.72rem;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.certidao-mensal-perfil-modal__selecao-toggle > strong {
+    color: #31523d;
+    font-size: 0.68rem;
+    font-weight: 950;
+    letter-spacing: 0.015em;
+}
+
+.certidao-mensal-perfil-modal__selecao-grupo.is-nao
+.certidao-mensal-perfil-modal__selecao-toggle > strong {
+    color: #9b3a32;
+}
+
+.certidao-mensal-perfil-modal__selecao-toggle > span {
+    display: inline-grid;
+    min-width: 24px;
+    height: 24px;
+    place-items: center;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.74);
+    color: inherit;
+    font-size: 0.64rem;
+    font-weight: 900;
+}
+
+.certidao-mensal-perfil-modal__selecao-chevron {
+    width: 16px;
+    height: 16px;
+    transition: transform 180ms ease;
+}
+
+.certidao-mensal-perfil-modal__selecao-chevron.is-open {
+    transform: rotate(180deg);
+}
+
+.certidao-mensal-perfil-modal__selecao-itens.is-collapsed {
+    display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .certidao-mensal-perfil-modal__selecao-chevron {
+        transition: none;
+    }
+}
+
+/* ============================================================
+   SafeScan: 1I-R1 fundo Hero padrão + regra anual
+   ============================================================ */
+
+/*
+ * O background-image é fornecido pelo JSX usando exatamente
+ * certidao-mensal-hero-pastas.webp, o mesmo asset do Hero
+ * principal da Certidão Mensal.
+ */
+.certidao-mensal-perfil-modal
+.certidao-mensal-perfil-modal__hero {
+    background-position: center 48%;
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+/* SafeScan: 1J anual no mesmo padrão visual do mensal */
+.certidao-mensal-perfil-modal__campo input[type="number"] {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #ccd6cf;
+    border-radius: 12px;
+    background: #fff;
+    color: #1f2922;
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 750;
+    outline: none;
+}
+
+.certidao-mensal-perfil-modal__campo input[type="number"]::-webkit-inner-spin-button,
+.certidao-mensal-perfil-modal__campo input[type="number"]::-webkit-outer-spin-button {
+    margin: 0;
+}
+
+/* ============================================================
+ * SAFE_SCAN_CERTIDAO_CONFIG_CNDT_MENSAL_A1_V1
+ * ============================================================ */
+
+.certidao-mensal-perfil-modal__prazo-documental {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    margin-left: 0.45rem;
+    padding: 0.13rem 0.44rem;
+    border: 1px solid rgba(18, 122, 72, 0.24);
+    border-radius: 999px;
+    background: rgba(18, 122, 72, 0.08);
+    color: #126f43;
+    font-size: 0.64rem;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+/* ============================================================
+ * SAFE_SCAN_CERTIDAO_PRAZO_DOCUMENTAL_A2_V1
+ * ============================================================ */
+
+.certidao-mensal-doc-row__action-primary {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.24rem;
+}
+
+.certidao-mensal-doc-row__prazo-documental {
+    display: inline-flex;
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    width: 92px;
+    min-width: 92px;
+    max-width: 92px;
+    height: 18px;
+    min-height: 18px;
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    margin-top: 14px;
+    padding: 0 5px;
+    border: 1px solid rgba(18, 122, 72, 0.25);
+    border-radius: 999px;
+    background: rgba(18, 122, 72, 0.08);
+    color: #126f43;
+    font-size: 0.64rem;
+    font-weight: 800;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* ============================================================
+ * SAFE_SCAN_CERTIDAO_LOADING_B2_V1_R1
+ * ============================================================ */
+
+.certidao-mensal-competencia-loading {
+    grid-column: 1 / -1;
+    min-height: 188px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 20px;
+    padding: 24px 28px;
+    border: 1px solid rgba(15, 118, 65, 0.16);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 10px 26px rgba(15, 23, 42, 0.05);
+}
+
+.certidao-mensal-competencia-loading__cabecalho {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+}
+
+.certidao-mensal-competencia-loading__spinner {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    border: 3px solid rgba(15, 118, 65, 0.14);
+    border-top-color: #0f7641;
+    border-radius: 50%;
+    animation:
+        certidao-mensal-competencia-spin
+        0.75s
+        linear
+        infinite;
+}
+
+.certidao-mensal-competencia-loading__conteudo {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.certidao-mensal-competencia-loading__conteudo strong {
+    color: #17201b;
+    font-size: 0.94rem;
+    font-weight: 900;
+    line-height: 1.2;
+}
+
+.certidao-mensal-competencia-loading__conteudo span {
+    margin-top: 3px;
+    color: #0f7641;
+    font-size: 0.82rem;
+    font-weight: 850;
+    line-height: 1.2;
+}
+
+.certidao-mensal-competencia-loading__conteudo p {
+    margin: 5px 0 0;
+    color: #66736c;
+    font-size: 0.72rem;
+    font-weight: 650;
+    line-height: 1.4;
+}
+
+.certidao-mensal-competencia-loading__skeletons {
+    width: 100%;
+    display: grid;
+    grid-template-columns:
+        minmax(0, 0.82fr)
+        minmax(0, 1.42fr)
+        minmax(0, 1.12fr);
+    gap: 12px;
+}
+
+.certidao-mensal-competencia-loading__skeleton {
+    height: 54px;
+    border-radius: 14px;
+    background:
+        linear-gradient(
+            100deg,
+            rgba(226, 232, 228, 0.72) 20%,
+            rgba(244, 248, 246, 0.96) 40%,
+            rgba(226, 232, 228, 0.72) 60%
+        );
+    background-size: 200% 100%;
+    animation:
+        certidao-mensal-competencia-skeleton
+        1.25s
+        ease-in-out
+        infinite;
+}
+
+@keyframes certidao-mensal-competencia-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes certidao-mensal-competencia-skeleton {
+    0% {
+        background-position: 120% 0;
+    }
+
+    100% {
+        background-position: -80% 0;
+    }
+}
+
+@media (max-width: 760px) {
+    .certidao-mensal-competencia-loading {
+        min-height: 170px;
+        gap: 16px;
+        padding: 22px 18px;
+    }
+
+    .certidao-mensal-competencia-loading__cabecalho {
+        justify-content: flex-start;
+    }
+
+    .certidao-mensal-competencia-loading__skeletons {
+        grid-template-columns: 1fr;
+    }
+
+    .certidao-mensal-competencia-loading__skeleton {
+        height: 34px;
+    }
+}
+
+/* ========================================================================== */
+/* SAFE_SCAN_CERT2_R7E_SNAPSHOT_FOOTER_VISIBLE                                */
+/* Relação mensal: somente a lista de colaboradores rola.                     */
+/* O footer e o botão de confirmação permanecem acessíveis.                   */
+/* ========================================================================== */
+
+@media (min-width: 1024px) {
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia
+    .certidao-mensal-snapshot__colaboradores {
+        min-height: 0;
+        max-height:
+            clamp(
+                210px,
+                31vh,
+                300px
+            );
+        overflow: hidden;
+    }
+
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia
+    .certidao-mensal-snapshot__colaboradores
+    > header {
+        flex: 0 0 auto;
+    }
+
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia
+    .certidao-mensal-snapshot__nomes {
+        min-height: 0;
+        flex: 1 1 auto;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+        scrollbar-width: thin;
+        scrollbar-color:
+            #a5b3aa
+            transparent;
+    }
+
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia
+    .certidao-mensal-snapshot__nomes
+    ::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia
+    .certidao-mensal-snapshot__nomes
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia
+    .certidao-mensal-snapshot__nomes
+    ::-webkit-scrollbar-thumb {
+        border-radius: 999px;
+        background: #a5b3aa;
+    }
+
+    .certidao-mensal-workspace
+    .certidao-mensal-evidencia
+    .certidao-mensal-snapshot__footer {
+        flex: 0 0 auto;
+    }
+}
+
+/* ========================================================================== */
+/* SAFE_SCAN_CERT2_AF3D_FOOTER_FINAL                                      */
+/* Rodapé histórico: resumo, escopo de salvamento e ações.                    */
+/* ========================================================================== */
+
+.certidao-mensal-regularizacao-modal__footer {
+    display: grid;
+    grid-template-columns:
+        minmax(175px, 0.75fr)
+        minmax(300px, 1.35fr)
+        auto;
+    align-items: center;
+    gap: 0.8rem;
+    border-top: 1px solid #dde7e0;
+    background: #fbfdfb;
+    padding: 0.8rem 1rem;
+}
+
+.certidao-mensal-regularizacao-modal__footer-resumo {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.certidao-mensal-regularizacao-modal__footer-resumo strong {
+    color: #176e3d;
+    font-size: 0.82rem;
+    font-weight: 900;
+    line-height: 1.25;
+}
+
+.certidao-mensal-regularizacao-modal__footer-resumo span {
+    margin-top: 0.15rem;
+    color: #69786f;
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.certidao-mensal-regularizacao-modal__footer
+.certidao-mensal-regularizacao-modal__modo {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.12rem;
+    border: 1px solid #ead7a7;
+    border-radius: 12px;
+    background: #fffaf0;
+    padding: 0.55rem 0.7rem;
+    text-align: left;
+    white-space: normal;
+}
+
+.certidao-mensal-regularizacao-modal__modo strong {
+    color: #75520a;
+    font-size: 0.65rem;
+    font-weight: 900;
+    line-height: 1.3;
+}
+
+.certidao-mensal-regularizacao-modal__modo span {
+    color: #816d42;
+    font-size: 0.61rem;
+    font-weight: 650;
+    line-height: 1.38;
+}
+
+.certidao-mensal-regularizacao-modal__footer-acoes {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    white-space: nowrap;
+}
+
+.certidao-mensal-regularizacao-modal__footer
+.is-secundario {
+    border: 1px solid #cdd9d1;
+    background: #ffffff;
+    color: #526158;
+}
+
+.certidao-mensal-regularizacao-modal__footer
+.is-secundario:hover:not(:disabled) {
+    border-color: #aebfb4;
+    background: #f3f7f4;
+    color: #34493c;
+}
+
+.certidao-mensal-regularizacao-modal__footer
+.is-principal {
+    min-width: 142px;
+}
+
+@media (max-width: 900px) {
+    .certidao-mensal-regularizacao-modal__footer {
+        grid-template-columns:
+            minmax(0, 1fr);
+    }
+
+    .certidao-mensal-regularizacao-modal__footer-acoes {
+        justify-content: stretch;
+    }
+
+    .certidao-mensal-regularizacao-modal__footer-acoes button {
+        flex: 1 1 0;
+    }
+}
+
+/* ========================================================================== */
+/* AF3D_FOOTER_CONTINUACAO_COMPACTA                             */
+/* Footer histórico compacto e com hierarquia visual simplificada.            */
+/* ========================================================================== */
+
+.certidao-mensal-regularizacao-modal__footer {
+    display: grid;
+    grid-template-columns:
+        auto
+        minmax(260px, 1fr)
+        auto;
+    align-items: center;
+    gap: 1rem;
+    min-height: 72px;
+    border-top: 1px solid #dde7e0;
+    background: #ffffff;
+    padding: 0.65rem 1rem;
+}
+
+.certidao-mensal-regularizacao-modal__footer-resumo {
+    display: flex;
+    min-width: 205px;
+    align-items: center;
+    flex-direction: row;
+    gap: 0.65rem;
+}
+
+.certidao-mensal-regularizacao-modal__footer-total {
+    display: inline-flex;
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #b9dfc8;
+    border-radius: 12px;
+    background: #eaf7ef;
+    color: #14723d;
+    font-size: 1rem;
+    font-weight: 950;
+    line-height: 1;
+}
+
+.certidao-mensal-regularizacao-modal__footer-resumo-texto {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.08rem;
+}
+
+.certidao-mensal-regularizacao-modal__footer-resumo-texto span {
+    color: #21362a;
+    font-size: 0.69rem;
+    font-weight: 850;
+    line-height: 1.25;
+    white-space: nowrap;
+}
+
+.certidao-mensal-regularizacao-modal__footer-resumo-texto small {
+    color: #6e7d74;
+    font-size: 0.61rem;
+    font-weight: 700;
+    line-height: 1.3;
+    white-space: nowrap;
+}
+
+.certidao-mensal-regularizacao-modal__footer
+.certidao-mensal-regularizacao-modal__modo {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.08rem;
+    border: 0;
+    border-radius: 10px;
+    background: #f5f8f6;
+    padding: 0.5rem 0.7rem 0.5rem 0.85rem;
+    text-align: left;
+    white-space: normal;
+}
+
+.certidao-mensal-regularizacao-modal__footer
+.certidao-mensal-regularizacao-modal__modo::before {
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    left: 0;
+    width: 3px;
+    border-radius: 999px;
+    background: #278c50;
+    content: "";
+}
+
+.certidao-mensal-regularizacao-modal__modo strong {
+    color: #294537;
+    font-size: 0.64rem;
+    font-weight: 900;
+    line-height: 1.25;
+}
+
+.certidao-mensal-regularizacao-modal__modo span {
+    color: #65746b;
+    font-size: 0.6rem;
+    font-weight: 650;
+    line-height: 1.32;
+}
+
+.certidao-mensal-regularizacao-modal__footer-acoes {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    white-space: nowrap;
+}
+
+.certidao-mensal-regularizacao-modal__footer-acoes button {
+    min-height: 40px;
+    border-radius: 10px;
+    padding-inline: 1rem;
+}
+
+.certidao-mensal-regularizacao-modal__footer
+.is-secundario {
+    border: 1px solid #cfdbd3;
+    background: #ffffff;
+    color: #526158;
+}
+
+.certidao-mensal-regularizacao-modal__footer
+.is-principal {
+    min-width: 146px;
+}
+
+@media (max-width: 980px) {
+    .certidao-mensal-regularizacao-modal__footer {
+        grid-template-columns:
+            minmax(0, 1fr)
+            auto;
+    }
+
+    .certidao-mensal-regularizacao-modal__modo {
+        grid-column: 1 / -1;
+        grid-row: 1;
+    }
+
+    .certidao-mensal-regularizacao-modal__footer-resumo {
+        grid-column: 1;
+        grid-row: 2;
+    }
+
+    .certidao-mensal-regularizacao-modal__footer-acoes {
+        grid-column: 2;
+        grid-row: 2;
+    }
+}
+
+@media (max-width: 720px) {
+    .certidao-mensal-regularizacao-modal__footer {
+        grid-template-columns:
+            minmax(0, 1fr);
+    }
+
+    .certidao-mensal-regularizacao-modal__modo,
+    .certidao-mensal-regularizacao-modal__footer-resumo,
+    .certidao-mensal-regularizacao-modal__footer-acoes {
+        grid-column: 1;
+    }
+
+    .certidao-mensal-regularizacao-modal__footer-acoes {
+        justify-content: stretch;
+    }
+
+    .certidao-mensal-regularizacao-modal__footer-acoes button {
+        flex: 1 1 0;
+    }
+}
+
+/* ========================================================================== */
+/* AF3D_FOOTER_CONTINUACAO_GEOMETRIA_FINAL                                           */
+/* Ajuste definitivo de altura, alinhamento e leitura do footer histórico.   */
+/* ========================================================================== */
+
+.certidao-mensal-regularizacao-modal__footer {
+    grid-template-columns:
+        minmax(210px, 0.85fr)
+        minmax(330px, 1.35fr)
+        auto;
+    align-items: center;
+    gap: 0.9rem;
+    min-height: 92px;
+    padding: 0.75rem 1rem;
+    overflow: visible;
+}
+
+.certidao-mensal-regularizacao-modal__footer-resumo {
+    display: flex;
+    min-width: 210px;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.7rem;
+    align-self: center;
+}
+
+.certidao-mensal-regularizacao-modal__footer
+.certidao-mensal-regularizacao-modal__footer-total {
+    display: flex;
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+    flex: 0 0 48px;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    border-radius: 13px;
+    line-height: 1;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.certidao-mensal-regularizacao-modal__footer-resumo-texto {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.16rem;
+    align-self: center;
+}
+
+.certidao-mensal-regularizacao-modal__footer-resumo-texto span,
+.certidao-mensal-regularizacao-modal__footer-resumo-texto small {
+    margin: 0;
+    padding: 0;
+    line-height: 1.3;
+}
+
+.certidao-mensal-regularizacao-modal__footer
+.certidao-mensal-regularizacao-modal__modo {
+    display: flex;
+    min-width: 330px;
+    min-height: 58px;
+    box-sizing: border-box;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.16rem;
+    align-self: center;
+    overflow: visible;
+    padding:
+        0.65rem
+        0.85rem
+        0.65rem
+        1rem;
+}
+
+.certidao-mensal-regularizacao-modal__footer
+.certidao-mensal-regularizacao-modal__modo strong {
+    display: block;
+    margin: 0;
+    padding: 0;
+    font-size: 0.72rem;
+    line-height: 1.25;
+    white-space: normal;
+    overflow: visible;
+}
+
+.certidao-mensal-regularizacao-modal__footer
+.certidao-mensal-regularizacao-modal__modo span {
+    display: block;
+    margin: 0;
+    padding: 0;
+    font-size: 0.63rem;
+    line-height: 1.4;
+    white-space: normal;
+    overflow: visible;
+}
+
+.certidao-mensal-regularizacao-modal__footer-acoes {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    align-self: center;
+    gap: 0.55rem;
+}
+
+.certidao-mensal-regularizacao-modal__footer-acoes button {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding:
+        0.65rem
+        1rem;
+    line-height: 1;
+}
+
+@media (max-width: 980px) {
+    .certidao-mensal-regularizacao-modal__footer {
+        grid-template-columns:
+            minmax(190px, 0.8fr)
+            minmax(0, 1.2fr);
+        min-height: 132px;
+    }
+
+    .certidao-mensal-regularizacao-modal__footer-acoes {
+        grid-column: 1 / -1;
+        justify-content: flex-end;
+    }
+
+    .certidao-mensal-regularizacao-modal__footer
+    .certidao-mensal-regularizacao-modal__modo {
+        min-width: 0;
+    }
+}
+
+/* ========================================================================== */
+/* SAFE_SCAN_CERT2_AF3D_HERO_FINAL                                           */
+/* Hero compacto institucional para o modal de regularização histórica.      */
+/* ========================================================================== */
+
+.certidao-mensal-regularizacao-modal__header {
+    position: relative;
+    display: flex;
+    min-height: 116px;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    overflow: hidden;
+    isolation: isolate;
+    border-bottom:
+        1px solid
+        rgba(56, 167, 102, 0.42);
+    background:
+        radial-gradient(
+            circle at 86% 18%,
+            rgba(71, 190, 121, 0.20),
+            transparent 30%
+        ),
+        linear-gradient(
+            118deg,
+            #071b16 0%,
+            #0b2a20 48%,
+            #124330 100%
+        );
+    padding:
+        1.15rem
+        1.2rem
+        1rem;
+    color: #ffffff;
+}
+
+.certidao-mensal-regularizacao-modal__header::before {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 4px;
+    background:
+        linear-gradient(
+            90deg,
+            #18a75d 0%,
+            #42ca7e 52%,
+            #16864c 100%
+        );
+}
+
+.certidao-mensal-regularizacao-modal__header::after {
+    content: "";
+    position: absolute;
+    z-index: 0;
+    right: -72px;
+    bottom: -95px;
+    width: 260px;
+    height: 180px;
+    border:
+        1px solid
+        rgba(122, 218, 162, 0.12);
+    border-radius: 50%;
+    background:
+        rgba(44, 157, 91, 0.08);
+    pointer-events: none;
+}
+
+.certidao-mensal-regularizacao-modal__header > * {
+    position: relative;
+    z-index: 2;
+}
+
+.certidao-mensal-regularizacao-modal__header
+> div:first-child {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.18rem;
+}
+
+.certidao-mensal-regularizacao-modal__header
+> div:first-child
+> :first-child {
+    display: inline-flex;
+    width: fit-content;
+    min-height: 24px;
+    box-sizing: border-box;
+    align-items: center;
+    margin: 0 0 0.18rem;
+    border:
+        1px solid
+        rgba(101, 219, 151, 0.30);
+    border-radius: 999px;
+    background:
+        rgba(44, 176, 100, 0.14);
+    padding:
+        0.28rem
+        0.62rem;
+    color: #7ee0a7;
+    font-size: 0.62rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: 0.075em;
+    text-transform: uppercase;
+}
+
+.certidao-mensal-regularizacao-modal__header
+> div:first-child
+> :nth-child(2) {
+    margin: 0;
+    color: #ffffff;
+    font-size:
+        clamp(
+            1.05rem,
+            1.35vw,
+            1.28rem
+        );
+    font-weight: 850;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+}
+
+.certidao-mensal-regularizacao-modal__header
+> div:first-child
+> :nth-child(3) {
+    display: inline-flex;
+    width: fit-content;
+    margin: 0.12rem 0 0;
+    color: #aec0b6;
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: 0.035em;
+    text-transform: uppercase;
+}
+
+.certidao-mensal-regularizacao-modal__header
+> button:last-child {
+    display: inline-flex;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    flex: 0 0 40px;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    border:
+        1px solid
+        rgba(255, 255, 255, 0.20);
+    border-radius: 12px;
+    background:
+        rgba(255, 255, 255, 0.08);
+    color: #e6f1eb;
+    box-shadow:
+        inset 0 1px 0
+        rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(8px);
+}
+
+.certidao-mensal-regularizacao-modal__header
+> button:last-child:hover {
+    border-color:
+        rgba(114, 222, 159, 0.46);
+    background:
+        rgba(255, 255, 255, 0.13);
+    color: #ffffff;
+}
+
+@media (max-width: 720px) {
+    .certidao-mensal-regularizacao-modal__header {
+        min-height: 104px;
+        padding:
+            1rem
+            0.9rem
+            0.85rem;
+    }
+
+    .certidao-mensal-regularizacao-modal__header
+    > div:first-child
+    > :nth-child(2) {
+        font-size: 1rem;
+    }
+}
+
+/* ========================================================================== */
+ /* AF3D_HERO_CONTINUACAO_IMAGEM_FINAL                                           */
+ /* Remove a faixa verde superior e aplica imagem de fundo no hero do modal.    */
+ /* ========================================================================== */
+
+.certidao-mensal-regularizacao-modal__header {
+    background-image:
+        linear-gradient(
+            102deg,
+            rgba(3, 15, 12, 0.90) 0%,
+            rgba(5, 29, 21, 0.86) 42%,
+            rgba(18, 78, 49, 0.74) 100%
+        ),
+        url("../../assets/certidao-mensal-hero-pastas.webp");
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+}
+
+.certidao-mensal-regularizacao-modal__header::before {
+    display: none;
+}
+
+.certidao-mensal-regularizacao-modal__header::after {
+    right: -54px;
+    bottom: -68px;
+    width: 240px;
+    height: 170px;
+    border: 1px solid rgba(122, 218, 162, 0.10);
+    background: rgba(255, 255, 255, 0.03);
 }

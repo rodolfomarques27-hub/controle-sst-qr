@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Header } from "../../../components/commonComponents";
 import { obterUrlLogoEmpresa } from "../../../services/supabaseServices";
 import "../../../styles/pages/certidao-mensal-documental.css";
@@ -11,6 +11,7 @@ import { PerfilDocumentalConfigModal } from "../components/PerfilDocumentalConfi
 import { EvidenciaConferenciaPanel } from "../components/EvidenciaConferenciaPanel";
 import { CertidaoPdfLaboratorioModal } from "../components/CertidaoPdfLaboratorioModal";
 import { useCertidaoPdfLaboratorio } from "../hooks/useCertidaoPdfLaboratorio";
+import { useCertidaoUploadMassaJob } from "../contexts/CertidaoUploadMassaJobContext.jsx";
 import { useCertidaoMensalCiclo } from "../hooks/useCertidaoMensalCiclo.js";
 import {
     CERTIDAO_MENSAL_DOCUMENTOS,
@@ -34,7 +35,7 @@ import {
     salvarRegraPerfilDocumentalCertidaoMensal,
 } from "../services/certidaoMensalPerfilDocumentalService.js";
 import {
-    buscarDocumentoAtualCertidaoMensal,
+    buscarDocumentosAtuaisCertidaoMensal,
     criarUrlAssinadaPdfCertidaoMensal,
 } from "../services/certidaoMensalDocumentPersistenceService";
 import {
@@ -78,6 +79,156 @@ const PERFIL_DOCUMENTAL_REMOTO_HABILITADO =
 
 const PERFIL_DOCUMENTAL_PERSISTENCIA_HABILITADA =
     true;
+
+/*
+ * SAFE_SCAN_CERTIDAO_PRAZO_DOCUMENTAL_REAL_A2_R4
+ *
+ * Duração documental separada da data real de vencimento.
+ */
+function formatarPrazoDocumentalEfetivo(
+    documento,
+    dadosTemporais = {}
+) {
+    const prazoBase =
+        String(
+            documento
+                ?.prazoDocumental ||
+            ""
+        ).trim();
+
+    /*
+     * SAFE_SCAN_PRAZO_PADRAO_PRIORITARIO_A2_V2
+     *
+     * O chip usa o prazo contratual padronizado do SafeScan.
+     * A validade real do PDF permanece independente.
+     */
+    if (prazoBase) {
+        return prazoBase;
+    }
+
+    const id =
+        String(
+            documento?.id ||
+            ""
+        ).trim();
+
+    const documentoLocal =
+        id === "cnd-estadual" ||
+        id === "cnd-municipal";
+
+    if (!documentoLocal) {
+        return prazoBase;
+    }
+
+    if (
+        dadosTemporais
+            ?.prazoValidadeAmbiguo ===
+        true
+    ) {
+        return prazoBase;
+    }
+
+    const meses =
+        Number(
+            dadosTemporais
+                ?.prazoValidadeMeses
+        );
+
+    const dias =
+        Number(
+            dadosTemporais
+                ?.prazoValidadeDias
+        );
+
+    const mesesValidos =
+        Number.isInteger(meses) &&
+        meses > 0;
+
+    const diasValidos =
+        Number.isInteger(dias) &&
+        dias > 0;
+
+    if (
+        mesesValidos ===
+        diasValidos
+    ) {
+        return prazoBase;
+    }
+
+    if (mesesValidos) {
+        return (
+            meses +
+            " " +
+            (
+                meses === 1
+                    ? "mês"
+                    : "meses"
+            )
+        );
+    }
+
+    return (
+        dias +
+        " " +
+        (
+            dias === 1
+                ? "dia"
+                : "dias"
+        )
+    );
+}
+
+function formatarCompetenciaExtensoCertidaoMensal(
+    valor = ""
+) {
+    const texto =
+        String(
+            valor ||
+            ""
+        ).trim();
+
+    const correspondencia =
+        /^(0[1-9]|1[0-2])\/(\d{4})$/
+            .exec(
+                texto
+            );
+
+    if (!correspondencia) {
+        return texto;
+    }
+
+    const data =
+        new Date(
+            Date.UTC(
+                Number(
+                    correspondencia[2]
+                ),
+                Number(
+                    correspondencia[1]
+                ) - 1,
+                1
+            )
+        );
+
+    const formatado =
+        new Intl.DateTimeFormat(
+            "pt-BR",
+            {
+                month: "long",
+                year: "numeric",
+                timeZone: "UTC",
+            }
+        ).format(
+            data
+        );
+
+    return (
+        formatado
+            .charAt(0)
+            .toUpperCase() +
+        formatado.slice(1)
+    );
+}
 
 export function CertidaoMensalDocumentalPage({
     supabase = null,
@@ -399,6 +550,27 @@ export function CertidaoMensalDocumentalPage({
             .regrasPorEmpresa,
     ]);
 
+    const {
+        uploadMassa,
+        sincronizarFontes:
+            sincronizarFontesUploadMassa,
+    } =
+        useCertidaoUploadMassaJob();
+
+    useEffect(
+        () => {
+            sincronizarFontesUploadMassa({
+                empresas,
+                colaboradores,
+            });
+        },
+        [
+            colaboradores,
+            empresas,
+            sincronizarFontesUploadMassa,
+        ]
+    );
+
     const [empresaSelecionadaId, setEmpresaSelecionadaId] =
         useState("");
 
@@ -493,6 +665,11 @@ export function CertidaoMensalDocumentalPage({
         chave: "",
         itens: {},
     }));
+
+    const sequenciaDocumentosPersistidosRef =
+        useRef(
+            0
+        );
 
     useEffect(() => {
         let efeitoAtivo =
@@ -2204,6 +2381,20 @@ export function CertidaoMensalDocumentalPage({
             };
         }
 
+        /*
+         * SAFE_SCAN_CERTIDAO_LATEST_REQUEST_WINS_B1_V3_R2
+         */
+        const requisicaoId =
+            (
+                sequenciaDocumentosPersistidosRef
+                    .current +
+                1
+            );
+
+        sequenciaDocumentosPersistidosRef
+            .current =
+            requisicaoId;
+
         const documentosConsultaveis =
             DOCUMENTOS_CERTIDAO_MENSAL_BASE
                 .filter(
@@ -2212,98 +2403,138 @@ export function CertidaoMensalDocumentalPage({
                 );
 
         async function carregarDocumentosPersistidos() {
-            const resultados =
-                await Promise.all(
-                    documentosConsultaveis.map(
-                        async (documento) => {
-                            try {
-                                const registro =
-                                    await buscarDocumentoAtualCertidaoMensal({
-                                        empresaId,
-                                        competencia,
-                                        tipoDocumento:
-                                            documento.id,
-                                    });
+            try {
+                /*
+                 * SAFE_SCAN_CERTIDAO_BATCH_READ_B2_V1_R1
+                 *
+                 * Banco consultado em lote.
+                 * URL assinada continua antecipada nesta etapa.
+                 */
+                const registrosPorTipo =
+                    await buscarDocumentosAtuaisCertidaoMensal({
+                        empresaId,
+                        competencia,
 
-                                if (
-                                    !registro?.versao ||
-                                    !registro?.caminhoStorage
-                                ) {
+                        tiposDocumento:
+                            documentosConsultaveis
+                                .map(
+                                    (
+                                        documento
+                                    ) =>
+                                        documento.id
+                                ),
+                    });
+
+                const resultados =
+                    await Promise.all(
+                        documentosConsultaveis
+                            .map(
+                                async (
+                                    documento
+                                ) => {
+                                    const registro =
+                                        registrosPorTipo?.[
+                                            documento.id
+                                        ] ||
+                                        null;
+
+                                    if (
+                                        !registro?.versao ||
+                                        !registro?.caminhoStorage
+                                    ) {
+                                        return [
+                                            documento.id,
+                                            registro,
+                                        ];
+                                    }
+
+                                    let urlAssinada =
+                                        "";
+
+                                    try {
+                                        urlAssinada =
+                                            await criarUrlAssinadaPdfCertidaoMensal({
+                                                caminhoStorage:
+                                                    registro.caminhoStorage,
+
+                                                duracaoSegundos:
+                                                    3600,
+                                            });
+                                    }
+                                    catch (erroUrl) {
+                                        console.warn(
+                                            (
+                                                "Não foi possível gerar a URL temporária do documento " +
+                                                documento.id +
+                                                "."
+                                            ),
+                                            erroUrl
+                                        );
+                                    }
+
                                     return [
                                         documento.id,
-                                        registro,
+
+                                        {
+                                            ...registro,
+                                            urlAssinada,
+                                        },
                                     ];
                                 }
-
-                                let urlAssinada =
-                                    "";
-
-                                try {
-                                    urlAssinada =
-                                        await criarUrlAssinadaPdfCertidaoMensal({
-                                            caminhoStorage:
-                                                registro.caminhoStorage,
-                                            duracaoSegundos:
-                                                3600,
-                                        });
-                                }
-                                catch (erroUrl) {
-                                    console.warn(
-                                        (
-                                            "Não foi possível gerar a URL temporária do documento " +
-                                            documento.id +
-                                            "."
-                                        ),
-                                        erroUrl
-                                    );
-                                }
-
-                                return [
-                                    documento.id,
-                                    {
-                                        ...registro,
-                                        urlAssinada,
-                                    },
-                                ];
-                            }
-                            catch (error) {
-                                console.warn(
-                                    (
-                                        "Não foi possível consultar o documento " +
-                                        documento.id +
-                                        " da competência."
-                                    ),
-                                    error
-                                );
-
-                                return [
-                                    documento.id,
-                                    null,
-                                ];
-                            }
-                        }
-                    )
-                );
-
-            if (!efeitoAtivo) {
-                return;
-            }
-
-            const itens =
-                Object.fromEntries(
-                    resultados.filter(
-                        ([, registro]) =>
-                            Boolean(
-                                registro?.versao
                             )
-                    )
+                    );
+
+                if (
+                    !efeitoAtivo ||
+                    sequenciaDocumentosPersistidosRef
+                        .current !==
+                        requisicaoId
+                ) {
+                    return;
+                }
+
+                const itens =
+                    Object.fromEntries(
+                        resultados.filter(
+                            (
+                                [, registro]
+                            ) =>
+                                Boolean(
+                                    registro?.versao
+                                )
+                        )
+                    );
+
+                setDocumentosPersistidosEstado({
+                    chave:
+                        chaveDocumentosPersistidos,
+
+                    itens,
+                });
+            }
+            catch (erro) {
+                if (
+                    !efeitoAtivo ||
+                    sequenciaDocumentosPersistidosRef
+                        .current !==
+                        requisicaoId
+                ) {
+                    return;
+                }
+
+                console.error(
+                    "[Certidões Mensais] Falha ao carregar documentos persistidos.",
+                    erro
                 );
 
-            setDocumentosPersistidosEstado({
-                chave:
-                    chaveDocumentosPersistidos,
-                itens,
-            });
+                setDocumentosPersistidosEstado({
+                    chave:
+                        chaveDocumentosPersistidos,
+
+                    itens:
+                        {},
+                });
+            }
         }
 
         carregarDocumentosPersistidos();
@@ -3559,6 +3790,12 @@ Deseja salvar as alterações?`
                 const dadosTemporais =
                     avaliacao.dadosTemporais || {};
 
+                const prazoDocumentalEfetivo =
+                    formatarPrazoDocumentalEfetivo(
+                        documento,
+                        dadosTemporais
+                    );
+
                 const dadosFgts =
                     avaliacao.dadosFgts || {};
 
@@ -4067,6 +4304,8 @@ return {
 
                 return {
                     ...documento,
+                    prazoDocumental:
+                        prazoDocumentalEfetivo,
                     temEvidencia:
                         true,
                     status:
@@ -5610,11 +5849,36 @@ return {
             }
         };
 
+    /*
+     * SAFE_SCAN_CERTIDAO_LOADING_COMPETENCIA_B1_V3_R2
+     */
+    const documentosPersistidosCarregando =
+        Boolean(
+            empresaSelecionada?.id &&
+            documentosPersistidosEstado
+                .chave !==
+                chaveDocumentosPersistidos
+        );
+
+    const competenciaCarregando =
+        Boolean(
+            empresaSelecionada?.id &&
+            (
+                cicloMensal.carregando ||
+                documentosPersistidosCarregando
+            )
+        );
+
+    const competenciaCarregandoRotulo =
+        formatarCompetenciaExtensoCertidaoMensal(
+            competencia
+        );
+
     return (
         <div
             className="page-shell certidao-mensal-page"
             aria-busy={
-                cicloMensal.carregando
+                competenciaCarregando
             }
             data-certidao-ciclo-status={
                 cicloMensal.status
@@ -5647,8 +5911,49 @@ return {
 
             <CertidaoMensalResumo resumo={resumo} />
 
+
             <main className="certidao-mensal-workspace">
-                {empresaSelecionada ? (
+                {competenciaCarregando ? (
+                    <section
+                        className="certidao-mensal-competencia-loading"
+                        role="status"
+                        aria-live="polite"
+                        aria-label={
+                            "Carregando documentos de " +
+                            competenciaCarregandoRotulo
+                        }
+                    >
+                        <div className="certidao-mensal-competencia-loading__cabecalho">
+                            <div
+                                className="certidao-mensal-competencia-loading__spinner"
+                                aria-hidden="true"
+                            />
+
+                            <div className="certidao-mensal-competencia-loading__conteudo">
+                                <strong>
+                                    Carregando documentos
+                                </strong>
+
+                                <span>
+                                    {competenciaCarregandoRotulo}
+                                </span>
+
+                                <p>
+                                    Atualizando a competência. Os painéis serão liberados assim que os documentos estiverem prontos.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div
+                            className="certidao-mensal-competencia-loading__skeletons"
+                            aria-hidden="true"
+                        >
+                            <span className="certidao-mensal-competencia-loading__skeleton" />
+                            <span className="certidao-mensal-competencia-loading__skeleton" />
+                            <span className="certidao-mensal-competencia-loading__skeleton" />
+                        </div>
+                    </section>
+                ) : empresaSelecionada ? (
                     <>
                         <EmpresasFiscalizadasPanel
                             empresas={empresasVisiveisCompetencia}
@@ -5758,6 +6063,11 @@ return {
                         documentoSelecionadoId={
                             documentoSelecionadoId
                         }
+                        uploadMassa={uploadMassa}
+                        uploadMassaDisponivel={Boolean(
+                            supabase &&
+                            empresas.length > 0
+                        )}
                         persistenciaHabilitada={
                             PERFIL_DOCUMENTAL_PERSISTENCIA_HABILITADA
                         }
@@ -6020,47 +6330,66 @@ return {
                         )}
 
                         <footer className="certidao-mensal-regularizacao-modal__footer">
-                            <div>
-                                <strong>
-                                    {regularizacaoHistoricaSelecionados.length}
-                                </strong>
+                                <div className="certidao-mensal-regularizacao-modal__footer-resumo">
+                                    <strong className="certidao-mensal-regularizacao-modal__footer-total">
+                                        {regularizacaoHistoricaSelecionados.length}
+                                    </strong>
 
-                                <span>
-                                    colaborador(es) selecionado(s) para confirmação histórica
-                                </span>
-                            </div>
+                                    <div className="certidao-mensal-regularizacao-modal__footer-resumo-texto">
+                                        <span>
+                                            {regularizacaoHistoricaSelecionados.length === 1
+                                                ? "Colaborador selecionado"
+                                                : "Colaboradores selecionados"}
+                                        </span>
 
-                            <span className="certidao-mensal-regularizacao-modal__modo">
-                                Confirmação manual · salva somente a Relação de Empregados
-                            </span>
+                                        <small>
+                                            Competência {competencia}
+                                        </small>
+                                    </div>
+                                </div>
 
-                                                <button
-                        type="button"
-                        className="is-principal"
-                        onClick={
-                            confirmarRegularizacaoHistorica
-                        }
-                        disabled={
-                            regularizacaoHistoricaSalvando
-                        }
-                    >
-                        {
-                            regularizacaoHistoricaSalvando
-                                ? "Salvando..."
-                                : relacaoHistoricaManualConfirmada
-                                    ? "Salvar alterações"
-                                    : "Confirmar e salvar"
-                        }
-                    </button>
-<button
-                                type="button"
-                                onClick={
-                                    fecharRegularizacaoHistorica
-                                }
-                            >
-                                Fechar revisão
-                            </button>
-                        </footer>
+                                <div className="certidao-mensal-regularizacao-modal__modo">
+                                    <strong>
+                                        Escopo da confirmação
+                                    </strong>
+
+                                    <span>
+                                        Somente a Relação de Empregados será salva.
+                                        Nenhum outro documento será alterado.
+                                    </span>
+                                </div>
+
+                                <div className="certidao-mensal-regularizacao-modal__footer-acoes">
+                                    <button
+                                        type="button"
+                                        className="is-secundario"
+                                        onClick={
+                                            fecharRegularizacaoHistorica
+                                        }
+                                    >
+                                        Fechar sem salvar
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className="is-principal"
+                                        onClick={
+                                            confirmarRegularizacaoHistorica
+                                        }
+                                        disabled={
+                                            regularizacaoHistoricaSalvando
+                                        }
+                                    >
+                                        {
+                                            regularizacaoHistoricaSalvando
+                                                ? "Salvando..."
+                                                : relacaoHistoricaManualConfirmada
+                                                    ? "Salvar alterações"
+                                                    : "Confirmar e salvar"
+                                        }
+                                    </button>
+                                </div>
+                            </footer>
                     </section>
                 </div>
             )}

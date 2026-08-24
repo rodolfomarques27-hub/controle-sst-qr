@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
     CheckCircle2,
     ExternalLink,
@@ -23,6 +23,321 @@ import {
 import {
     CertidaoFolhaEvidenciasComplementares,
 } from "./CertidaoFolhaEvidenciasComplementares.jsx";
+import {
+    carregarPdfJsDocumental,
+} from "../../../services/documentosOcrPdfJsService.js";
+
+function PdfJsDocumentoPreview({
+    url,
+    nomeArquivo,
+    completo = false,
+}) {
+    const paginasRef =
+        useRef(null);
+
+    const [carregando, setCarregando] =
+        useState(Boolean(url));
+
+    const [erro, setErro] =
+        useState("");
+
+    useEffect(() => {
+        const container =
+            paginasRef.current;
+
+        if (!container) {
+            return undefined;
+        }
+
+        container.replaceChildren();
+
+        if (!url) {
+            return undefined;
+        }
+
+        let cancelado =
+            false;
+
+        let tarefaCarregamento =
+            null;
+
+        let documentoPdf =
+            null;
+
+        const tarefasRender =
+            [];
+
+        async function renderizarPdf() {
+            setCarregando(true);
+            setErro("");
+
+            try {
+                const pdfjsLib =
+                    await carregarPdfJsDocumental();
+
+                if (cancelado) {
+                    return;
+                }
+
+                tarefaCarregamento =
+                    pdfjsLib.getDocument({
+                        url,
+                        withCredentials: false,
+                    });
+
+                documentoPdf =
+                    await tarefaCarregamento.promise;
+
+                if (cancelado) {
+                    return;
+                }
+
+                const totalPaginas =
+                    completo
+                        ? documentoPdf.numPages
+                        : Math.min(
+                            documentoPdf.numPages,
+                            1
+                        );
+
+                for (
+                    let numeroPagina = 1;
+                    numeroPagina <= totalPaginas;
+                    numeroPagina += 1
+                ) {
+                    if (cancelado) {
+                        return;
+                    }
+
+                    const pagina =
+                        await documentoPdf.getPage(
+                            numeroPagina
+                        );
+
+                    if (cancelado) {
+                        return;
+                    }
+
+                    const viewportBase =
+                        pagina.getViewport({
+                            scale: 1,
+                        });
+
+                    const larguraContainer =
+                        Math.max(
+                            container.clientWidth,
+                            320
+                        );
+
+                    const escalaCss =
+                        larguraContainer /
+                        viewportBase.width;
+
+                    const pixelRatio =
+                        completo
+                            ? Math.min(
+                                window.devicePixelRatio || 1,
+                                1.25
+                            )
+                            : Math.min(
+                                window.devicePixelRatio || 1,
+                                1.5
+                            );
+
+                    const viewportRender =
+                        pagina.getViewport({
+                            scale:
+                                escalaCss *
+                                pixelRatio,
+                        });
+
+                    const canvas =
+                        document.createElement(
+                            "canvas"
+                        );
+
+                    canvas.className =
+                        "certidao-pdfjs-preview__canvas";
+
+                    canvas.width =
+                        Math.ceil(
+                            viewportRender.width
+                        );
+
+                    canvas.height =
+                        Math.ceil(
+                            viewportRender.height
+                        );
+
+                    canvas.style.width =
+                        "100%";
+
+                    canvas.style.height =
+                        "auto";
+
+                    canvas.setAttribute(
+                        "aria-label",
+                        `Página ${numeroPagina} de ${documentoPdf.numPages}`
+                    );
+
+                    const paginaContainer =
+                        document.createElement(
+                            "div"
+                        );
+
+                    paginaContainer.className =
+                        "certidao-pdfjs-preview__pagina";
+
+                    paginaContainer.dataset.pagina =
+                        String(numeroPagina);
+
+                    paginaContainer.appendChild(
+                        canvas
+                    );
+
+                    container.appendChild(
+                        paginaContainer
+                    );
+
+                    const contexto =
+                        canvas.getContext(
+                            "2d",
+                            {
+                                alpha: false,
+                            }
+                        );
+
+                    if (!contexto) {
+                        throw new Error(
+                            "Canvas 2D indisponível."
+                        );
+                    }
+
+                    const tarefaRender =
+                        pagina.render({
+                            canvasContext:
+                                contexto,
+                            viewport:
+                                viewportRender,
+                        });
+
+                    tarefasRender.push(
+                        tarefaRender
+                    );
+
+                    await tarefaRender.promise;
+
+                    if (cancelado) {
+                        return;
+                    }
+                }
+            }
+            catch {
+                if (cancelado) {
+                    return;
+                }
+
+                container.replaceChildren();
+
+                setErro(
+                    "Não foi possível gerar a prévia interna deste PDF."
+                );
+            }
+            finally {
+                if (!cancelado) {
+                    setCarregando(false);
+                }
+            }
+        }
+
+        void renderizarPdf();
+
+        return () => {
+            cancelado =
+                true;
+
+            for (
+                const tarefaRender of tarefasRender
+            ) {
+                try {
+                    tarefaRender.cancel();
+                }
+                catch {
+                    // Renderização já encerrada.
+                }
+            }
+
+            try {
+                tarefaCarregamento?.destroy();
+            }
+            catch {
+                // Carregamento já encerrado.
+            }
+
+            try {
+                documentoPdf?.destroy();
+            }
+            catch {
+                // Documento já encerrado.
+            }
+
+            container.replaceChildren();
+        };
+    }, [
+        completo,
+        url,
+    ]);
+
+    return (
+        <div
+            className={
+                "certidao-pdfjs-preview " +
+                (
+                    completo
+                        ? "is-completo"
+                        : "is-resumo"
+                )
+            }
+            aria-busy={carregando}
+        >
+            <div
+                ref={paginasRef}
+                className="certidao-pdfjs-preview__paginas"
+                aria-label={
+                    completo
+                        ? `Documento completo: ${nomeArquivo}`
+                        : `Prévia da primeira página: ${nomeArquivo}`
+                }
+            />
+
+            {carregando && (
+                <div
+                    className="certidao-pdfjs-preview__estado"
+                    role="status"
+                >
+                    Carregando PDF...
+                </div>
+            )}
+
+            {!carregando && erro && (
+                <div
+                    className="certidao-pdfjs-preview__estado is-erro"
+                    role="alert"
+                >
+                    <FileText aria-hidden="true" />
+
+                    <strong>
+                        Prévia indisponível
+                    </strong>
+
+                    <span>
+                        {erro} Use “Abrir PDF completo” para acessar o arquivo original.
+                    </span>
+                </div>
+            )}
+        </div>
+    );
+}
 
 function RegraResultadoIcon({ resultado }) {
     if (resultado === "aprovada") {
@@ -904,11 +1219,18 @@ export function EvidenciaConferenciaPanel({
                         type="button"
                         className="certidao-mensal-evidencia__toolbar-action"
                         title="Abrir o PDF na visualização completa"
-                        onClick={() =>
-                            setAba(
-                                "arquivo"
-                            )
-                        }
+                        onClick={() => {
+                            if (!urlDocumento) {
+                                return;
+                            }
+
+                            window.open(
+                                urlDocumento,
+                                "_blank",
+                                "noopener,noreferrer"
+                            );
+                        }}
+                        disabled={!urlDocumento}
                     >
                         <ExternalLink aria-hidden="true" />
                         Abrir PDF completo
@@ -970,17 +1292,12 @@ export function EvidenciaConferenciaPanel({
                     <div className="certidao-mensal-evidencia__preview">
                         <div className="certidao-mensal-preview-real">
                             {urlDocumento ? (
-                                <iframe
-                                    className="certidao-mensal-preview-real__frame"
-                                    src={`${urlDocumento}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
-                                    title={
-                                        "Prévia de " +
-                                        (
-                                            documento.arquivoNome ||
-                                            "documento PDF"
-                                        )
+                                <PdfJsDocumentoPreview
+                                    url={urlDocumento}
+                                    nomeArquivo={
+                                        documento.arquivoNome ||
+                                        "documento PDF"
                                     }
-                                    referrerPolicy="no-referrer"
                                 />
                             ) : (
                                 <div className="certidao-mensal-preview-real__empty">
@@ -1185,17 +1502,13 @@ export function EvidenciaConferenciaPanel({
             ) : (
                 <div className="certidao-mensal-evidencia__arquivo certidao-mensal-evidencia__arquivo--pdf">
                     {urlDocumento ? (
-                        <iframe
-                            className="certidao-mensal-evidencia__arquivo-frame"
-                            src={`${urlDocumento}#toolbar=0&navpanes=0&view=FitH`}
-                            title={
-                                "Visualização de " +
-                                (
-                                    documento.arquivoNome ||
-                                    "documento PDF"
-                                )
+                        <PdfJsDocumentoPreview
+                            url={urlDocumento}
+                            nomeArquivo={
+                                documento.arquivoNome ||
+                                "documento PDF"
                             }
-                            referrerPolicy="no-referrer"
+                            completo
                         />
                     ) : (
                         <div className="certidao-mensal-evidencia__arquivo-page is-indisponivel">
