@@ -38,7 +38,12 @@ function formatarTamanho(bytes) {
         : `${Math.max(1, Math.round(numero / 1024))} KB`;
 }
 
-export default function DdsHistoricoPdfsSection({ supabase, aberto = true, onAlternar }) {
+export default function DdsHistoricoPdfsSection({
+    supabase,
+    aberto = true,
+    onAlternar,
+    onDocumentosChange,
+}) {
     const [registros, setRegistros] = useState([]);
     const [documentos, setDocumentos] = useState([]);
     const [empresa, setEmpresa] = useState("");
@@ -61,12 +66,24 @@ export default function DdsHistoricoPdfsSection({ supabase, aberto = true, onAlt
             });
             setRegistros(registrosCarregados);
             setDocumentos(documentosCarregados);
+
+            if (
+                typeof onDocumentosChange ===
+                "function"
+            ) {
+                onDocumentosChange(
+                    documentosCarregados
+                );
+            }
         } catch (error) {
             setMensagem({ tipo: "erro", texto: error?.message || "Não foi possível carregar o histórico." });
         } finally {
             setCarregando(false);
         }
-    }, [supabase]);
+    }, [
+        onDocumentosChange,
+        supabase,
+    ]);
 
     useEffect(() => {
         carregar();
@@ -135,7 +152,27 @@ export default function DdsHistoricoPdfsSection({ supabase, aberto = true, onAlt
         setMensagem(null);
         try {
             await excluirDocumentoDdsHistorico({ supabase, documento });
-            setDocumentos((atuais) => atuais.filter((item) => item.id !== documento.id));
+
+            const documentosRestantes =
+                documentos.filter(
+                    (item) =>
+                        item.id !==
+                        documento.id
+                );
+
+            setDocumentos(
+                documentosRestantes
+            );
+
+            if (
+                typeof onDocumentosChange ===
+                "function"
+            ) {
+                onDocumentosChange(
+                    documentosRestantes
+                );
+            }
+
             setMensagem({ tipo: "sucesso", texto: `PDF do ${codigo} excluído. O cadastro do DDS foi mantido.` });
         } catch (error) {
             setMensagem({ tipo: "erro", texto: error?.message || "Não foi possível excluir o PDF." });
