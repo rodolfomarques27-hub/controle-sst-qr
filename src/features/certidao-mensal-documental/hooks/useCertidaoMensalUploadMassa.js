@@ -1,10 +1,6 @@
-import {
-    executarEvidenciaComplementarControlada,
-} from "../services/certidaoMensalUploadMassaComplementarExecutorService.js";
 
 import {
     listarEvidenciasAtivasCertidaoMensal,
-    salvarEvidenciaComplementarCertidaoMensal,
 } from "../services/certidaoMensalEvidenciaPersistenceService.js";
 
 import {
@@ -27,8 +23,6 @@ import {
 import {
     criarFilaAlvosPersistenciaPrincipalUploadMassa,
     criarPlanoPersistenciaPrincipalUploadMassa,
-    executarFilaViaExecutorUnitarioUploadMassa,
-    executarPlanoPersistenciaPrincipalUploadMassa,
 } from "../services/certidaoMensalUploadMassaPersistencePlanService.js";
 
 import {
@@ -1450,8 +1444,7 @@ export function aplicarClassificacaoFinanceiraSispagUploadMassa({
  * complementar permanece deliberadamente bloqueada.
  * ============================================================
  */
-const HABILITAR_PERSISTENCIA_COMPLEMENTAR_UPLOAD_MASSA =
-    false;
+
 
 export function useCertidaoMensalUploadMassa({
     supabase = null,
@@ -1791,19 +1784,7 @@ export function useCertidaoMensalUploadMassa({
         );
     const executarPersistenciaPrincipalControlada =
         useCallback(
-            async ({
-                /*
-                 * SAFE_SCAN_UPLOAD_MASSA_HOOK_ALVO_UNICO_V1
-                 *
-                 * Sem alvo documental explícito:
-                 * zero execução.
-                 */
-                alvo =
-                    null,
-
-                interromperNoErro =
-                    true,
-            } = {}) => {
+            async () => {
                 if (
                     !montadoRef.current ||
                     estado?.processando ||
@@ -1812,38 +1793,45 @@ export function useCertidaoMensalUploadMassa({
                     return null;
                 }
 
-                return executarPlanoPersistenciaPrincipalUploadMassa({
-                    resultado:
-                        estado.resultado,
+                const plano =
+                    criarPlanoPersistenciaPrincipalUploadMassa({
+                        resultado:
+                            estado.resultado,
+                    });
 
-                    executarPersistencia:
-                        executorPersistenciaPrincipal,
-
-                    validarPreflightAntesPersistencia:
-                        validarPreflightPersistenciaPrincipal,
-
-                    auditarFalhaPersistencia:
-                        auditorPersistenciaPrincipal,
-
+                return {
                     habilitado:
-                        habilitarPersistenciaPrincipal ===
-                        true,
+                        false,
 
-                    alvo,
+                    executorDisponivel:
+                        false,
 
-                    interromperNoErro,
-                });
+                    executorInvocado:
+                        false,
+
+                    chamadas:
+                        0,
+
+                    interrompidoPorErro:
+                        false,
+
+                    motivo:
+                        "GATE_DESABILITADO",
+
+                    alvo:
+                        null,
+
+                    plano,
+
+                    resultados:
+                        [],
+                };
             },
             [
                 estado.processando,
                 estado.resultado,
-                executorPersistenciaPrincipal,
-                validarPreflightPersistenciaPrincipal,
-                auditorPersistenciaPrincipal,
-                habilitarPersistenciaPrincipal,
             ]
         );
-
     /*
      * ============================================================
      * SAFE_SCAN_UPLOAD_MASSA_HOOK_LOTE_CONTROLADO_V1
@@ -1858,10 +1846,7 @@ export function useCertidaoMensalUploadMassa({
      */
     const executarPersistenciaPrincipalLoteControlado =
         useCallback(
-            async ({
-                interromperNoErro =
-                    false,
-            } = {}) => {
+            async () => {
                 if (
                     !montadoRef.current ||
                     estado?.processando ||
@@ -1881,35 +1866,35 @@ export function useCertidaoMensalUploadMassa({
                         plano,
                     });
 
-                return executarFilaViaExecutorUnitarioUploadMassa({
-                    resultado:
-                        estado.resultado,
+                return {
+                    executorDisponivel:
+                        false,
 
-                    fila,
+                    totalFila:
+                        fila.length,
 
-                    executarPersistencia:
-                        executorPersistenciaPrincipal,
+                    tentados:
+                        0,
 
-                    validarPreflightAntesPersistencia:
-                        validarPreflightPersistenciaPrincipal,
+                    sucessos:
+                        0,
 
-                    auditarFalhaPersistencia:
-                        auditorPersistenciaPrincipal,
+                    falhas:
+                        0,
 
-                    habilitado:
-                        habilitarPersistenciaPrincipal ===
-                        true,
+                    interrompidoPorErro:
+                        false,
 
-                    interromperNoErro,
-                });
+                    motivo:
+                        "GATE_DESABILITADO",
+
+                    resultados:
+                        [],
+                };
             },
             [
                 estado.processando,
                 estado.resultado,
-                executorPersistenciaPrincipal,
-                validarPreflightPersistenciaPrincipal,
-                auditorPersistenciaPrincipal,
-                habilitarPersistenciaPrincipal,
             ]
         );
     const processarArquivos =
@@ -3029,25 +3014,32 @@ export function useCertidaoMensalUploadMassa({
         consultarDestinosComplementaresReadOnly,
 
         executarEvidenciaComplementarUploadMassaControlada:
-            async ({
-                indiceSelecionado = null,
-                confirmacaoExecucao = "",
-            } = {}) =>
-                executarEvidenciaComplementarControlada({
-                    planoDryRun:
-                        planoExecucaoComplementarDryRun,
+            async () =>
+                Object.freeze({
+                    permitido:
+                        false,
 
-                    indiceSelecionado,
+                    estado:
+                        "BLOQUEADO",
 
-                    habilitarPersistenciaComplementar:
-                        HABILITAR_PERSISTENCIA_COMPLEMENTAR_UPLOAD_MASSA,
+                    codigo:
+                        "GATE_PERSISTENCIA_COMPLEMENTAR_FECHADO",
 
-                    confirmacaoExecucao,
+                    indice:
+                        null,
 
-                    persistirEvidencia:
-                        salvarEvidenciaComplementarCertidaoMensal,
+                    payload:
+                        null,
+
+                    chamouAdapter:
+                        false,
+
+                    persistenciaExecutada:
+                        false,
+
+                    quantidadeExecutada:
+                        0,
                 }),
-
         temResultado:
             Boolean(
                 estado.resultado
