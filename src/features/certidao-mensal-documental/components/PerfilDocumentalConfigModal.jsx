@@ -5,11 +5,19 @@ import {
 
 import {
     CalendarRange,
+    ChevronDown,
     History,
     Save,
     SlidersHorizontal,
+    UploadCloud,
     X,
 } from "lucide-react";
+
+import {
+    CertidaoUploadMassaPanel,
+} from "./CertidaoUploadMassaPanel.jsx";
+
+import certidaoMensalHeroBackground from "../../../assets/certidao-mensal-hero-pastas.webp";
 
 const LIMITE_MOTIVO =
     500;
@@ -116,6 +124,8 @@ export function PerfilDocumentalConfigModal({
     erro = "",
     documentoSelecionadoId = "",
     persistenciaHabilitada = false,
+    uploadMassa = null,
+    uploadMassaDisponivel = false,
     onSalvar,
     onCancelar,
 }) {
@@ -263,6 +273,43 @@ export function PerfilDocumentalConfigModal({
         setErroSalvar,
     ] =
         useState("");
+
+    const [
+        abaAtiva,
+        setAbaAtiva,
+    ] =
+        useState(
+            "exigibilidade",
+        );
+
+    const abaUploadAtiva =
+        abaAtiva ===
+        "upload";
+
+    /*
+     * ============================================================
+     * SAFE_SCAN_CERTIDAO_CONFIG_CNDT_MENSAL_A1_V1
+     *
+     * Configuração visual/contratual:
+     *
+     * - Documentos exigidos inicia recolhido;
+     * - Não exigidos inicia recolhido;
+     * - CNDT exibe prazo documental de 1 mês;
+     * - validade jurídica do PDF não é modificada.
+     * ============================================================
+     */
+
+    const [
+        documentosExigidosAbertos,
+        setDocumentosExigidosAbertos,
+    ] =
+        useState(false);
+
+    const [
+        documentosNaoExigidosAbertos,
+        setDocumentosNaoExigidosAbertos,
+    ] =
+        useState(false);
 
     const documentoAtual =
         useMemo(
@@ -546,52 +593,111 @@ export function PerfilDocumentalConfigModal({
                     }
                 }}
             >
-                <header className="certidao-mensal-reenvio-modal__header">
+                <header
+                    className="certidao-mensal-reenvio-modal__header certidao-mensal-perfil-modal__hero"
+                    style={{
+                        backgroundImage:
+                            `linear-gradient(90deg, rgba(5, 27, 17, 0.93) 0%, rgba(7, 47, 28, 0.82) 56%, rgba(10, 72, 40, 0.68) 100%), url(${certidaoMensalHeroBackground})`,
+                    }}
+                >
                     <span className="certidao-mensal-reenvio-modal__icone certidao-mensal-perfil-modal__icone">
                         <SlidersHorizontal aria-hidden="true" />
                     </span>
 
                     <div>
                         <p>
-                            Configuração contratual
+                            Certidão mensal documental
                         </p>
 
                         <h2 id="certidao-perfil-documental-titulo">
-                            Exigibilidade documental
+                            Configurações documentais
                         </h2>
 
                         <span>
-                            {empresa?.nome ||
-                                "Empresa selecionada"}{" "}
-                            • Competência{" "}
-                            {competencia}
+                            {abaUploadAtiva ? (
+                                <>
+                                    Lote multiempresa
+                                    {" • "}
+                                    competência identificada pelo conteúdo
+                                </>
+                            ) : (
+                                <>
+                                    {empresa?.nome ||
+                                        "Empresa selecionada"}{" "}
+                                    • Competência{" "}
+                                    {competencia}
+                                </>
+                            )}
                         </span>
                     </div>
 
                     <button
                         type="button"
                         className="certidao-mensal-reenvio-modal__fechar"
-                        aria-label="Fechar configuração de exigibilidade"
+                        aria-label="Fechar configurações documentais"
                         onClick={fechar}
                     >
                         <X aria-hidden="true" />
                     </button>
                 </header>
 
-                <div className="certidao-mensal-reenvio-modal__body certidao-mensal-perfil-modal__body">
-                    <div className="certidao-mensal-perfil-modal__aviso">
+                <nav
+                    className="certidao-mensal-perfil-modal__tabs"
+                    role="tablist"
+                    aria-label="Configurações documentais"
+                >
+                    <button
+                        type="button"
+                        role="tab"
+                        aria-selected={!abaUploadAtiva}
+                        className={
+                            !abaUploadAtiva
+                                ? "certidao-mensal-perfil-modal__tab is-active"
+                                : "certidao-mensal-perfil-modal__tab"
+                        }
+                        onClick={() =>
+                            setAbaAtiva(
+                                "exigibilidade",
+                            )
+                        }
+                    >
                         <SlidersHorizontal aria-hidden="true" />
+                        Exigibilidade documental
+                    </button>
 
-                        <div>
-                            <strong>
-                                Configuração anual e exceções
-                            </strong>
+                    <button
+                        type="button"
+                        role="tab"
+                        aria-selected={abaUploadAtiva}
+                        className={
+                            abaUploadAtiva
+                                ? "certidao-mensal-perfil-modal__tab is-active"
+                                : "certidao-mensal-perfil-modal__tab"
+                        }
+                        onClick={() =>
+                            setAbaAtiva(
+                                "upload",
+                            )
+                        }
+                    >
+                        <UploadCloud aria-hidden="true" />
+                        Upload em massa
+                    </button>
+                </nav>
 
-                            <span>
-                                Configure a exigibilidade deste documento. Alterações passam a valer a partir da vigência escolhida, preservando o histórico das competências anteriores.
-                            </span>
-                        </div>
-                    </div>
+                <div
+                    className={
+                        `certidao-mensal-reenvio-modal__body certidao-mensal-perfil-modal__body${
+                            abaUploadAtiva
+                                ? " is-hidden"
+                                : ""
+                        }`
+                    }
+                >
+                    <p className="certidao-mensal-perfil-modal__orientacao">
+                        Defina os documentos exigidos e a vigência das alterações.
+                        O histórico das competências anteriores permanece preservado.
+                    </p>
 
                     <div className="certidao-mensal-perfil-modal__modo">
                         <button
@@ -681,8 +787,21 @@ export function PerfilDocumentalConfigModal({
                                 ) && (
                                     <section className="certidao-mensal-perfil-modal__selecao-grupo">
                                         <header>
+                                            <button
+                                                type="button"
+                                                className="certidao-mensal-perfil-modal__selecao-toggle"
+                                                aria-expanded={
+                                                    documentosExigidosAbertos
+                                                }
+                                                onClick={() =>
+                                                    setDocumentosExigidosAbertos(
+                                                        (aberto) =>
+                                                            !aberto,
+                                                    )
+                                                }
+                                            >
                                             <strong>
-                                                DOCUMENTOS EXIGIDOS
+                                                Documentos exigidos
                                             </strong>
 
                                             <span>
@@ -695,9 +814,27 @@ export function PerfilDocumentalConfigModal({
                                                     ).length
                                                 }
                                             </span>
+
+                                            <ChevronDown
+                                                className={
+                                                    documentosExigidosAbertos
+                                                        ? "certidao-mensal-perfil-modal__selecao-chevron is-open"
+                                                        : "certidao-mensal-perfil-modal__selecao-chevron"
+                                                }
+                                                aria-hidden="true"
+                                            />
+                                            </button>
                                         </header>
 
-                                        <div className="certidao-mensal-perfil-modal__selecao-itens">
+                                        <div
+                                            className={
+                                                `certidao-mensal-perfil-modal__selecao-itens${
+                                                    documentosExigidosAbertos
+                                                        ? ""
+                                                        : " is-collapsed"
+                                                }`
+                                            }
+                                        >
                                             {documentosValidos
                                                 .filter(
                                                     (documento) =>
@@ -746,6 +883,14 @@ export function PerfilDocumentalConfigModal({
                                                                             documento.titulo
                                                                         }
                                                                     </strong>
+                                                                    {documento.prazoDocumental && (
+                                                    <span
+                                                        className="certidao-mensal-perfil-modal__prazo-documental"
+                                                        title="Prazo documental configurado para este tipo de documento. A data real de vencimento continua sendo conferida separadamente."
+                                                    >
+                                                        Prazo: {documento.prazoDocumental}
+                                                    </span>
+                                                )}
                                                                 </span>
                                                             </span>
 
@@ -766,8 +911,21 @@ export function PerfilDocumentalConfigModal({
                                 ) && (
                                     <section className="certidao-mensal-perfil-modal__selecao-grupo is-nao">
                                         <header>
+                                            <button
+                                                type="button"
+                                                className="certidao-mensal-perfil-modal__selecao-toggle"
+                                                aria-expanded={
+                                                    documentosNaoExigidosAbertos
+                                                }
+                                                onClick={() =>
+                                                    setDocumentosNaoExigidosAbertos(
+                                                        (aberto) =>
+                                                            !aberto,
+                                                    )
+                                                }
+                                            >
                                             <strong>
-                                                NÃO EXIGIDOS PARA ESTE CONTRATO
+                                                Não exigidos para este contrato
                                             </strong>
 
                                             <span>
@@ -780,9 +938,27 @@ export function PerfilDocumentalConfigModal({
                                                     ).length
                                                 }
                                             </span>
+
+                                            <ChevronDown
+                                                className={
+                                                    documentosNaoExigidosAbertos
+                                                        ? "certidao-mensal-perfil-modal__selecao-chevron is-open"
+                                                        : "certidao-mensal-perfil-modal__selecao-chevron"
+                                                }
+                                                aria-hidden="true"
+                                            />
+                                            </button>
                                         </header>
 
-                                        <div className="certidao-mensal-perfil-modal__selecao-itens">
+                                        <div
+                                            className={
+                                                `certidao-mensal-perfil-modal__selecao-itens${
+                                                    documentosNaoExigidosAbertos
+                                                        ? ""
+                                                        : " is-collapsed"
+                                                }`
+                                            }
+                                        >
                                             {documentosValidos
                                                 .filter(
                                                     (documento) =>
@@ -831,6 +1007,14 @@ export function PerfilDocumentalConfigModal({
                                                                             documento.titulo
                                                                         }
                                                                     </strong>
+                                                                    {documento.prazoDocumental && (
+                                                    <span
+                                                        className="certidao-mensal-perfil-modal__prazo-documental"
+                                                        title="Prazo documental configurado para este tipo de documento. A data real de vencimento continua sendo conferida separadamente."
+                                                    >
+                                                        Prazo: {documento.prazoDocumental}
+                                                    </span>
+                                                )}
                                                                 </span>
                                                             </span>
 
@@ -916,32 +1100,32 @@ export function PerfilDocumentalConfigModal({
                                 </span>
 
                                 <input
-                                    type="number"
-                                    min="2020"
-                                    max="2100"
-                                    step="1"
-                                    value={
-                                        anoInicio
-                                    }
-                                    onChange={(evento) =>
-                                        setAnoInicio(
-                                            evento
-                                                .target
-                                                .value
-                                                .replace(
-                                                    /[^\d]/g,
-                                                    "",
-                                                )
-                                                .slice(
-                                                    0,
-                                                    4,
-                                                ),
-                                        )
-                                    }
+                                        type="number"
+                                        min="2020"
+                                        max="2100"
+                                        step="1"
+                                        value={
+                                            anoInicio
+                                        }
+                                        onChange={(evento) =>
+                                            setAnoInicio(
+                                                evento
+                                                    .target
+                                                    .value
+                                                    .replace(
+                                                        /[^\d]/g,
+                                                        "",
+                                                    )
+                                                    .slice(
+                                                        0,
+                                                        4,
+                                                    ),
+                                            )
+                                        }
                                 />
 
                                 <small>
-                                    A regra passa a valer em janeiro do ano informado e permanece até uma nova alteração.
+                                    A regra passa a valer em janeiro deste ano e permanece até uma nova alteração.
                                 </small>
                             </label>
                         ) : (
@@ -1101,7 +1285,17 @@ export function PerfilDocumentalConfigModal({
                     </section>
                 </div>
 
-                {erroSalvar && (
+                {abaUploadAtiva && (
+                    <div className="certidao-mensal-reenvio-modal__body certidao-mensal-perfil-modal__body certidao-mensal-perfil-modal__body--upload">
+                        <CertidaoUploadMassaPanel
+                            uploadMassa={uploadMassa}
+                            disponivel={uploadMassaDisponivel}
+                            embutido
+                        />
+                    </div>
+                )}
+
+                {!abaUploadAtiva && erroSalvar && (
                     <p
                         className="certidao-mensal-perfil-modal__mensagem is-error"
                         role="alert"
@@ -1124,6 +1318,7 @@ export function PerfilDocumentalConfigModal({
                         type="button"
                         className="is-principal"
                         onClick={salvarRegra}
+                        hidden={abaUploadAtiva}
                         disabled={
                             !persistenciaHabilitada ||
                             salvando ||

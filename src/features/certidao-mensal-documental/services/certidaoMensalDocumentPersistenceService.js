@@ -619,6 +619,28 @@ export function criarCertidaoMensalDocumentPersistenceService({
         }
     }
 
+    /*
+     * ============================================================
+     * SAFE_SCAN_CERT2_AMBIGUIDADE_PERSISTENCIA_V1
+     *
+     * A ausência de resposta conclusiva depois do início de uma
+     * requisição remota NÃO é tratada como rejeição confirmada.
+     *
+     * Em especial:
+     *
+     * - Storage throw / erro não conclusivo:
+     *   estado do objeto pode ser ambíguo.
+     *
+     * - RPC throw / erro não conclusivo:
+     *   a transação pode ter sido commitada no servidor.
+     *
+     * Nesses casos:
+     *
+     * - não apagar Storage automaticamente;
+     * - não declarar falha confirmada;
+     * - exigir auditoria remota antes de retry/continuação.
+     * ============================================================
+     */
     async function salvarPdfCertidaoMensal({
         arquivo,
         payload,
@@ -637,47 +659,378 @@ export function criarCertidaoMensalDocumentPersistenceService({
                 payload,
             });
 
-        const {
-            error: uploadError,
-        } =
-            await cliente
-                .storage
-                .from(
-                    CERTIDAO_MENSAL_BUCKET_DOCUMENTOS
-                )
-                .upload(
-                    caminhoStorage,
-                    arquivo,
-                    {
-                        cacheControl:
-                            "3600",
+        /*
+         * Status HTTP 4xx é utilizado como prova de rejeição
+         * explícita da requisição pelo endpoint.
+         *
+         * Status 0, ausência de status, throw e 5xx são tratados
+         * de forma conservadora como inconclusivos.
+         */
+        const obterStatusHttp =
+            (
+                resposta,
+                error
+            ) => {
+                const candidatos = [
+                    error?.status,
+                    error?.statusCode,
+                    resposta?.status,
+                ];
 
-                        contentType:
-                            MIME_PDF,
-
-                        upsert:
-                            false,
+                for (
+                    const candidato of
+                    candidatos
+                ) {
+                    if (
+                        candidato ===
+                            null ||
+                        candidato ===
+                            undefined ||
+                        candidato ===
+                            ""
+                    ) {
+                        continue;
                     }
-                );
 
-        if (uploadError) {
+                    const numero =
+                        Number(
+                            candidato
+                        );
+
+                    if (
+                        Number.isInteger(
+                            numero
+                        )
+                    ) {
+                        return numero;
+                    }
+                }
+
+                return null;
+            };
+
+        const rejeicaoHttpConfirmada =
+            (statusHttp) =>
+                Number.isInteger(
+                    statusHttp
+                ) &&
+                statusHttp >= 400 &&
+                statusHttp < 500;
+
+        /*
+         * ========================================================
+         * 1 — STORAGE UPLOAD
+         * ========================================================
+         */
+
+        let respostaUpload;
+
+        try {
+            respostaUpload =
+                await cliente
+                    .storage
+                    .from(
+                        CERTIDAO_MENSAL_BUCKET_DOCUMENTOS
+                    )
+                    .upload(
+                        caminhoStorage,
+                        arquivo,
+                        {
+                            cacheControl:
+                                "3600",
+
+                            contentType:
+                                MIME_PDF,
+
+                            upsert:
+                                false,
+                        }
+                    );
+        }
+        catch (error) {
             throw criarErroPersistencia(
-                "Não foi possível enviar o PDF ao armazenamento.",
-                uploadError,
+                "A resposta do upload do PDF é inconclusiva. O estado remoto do arquivo precisa ser auditado antes de nova tentativa.",
+                error,
                 {
+                    codigo:
+                        "PERSISTENCIA_STORAGE_UPLOAD_AMBIGUO",
+
                     etapa:
                         "storage_upload",
 
+                    estadoPersistencia:
+                        "AMBIGUO",
+
+                    ambigua:
+                        true,
+
+                    requerAuditoriaRemota:
+                        true,
+
+                    tipoAuditoria:
+                        "ESTADO_STORAGE",
+
                     caminhoStorage,
+
+                    storageRequestIniciado:
+                        true,
+
+                    rpcRequestIniciado:
+                        false,
+
+                    rollbackExecutado:
+                        false,
+
+                    rollbackAutomaticoBloqueado:
+                        true,
                 }
             );
         }
 
-        const parametrosRpc =
-            criarParametrosRpc({
-                payload,
-                caminhoStorage,
-            });
+        if (
+            !respostaUpload ||
+            typeof respostaUpload !==
+                "object" ||
+            !Object.prototype.hasOwnProperty.call(
+                respostaUpload,
+                "error"
+            )
+        ) {
+            throw criarErroPersistencia(
+                "O upload do PDF não retornou uma resposta canônica. O estado remoto do arquivo precisa ser auditado.",
+                null,
+                {
+                    codigo:
+                        "PERSISTENCIA_STORAGE_RESPOSTA_AMBIGUA",
+
+                    etapa:
+                        "storage_upload",
+
+                    estadoPersistencia:
+                        "AMBIGUO",
+
+                    ambigua:
+                        true,
+
+                    requerAuditoriaRemota:
+                        true,
+
+                    tipoAuditoria:
+                        "ESTADO_STORAGE",
+
+                    caminhoStorage,
+
+                    storageRequestIniciado:
+                        true,
+
+                    rpcRequestIniciado:
+                        false,
+
+                    rollbackExecutado:
+                        false,
+
+                    rollbackAutomaticoBloqueado:
+                        true,
+                }
+            );
+        }
+
+        const uploadError =
+            respostaUpload.error ||
+            null;
+
+        if (uploadError) {
+            const statusHttp =
+                obterStatusHttp(
+                    respostaUpload,
+                    uploadError
+                );
+
+            if (
+                !rejeicaoHttpConfirmada(
+                    statusHttp
+                )
+            ) {
+                throw criarErroPersistencia(
+                    "O upload do PDF retornou uma falha inconclusiva. O estado remoto do arquivo precisa ser auditado antes de nova tentativa.",
+                    uploadError,
+                    {
+                        codigo:
+                            "PERSISTENCIA_STORAGE_UPLOAD_AMBIGUO",
+
+                        etapa:
+                            "storage_upload",
+
+                        estadoPersistencia:
+                            "AMBIGUO",
+
+                        ambigua:
+                            true,
+
+                        requerAuditoriaRemota:
+                            true,
+
+                        tipoAuditoria:
+                            "ESTADO_STORAGE",
+
+                        statusHttp,
+
+                        caminhoStorage,
+
+                        storageRequestIniciado:
+                            true,
+
+                        rpcRequestIniciado:
+                            false,
+
+                        rollbackExecutado:
+                            false,
+
+                        rollbackAutomaticoBloqueado:
+                            true,
+                    }
+                );
+            }
+
+            throw criarErroPersistencia(
+                "O armazenamento rejeitou o upload do PDF.",
+                uploadError,
+                {
+                    codigo:
+                        "PERSISTENCIA_STORAGE_REJEITADA",
+
+                    etapa:
+                        "storage_upload",
+
+                    estadoPersistencia:
+                        "FALHA_CONFIRMADA",
+
+                    ambigua:
+                        false,
+
+                    requerAuditoriaRemota:
+                        false,
+
+                    tipoAuditoria:
+                        "",
+
+                    statusHttp,
+
+                    caminhoStorage,
+
+                    storageRequestIniciado:
+                        true,
+
+                    rpcRequestIniciado:
+                        false,
+
+                    rollbackExecutado:
+                        false,
+
+                    rollbackAutomaticoBloqueado:
+                        false,
+                }
+            );
+        }
+
+        /*
+         * ========================================================
+         * 2 — PREPARAÇÃO DO RPC
+         *
+         * O upload foi confirmado.
+         * O RPC ainda NÃO foi iniciado.
+         *
+         * Se houver falha local aqui, é seguro tentar remover o
+         * objeto recém-enviado, pois nenhum request de banco deste
+         * salvamento foi iniciado.
+         * ========================================================
+         */
+
+        let parametrosRpc;
+
+        try {
+            parametrosRpc =
+                criarParametrosRpc({
+                    payload,
+                    caminhoStorage,
+                });
+        }
+        catch (error) {
+            const rollbackError =
+                await removerUploadDeRollback(
+                    caminhoStorage
+                );
+
+            const possuiResiduoStorage =
+                Boolean(
+                    rollbackError
+                );
+
+            throw criarErroPersistencia(
+                possuiResiduoStorage
+                    ? "A preparação do registro falhou e o rollback do arquivo também falhou."
+                    : "A preparação do registro falhou. O arquivo enviado foi removido automaticamente.",
+                error,
+                {
+                    codigo:
+                        possuiResiduoStorage
+                            ? "PERSISTENCIA_PRE_RPC_FALHOU_ROLLBACK_STORAGE_FALHOU"
+                            : "PERSISTENCIA_PRE_RPC_FALHOU",
+
+                    etapa:
+                        "preparacao_rpc",
+
+                    estadoPersistencia:
+                        possuiResiduoStorage
+                            ? "FALHA_CONFIRMADA_COM_RESIDUO_STORAGE"
+                            : "FALHA_CONFIRMADA",
+
+                    ambigua:
+                        false,
+
+                    requerAuditoriaRemota:
+                        possuiResiduoStorage,
+
+                    tipoAuditoria:
+                        possuiResiduoStorage
+                            ? "RESIDUO_STORAGE"
+                            : "",
+
+                    caminhoStorage,
+
+                    storageRequestIniciado:
+                        true,
+
+                    rpcRequestIniciado:
+                        false,
+
+                    rollbackExecutado:
+                        !rollbackError,
+
+                    rollbackAutomaticoBloqueado:
+                        false,
+
+                    rollbackError:
+                        rollbackError ||
+                        null,
+                }
+            );
+        }
+
+        /*
+         * ========================================================
+         * 3 — RPC
+         *
+         * A partir do momento da chamada abaixo, qualquer ausência
+         * de resposta conclusiva pode significar:
+         *
+         * A) banco não recebeu;
+         * B) banco recebeu e rejeitou;
+         * C) banco recebeu, commitou e a resposta se perdeu.
+         *
+         * Por isso um throw NÃO autoriza cleanup do Storage.
+         * ========================================================
+         */
 
         let respostaRpc;
 
@@ -689,20 +1042,171 @@ export function criarCertidaoMensalDocumentPersistenceService({
                 );
         }
         catch (error) {
-            respostaRpc = {
-                data: null,
+            throw criarErroPersistencia(
+                "A resposta do registro documental é inconclusiva. O estado remoto deve ser auditado antes de remover o arquivo ou repetir a operação.",
                 error,
-            };
+                {
+                    codigo:
+                        "PERSISTENCIA_RPC_AMBIGUA",
+
+                    etapa:
+                        "database_rpc",
+
+                    estadoPersistencia:
+                        "AMBIGUO",
+
+                    ambigua:
+                        true,
+
+                    requerAuditoriaRemota:
+                        true,
+
+                    tipoAuditoria:
+                        "ESTADO_DOCUMENTO_E_STORAGE",
+
+                    caminhoStorage,
+
+                    storageRequestIniciado:
+                        true,
+
+                    rpcRequestIniciado:
+                        true,
+
+                    rollbackExecutado:
+                        false,
+
+                    rollbackAutomaticoBloqueado:
+                        true,
+                }
+            );
         }
 
-        if (respostaRpc?.error) {
+        if (
+            !respostaRpc ||
+            typeof respostaRpc !==
+                "object" ||
+            !Object.prototype.hasOwnProperty.call(
+                respostaRpc,
+                "error"
+            )
+        ) {
+            throw criarErroPersistencia(
+                "O registro documental não retornou uma resposta canônica. O estado remoto deve ser auditado antes de qualquer nova tentativa.",
+                null,
+                {
+                    codigo:
+                        "PERSISTENCIA_RPC_RESPOSTA_AMBIGUA",
+
+                    etapa:
+                        "database_rpc",
+
+                    estadoPersistencia:
+                        "AMBIGUO",
+
+                    ambigua:
+                        true,
+
+                    requerAuditoriaRemota:
+                        true,
+
+                    tipoAuditoria:
+                        "ESTADO_DOCUMENTO_E_STORAGE",
+
+                    caminhoStorage,
+
+                    storageRequestIniciado:
+                        true,
+
+                    rpcRequestIniciado:
+                        true,
+
+                    rollbackExecutado:
+                        false,
+
+                    rollbackAutomaticoBloqueado:
+                        true,
+                }
+            );
+        }
+
+        if (respostaRpc.error) {
+            const statusHttp =
+                obterStatusHttp(
+                    respostaRpc,
+                    respostaRpc.error
+                );
+
+            /*
+             * 5xx, status 0 ou status desconhecido:
+             *
+             * não existe prova suficiente para afirmar que a
+             * transação não foi commitada.
+             */
+            if (
+                !rejeicaoHttpConfirmada(
+                    statusHttp
+                )
+            ) {
+                throw criarErroPersistencia(
+                    "O registro documental retornou uma falha sem confirmação de rejeição. O banco e o Storage devem ser auditados antes de qualquer nova tentativa.",
+                    respostaRpc.error,
+                    {
+                        codigo:
+                            "PERSISTENCIA_RPC_AMBIGUA",
+
+                        etapa:
+                            "database_rpc",
+
+                        estadoPersistencia:
+                            "AMBIGUO",
+
+                        ambigua:
+                            true,
+
+                        requerAuditoriaRemota:
+                            true,
+
+                        tipoAuditoria:
+                            "ESTADO_DOCUMENTO_E_STORAGE",
+
+                        statusHttp,
+
+                        caminhoStorage,
+
+                        storageRequestIniciado:
+                            true,
+
+                        rpcRequestIniciado:
+                            true,
+
+                        rollbackExecutado:
+                            false,
+
+                        rollbackAutomaticoBloqueado:
+                            true,
+                    }
+                );
+            }
+
+            /*
+             * HTTP 4xx:
+             *
+             * rejeição explícita da request.
+             * O banco não confirmou persistência.
+             * Agora o rollback do Storage pode ser tentado.
+             */
             const rollbackError =
                 await removerUploadDeRollback(
                     caminhoStorage
                 );
 
+            const possuiResiduoStorage =
+                Boolean(
+                    rollbackError
+                );
+
             const mensagem =
-                rollbackError
+                possuiResiduoStorage
                     ? "O banco rejeitou o registro e o rollback do arquivo também falhou."
                     : "O banco rejeitou o registro. O arquivo enviado foi removido automaticamente.";
 
@@ -710,20 +1214,57 @@ export function criarCertidaoMensalDocumentPersistenceService({
                 mensagem,
                 respostaRpc.error,
                 {
+                    codigo:
+                        possuiResiduoStorage
+                            ? "PERSISTENCIA_RPC_REJEITADA_ROLLBACK_STORAGE_FALHOU"
+                            : "PERSISTENCIA_RPC_REJEITADA",
+
                     etapa:
                         "database_rpc",
 
+                    estadoPersistencia:
+                        possuiResiduoStorage
+                            ? "FALHA_CONFIRMADA_COM_RESIDUO_STORAGE"
+                            : "FALHA_CONFIRMADA",
+
+                    ambigua:
+                        false,
+
+                    requerAuditoriaRemota:
+                        possuiResiduoStorage,
+
+                    tipoAuditoria:
+                        possuiResiduoStorage
+                            ? "RESIDUO_STORAGE"
+                            : "",
+
+                    statusHttp,
+
                     caminhoStorage,
+
+                    storageRequestIniciado:
+                        true,
+
+                    rpcRequestIniciado:
+                        true,
 
                     rollbackExecutado:
                         !rollbackError,
 
+                    rollbackAutomaticoBloqueado:
+                        false,
+
                     rollbackError:
-                        rollbackError || null,
+                        rollbackError ||
+                        null,
                 }
             );
         }
 
+        /*
+         * RPC resolveu sem erro.
+         * Preserva o contrato público de sucesso existente.
+         */
         return {
             bucketId:
                 CERTIDAO_MENSAL_BUCKET_DOCUMENTOS,
@@ -1578,6 +2119,767 @@ export function criarCertidaoMensalDocumentPersistenceService({
         };
     }
 
+    /*
+     * SAFE_SCAN_CERTIDAO_BATCH_READ_B2_V1_R1
+     *
+     * Carrega competências, itens e versões uma única vez no banco
+     * e reutiliza buscarDocumentoAtual sobre um cliente em memória.
+     *
+     * O resolvedor central continua sendo a única fonte da regra de:
+     * - competência;
+     * - competência fechada;
+     * - validade;
+     * - histórico;
+     * - herança.
+     */
+    async function buscarDocumentosAtuais({
+        empresaId,
+        competencia,
+        tiposDocumento = [],
+    } = {}) {
+        const empresaIdSeguro =
+            textoSeguro(
+                empresaId
+            );
+
+        if (!empresaIdSeguro) {
+            throw new Error(
+                "A empresa da consulta em lote não foi informada."
+            );
+        }
+
+        const competenciaRecebida =
+            textoSeguro(
+                competencia
+            );
+
+        let competenciaNormalizada =
+            "";
+
+        const competenciaBr =
+            /^(0[1-9]|1[0-2])\/(\d{4})$/
+                .exec(
+                    competenciaRecebida
+                );
+
+        const competenciaAnoMes =
+            /^(\d{4})-(0[1-9]|1[0-2])$/
+                .exec(
+                    competenciaRecebida
+                );
+
+        const competenciaIso =
+            /^(\d{4})-(0[1-9]|1[0-2])-\d{2}$/
+                .exec(
+                    competenciaRecebida
+                );
+
+        if (competenciaBr) {
+            competenciaNormalizada =
+                competenciaBr[2] +
+                "-" +
+                competenciaBr[1] +
+                "-01";
+        }
+        else if (competenciaAnoMes) {
+            competenciaNormalizada =
+                competenciaAnoMes[1] +
+                "-" +
+                competenciaAnoMes[2] +
+                "-01";
+        }
+        else if (competenciaIso) {
+            competenciaNormalizada =
+                competenciaIso[1] +
+                "-" +
+                competenciaIso[2] +
+                "-01";
+        }
+        else {
+            throw new Error(
+                "A competência da consulta em lote é inválida."
+            );
+        }
+
+        const tiposDocumentoSeguros =
+            [
+                ...new Set(
+                    (
+                        Array.isArray(
+                            tiposDocumento
+                        )
+                            ? tiposDocumento
+                            : []
+                    )
+                        .map(
+                            (tipoDocumento) =>
+                                textoSeguro(
+                                    tipoDocumento
+                                )
+                        )
+                        .filter(Boolean)
+                ),
+            ];
+
+        if (
+            tiposDocumentoSeguros
+                .some(
+                    (tipoDocumento) =>
+                        !PADRAO_TIPO_DOCUMENTO
+                            .test(
+                                tipoDocumento
+                            )
+                )
+        ) {
+            throw new Error(
+                "A consulta em lote recebeu tipo documental inválido."
+            );
+        }
+
+        if (!tiposDocumentoSeguros.length) {
+            return {};
+        }
+
+        if (
+            typeof cliente.from !==
+            "function"
+        ) {
+            throw new Error(
+                "O cliente Supabase não oferece leitura de tabelas."
+            );
+        }
+
+        const anoAlvo =
+            Number(
+                competenciaNormalizada
+                    .slice(
+                        0,
+                        4
+                    )
+            );
+
+        const inicioJanela =
+            String(
+                anoAlvo - 1
+            ) +
+            "-01-01";
+
+        const fimJanela =
+            String(
+                anoAlvo + 2
+            ) +
+            "-01-01";
+
+        /*
+         * ========================================================
+         * A — COMPETÊNCIAS — UMA QUERY
+         * ========================================================
+         */
+
+        let respostaCompetencias;
+
+        try {
+            respostaCompetencias =
+                await cliente
+                    .from(
+                        "certidao_mensal_competencias"
+                    )
+                    .select(
+                        [
+                            "id",
+                            "empresa_id",
+                            "competencia",
+                            "status",
+                            "atualizado_em",
+                        ].join(",")
+                    )
+                    .eq(
+                        "empresa_id",
+                        empresaIdSeguro
+                    )
+                    .gte(
+                        "competencia",
+                        inicioJanela
+                    )
+                    .lt(
+                        "competencia",
+                        fimJanela
+                    )
+                    .order(
+                        "competencia",
+                        {
+                            ascending:
+                                true,
+                        }
+                    );
+        }
+        catch (error) {
+            throw criarErroPersistencia(
+                "Não foi possível consultar as competências documentais em lote.",
+                error,
+                {
+                    etapa:
+                        "database_batch_select_competencias",
+                }
+            );
+        }
+
+        if (
+            respostaCompetencias
+                ?.error
+        ) {
+            throw criarErroPersistencia(
+                "Não foi possível consultar as competências documentais em lote.",
+                respostaCompetencias.error,
+                {
+                    etapa:
+                        "database_batch_select_competencias",
+                }
+            );
+        }
+
+        const competencias =
+            Array.isArray(
+                respostaCompetencias
+                    ?.data
+            )
+                ? respostaCompetencias.data
+                : [];
+
+        const resultadoVazio =
+            () =>
+                Object.fromEntries(
+                    tiposDocumentoSeguros
+                        .map(
+                            (tipoDocumento) => [
+                                tipoDocumento,
+                                null,
+                            ]
+                        )
+                );
+
+        if (!competencias.length) {
+            return resultadoVazio();
+        }
+
+        const competenciaIds =
+            competencias
+                .map(
+                    (registro) =>
+                        textoSeguro(
+                            registro?.id
+                        )
+                )
+                .filter(Boolean);
+
+        if (!competenciaIds.length) {
+            return resultadoVazio();
+        }
+
+        /*
+         * ========================================================
+         * B — ITENS — UMA QUERY PARA TODOS OS TIPOS
+         * ========================================================
+         */
+
+        let respostaItens;
+
+        try {
+            respostaItens =
+                await cliente
+                    .from(
+                        "certidao_mensal_itens"
+                    )
+                    .select(
+                        [
+                            "id",
+                            "competencia_id",
+                            "tipo_documento",
+                            "titulo",
+                            "origem",
+                            "status",
+                            "requer_consulta_oficial",
+                            "status_consulta_oficial",
+                            "versao_atual_id",
+                            "atualizado_em",
+                        ].join(",")
+                    )
+                    .in(
+                        "competencia_id",
+                        competenciaIds
+                    )
+                    .in(
+                        "tipo_documento",
+                        tiposDocumentoSeguros
+                    );
+        }
+        catch (error) {
+            throw criarErroPersistencia(
+                "Não foi possível consultar os itens documentais em lote.",
+                error,
+                {
+                    etapa:
+                        "database_batch_select_itens",
+                }
+            );
+        }
+
+        if (
+            respostaItens
+                ?.error
+        ) {
+            throw criarErroPersistencia(
+                "Não foi possível consultar os itens documentais em lote.",
+                respostaItens.error,
+                {
+                    etapa:
+                        "database_batch_select_itens",
+                }
+            );
+        }
+
+        const itens =
+            Array.isArray(
+                respostaItens?.data
+            )
+                ? respostaItens.data
+                : [];
+
+        const versaoIds =
+            [
+                ...new Set(
+                    itens
+                        .map(
+                            (item) =>
+                                textoSeguro(
+                                    item
+                                        ?.versao_atual_id
+                                )
+                        )
+                        .filter(Boolean)
+                ),
+            ];
+
+        /*
+         * ========================================================
+         * C — VERSÕES — UMA QUERY
+         * ========================================================
+         */
+
+        let versoesBanco =
+            [];
+
+        if (versaoIds.length) {
+            let respostaVersoes;
+
+            try {
+                respostaVersoes =
+                    await cliente
+                        .from(
+                            "certidao_mensal_versoes"
+                        )
+                        .select(
+                            [
+                                "id",
+                                "item_id",
+                                "numero_versao",
+                                "bucket_id",
+                                "caminho_storage",
+                                "nome_original",
+                                "mime_type",
+                                "tamanho_bytes",
+                                "hash_algoritmo",
+                                "hash_sha256",
+                                "hash_calculado_em",
+                                "total_paginas",
+                                "status_resultado",
+                                "diagnostico",
+                                "payload",
+                                "criado_por",
+                                "criado_em",
+                            ].join(",")
+                        )
+                        .in(
+                            "id",
+                            versaoIds
+                        );
+            }
+            catch (error) {
+                throw criarErroPersistencia(
+                    "Não foi possível consultar as versões documentais em lote.",
+                    error,
+                    {
+                        etapa:
+                            "database_batch_select_versoes",
+                    }
+                );
+            }
+
+            if (
+                respostaVersoes
+                    ?.error
+            ) {
+                throw criarErroPersistencia(
+                    "Não foi possível consultar as versões documentais em lote.",
+                    respostaVersoes.error,
+                    {
+                        etapa:
+                            "database_batch_select_versoes",
+                    }
+                );
+            }
+
+            versoesBanco =
+                Array.isArray(
+                    respostaVersoes
+                        ?.data
+                )
+                    ? respostaVersoes.data
+                    : [];
+        }
+
+        /*
+         * ========================================================
+         * D — CLIENTE SOMENTE EM MEMÓRIA
+         *
+         * Nenhuma query real daqui para frente.
+         * ========================================================
+         */
+
+        const dadosMemoria =
+            Object.freeze({
+                certidao_mensal_competencias:
+                    competencias,
+
+                certidao_mensal_itens:
+                    itens,
+
+                certidao_mensal_versoes:
+                    versoesBanco,
+            });
+
+        const criarConsultaMemoria =
+            (
+                registrosOriginais
+            ) => {
+                let registros =
+                    Array.isArray(
+                        registrosOriginais
+                    )
+                        ? [
+                            ...registrosOriginais,
+                        ]
+                        : [];
+
+                const consulta = {
+                    select() {
+                        return consulta;
+                    },
+
+                    eq(
+                        coluna,
+                        valor
+                    ) {
+                        const comparacao =
+                            String(
+                                valor ??
+                                ""
+                            );
+
+                        registros =
+                            registros.filter(
+                                (registro) =>
+                                    String(
+                                        registro?.[
+                                            coluna
+                                        ] ??
+                                        ""
+                                    ) ===
+                                    comparacao
+                            );
+
+                        return consulta;
+                    },
+
+                    gte(
+                        coluna,
+                        valor
+                    ) {
+                        const comparacao =
+                            String(
+                                valor ??
+                                ""
+                            );
+
+                        registros =
+                            registros.filter(
+                                (registro) =>
+                                    String(
+                                        registro?.[
+                                            coluna
+                                        ] ??
+                                        ""
+                                    ) >=
+                                    comparacao
+                            );
+
+                        return consulta;
+                    },
+
+                    lt(
+                        coluna,
+                        valor
+                    ) {
+                        const comparacao =
+                            String(
+                                valor ??
+                                ""
+                            );
+
+                        registros =
+                            registros.filter(
+                                (registro) =>
+                                    String(
+                                        registro?.[
+                                            coluna
+                                        ] ??
+                                        ""
+                                    ) <
+                                    comparacao
+                            );
+
+                        return consulta;
+                    },
+
+                    in(
+                        coluna,
+                        valores
+                    ) {
+                        const valoresSeguros =
+                            new Set(
+                                (
+                                    Array.isArray(
+                                        valores
+                                    )
+                                        ? valores
+                                        : []
+                                )
+                                    .map(
+                                        (
+                                            valor
+                                        ) =>
+                                            String(
+                                                valor ??
+                                                ""
+                                            )
+                                    )
+                            );
+
+                        registros =
+                            registros.filter(
+                                (registro) =>
+                                    valoresSeguros.has(
+                                        String(
+                                            registro?.[
+                                                coluna
+                                            ] ??
+                                            ""
+                                        )
+                                    )
+                            );
+
+                        return consulta;
+                    },
+
+                    order(
+                        coluna,
+                        {
+                            ascending = true,
+                        } = {}
+                    ) {
+                        registros =
+                            [
+                                ...registros,
+                            ].sort(
+                                (
+                                    registroA,
+                                    registroB
+                                ) => {
+                                    const valorA =
+                                        String(
+                                            registroA?.[
+                                                coluna
+                                            ] ??
+                                            ""
+                                        );
+
+                                    const valorB =
+                                        String(
+                                            registroB?.[
+                                                coluna
+                                            ] ??
+                                            ""
+                                        );
+
+                                    const comparacao =
+                                        valorA.localeCompare(
+                                            valorB
+                                        );
+
+                                    return ascending
+                                        ? comparacao
+                                        : -comparacao;
+                                }
+                            );
+
+                        return consulta;
+                    },
+
+                    limit(
+                        valor
+                    ) {
+                        const limite =
+                            Number(
+                                valor
+                            );
+
+                        if (
+                            Number.isFinite(
+                                limite
+                            ) &&
+                            limite >= 0
+                        ) {
+                            registros =
+                                registros.slice(
+                                    0,
+                                    limite
+                                );
+                        }
+
+                        return consulta;
+                    },
+
+                    then(
+                        resolver,
+                        rejeitar
+                    ) {
+                        return Promise
+                            .resolve({
+                                data:
+                                    registros,
+
+                                error:
+                                    null,
+                            })
+                            .then(
+                                resolver,
+                                rejeitar
+                            );
+                    },
+                };
+
+                return consulta;
+            };
+
+        const clienteMemoria =
+            new Proxy(
+                cliente,
+                {
+                    get(
+                        alvo,
+                        propriedade,
+                        receiver
+                    ) {
+                        if (
+                            propriedade ===
+                            "from"
+                        ) {
+                            return (
+                                tabela
+                            ) => {
+                                if (
+                                    !Object.prototype
+                                        .hasOwnProperty
+                                        .call(
+                                            dadosMemoria,
+                                            tabela
+                                        )
+                                ) {
+                                    throw new Error(
+                                        "Consulta não prevista durante a resolução documental em memória: " +
+                                        String(
+                                            tabela
+                                        )
+                                    );
+                                }
+
+                                return criarConsultaMemoria(
+                                    dadosMemoria[
+                                        tabela
+                                    ]
+                                );
+                            };
+                        }
+
+                        const valor =
+                            Reflect.get(
+                                alvo,
+                                propriedade,
+                                receiver
+                            );
+
+                        return (
+                            typeof valor ===
+                            "function"
+                        )
+                            ? valor.bind(
+                                alvo
+                            )
+                            : valor;
+                    },
+                }
+            );
+
+        /*
+         * ========================================================
+         * E — REUTILIZAR O READER CENTRAL
+         * ========================================================
+         */
+
+        const servicoMemoria =
+            criarCertidaoMensalDocumentPersistenceService({
+                clienteSupabase:
+                    clienteMemoria,
+            });
+
+        const pares =
+            await Promise.all(
+                tiposDocumentoSeguros
+                    .map(
+                        async (
+                            tipoDocumento
+                        ) => [
+                            tipoDocumento,
+
+                            await servicoMemoria
+                                .buscarDocumentoAtual({
+                                    empresaId:
+                                        empresaIdSeguro,
+
+                                    competencia:
+                                        competenciaNormalizada,
+
+                                    tipoDocumento,
+                                }),
+                        ]
+                    )
+            );
+
+        return Object.fromEntries(
+            pares
+        );
+    }
+
     async function criarUrlAssinadaPdf({
         caminhoStorage,
         duracaoSegundos = 600,
@@ -1652,6 +2954,7 @@ export function criarCertidaoMensalDocumentPersistenceService({
     return Object.freeze({
         salvarPdfCertidaoMensal,
         buscarDocumentoAtual,
+        buscarDocumentosAtuais,
         criarUrlAssinadaPdf,
     });
 }
@@ -1685,6 +2988,18 @@ export async function buscarDocumentoAtualCertidaoMensal(
 
     return servico
         .buscarDocumentoAtual(
+            parametros
+        );
+}
+
+export async function buscarDocumentosAtuaisCertidaoMensal(
+    parametros
+) {
+    const servico =
+        await criarServicoPadrao();
+
+    return servico
+        .buscarDocumentosAtuais(
             parametros
         );
 }
