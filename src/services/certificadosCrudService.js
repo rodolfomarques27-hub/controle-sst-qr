@@ -4,6 +4,10 @@ import {
     removerArquivoCertificadoStorage,
 } from "./certificadosStorageService";
 import {
+    buscarEvidenciaCorrentePorSha256Service,
+    calcularSha256ArquivoCertificadoService,
+} from "./certificadosEvidenciasService";
+import {
     inferirTreinamentoPorNomeArquivo,
     normalizarCertificado,
     obterTreinamento,
@@ -431,70 +435,311 @@ export async function salvarCertificadoTreinamentoCrud({
         treinamentoId: treinamentoIdSeguro,
     });
 
-    const arquivo = await enviarArquivoCertificado({
-        supabase,
-        arquivo: certificado.arquivo,
-        colaborador: colaboradorSeguro,
-        treinamentoId: treinamentoIdSeguro,
-    });
+    const tipoEvidenciaTreinamento =
+        String(
+            certificado?.tipoEvidenciaTreinamento ||
+            ""
+        )
+            .trim()
+            .toLowerCase();
 
-    const payload = {
-        colaborador_id: colaboradorIdSeguro,
-        tipo_treinamento: treinamento.nome,
-        treinamento_codigo: treinamentoIdSeguro,
-        nome_treinamento: treinamento.nome,
-        data_realizacao: certificado.dataRealizacao,
-        data_vencimento: treinamentoSemVencimento ? null : certificado.dataVencimento,
-        arquivo_url: arquivo.arquivoUrl,
-        arquivo_nome: certificado.arquivoNome || arquivo.arquivoNome,
-        observacao: certificado.observacao || null,
-        status_validacao: "Pendente de verificação",
-    };
+    const evidenciaListaPresenca =
+        tipoEvidenciaTreinamento ===
+        "lista_presenca";
 
-    const { data: existentes, error: buscaError } = await supabase
-        .from("certificados")
-        .select("*")
-        .eq("colaborador_id", colaboradorIdSeguro)
-        .eq("tipo_treinamento", treinamento.nome)
-        .order("created_at", { ascending: false })
-        .limit(1);
+    const evidenciaIndividual =
+        tipoEvidenciaTreinamento ===
+        "certificado_individual";
+
+    const evidenciaIntegrada =
+        evidenciaListaPresenca ||
+        evidenciaIndividual;
+
+    const {
+        data: existentes,
+        error: buscaError,
+    } =
+        await supabase
+            .from("certificados")
+            .select("*")
+            .eq(
+                "colaborador_id",
+                colaboradorIdSeguro
+            )
+            .eq(
+                "tipo_treinamento",
+                treinamento.nome
+            )
+            .order(
+                "created_at",
+                {
+                    ascending: false,
+                }
+            )
+            .limit(1);
 
     if (buscaError) {
-        throw new Error(`Erro ao verificar certificado existente: ${buscaError.message}`);
+        throw new Error(
+            `Erro ao verificar certificado existente: ${buscaError.message}`
+        );
     }
 
-    const existente = existentes?.[0] || null;
+    const existente =
+        existentes?.[0] || null;
 
-    const consulta = existente?.id
-        ? supabase
-            .from("certificados")
-            .update(payload)
-            .eq("id", existente.id)
-        : supabase
-            .from("certificados")
-            .insert(payload);
+    const dataExistente =
+        String(
+            existente?.data_realizacao ||
+            ""
+        ).slice(
+            0,
+            10
+        );
 
-    const { data, error } = await consulta
-        .select("*")
-        .single();
+    const dataEntrada =
+        String(
+            certificado?.dataRealizacao ||
+            ""
+        ).slice(
+            0,
+            10
+        );
 
-    if (error) {
-        throw new Error(`Erro ao salvar certificado na tabela certificados: ${error.message}`);
+    const mesmaDataRealizacao =
+        Boolean(
+            existente?.id &&
+            dataExistente &&
+            dataEntrada &&
+            dataExistente === dataEntrada
+        );
+
+    const preservarSnapshotLista =
+        Boolean(
+            evidenciaListaPresenca &&
+            existente?.id &&
+            mesmaDataRealizacao
+        );
+
+    let arquivoSha256 =
+        null;
+
+    let evidenciaDuplicada =
+        null;
+
+    if (evidenciaIntegrada) {
+        /*
+         * E3-IDEMP-1
+         *
+         * O fingerprint é calculado antes de qualquer
+         * chamada ao Storage.
+         */
+        arquivoSha256 =
+            await calcularSha256ArquivoCertificadoService(
+                certificado.arquivo
+            );
+
+        evidenciaDuplicada =
+            await buscarEvidenciaCorrentePorSha256Service({
+                supabase,
+
+                colaboradorId:
+                    colaboradorIdSeguro,
+
+                treinamentoCodigo:
+                    treinamentoIdSeguro,
+
+                dataRealizacao:
+                    certificado.dataRealizacao,
+
+                tipoEvidencia:
+                    tipoEvidenciaTreinamento,
+
+                arquivoSha256,
+            });
+
+        if (evidenciaDuplicada) {
+            if (
+                !existente?.id ||
+                String(
+                    evidenciaDuplicada
+                        .certificadoOrigemId ||
+                    ""
+                ) !==
+                    String(
+                        existente.id
+                    )
+            ) {
+                throw new Error(
+                    "O mesmo arquivo já está vinculado a outro certificado lógico desta realização. Nenhum novo upload foi executado."
+                );
+            }
+        }
+    }
+
+    /*
+     * Se o fingerprint já existe:
+     *
+     * - nenhum novo objeto é enviado;
+     * - arquivo_url existente é reutilizado;
+     * - RPC SHA-aware garante idempotência final.
+     */
+    const arquivo =
+        evidenciaDuplicada
+            ? {
+                arquivoUrl:
+                    evidenciaDuplicada
+                        .arquivoUrl,
+
+                arquivoNome:
+                    evidenciaDuplicada
+                        .arquivoNome ||
+                    certificado.arquivoNome ||
+                    certificado.arquivo?.name ||
+                    null,
+            }
+            : await enviarArquivoCertificado({
+                supabase,
+
+                arquivo:
+                    certificado.arquivo,
+
+                colaborador:
+                    colaboradorSeguro,
+
+                treinamentoId:
+                    treinamentoIdSeguro,
+            });
+
+    const payload = {
+        colaborador_id:
+            colaboradorIdSeguro,
+
+        tipo_treinamento:
+            treinamento.nome,
+
+        treinamento_codigo:
+            treinamentoIdSeguro,
+
+        nome_treinamento:
+            treinamento.nome,
+
+        data_realizacao:
+            certificado.dataRealizacao,
+
+        data_vencimento:
+            treinamentoSemVencimento
+                ? null
+                : certificado.dataVencimento,
+
+        arquivo_url:
+            arquivo.arquivoUrl,
+
+        arquivo_nome:
+            certificado.arquivoNome ||
+            arquivo.arquivoNome,
+
+        observacao:
+            certificado.observacao ||
+            null,
+
+        status_validacao:
+            "Pendente de verificação",
+    };
+
+    let data =
+        existente || null;
+
+    /*
+     * Lista da mesma realização não substitui o snapshot.
+     * Nos demais cenários, preserva-se o UPDATE/INSERT legado.
+     */
+    if (
+        !preservarSnapshotLista &&
+        !evidenciaDuplicada
+    ) {
+        const consulta =
+            existente?.id
+                ? supabase
+                    .from("certificados")
+                    .update(payload)
+                    .eq(
+                        "id",
+                        existente.id
+                    )
+                : supabase
+                    .from("certificados")
+                    .insert(payload);
+
+        const resultado =
+            await consulta
+                .select("*")
+                .single();
+
+        if (resultado.error) {
+            throw new Error(
+                `Erro ao salvar certificado na tabela certificados: ${resultado.error.message}`
+            );
+        }
+
+        data =
+            resultado.data;
+    }
+
+    if (!data) {
+        throw new Error(
+            "O certificado lógico não foi localizado após o salvamento."
+        );
     }
 
     /*
      * CERT-HIST-G1-R2-F1
      *
-     * Substituir um certificado não remove mais o objeto físico
-     * anterior.
-     *
-     * A versão OLD será registrada por trigger em
-     * public.certificados_historico.
-     *
-     * A exclusão explícita continua separada em
-     * excluirCertificadoTreinamentoCrud.
+     * O trigger já existente continua responsável pelo histórico
+     * quando o snapshot realmente é substituído.
      */
-    return normalizarCertificado(data);
+
+    const certificadoNormalizado =
+        normalizarCertificado(
+            data
+        );
+
+    if (!evidenciaIntegrada) {
+        return certificadoNormalizado;
+    }
+
+    return {
+        ...certificadoNormalizado,
+
+        arquivoEvidenciaUrl:
+            arquivo.arquivoUrl,
+
+        arquivoEvidenciaNome:
+            certificado.arquivoNome ||
+            arquivo.arquivoNome,
+
+        tipoEvidenciaTreinamento,
+
+        arquivoSha256,
+
+        evidenciaDuplicada:
+            Boolean(
+                evidenciaDuplicada
+            ),
+
+        evidenciaIdReutilizada:
+            evidenciaDuplicada?.id ||
+            null,
+
+        snapshotPreservado:
+            preservarSnapshotLista ||
+            Boolean(
+                evidenciaDuplicada
+            ),
+
+        evidenciaPrincipalSolicitada:
+            evidenciaIndividual ||
+            !preservarSnapshotLista,
+    };
 }
 
 export async function atualizarDatasCertificadoCrud({ supabase, certificado, datas } = {}) {

@@ -12,6 +12,76 @@ import { FileUploadAviso } from "../FileUploadAviso";
 import { classNames } from "../../utils/sstUtils";
 import { EnvioLoteTreinamentos } from "./EnvioLoteTreinamentos";
 
+function obterNomeEmpresaDiretaSelecaoTreinamentos(
+    colaborador = {}
+) {
+    const empresaCompleta =
+        String(
+            colaborador?.empresaExibicao ||
+            colaborador?.empresa_exibicao ||
+            colaborador?.empresaNome ||
+            colaborador?.empresa_nome ||
+            colaborador?.empresa ||
+            "Empresa não informada"
+        )
+            .replace(/\s+/g, " ")
+            .trim();
+
+    const partes =
+        empresaCompleta.split(
+            /\bsubcontratada\s*:/i
+        );
+
+    const nomeExtraido =
+        String(
+            partes.length > 1
+                ? partes[partes.length - 1]
+                : ""
+        )
+            .replace(/\s+/g, " ")
+            .trim();
+
+    return (
+        String(
+            nomeExtraido ||
+            colaborador?.empresaNome ||
+            colaborador?.empresa_nome ||
+            colaborador?.empresa ||
+            empresaCompleta ||
+            "Empresa não informada"
+        )
+            .replace(/\s+/g, " ")
+            .trim() ||
+        "Empresa não informada"
+    );
+}
+
+function obterRotuloColaboradorSelecaoTreinamentos(
+    colaborador = null
+) {
+    if (!colaborador) {
+        return "Selecione um colaborador";
+    }
+
+    return [
+        String(
+            colaborador?.nome ||
+            "Colaborador sem nome"
+        ).trim(),
+
+        obterNomeEmpresaDiretaSelecaoTreinamentos(
+            colaborador
+        ),
+
+        String(
+            colaborador?.codigoFuncionario ||
+            ""
+        ).trim(),
+    ]
+        .filter(Boolean)
+        .join(" — ");
+}
+
 export function FormularioLancamentoCertificado({
     colaboradores = [],
     colabSelecionadoCodigo = "",
@@ -33,6 +103,9 @@ export function FormularioLancamentoCertificado({
     salvandoCertificado,
     analisandoArquivoCertificado = false,
     adicionarTreinamento,
+    adicionarTreinamentoGradeArquivoLote,
+    adicionandoTreinamentoGradeArquivoId = "",
+    podeAdicionarTreinamentoGradeLote = false,
     arquivosLote = [],
     prepararArquivosLote,
     sincronizarArquivosDoStorage,
@@ -92,21 +165,165 @@ export function FormularioLancamentoCertificado({
             {recolhido ? null : (
             <div className="mt-5 space-y-3">
                 <div>
-                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Colaborador</label>
-                    <select
-                        value={colabSelecionadoCodigo}
-                        onChange={(e) => onAlterarColaboradorCertificado(e.target.value)}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                        Colaborador
+                    </label>
+
+                    <details
+                        className="group relative"
+                        data-seletor-colaborador-treinamentos
+                        onClick={(evento) => {
+                            evento.stopPropagation();
+                        }}
+                        onToggle={(evento) => {
+                            if (!evento.currentTarget.open) {
+                                return;
+                            }
+
+                            const lista =
+                                evento.currentTarget.querySelector(
+                                    "[data-lista-colaboradores-treinamentos]"
+                                );
+
+                            if (lista) {
+                                lista.scrollTop = 0;
+                            }
+                        }}
+                        onBlur={(evento) => {
+                            if (
+                                evento.currentTarget.contains(
+                                    evento.relatedTarget
+                                )
+                            ) {
+                                return;
+                            }
+
+                            evento.currentTarget.removeAttribute(
+                                "open"
+                            );
+                        }}
+                        onKeyDown={(evento) => {
+                            if (
+                                evento.key !==
+                                "Escape"
+                            ) {
+                                return;
+                            }
+
+                            evento.preventDefault();
+
+                            evento.currentTarget.removeAttribute(
+                                "open"
+                            );
+
+                            evento.currentTarget
+                                .querySelector("summary")
+                                ?.focus();
+                        }}
                     >
-                        {colaboradores.length === 0 && <option value="">Nenhum colaborador cadastrado</option>}
-                        {colaboradores.map((c) => (
-                            <option key={c.id} value={c.codigoFuncionario}>
-                                {c.nome} — {c.empresaExibicao || c.empresa} — {c.codigoFuncionario}
-                            </option>
-                        ))}
-                    </select>
+                        <summary
+                            className="flex w-full cursor-pointer list-none items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition hover:border-slate-300 focus:ring-2 focus:ring-slate-300 [&::-webkit-details-marker]:hidden"
+                            aria-label="Selecionar colaborador"
+                        >
+                            <span className="min-w-0 flex-1 truncate text-left">
+                                {colaboradores.length === 0
+                                    ? "Nenhum colaborador cadastrado"
+                                    : obterRotuloColaboradorSelecaoTreinamentos(
+                                        colaboradores.find(
+                                            (colaborador) =>
+                                                String(
+                                                    colaborador?.codigoFuncionario ||
+                                                    ""
+                                                ) ===
+                                                String(
+                                                    colabSelecionadoCodigo ||
+                                                    ""
+                                                )
+                                        )
+                                    )}
+                            </span>
+
+                            <ChevronDown className="h-4 w-4 shrink-0 text-slate-500 transition-transform duration-200 group-open:rotate-180" />
+                        </summary>
+
+                        <div
+                            data-lista-colaboradores-treinamentos
+                            role="listbox"
+                            aria-label="Lista de colaboradores"
+                            className="absolute left-0 right-0 top-full z-[120] mt-2 overflow-y-auto overscroll-contain rounded-2xl border border-slate-200 bg-white p-1.5 shadow-[0_18px_45px_rgba(15,23,42,0.18)]"
+                            style={{
+                                maxHeight:
+                                    "min(320px, 42vh)",
+                            }}
+                        >
+                            {colaboradores.length === 0 ? (
+                                <div className="px-4 py-3 text-sm font-semibold text-slate-500">
+                                    Nenhum colaborador cadastrado
+                                </div>
+                            ) : (
+                                colaboradores.map(
+                                    (colaborador) => {
+                                        const codigo =
+                                            String(
+                                                colaborador?.codigoFuncionario ||
+                                                ""
+                                            );
+
+                                        const selecionado =
+                                            codigo ===
+                                            String(
+                                                colabSelecionadoCodigo ||
+                                                ""
+                                            );
+
+                                        return (
+                                            <button
+                                                key={
+                                                    colaborador?.id ||
+                                                    codigo
+                                                }
+                                                type="button"
+                                                role="option"
+                                                aria-selected={
+                                                    selecionado
+                                                }
+                                                title={obterRotuloColaboradorSelecaoTreinamentos(
+                                                    colaborador
+                                                )}
+                                                onClick={(evento) => {
+                                                    evento.stopPropagation();
+
+                                                    onAlterarColaboradorCertificado(
+                                                        codigo
+                                                    );
+
+                                                    evento.currentTarget
+                                                        .closest("details")
+                                                        ?.removeAttribute(
+                                                            "open"
+                                                        );
+                                                }}
+                                                className={classNames(
+                                                    "flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm transition",
+                                                    selecionado
+                                                        ? "bg-blue-50 font-bold text-blue-800"
+                                                        : "text-slate-700 hover:bg-slate-50"
+                                                )}
+                                            >
+                                                <span className="min-w-0 flex-1 truncate">
+                                                    {obterRotuloColaboradorSelecaoTreinamentos(
+                                                        colaborador
+                                                    )}
+                                                </span>
+                                            </button>
+                                        );
+                                    }
+                                )
+                            )}
+                        </div>
+                    </details>
                 </div>
-        
+
                 <div>
                     <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Treinamento / documento</label>
                     <select
@@ -121,7 +338,7 @@ export function FormularioLancamentoCertificado({
                         ))}
                     </select>
                 </div>
-        
+
                 {avaliacaoSelecionado && (
                     <div className="rounded-2xl bg-slate-50 p-3">
                         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -133,7 +350,7 @@ export function FormularioLancamentoCertificado({
                                     {avaliacaoSelecionado.emDia.length} em dia · {avaliacaoSelecionado.pendentes.length} pendente(s) · {avaliacaoSelecionado.vencendo.length} a vencer · {avaliacaoSelecionado.vencidos.length} vencido(s)
                                 </p>
                             </div>
-        
+
                             <button
                                 type="button"
                                 onClick={() => setExigenciasAbertas((valor) => !valor)}
@@ -152,7 +369,7 @@ export function FormularioLancamentoCertificado({
                                 )}
                             </button>
                         </div>
-        
+
                         {exigenciasAbertas && (
                             <div className="mt-2 max-h-64 space-y-1.5 overflow-y-auto pr-1 scrollbar-discreta">
                                 {avaliacaoSelecionado.itens.map((item) => (
@@ -167,7 +384,7 @@ export function FormularioLancamentoCertificado({
                         )}
                     </div>
                 )}
-        
+
                 <div className="grid gap-3 sm:grid-cols-2">
                     <div>
                         <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Realização / emissão</label>
@@ -178,7 +395,7 @@ export function FormularioLancamentoCertificado({
                             className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
                         />
                     </div>
-        
+
                     <div>
                         <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Validade / vencimento</label>
                         <input
@@ -189,7 +406,7 @@ export function FormularioLancamentoCertificado({
                         />
                     </div>
                 </div>
-        
+
                 <textarea
                     value={observacao}
                     onChange={(e) => setObservacao(e.target.value)}
@@ -197,7 +414,7 @@ export function FormularioLancamentoCertificado({
                     rows={3}
                     className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
                 />
-        
+
                 <label className={classNames(
                     "flex items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm font-medium text-slate-600 hover:bg-slate-100",
                     analisandoArquivoCertificado || salvandoCertificado ? "cursor-wait opacity-80" : "cursor-pointer"
@@ -234,7 +451,7 @@ export function FormularioLancamentoCertificado({
                         <Loader2 className="ml-auto h-5 w-5 shrink-0 animate-spin" />
                     </div>
                 )}
-        
+
                 {sugestaoDataArquivo && (
                     <div className={classNames(
                         "rounded-2xl px-3 py-2 text-xs font-medium ring-1",
@@ -245,7 +462,7 @@ export function FormularioLancamentoCertificado({
                         {sugestaoDataArquivo.mensagem}
                     </div>
                 )}
-        
+
                 <button
                     onClick={adicionarTreinamento}
                     disabled={salvandoCertificado || analisandoArquivoCertificado}
@@ -262,7 +479,7 @@ export function FormularioLancamentoCertificado({
                             )
                             : "Salvar certificado no banco"}
                 </button>
-        
+
                 <EnvioLoteTreinamentos
                     arquivosLote={arquivosLote}
                     prepararArquivosLote={prepararArquivosLote}
@@ -276,6 +493,9 @@ export function FormularioLancamentoCertificado({
                     alterarDataArquivoLote={alterarDataArquivoLote}
                     colaboradores={colaboradores}
                     treinamentosBase={treinamentosBase}
+                    onAdicionarTreinamentoGrade={adicionarTreinamentoGradeArquivoLote}
+                    adicionandoTreinamentoGradeArquivoId={adicionandoTreinamentoGradeArquivoId}
+                    podeAdicionarTreinamentoGrade={podeAdicionarTreinamentoGradeLote}
                     salvarCertificadosEmLote={salvarCertificadosEmLote}
                     salvandoLote={salvandoLote}
                     preparandoLoteCertificados={preparandoLoteCertificados}

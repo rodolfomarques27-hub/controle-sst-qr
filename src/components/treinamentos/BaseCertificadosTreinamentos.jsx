@@ -17,6 +17,10 @@ import {
 import { formatDate, classNames } from "../../utils/sstUtils";
 import { VerificacaoCertificadoTreinamento } from "./VerificacaoCertificadoTreinamento";
 import { criarUrlAssinadaStorage } from "../../services/supabaseServices";
+import { supabase } from "../../lib/supabaseClient";
+import {
+    listarEvidenciasCertificadosEmLoteService,
+} from "../../services/certificadosEvidenciasService";
 
 function obterFotoColaboradorBase(colaborador = {}) {
     return String(
@@ -284,8 +288,9 @@ function converterDataBrFormularioCertificadoParaIso(valor = "") {
 
     return normalizarDataIsoFormularioCertificado(mascarada);
 }
-// empresa_card_compacta_v1:
-// Exibe primeiro a empresa direta e preserva o vínculo completo no title.
+// empresa_card_direta_v2:
+// Exibe somente a empresa efetiva do colaborador.
+// O vínculo contratante/subcontratada continua preservado nos dados.
 function obterRotuloEmpresaCompactoBaseCertificados(
     colaborador = {}
 ) {
@@ -318,33 +323,361 @@ function obterRotuloEmpresaCompactoBaseCertificados(
 
     const nomeDireto =
         String(
+            nomeExtraido ||
             colaborador?.empresaNome ||
             colaborador?.empresa_nome ||
             colaborador?.empresa ||
-            nomeExtraido ||
             empresaCompleta
         )
             .replace(/\s+/g, " ")
             .trim();
 
-    const ehSubcontratada =
-        Boolean(
-            colaborador?.empresaPaiId ||
-            colaborador?.empresa_pai_id ||
-            colaborador?.empresaPaiNome ||
-            colaborador?.empresa_pai_nome ||
-            partes.length > 1
+    return (
+        nomeDireto ||
+        "Empresa não informada"
+    );
+}
+
+const TIPOS_EVIDENCIA_VISIVEIS_BASE =
+    new Set([
+        "certificado_individual",
+        "lista_presenca",
+        "evidencia_complementar",
+    ]);
+
+function obterRotuloTipoEvidenciaBase(
+    tipo = ""
+) {
+    if (
+        tipo ===
+        "certificado_individual"
+    ) {
+        return "Certificado individual";
+    }
+
+    if (
+        tipo ===
+        "lista_presenca"
+    ) {
+        return "Lista de presença";
+    }
+
+    return "Evidência complementar";
+}
+
+function obterClasseTipoEvidenciaBase(
+    tipo = ""
+) {
+    if (
+        tipo ===
+        "certificado_individual"
+    ) {
+        return "bg-emerald-50 text-emerald-700 ring-emerald-100";
+    }
+
+    if (
+        tipo ===
+        "lista_presenca"
+    ) {
+        return "bg-blue-50 text-blue-700 ring-blue-100";
+    }
+
+    return "bg-slate-100 text-slate-700 ring-slate-200";
+}
+
+function dividirIdsEvidenciasBase(
+    ids = [],
+    tamanho = 120
+) {
+    const lotes = [];
+
+    for (
+        let indice = 0;
+        indice < ids.length;
+        indice += tamanho
+    ) {
+        lotes.push(
+            ids.slice(
+                indice,
+                indice + tamanho
+            )
+        );
+    }
+
+    return lotes;
+}
+
+function criarDocumentoVisualizacaoEvidenciaBase(
+    documento = {},
+    evidencia = {}
+) {
+    return {
+        ...documento,
+
+        arquivoUrl:
+            evidencia?.arquivoUrl ||
+            documento?.arquivoUrl ||
+            "",
+
+        arquivo:
+            evidencia?.arquivoNome ||
+            documento?.arquivo ||
+            "Arquivo não informado",
+
+        arquivoNome:
+            evidencia?.arquivoNome ||
+            documento?.arquivoNome ||
+            documento?.arquivo ||
+            "",
+
+        evidenciaId:
+            evidencia?.id ||
+            "",
+
+        tipoEvidencia:
+            evidencia?.tipoEvidencia ||
+            "",
+    };
+}
+
+const FUSO_HORARIO_ALERTA_UPLOAD_BASE =
+    "America/Sao_Paulo";
+
+const FORMATADOR_DATA_ALERTA_UPLOAD_BASE =
+    new Intl.DateTimeFormat(
+        "pt-BR",
+        {
+            timeZone:
+                FUSO_HORARIO_ALERTA_UPLOAD_BASE,
+
+            year:
+                "numeric",
+
+            month:
+                "2-digit",
+
+            day:
+                "2-digit",
+        }
+    );
+
+function obterChaveDataAlertaUploadBase(
+    valor = null
+) {
+    const data =
+        valor instanceof Date
+            ? valor
+            : new Date(
+                valor
+            );
+
+    if (
+        Number.isNaN(
+            data.getTime()
+        )
+    ) {
+        return "";
+    }
+
+    const partes =
+        FORMATADOR_DATA_ALERTA_UPLOAD_BASE
+            .formatToParts(
+                data
+            );
+
+    const obterParte =
+        (tipo) =>
+            partes.find(
+                (parte) =>
+                    parte.type ===
+                    tipo
+            )?.value ||
+            "";
+
+    const ano =
+        obterParte(
+            "year"
         );
 
-    return ehSubcontratada
-        ? `Sub... · ${nomeDireto}`
-        : empresaCompleta;
+    const mes =
+        obterParte(
+            "month"
+        );
+
+    const dia =
+        obterParte(
+            "day"
+        );
+
+    if (
+        !ano ||
+        !mes ||
+        !dia
+    ) {
+        return "";
+    }
+
+    return `${ano}-${mes}-${dia}`;
 }
+
+function obterCaminhoArquivoAlertaUploadBase(
+    registro = {}
+) {
+    return String(
+        registro?.arquivoUrl ||
+        registro?.arquivo_url ||
+        registro?.urlDoArquivo ||
+        registro?.url_do_arquivo ||
+        ""
+    ).trim();
+}
+
+function obterDataUploadRegistroBase(
+    registro = {}
+) {
+    const caminho =
+        obterCaminhoArquivoAlertaUploadBase(
+            registro
+        );
+
+    if (caminho) {
+        const semQuery =
+            caminho.split(
+                "?"
+            )[0] ||
+            "";
+
+        const nomeArquivo =
+            semQuery
+                .split("/")
+                .pop() ||
+            "";
+
+        const correspondenciaTimestamp =
+            nomeArquivo.match(
+                /^(\d{13})-/
+            );
+
+        if (
+            correspondenciaTimestamp?.[1]
+        ) {
+            const timestamp =
+                Number(
+                    correspondenciaTimestamp[1]
+                );
+
+            if (
+                Number.isFinite(
+                    timestamp
+                ) &&
+                timestamp > 0
+            ) {
+                const dataStorage =
+                    new Date(
+                        timestamp
+                    );
+
+                if (
+                    !Number.isNaN(
+                        dataStorage.getTime()
+                    )
+                ) {
+                    return dataStorage;
+                }
+            }
+        }
+    }
+
+    const criadoEm =
+        String(
+            registro?.createdAt ||
+            registro?.created_at ||
+            ""
+        ).trim();
+
+    if (!criadoEm) {
+        return null;
+    }
+
+    const dataCriacao =
+        new Date(
+            criadoEm
+        );
+
+    return Number.isNaN(
+        dataCriacao.getTime()
+    )
+        ? null
+        : dataCriacao;
+}
+
+function registroEnviadoNaDataBase(
+    registro = {},
+    chaveData = ""
+) {
+    if (!chaveData) {
+        return false;
+    }
+
+    const dataUpload =
+        obterDataUploadRegistroBase(
+            registro
+        );
+
+    if (!dataUpload) {
+        return false;
+    }
+
+    return (
+        obterChaveDataAlertaUploadBase(
+            dataUpload
+        ) ===
+        chaveData
+    );
+}
+
+function obterIdsTreinamentosGradeIndividualBase(
+    colaborador = {}
+) {
+    const entradas = [
+        colaborador?.treinamentosAdicionais,
+        colaborador?.treinamentos_adicionais,
+    ];
+
+    return new Set(
+        entradas
+            .flatMap(
+                (lista) =>
+                    Array.isArray(lista)
+                        ? lista
+                        : []
+            )
+            .map((item) =>
+                Number(
+                    typeof item === "object"
+                        ? item?.id ??
+                            item?.treinamentoId ??
+                            item?.treinamento_id
+                        : item
+                )
+            )
+            .filter(
+                (id) =>
+                    Number.isFinite(id) &&
+                    id > 0
+            )
+    );
+}
+
+const STORAGE_EVIDENCIAS_TREINAMENTOS_RECOLHIDAS =
+    "safescan:treinamentos:evidencias-recolhidas:v1";
+
 export function BaseCertificadosTreinamentos({
     documentos = [],
     documentosFiltrados = [],
     documentosPorColaborador = [],
     totalPorStatusCertificados = { pendentes: 0 },
+    ordemColaboradoresBase = "atual",
     gruposCertificadosAbertos = {},
     setGruposCertificadosAbertos,
     certificadosAbertos = {},
@@ -363,7 +696,332 @@ export function BaseCertificadosTreinamentos({
 }) {
     const [datasCertificadosAtualizadas, setDatasCertificadosAtualizadas] = React.useState({});
     const [datasDigitadasRevisao, setDatasDigitadasRevisao] = React.useState({});
-    const [ordemColaboradoresBase, setOrdemColaboradoresBase] = React.useState("atual");
+
+    const [
+        evidenciasPorCertificado,
+        setEvidenciasPorCertificado,
+    ] =
+        React.useState({});
+
+    const [
+        erroEvidenciasCertificados,
+        setErroEvidenciasCertificados,
+    ] =
+        React.useState("");
+
+    /*
+     * E3-UI-COLLAPSE-PERSIST-GLOBAL
+     *
+     * Cada certificado lógico possui estado próprio.
+     *
+     * true  = evidências recolhidas
+     * false = evidências abertas
+     *
+     * O estado é restaurado do navegador para manter a última
+     * escolha após F5, navegação entre telas ou novo acesso no
+     * mesmo navegador.
+     */
+    const [
+        evidenciasTreinamentosRecolhidas,
+        setEvidenciasTreinamentosRecolhidas,
+    ] =
+        React.useState(() => {
+            if (
+                typeof window ===
+                "undefined"
+            ) {
+                return {};
+            }
+
+            try {
+                const salvo =
+                    window.localStorage.getItem(
+                        STORAGE_EVIDENCIAS_TREINAMENTOS_RECOLHIDAS
+                    );
+
+                if (!salvo) {
+                    return {};
+                }
+
+                const interpretado =
+                    JSON.parse(
+                        salvo
+                    );
+
+                if (
+                    !interpretado ||
+                    typeof interpretado !==
+                        "object" ||
+                    Array.isArray(
+                        interpretado
+                    )
+                ) {
+                    return {};
+                }
+
+                return Object.fromEntries(
+                    Object.entries(
+                        interpretado
+                    ).filter(
+                        ([chave, valor]) =>
+                            typeof chave ===
+                                "string" &&
+                            typeof valor ===
+                                "boolean"
+                    )
+                );
+            }
+            catch (erro) {
+                void erro;
+
+                return {};
+            }
+        });
+
+    React.useEffect(
+        () => {
+            if (
+                typeof window ===
+                "undefined"
+            ) {
+                return;
+            }
+
+            try {
+                window.localStorage.setItem(
+                    STORAGE_EVIDENCIAS_TREINAMENTOS_RECOLHIDAS,
+                    JSON.stringify(
+                        evidenciasTreinamentosRecolhidas
+                    )
+                );
+            }
+            catch (erro) {
+                void erro;
+            }
+        },
+        [
+            evidenciasTreinamentosRecolhidas,
+        ]
+    );
+
+    /*
+     * E3-UI
+     *
+     * A Base continua trabalhando com UM certificado lógico por
+     * colaborador + treinamento.
+     *
+     * As evidências físicas são carregadas em lote por
+     * certificado_origem_id.
+     *
+     * Não existe consulta individual por card.
+     */
+    const idsCertificadosEvidencias =
+        React.useMemo(
+            () => {
+                const ids =
+                    documentosPorColaborador
+                        .flatMap(
+                            (grupo) =>
+                                Array.isArray(
+                                    grupo?.certificados
+                                )
+                                    ? grupo.certificados
+                                    : []
+                        )
+                        .map((certificado) =>
+                            String(
+                                certificado?.id ||
+                                ""
+                            ).trim()
+                        )
+                        .filter(Boolean);
+
+                return [
+                    ...new Set(ids),
+                ].sort();
+            },
+            [
+                documentosPorColaborador,
+            ]
+        );
+
+    const chaveCertificadosEvidencias =
+        idsCertificadosEvidencias.join(
+            "|"
+        );
+
+    React.useEffect(
+        () => {
+            let ativo =
+                true;
+
+            async function carregarEvidenciasCertificadosBase() {
+                const ids =
+                    chaveCertificadosEvidencias
+                        ? chaveCertificadosEvidencias.split(
+                            "|"
+                        )
+                        : [];
+
+                if (!ids.length) {
+                    if (ativo) {
+                        setEvidenciasPorCertificado(
+                            {}
+                        );
+
+                        setErroEvidenciasCertificados(
+                            ""
+                        );
+                    }
+
+                    return;
+                }
+
+                try {
+                    const evidencias =
+                        [];
+
+                    /*
+                     * Evita N+1 e também evita um IN gigantesco.
+                     * Cada lote consulta no máximo 120 IDs.
+                     */
+                    for (
+                        const lote
+                        of dividirIdsEvidenciasBase(
+                            ids,
+                            120
+                        )
+                    ) {
+                        const resultado =
+                            await listarEvidenciasCertificadosEmLoteService({
+                                supabase,
+
+                                certificadoIds:
+                                    lote,
+                            });
+
+                        if (!ativo) {
+                            return;
+                        }
+
+                        evidencias.push(
+                            ...resultado
+                        );
+                    }
+
+                    const agrupadas =
+                        {};
+
+                    evidencias.forEach(
+                        (evidencia) => {
+                            const tipo =
+                                String(
+                                    evidencia?.tipoEvidencia ||
+                                    ""
+                                )
+                                    .trim()
+                                    .toLowerCase();
+
+                            /*
+                             * O backfill legado continua preservado
+                             * no banco, mas não é desenhado aqui.
+                             *
+                             * Isso impede duplicar visualmente todos
+                             * os certificados antigos.
+                             */
+                            if (
+                                evidencia?.historica === true ||
+                                !TIPOS_EVIDENCIA_VISIVEIS_BASE.has(
+                                    tipo
+                                )
+                            ) {
+                                return;
+                            }
+
+                            const certificadoId =
+                                String(
+                                    evidencia?.certificadoOrigemId ||
+                                    ""
+                                ).trim();
+
+                            if (!certificadoId) {
+                                return;
+                            }
+
+                            if (
+                                !agrupadas[
+                                    certificadoId
+                                ]
+                            ) {
+                                agrupadas[
+                                    certificadoId
+                                ] = [];
+                            }
+
+                            agrupadas[
+                                certificadoId
+                            ].push({
+                                ...evidencia,
+
+                                tipoEvidencia:
+                                    tipo,
+                            });
+                        }
+                    );
+
+                    if (!ativo) {
+                        return;
+                    }
+
+                    setEvidenciasPorCertificado(
+                        agrupadas
+                    );
+
+                    setErroEvidenciasCertificados(
+                        ""
+                    );
+                }
+                catch (erro) {
+                    console.error(
+                        "Erro ao carregar evidências dos certificados:",
+                        erro
+                    );
+
+                    if (!ativo) {
+                        return;
+                    }
+
+                    setEvidenciasPorCertificado(
+                        {}
+                    );
+
+                    setErroEvidenciasCertificados(
+                        erro?.message ||
+                        "Não foi possível carregar as evidências dos treinamentos."
+                    );
+                }
+            }
+
+            void carregarEvidenciasCertificadosBase();
+
+            return () => {
+                ativo =
+                    false;
+            };
+        },
+        [
+            chaveCertificadosEvidencias,
+
+            /*
+             * Mantemos também a referência da lista como gatilho.
+             *
+             * Isso faz a UI recarregar depois de um salvamento de
+             * lista em que o ID lógico do certificado permaneceu
+             * exatamente o mesmo.
+             */
+            documentosPorColaborador,
+        ]
+    );
 
     const documentosPorColaboradorOrdenados = React.useMemo(() => {
         if (ordemColaboradoresBase === "atual") {
@@ -465,25 +1123,6 @@ export function BaseCertificadosTreinamentos({
 
                 <div className="flex flex-wrap gap-2 md:justify-end">
                     {!recolhido && (
-                        <label
-                            className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200"
-                            data-base-certificados-acao
-                        >
-                            <span>Ordenar</span>
-                            <select
-                                value={ordemColaboradoresBase}
-                                onChange={(evento) => setOrdemColaboradoresBase(evento.target.value)}
-                                className="bg-transparent font-bold text-slate-700 outline-none"
-                                aria-label="Ordenar colaboradores da base de certificados"
-                            >
-                                <option value="atual">Ordem atual</option>
-                                <option value="az">A–Z</option>
-                                <option value="za">Z–A</option>
-                            </select>
-                        </label>
-                    )}
-
-                    {!recolhido && (
                         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
                             {documentosFiltrados.length} certificado(s) · {totalPendentesFiltradosBase} pendente(s)
                         </span>
@@ -532,6 +1171,12 @@ export function BaseCertificadosTreinamentos({
 
                 {documentosPorColaboradorOrdenados.map((grupo, indiceGrupo) => {
                     const colaborador = grupo.colaborador;
+
+                    const idsTreinamentosGradeIndividual =
+                        obterIdsTreinamentosGradeIndividualBase(
+                            colaborador
+                        );
+
                     const certificados = grupo.certificados || [];
                     const pendentes = grupo.pendentes || [];
                     const situacaoHistorica =
@@ -647,17 +1292,10 @@ export function BaseCertificadosTreinamentos({
                                             {colaborador.nome}
                                         </p>
                                         <p
-                                            className="mt-1 max-w-full truncate text-sm text-slate-500"
-                                            title={
-                                                String(
-                                                    colaborador.empresaExibicao ||
-                                                    colaborador.empresa_exibicao ||
-                                                    colaborador.empresaNome ||
-                                                    colaborador.empresa_nome ||
-                                                    colaborador.empresa ||
-                                                    "Empresa não informada"
-                                                )
-                                            }
+                                            className="mt-1 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[12px] font-medium leading-5 text-slate-500 sm:text-[13px]"
+                                            title={obterRotuloEmpresaCompactoBaseCertificados(
+                                                colaborador
+                                            )}
                                         >
                                             {obterRotuloEmpresaCompactoBaseCertificados(
                                                 colaborador
@@ -782,6 +1420,21 @@ export function BaseCertificadosTreinamentos({
                                                                 <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 ring-1 ring-blue-200">
                                                                     Pendente
                                                                 </span>
+
+                                                                {idsTreinamentosGradeIndividual.has(
+                                                                    Number(
+                                                                        item?.treinamento?.id ||
+                                                                        0
+                                                                    )
+                                                                ) ? (
+                                                                    <span
+                                                                        className="whitespace-nowrap rounded-full bg-violet-50 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.06em] text-violet-700 ring-1 ring-violet-200"
+                                                                        title="Treinamento incluído somente na grade individual deste colaborador."
+                                                                    >
+                                                                        Grade individual
+                                                                    </span>
+                                                                ) : null}
+
                                                                 <p className="break-words text-sm font-semibold text-slate-800">
                                                                     {item.treinamento.nome}
                                                                 </p>
@@ -829,6 +1482,72 @@ export function BaseCertificadosTreinamentos({
                                         const nomeTreinamentoAtual = String(d?.treinamento?.nome || "");
                                         const ehFichaRegistro = /ficha\s+(de\s+)?registro|registro\s+clt|\bclt\b|e\s*social|\besocial\b/i.test(nomeTreinamentoAtual);
                                         const ehFichaEpi = /nr\s*-?\s*0?6|ficha\s+(de\s+)?epi|epis\s+atualizada|controle\s+de\s+entrega\s+de\s+epi|entrega\s+de\s+epi|equipamento\s+de\s+prote[cç][aã]o\s+individual/i.test(nomeTreinamentoAtual);
+
+                                        /*
+                                         * E3-UI-EVID-ONLY-TRAINING
+                                         *
+                                         * O bloco de múltiplas evidências representa o
+                                         * par documental:
+                                         *
+                                         *   certificado individual
+                                         *   lista de presença
+                                         *
+                                         * Portanto ele não deve ser exibido em documentos
+                                         * individuais/administrativos que estão no mesmo
+                                         * catálogo operacional de SST.
+                                         */
+                                        const normalizarClassificacaoEvidencias =
+                                            (valor = "") =>
+                                                String(
+                                                    valor ||
+                                                    ""
+                                                )
+                                                    .normalize(
+                                                        "NFD"
+                                                    )
+                                                    .replace(
+                                                        /[\u0300-\u036f]/g,
+                                                        ""
+                                                    )
+                                                    .toLowerCase()
+                                                    .replace(
+                                                        /[^a-z0-9]+/g,
+                                                        " "
+                                                    )
+                                                    .replace(
+                                                        /\s+/g,
+                                                        " "
+                                                    )
+                                                    .trim();
+
+                                        const categoriaTreinamentoAtual =
+                                            normalizarClassificacaoEvidencias(
+                                                d?.treinamento?.categoria ||
+                                                ""
+                                            );
+
+                                        const nomeTreinamentoEvidencias =
+                                            normalizarClassificacaoEvidencias(
+                                                nomeTreinamentoAtual ||
+                                                d?.nomeTreinamento ||
+                                                d?.tipoTreinamento ||
+                                                ""
+                                            );
+
+                                        const categoriaEhDocumentoIndividual =
+                                            /^documento(?:\s|$)/.test(
+                                                categoriaTreinamentoAtual
+                                            );
+
+                                        const nomeEhDocumentoIndividualSemPar =
+                                            /\b(ficha de registro|ficha registro|registro clt|clt|esocial|e social|ficha de epi|ficha epi|epis atualizada|controle de entrega de epi|entrega de epi|atestado de saude ocupacional|aso|integracao|mobilizacao|ordem de servico|procedimento operacional)\b/.test(
+                                                nomeTreinamentoEvidencias
+                                            );
+
+                                        const mostrarEvidenciasTreinamento =
+                                            !categoriaEhDocumentoIndividual &&
+                                            !nomeEhDocumentoIndividualSemPar;
+
                                         const rotuloDataPrincipal = ehFichaRegistro
                                             ? "Admiss\u00e3o / Registro"
                                             : ehFichaEpi
@@ -837,6 +1556,143 @@ export function BaseCertificadosTreinamentos({
                                         const statusAtual = statusDocumento(valores.vencimento || d.vencimento, semValidade);
                                         const itemKey = String(d.id || `${d.colaborador.id}-${d.treinamentoId}-${idx}`);
                                         const aberto = Boolean(certificadosAbertos[itemKey]);
+
+                                        const gradeIndividual =
+                                            idsTreinamentosGradeIndividual.has(
+                                                Number(
+                                                    d?.treinamentoId ||
+                                                    d?.treinamento?.id ||
+                                                    0
+                                                )
+                                            );
+
+                                        const certificadoEvidenciaId =
+                                            String(
+                                                d?.id ||
+                                                ""
+                                            ).trim();
+
+                                        const evidenciasTreinamentoPersistidas =
+                                            certificadoEvidenciaId
+                                                ? evidenciasPorCertificado[
+                                                    certificadoEvidenciaId
+                                                ] ||
+                                                []
+                                                : [];
+
+                                        /*
+                                         * Certificados anteriores à arquitetura E3 podem
+                                         * possuir somente o snapshot lógico atual.
+                                         *
+                                         * Quando não houver evidência typed persistida,
+                                         * mostramos o snapshot apenas como fallback
+                                         * VISUAL de certificado individual.
+                                         *
+                                         * Nenhum registro é criado por este fallback.
+                                         */
+                                        const arquivoLegadoUrl =
+                                            String(
+                                                d?.arquivoUrl ||
+                                                d?.arquivo_url ||
+                                                ""
+                                            ).trim();
+
+                                        const arquivoLegadoNome =
+                                            String(
+                                                d?.arquivoNome ||
+                                                d?.arquivo_nome ||
+                                                ""
+                                            ).trim();
+
+                                        const evidenciasTreinamento =
+                                            evidenciasTreinamentoPersistidas.length > 0
+                                                ? evidenciasTreinamentoPersistidas
+                                                : arquivoLegadoUrl
+                                                    ? [
+                                                        {
+                                                            id:
+                                                                `fallback-certificado-${certificadoEvidenciaId || idx}`,
+
+                                                            certificadoOrigemId:
+                                                                certificadoEvidenciaId ||
+                                                                null,
+
+                                                            tipoEvidencia:
+                                                                "certificado_individual",
+
+                                                            arquivoUrl:
+                                                                arquivoLegadoUrl,
+
+                                                            arquivoNome:
+                                                                arquivoLegadoNome ||
+                                                                "Certificado",
+
+                                                            principal:
+                                                                true,
+
+                                                            historica:
+                                                                false,
+
+                                                            origem:
+                                                                "fallback_snapshot",
+                                                        },
+                                                    ]
+                                                    : [];
+
+                                        const chaveHojeAlertaUpload =
+                                            obterChaveDataAlertaUploadBase(
+                                                new Date()
+                                            );
+
+                                        const documentoEnviadoHoje =
+                                            registroEnviadoNaDataBase(
+                                                d,
+                                                chaveHojeAlertaUpload
+                                            ) ||
+                                            evidenciasTreinamento.some(
+                                                (evidencia) =>
+                                                    registroEnviadoNaDataBase(
+                                                        evidencia,
+                                                        chaveHojeAlertaUpload
+                                                    )
+                                            );
+
+                                        const evidenciasTreinamentoRecolhido =
+                                            Boolean(
+                                                certificadoEvidenciaId &&
+                                                evidenciasTreinamentosRecolhidas[
+                                                    certificadoEvidenciaId
+                                                ]
+                                            );
+
+                                        const alternarEvidenciasTreinamento =
+                                            (evento = null) => {
+                                                evento?.stopPropagation?.();
+
+                                                if (
+                                                    !certificadoEvidenciaId
+                                                ) {
+                                                    return;
+                                                }
+
+                                                setEvidenciasTreinamentosRecolhidas(
+                                                    (atual) => ({
+                                                        ...atual,
+
+                                                        [certificadoEvidenciaId]:
+                                                            !atual[
+                                                                certificadoEvidenciaId
+                                                            ],
+                                                    })
+                                                );
+                                            };
+
+                                        const mostrarFalhaEvidencias =
+                                            Boolean(
+                                                erroEvidenciasCertificados &&
+                                                indiceGrupo === 0 &&
+                                                idx === 0
+                                            );
 
                                         const obterValorDataRevisaoFormulario = (itemKey, campo, valorIso) => {
         const chave = `${itemKey}:${campo}`;
@@ -878,9 +1734,34 @@ export function BaseCertificadosTreinamentos({
                                                     <div className="min-w-0">
                                                         <div className="flex flex-wrap items-center gap-2">
                                                             <StatusPill status={statusAtual} small />
+
+                                                            {documentoEnviadoHoje ? (
+                                                                <span
+                                                                    data-alerta-upload-hoje
+                                                                    className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-amber-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.07em] text-amber-900 ring-1 ring-amber-300 shadow-sm"
+                                                                    title="Documento enviado hoje ao SafeScan."
+                                                                >
+                                                                    <span
+                                                                        aria-hidden="true"
+                                                                        className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-amber-500"
+                                                                    />
+
+                                                                    Enviado hoje
+                                                                </span>
+                                                            ) : null}
+
                                                             <h3 className="break-words text-base font-bold leading-snug text-slate-900">
                                                                 {d.treinamento.nome}
                                                             </h3>
+
+                                                            {gradeIndividual ? (
+                                                                <span
+                                                                    className="whitespace-nowrap rounded-full bg-violet-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.06em] text-violet-700 ring-1 ring-violet-200"
+                                                                    title="Treinamento incluído somente na grade individual deste colaborador."
+                                                                >
+                                                                    Grade individual
+                                                                </span>
+                                                            ) : null}
                                                         </div>
 
                                                         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
@@ -962,6 +1843,162 @@ export function BaseCertificadosTreinamentos({
                                                 <div className="mt-3">
                                                     <VerificacaoCertificadoTreinamento certificado={d} />
                                                 </div>
+
+                                                {mostrarEvidenciasTreinamento &&
+                                                    (evidenciasTreinamento.length > 0 ||
+                                                        mostrarFalhaEvidencias) && (
+                                                    <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
+                                                        <div
+                                                            role="button"
+                                                            tabIndex={0}
+                                                            aria-expanded={
+                                                                !evidenciasTreinamentoRecolhido
+                                                            }
+                                                            onClick={
+                                                                alternarEvidenciasTreinamento
+                                                            }
+                                                            onKeyDown={(evento) => {
+                                                                if (
+                                                                    evento.key !==
+                                                                        "Enter" &&
+                                                                    evento.key !==
+                                                                        " "
+                                                                ) {
+                                                                    return;
+                                                                }
+
+                                                                evento.preventDefault();
+
+                                                                alternarEvidenciasTreinamento(
+                                                                    evento
+                                                                );
+                                                            }}
+                                                            className="-m-1 flex cursor-pointer select-none flex-wrap items-start justify-between gap-2 rounded-xl p-1 transition hover:bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                                        >
+                                                            <div>
+                                                                <p className="text-[10px] font-black uppercase tracking-[0.08em] text-slate-500">
+                                                                    Evidências do treinamento
+                                                                </p>
+
+                                                                {evidenciasTreinamento.length > 0 && (
+                                                                    <p className="mt-0.5 text-[11px] font-semibold text-slate-500">
+                                                                        {evidenciasTreinamento.length}{" "}
+                                                                        {evidenciasTreinamento.length === 1
+                                                                            ? "documento vinculado"
+                                                                            : "documentos vinculados"}{" "}
+                                                                        à mesma realização.
+                                                                    </p>
+                                                                )}
+                                                            </div>
+
+                                                            <div className="flex items-center gap-2">
+                                                                {evidenciasTreinamento.length > 0 && (
+                                                                    <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-white px-2 text-[10px] font-black text-slate-600 ring-1 ring-slate-200">
+                                                                        {evidenciasTreinamento.length}
+                                                                    </span>
+                                                                )}
+
+                                                                <span className="inline-flex h-7 items-center justify-center rounded-full bg-white px-3 text-[10px] font-black text-slate-700 shadow-sm ring-1 ring-slate-200">
+                                                                    {evidenciasTreinamentoRecolhido
+                                                                        ? "Abrir"
+                                                                        : "Fechar"}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        {!evidenciasTreinamentoRecolhido &&
+                                                            mostrarFalhaEvidencias && (
+                                                            <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-800 ring-1 ring-amber-100">
+                                                                Evidências complementares temporariamente indisponíveis.
+                                                            </p>
+                                                        )}
+
+                                                        {!evidenciasTreinamentoRecolhido &&
+                                                            evidenciasTreinamento.length > 0 && (
+                                                            <div className="mt-2 grid gap-2">
+                                                                {evidenciasTreinamento.map((evidencia) => {
+                                                                    const tipo =
+                                                                        evidencia?.tipoEvidencia ||
+                                                                        "evidencia_complementar";
+
+                                                                    const arquivoNome =
+                                                                        evidencia?.arquivoNome ||
+                                                                        "Arquivo sem nome";
+
+                                                                    return (
+                                                                        <div
+                                                                            key={
+                                                                                evidencia?.id ||
+                                                                                `${certificadoEvidenciaId}-${tipo}-${evidencia?.arquivoUrl || arquivoNome}`
+                                                                            }
+                                                                            className="flex flex-col gap-2 rounded-xl bg-white p-2.5 shadow-sm ring-1 ring-slate-100 sm:flex-row sm:items-center"
+                                                                        >
+                                                                            <div className="min-w-0 flex-1">
+                                                                                <div className="flex flex-wrap items-center gap-2">
+                                                                                    <span
+                                                                                        className={classNames(
+                                                                                            "inline-flex items-center gap-1 rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-wide ring-1",
+                                                                                            obterClasseTipoEvidenciaBase(
+                                                                                                tipo
+                                                                                            )
+                                                                                        )}
+                                                                                    >
+                                                                                        <FileText className="h-3 w-3" />
+
+                                                                                        {obterRotuloTipoEvidenciaBase(
+                                                                                            tipo
+                                                                                        )}
+                                                                                    </span>
+
+                                                                                    <span
+                                                                                        className={classNames(
+                                                                                            "inline-flex rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-wide ring-1",
+                                                                                            evidencia?.principal
+                                                                                                ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+                                                                                                : "bg-slate-50 text-slate-500 ring-slate-200"
+                                                                                        )}
+                                                                                    >
+                                                                                        {evidencia?.principal
+                                                                                            ? "Principal"
+                                                                                            : "Complementar"}
+                                                                                    </span>
+                                                                                </div>
+
+                                                                                <p
+                                                                                    className="mt-1.5 truncate text-[11px] font-semibold text-slate-600"
+                                                                                    title={arquivoNome}
+                                                                                >
+                                                                                    {arquivoNome}
+                                                                                </p>
+                                                                            </div>
+
+                                                                            <button
+                                                                                type="button"
+                                                                                data-base-certificados-acao
+                                                                                disabled={
+                                                                                    !evidencia?.arquivoUrl ||
+                                                                                    typeof onVisualizarCertificado !==
+                                                                                        "function"
+                                                                                }
+                                                                                onClick={() =>
+                                                                                    onVisualizarCertificado?.(
+                                                                                        criarDocumentoVisualizacaoEvidenciaBase(
+                                                                                            d,
+                                                                                            evidencia
+                                                                                        )
+                                                                                    )
+                                                                                }
+                                                                                className="inline-flex min-h-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-[10px] font-black uppercase tracking-wide text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                            >
+                                                                                Abrir
+                                                                            </button>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
 
                                                 {aberto && (
                                                     <div className="treinamentos-base-certificados-card__revisao mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-100">
