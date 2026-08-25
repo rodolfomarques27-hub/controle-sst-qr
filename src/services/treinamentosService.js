@@ -91,6 +91,7 @@ export async function prepararArquivosTreinamentoLote({
                 treinamento,
                 sugestaoData,
             });
+            const dataIdentificadaDocumento = Boolean(sugestaoData?.data);
             const dataArquivo = sugestaoData.data || dataRealizacao || "";
             const colaboradorSugerido = identificarColaboradorPorArquivo(arquivo, colaboradores);
             const pareceOutroColaborador =
@@ -107,6 +108,9 @@ export async function prepararArquivosTreinamentoLote({
                 dataRealizacao: dataArquivo,
                 dataVencimento: treinamento ? calcularVencimentoTreinamento(treinamento.id, dataArquivo) : "",
                 sugestaoData,
+                dataIdentificadaDocumento,
+                dataProvisoria: !dataIdentificadaDocumento && Boolean(dataArquivo),
+                dataConferidaManualmente: false,
                 classificacaoDocumento,
                 tipoDocumentoTreinamento: classificacaoDocumento.tipo,
                 tipoDocumentoTreinamentoLabel: classificacaoDocumento.label,
@@ -166,6 +170,8 @@ export function atualizarDataArquivoLote(lista = [], arquivoId, data) {
             dataVencimento: item.treinamentoId
                 ? calcularVencimentoTreinamento(item.treinamentoId, data)
                 : "",
+            dataProvisoria: false,
+            dataConferidaManualmente: Boolean(data),
         };
     });
 }

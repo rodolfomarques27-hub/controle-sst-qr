@@ -76,6 +76,128 @@ function ordenarCertificadosPorTreinamento(a = {}, b = {}) {
     return String(nomeA).localeCompare(String(nomeB), "pt-BR");
 }
 
+function normalizarClassificacaoEvidenciaLote(
+    valor = ""
+) {
+    return String(
+        valor ||
+        ""
+    )
+        .normalize(
+            "NFD"
+        )
+        .replace(
+            /[\u0300-\u036f]/g,
+            ""
+        )
+        .toLowerCase()
+        .replace(
+            /[^a-z0-9]+/g,
+            " "
+        )
+        .replace(
+            /\s+/g,
+            " "
+        )
+        .trim();
+}
+
+function treinamentoAdmiteMultiplasEvidenciasLote(
+    item = {}
+) {
+    const treinamentoId =
+        Number(
+            item?.treinamentoId ||
+            item?.treinamento_id ||
+            0
+        );
+
+    if (
+        !Number.isFinite(
+            treinamentoId
+        ) ||
+        treinamentoId <= 0
+    ) {
+        return false;
+    }
+
+    const treinamento =
+        obterTreinamento(
+            treinamentoId
+        );
+
+    const categoria =
+        normalizarClassificacaoEvidenciaLote(
+            treinamento?.categoria ||
+            item?.treinamentoCategoria ||
+            item?.categoriaTreinamento ||
+            ""
+        );
+
+    const nome =
+        normalizarClassificacaoEvidenciaLote(
+            treinamento?.nome ||
+            item?.nomeTreinamento ||
+            item?.treinamentoNome ||
+            item?.tipoTreinamento ||
+            ""
+        );
+
+    /*
+     * Documento / Documento Médico são registros individuais,
+     * não o par "certificado + lista de presença".
+     */
+    const categoriaEhDocumento =
+        /^documento(?:\s|$)/.test(
+            categoria
+        );
+
+    /*
+     * Alguns itens documentais usam categoria operacional
+     * "Obrigatório"; por isso existe uma segunda guarda
+     * semântica pelo nome.
+     *
+     * NR-06 Uso Correto de EPIs NÃO casa com esta expressão.
+     */
+    const nomeEhDocumentoSemPar =
+        /\b(ficha de registro|registro clt|clt|esocial|e social|ficha de epi|ficha epi|epis atualizada|controle de entrega de epi|entrega de epi|atestado de saude ocupacional|aso|integracao|mobilizacao|ordem de servico|procedimento operacional)\b/.test(
+            nome
+        );
+
+    return (
+        !categoriaEhDocumento &&
+        !nomeEhDocumentoSemPar
+    );
+}
+
+function obterTipoEvidenciaTreinamentoLote(
+    item = {}
+) {
+    if (
+        !treinamentoAdmiteMultiplasEvidenciasLote(
+            item
+        )
+    ) {
+        return "";
+    }
+
+    if (
+        item?.tipoDocumentoTreinamento ===
+        "individual"
+    ) {
+        return "certificado_individual";
+    }
+
+    if (
+        item?.tipoDocumentoTreinamento ===
+        "lista_presenca"
+    ) {
+        return "lista_presenca";
+    }
+
+    return "";
+}
+
 function normalizarDataLancamentoCertificado(data) {
     const texto = String(data || "").trim();
 
@@ -176,7 +298,7 @@ function obterNomeEmpresaFiltroCertificados(colaborador = {}) {
 // compacto somente na apresentação do filtro nativo.
 function limitarRotuloEmpresaFiltroCertificados(
     texto = "",
-    limite = 36
+    limite = 72
 ) {
     const valor =
         String(texto || "")
@@ -222,10 +344,10 @@ function obterRotuloEmpresaFiltroCertificados(
 
     const nomeDireto =
         String(
+            nomeExtraido ||
             colaborador?.empresaNome ||
             colaborador?.empresa_nome ||
             colaborador?.empresa ||
-            nomeExtraido ||
             nomeCompleto
         )
             .replace(/\s+/g, " ")
@@ -241,9 +363,8 @@ function obterRotuloEmpresaFiltroCertificados(
         );
 
     const rotulo =
-        ehSubcontratada
-            ? `Subcontratada · ${nomeDireto}`
-            : nomeCompleto;
+        nomeDireto ||
+        nomeCompleto;
 
     return limitarRotuloEmpresaFiltroCertificados(
         rotulo
@@ -272,6 +393,7 @@ export function Treinamentos({
     empresasBanco = [],
     colaboradorInicialId,
     permissaoSistemaUsuario = null,
+    onAtualizarColaborador,
     onSalvarCertificado,
     onVisualizarCertificado,
     onExcluirCertificado,
@@ -295,6 +417,7 @@ export function Treinamentos({
     const [resolvendoDivergenciaFuncaoAso, setResolvendoDivergenciaFuncaoAso] = useState(false);
     const resolverDivergenciaFuncaoAsoRef = useRef(null);
     const [arquivosLote, setArquivosLote] = useState([]);
+    const [adicionandoTreinamentoGradeArquivoId, setAdicionandoTreinamentoGradeArquivoId] = useState("");
     const [salvandoLote, setSalvandoLote] = useState(false);
     const [preparandoLoteCertificados, setPreparandoLoteCertificados] = useState(false);
     const [sincronizandoStorage, setSincronizandoStorage] = useState(false);
@@ -306,6 +429,7 @@ export function Treinamentos({
     const [buscaCertificados, setBuscaCertificados] = useState("");
     const [filtroEmpresaCertificados, setFiltroEmpresaCertificados] = useState("Todas");
     const [filtroStatusCertificados, setFiltroStatusCertificados] = useState("Todos");
+    const [ordemColaboradoresBase, setOrdemColaboradoresBase] = useState("az");
     const [exigenciasAbertas, setExigenciasAbertas] = useState(false);
     const [enviandoAlertaTst, setEnviandoAlertaTst] = useState(false);
     const [cardsTreinamentosRecolhidos, setCardsTreinamentosRecolhidos] = useState(carregarCardsTreinamentosRecolhidos);
@@ -432,6 +556,53 @@ export function Treinamentos({
         filtroEmpresaCertificados,
     ]);
 
+    /*
+     * A mesma ordenação selecionada na Base de Certificados
+     * deve ser aplicada aos selects de colaboradores do
+     * lançamento individual e do envio em lote.
+     *
+     * O array original nunca é mutado.
+     */
+    const colaboradoresFiltradosEmpresaOrdenados =
+        useMemo(
+            () => {
+                const lista =
+                    [...colaboradoresFiltradosEmpresa].sort(
+                        (
+                            colaboradorA,
+                            colaboradorB
+                        ) =>
+                            String(
+                                colaboradorA?.nome ||
+                                ""
+                            ).localeCompare(
+                                String(
+                                    colaboradorB?.nome ||
+                                    ""
+                                ),
+                                "pt-BR",
+                                {
+                                    sensitivity:
+                                        "base",
+                                }
+                            )
+                    );
+
+                if (
+                    ordemColaboradoresBase ===
+                    "za"
+                ) {
+                    lista.reverse();
+                }
+
+                return lista;
+            },
+            [
+                colaboradoresFiltradosEmpresa,
+                ordemColaboradoresBase,
+            ]
+        );
+
     useEffect(() => {
         setArquivosLote([]);
         setResultadoLote("");
@@ -484,6 +655,20 @@ export function Treinamentos({
         () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.TREINAMENTOS, ACOES_PERMISSAO_SISTEMA.EDITAR),
         [permissaoSistemaAtual]
     );
+
+    const podeEditarGradeColaboradorSistema = useMemo(
+        () =>
+            usuarioPodeExecutarAcaoSistema(
+                permissaoSistemaAtual,
+                MODULOS_PERMISSAO_SISTEMA.COLABORADORES,
+                ACOES_PERMISSAO_SISTEMA.EDITAR
+            ),
+        [permissaoSistemaAtual]
+    );
+
+    const podeAdicionarTreinamentoGradeLote =
+        podeEditarTreinamentosSistema &&
+        podeEditarGradeColaboradorSistema;
 
     const podeUploadTreinamentosSistema = useMemo(
         () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.TREINAMENTOS, ACOES_PERMISSAO_SISTEMA.UPLOAD),
@@ -890,6 +1075,263 @@ export function Treinamentos({
         setArquivosLote((atual) => atualizarTreinamentoArquivoLote(atual, arquivoId, treinamentoId, dataBaseLote));
     };
 
+    const adicionarTreinamentoGradeArquivoLote =
+        async ({
+            arquivoId,
+            colaboradorCodigo,
+            treinamentoId,
+        } = {}) => {
+            if (
+                !podeAdicionarTreinamentoGradeLote
+            ) {
+                if (typeof window !== "undefined") {
+                    window.alert(
+                        "Seu usuário precisa de permissão para editar Treinamentos e Colaboradores antes de alterar a grade individual."
+                    );
+                }
+
+                return false;
+            }
+
+            if (
+                typeof onAtualizarColaborador !==
+                "function"
+            ) {
+                if (typeof window !== "undefined") {
+                    window.alert(
+                        "A atualização do colaborador não está disponível nesta tela."
+                    );
+                }
+
+                return false;
+            }
+
+            const idTreinamento =
+                Number(
+                    treinamentoId
+                );
+
+            const colaborador =
+                colaboradores.find(
+                    (item) =>
+                        String(
+                            item?.codigoFuncionario ||
+                            ""
+                        ) ===
+                        String(
+                            colaboradorCodigo ||
+                            ""
+                        )
+                ) ||
+                null;
+
+            const treinamento =
+                treinamentosBase.find(
+                    (item) =>
+                        Number(item?.id) ===
+                        idTreinamento
+                ) ||
+                null;
+
+            if (
+                !colaborador?.id ||
+                !Number.isFinite(idTreinamento) ||
+                idTreinamento <= 0 ||
+                !treinamento
+            ) {
+                if (typeof window !== "undefined") {
+                    window.alert(
+                        "Não foi possível identificar colaborador e treinamento para atualizar a grade."
+                    );
+                }
+
+                return false;
+            }
+
+            const avaliacao =
+                avaliarTreinamentosColaborador(
+                    colaborador
+                );
+
+            const jaPertenceGrade =
+                Array.isArray(
+                    avaliacao?.itensObrigatoriosMatriz
+                ) &&
+                avaliacao.itensObrigatoriosMatriz.some(
+                    (item) =>
+                        Number(
+                            item?.treinamento?.id
+                        ) ===
+                        idTreinamento
+                );
+
+            if (jaPertenceGrade) {
+                return true;
+            }
+
+
+            const idsMatrizFuncao =
+                new Set(
+                    (
+                        Array.isArray(
+                            avaliacao?.matriz?.treinamentos
+                        )
+                            ? avaliacao.matriz.treinamentos
+                            : []
+                    )
+                        .map(Number)
+                        .filter(
+                            (id) =>
+                                Number.isFinite(id) &&
+                                id > 0
+                        )
+                );
+
+            const idsRemovidosAtuais =
+                Array.from(
+                    new Set(
+                        (
+                            colaborador
+                                .treinamentosRemovidos ||
+                            []
+                        )
+                            .map(Number)
+                            .filter(
+                                (id) =>
+                                    Number.isFinite(id) &&
+                                    id > 0
+                            )
+                    )
+                );
+
+            const idsAdicionaisAtuais =
+                Array.from(
+                    new Set(
+                        (
+                            colaborador
+                                .treinamentosAdicionais ||
+                            []
+                        )
+                            .map(Number)
+                            .filter(
+                                (id) =>
+                                    Number.isFinite(id) &&
+                                    id > 0
+                            )
+                    )
+                );
+
+            const treinamentosRemovidos =
+                idsRemovidosAtuais.filter(
+                    (id) =>
+                        id !== idTreinamento
+                );
+
+            const treinamentosAdicionais =
+                idsMatrizFuncao.has(
+                    idTreinamento
+                )
+                    ? idsAdicionaisAtuais
+                    : Array.from(
+                        new Set([
+                            ...idsAdicionaisAtuais,
+                            idTreinamento,
+                        ])
+                    );
+
+            const empresaNome =
+                String(
+                    colaborador?.empresa ||
+                    colaborador?.empresaNome ||
+                    ""
+                ).trim();
+
+            if (
+                !empresaNome ||
+                empresaNome ===
+                    "Empresa não informada"
+            ) {
+                if (typeof window !== "undefined") {
+                    window.alert(
+                        "A empresa atual do colaborador não pôde ser confirmada. A grade não foi alterada."
+                    );
+                }
+
+                return false;
+            }
+
+            const matriculaAtual =
+                String(
+                    colaborador?.matriculaEsocial ||
+                    colaborador?.matricula ||
+                    ""
+                ).trim();
+
+            const chaveProcessamento =
+                String(
+                    arquivoId ||
+                    `${colaboradorCodigo}:${idTreinamento}`
+                );
+
+            setAdicionandoTreinamentoGradeArquivoId(
+                chaveProcessamento
+            );
+
+            try {
+                const ok =
+                    await onAtualizarColaborador({
+                        ...colaborador,
+
+                        empresaNome,
+
+                        matricula:
+                            ["-", "—"].includes(
+                                matriculaAtual
+                            )
+                                ? ""
+                                : matriculaAtual,
+
+                        treinamentosRemovidos,
+                        treinamentosAdicionais,
+
+                        foto: null,
+
+                        fotoAtual:
+                            colaborador?.fotoUrl ||
+                            colaborador?.foto_url ||
+                            "",
+
+                        fotoNomeAtual:
+                            colaborador?.fotoNome ||
+                            colaborador?.foto_nome ||
+                            "",
+                    });
+
+                if (!ok) {
+                    throw new Error(
+                        "O cadastro do colaborador não confirmou a atualização da grade."
+                    );
+                }
+
+                return true;
+            }
+            catch (erro) {
+                if (typeof window !== "undefined") {
+                    window.alert(
+                        erro?.message ||
+                        "Não foi possível adicionar o treinamento à grade do colaborador."
+                    );
+                }
+
+                return false;
+            }
+            finally {
+                setAdicionandoTreinamentoGradeArquivoId(
+                    ""
+                );
+            }
+        };
+
     const alterarDataArquivoLote = (arquivoId, data) => {
         setArquivosLote((atual) => atualizarDataArquivoLote(atual, arquivoId, data));
     };
@@ -932,11 +1374,14 @@ export function Treinamentos({
                     mensagem: "Data detectada ignorada por estar fora do intervalo esperado. Confira manualmente.",
                 }
                 : sugestao;
-            const mensagemData = sugestaoNormalizada?.mensagem || "Não foi possível identificar a data no arquivo. Informe manualmente antes de salvar.";
+            const mensagemData = dataDetectada
+                ? (sugestaoNormalizada?.mensagem || "Data identificada automaticamente. Confira antes de salvar.")
+                : "DATA NÃO IDENTIFICADA — O sistema não encontrou uma data válida neste documento. Informe manualmente a data correta antes de salvar.";
 
             setSugestaoDataArquivo({
                 ...(sugestaoNormalizada || {}),
-                mensagem: [mensagemTipoDetectado, mensagemData].filter(Boolean).join(" "),
+                mensagemTipoDetectado,
+                mensagem: mensagemData,
             });
 
             if (dataDetectada) {
@@ -945,10 +1390,8 @@ export function Treinamentos({
         } catch (erro) {
             console.error("Erro ao analisar documento de treinamento:", erro);
             setSugestaoDataArquivo({
-                mensagem: [
-                    mensagemTipoDetectado,
-                    "Não foi possível analisar o documento automaticamente. Confira tipo e data manualmente antes de salvar.",
-                ].filter(Boolean).join(" "),
+                mensagemTipoDetectado,
+                mensagem: "ANÁLISE AUTOMÁTICA INCONCLUSIVA — Não foi possível analisar o documento. Confira manualmente o tipo e a data antes de salvar.",
             });
         } finally {
             setAnalisandoArquivoCertificado(false);
@@ -999,11 +1442,12 @@ export function Treinamentos({
                 !item.colaboradorCodigo ||
                 !item.treinamentoId ||
                 !item.dataRealizacao ||
+                (item.dataIdentificadaDocumento === false && item.dataConferidaManualmente !== true) ||
                 (!treinamentoSemValidade(item.treinamentoId) && !item.dataVencimento)
         );
 
         if (incompletos.length > 0) {
-            alert("Antes de salvar, confira colaborador, treinamento e datas dos arquivos pendentes ou com falha.");
+            alert("Antes de salvar, confira colaborador, treinamento e datas. Nos arquivos com DATA NÃO IDENTIFICADA, altere a data manualmente ou use \"Confirmar data exibida\" após conferir o documento.");
             return;
         }
 
@@ -1061,6 +1505,10 @@ export function Treinamentos({
                         dataVencimento: item.dataVencimento,
                         arquivo: item.arquivo,
                         arquivoNome: item.arquivo.name,
+                        tipoEvidenciaTreinamento:
+                            obterTipoEvidenciaTreinamentoLote(
+                                item
+                            ),
                         observacao: observacao.trim() || "Enviado em lote com distribuição automática por nome do arquivo",
                     });
 
@@ -1246,6 +1694,37 @@ export function Treinamentos({
 
             return grupo.certificados.length > 0 || grupo.pendentes.length > 0;
         });
+
+    /*
+     * Ordenação funcional da Base de Certificados.
+     *
+     * A lista que segue para o componente visual já chega na
+     * sequência escolhida pelo filtro A-Z / Z-A.
+     */
+    const documentosPorColaboradorOrdenadosFiltro =
+        [...documentosPorColaborador].sort(
+            (grupoA, grupoB) =>
+                String(
+                    grupoA?.colaborador?.nome ||
+                    ""
+                ).localeCompare(
+                    String(
+                        grupoB?.colaborador?.nome ||
+                        ""
+                    ),
+                    "pt-BR",
+                    {
+                        sensitivity: "base",
+                    }
+                )
+        );
+
+    if (
+        ordemColaboradoresBase ===
+        "za"
+    ) {
+        documentosPorColaboradorOrdenadosFiltro.reverse();
+    }
 
     const colaboradorTemEmpresaCadastrada = (colaborador = {}) => {
         const empresaId = String(colaborador.empresaId || colaborador.empresa_id || "").trim();
@@ -2034,7 +2513,7 @@ export function Treinamentos({
                                     </div>
 
                                     {!cardsTreinamentosRecolhidos.filtros && (
-                                        <div className="mt-4 grid gap-3 xl:grid-cols-[minmax(0,1fr)_360px_220px]">
+                                        <div className="mt-4 grid gap-3 xl:grid-cols-[minmax(0,1fr)_400px_210px_170px]">
                                             <div className="relative">
                                                 <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                                                 <input
@@ -2061,7 +2540,7 @@ export function Treinamentos({
                                                             ""
                                                         )
                                                 }
-                                                className="treinamentos-filtros-certificados-card__select w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                                className="treinamentos-filtros-certificados-card__select w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-[13px] font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                                             >
                                                 <option value="Todas">Todas as empresas</option>
                                                 {empresasFiltroCertificados.map((empresa) => (
@@ -2090,6 +2569,17 @@ export function Treinamentos({
                                                 <option value="A vencer">A vencer ({totalPorStatusCertificados.aVencer})</option>
                                                 <option value="Vencido">Vencidos ({totalPorStatusCertificados.vencidos})</option>
                                             </select>
+
+                                            <select
+                                                value={ordemColaboradoresBase}
+                                                onChange={(e) => setOrdemColaboradoresBase(e.target.value)}
+                                                aria-label="Ordenar colaboradores da base de certificados"
+                                                title="Ordenar colaboradores"
+                                                className="treinamentos-filtros-certificados-card__select w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                            >
+                                                <option value="az">A–Z</option>
+                                                <option value="za">Z–A</option>
+                                            </select>
                                         </div>
                                     )}
 
@@ -2108,7 +2598,7 @@ export function Treinamentos({
                 onClick={(evento) => alternarCardTreinamentoPorArea(chave, cardsTreinamentosRecolhidos.lancamento, evento)}
             >
                                 <FormularioLancamentoCertificado
-                                    colaboradores={colaboradoresFiltradosEmpresa}
+                                    colaboradores={colaboradoresFiltradosEmpresaOrdenados}
                                     colabSelecionadoCodigo={colabSelecionadoCodigo}
                                     onAlterarColaboradorCertificado={alterarColaboradorCertificado}
                                     treinamentosDisponiveis={treinamentosDisponiveis}
@@ -2128,6 +2618,9 @@ export function Treinamentos({
                                     salvandoCertificado={salvandoCertificado}
                                     analisandoArquivoCertificado={analisandoArquivoCertificado}
                                     adicionarTreinamento={adicionarTreinamento}
+                                    adicionarTreinamentoGradeArquivoLote={adicionarTreinamentoGradeArquivoLote}
+                                    adicionandoTreinamentoGradeArquivoId={adicionandoTreinamentoGradeArquivoId}
+                                    podeAdicionarTreinamentoGradeLote={podeAdicionarTreinamentoGradeLote}
                                     arquivosLote={arquivosLote}
                                     prepararArquivosLote={prepararArquivosLote}
                                     sincronizarArquivosDoStorage={sincronizarArquivosDoStorage}
@@ -2190,7 +2683,7 @@ export function Treinamentos({
                                 <BaseCertificadosTreinamentos
                                     documentos={documentosOperacionais}
                                     documentosFiltrados={documentosFiltrados}
-                                    documentosPorColaborador={documentosPorColaborador}
+                                    documentosPorColaborador={documentosPorColaboradorOrdenadosFiltro}
                                     totalPorStatusCertificados={totalPorStatusCertificados}
                                     gruposCertificadosAbertos={gruposCertificadosAbertos}
                                     setGruposCertificadosAbertos={setGruposCertificadosAbertos}
@@ -2241,6 +2734,3 @@ export function Treinamentos({
         </div>
     );
 }
-
-
-

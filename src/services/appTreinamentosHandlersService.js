@@ -5,6 +5,9 @@ import {
     salvarCertificadoTreinamentoCrud,
 } from "./certificadosCrudService";
 import {
+    registrarEvidenciaCorrenteCertificadoService,
+} from "./certificadosEvidenciasService";
+import {
     excluirArquivoStorageAuditoriaService,
     listarArquivosCertificadosStorageService,
     sincronizarCertificadosDoStorageService,
@@ -367,7 +370,7 @@ function limparMensagemBloqueioDocumento(valor = "") {
 function montarMensagemBloqueioAntesSalvar({ indicios = [] } = {}) {
     const principal = indicios[0] || {};
     const codigo = String(principal.codigo || "");
-    const detalheOriginal = principal.detalhe || principal.titulo || "A verificacao documental encontrou divergencia."; 
+    const detalheOriginal = principal.detalhe || principal.titulo || "A verificacao documental encontrou divergencia.";
     const detalheLimpo = limparMensagemBloqueioDocumento(detalheOriginal);
 
     if (
@@ -1191,6 +1194,105 @@ export async function salvarCertificadoTreinamentoAppService({
                 colaboradorSelecionado:
                     colaboradorSelecionadoFluxo,
             });
+
+        const tipoEvidenciaTreinamento =
+            String(
+                certificadoFluxo
+                    ?.tipoEvidenciaTreinamento ||
+                ""
+            )
+                .trim()
+                .toLowerCase();
+
+        const integrarEvidenciaTreinamento =
+            [
+                "certificado_individual",
+                "lista_presenca",
+            ].includes(
+                tipoEvidenciaTreinamento
+            );
+
+        if (integrarEvidenciaTreinamento) {
+            await registrarEvidenciaCorrenteCertificadoService({
+                supabase,
+
+                evidencia: {
+                    certificadoOrigemId:
+                        certificadoNormalizado.id,
+
+                    colaboradorId:
+                        certificadoNormalizado
+                            .colaboradorId,
+
+                    treinamentoCodigo:
+                        Number(
+                            certificadoNormalizado
+                                .treinamentoId ||
+                            certificadoFluxo
+                                .treinamentoId ||
+                            certificadoFluxo
+                                .treinamento_codigo ||
+                            0
+                        ),
+
+                    tipoTreinamento:
+                        certificadoNormalizado
+                            .nomeTreinamento ||
+                        certificadoFluxo
+                            .tipo_treinamento ||
+                        "",
+
+                    nomeTreinamento:
+                        certificadoNormalizado
+                            .nomeTreinamento ||
+                        certificadoFluxo
+                            .nome_treinamento ||
+                        certificadoFluxo
+                            .tipo_treinamento ||
+                        "",
+
+                    dataRealizacao:
+                        certificadoNormalizado
+                            .dataRealizacao ||
+                        certificadoFluxo
+                            .dataRealizacao ||
+                        null,
+
+                    dataVencimento:
+                        certificadoNormalizado
+                            .dataVencimento ||
+                        certificadoFluxo
+                            .dataVencimento ||
+                        null,
+
+                    tipoEvidencia:
+                        tipoEvidenciaTreinamento,
+
+                    arquivoUrl:
+                        certificadoNormalizado
+                            .arquivoEvidenciaUrl,
+
+                    arquivoNome:
+                        certificadoNormalizado
+                            .arquivoEvidenciaNome,
+
+                    arquivoSha256:
+                        certificadoNormalizado
+                            .arquivoSha256,
+
+                    observacao:
+                        certificadoFluxo
+                            .observacao ||
+                        null,
+
+                    principal:
+                        Boolean(
+                            certificadoNormalizado
+                                .evidenciaPrincipalSolicitada
+                        ),
+                },
+            });
+        }
 
         setColaboradores((atual) =>
             atual.map((colaborador) => {
