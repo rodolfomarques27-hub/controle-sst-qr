@@ -20,6 +20,7 @@ import {
 
 import { Card, Header } from "../commonComponents";
 import { FileUploadAviso, validarArquivoAntesUpload } from "../FileUploadAviso";
+import SafeScanAlert from "../SafeScanAlert";
 import ResultadoVerificacaoDocumento from "../documentos/ResultadoVerificacaoDocumento";
 import EmpresaCnpjsVinculados from "./EmpresaCnpjsVinculados";
 import { supabase } from "../../lib/supabaseClient";
@@ -498,6 +499,72 @@ export function Empresas({
     const [erroVerificacoes, setErroVerificacoes] = useState("");
     const [agoraHeroEmpresas, setAgoraHeroEmpresas] = useState(() => new Date());
 
+    // empresas_alertas_safescan_v1:
+    // Substitui mostrarAlertaSafeScan() nativo por feedback visual integrado ao SafeScan.
+    const [alertaSafeScan, setAlertaSafeScan] = useState(null);
+
+    const fecharAlertaSafeScan = () => {
+        setAlertaSafeScan(null);
+    };
+
+    const mostrarAlertaSafeScan = (
+        mensagem,
+        opcoes = {}
+    ) => {
+        const texto =
+            String(
+                mensagem ?? ""
+            ).trim();
+
+        if (!texto) {
+            return;
+        }
+
+        const textoNormalizado =
+            texto
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .toLowerCase();
+
+        let tipo =
+            opcoes.tipo ||
+            "info";
+
+        if (!opcoes.tipo) {
+            if (
+                /sucesso|aprovad|atualizad|salv|confirmad/.test(
+                    textoNormalizado
+                )
+            ) {
+                tipo = "sucesso";
+            } else if (
+                /erro|nao foi possivel|falhou|indisponivel/.test(
+                    textoNormalizado
+                )
+            ) {
+                tipo = "erro";
+            } else if (
+                /sem permissao|selecione|informe|inval|vencid|nao pode|cancelad|atencao/.test(
+                    textoNormalizado
+                )
+            ) {
+                tipo = "aviso";
+            }
+        }
+
+        setAlertaSafeScan({
+            mensagem:
+                texto,
+            titulo:
+                opcoes.titulo ||
+                "",
+            tipo,
+            rotuloBotao:
+                opcoes.rotuloBotao ||
+                "Entendi",
+        });
+    };
+
     useEffect(() => {
         const atualizarRelogioHeroEmpresas = () => {
             setAgoraHeroEmpresas(new Date());
@@ -925,7 +992,7 @@ export function Empresas({
             },
         }));
 
-        alert("Documento aprovado manualmente e marcado como válido.");
+        mostrarAlertaSafeScan("Documento aprovado manualmente e marcado como válido.");
     };
 
     const colaboradoresPorEmpresa = useMemo(() => {
@@ -945,12 +1012,12 @@ export function Empresas({
 
     const adicionarEmpresa = async () => {
         if (!podeCadastrarEmpresasSistema) {
-            if (typeof window !== "undefined") window.alert(mensagemBloqueioCadastroEmpresas);
+            if (typeof window !== "undefined") mostrarAlertaSafeScan(mensagemBloqueioCadastroEmpresas);
             return;
         }
 
         if (!novaEmpresa.nome.trim()) {
-            alert("Informe o nome da empresa.");
+            mostrarAlertaSafeScan("Informe o nome da empresa.");
             return;
         }
 
@@ -1062,12 +1129,12 @@ export function Empresas({
 
     const salvarEdicaoEmpresa = async () => {
         if (!podeEditarEmpresasSistema) {
-            if (typeof window !== "undefined") window.alert(mensagemBloqueioEdicaoEmpresas);
+            if (typeof window !== "undefined") mostrarAlertaSafeScan(mensagemBloqueioEdicaoEmpresas);
             return;
         }
 
         if (!empresaEdicao?.nome?.trim()) {
-            alert("Informe o nome da empresa.");
+            mostrarAlertaSafeScan("Informe o nome da empresa.");
             return;
         }
 
@@ -1154,7 +1221,7 @@ export function Empresas({
         if (!onExcluirDocumentoEmpresa) return;
 
         if (!podeExcluirEmpresasSistema) {
-            if (typeof window !== "undefined") window.alert(mensagemBloqueioExclusaoEmpresas);
+            if (typeof window !== "undefined") mostrarAlertaSafeScan(mensagemBloqueioExclusaoEmpresas);
             return;
         }
 
@@ -1165,7 +1232,7 @@ export function Empresas({
         if (!empresaEdicao?.id || !onExcluirEmpresa) return;
 
         if (!podeExcluirEmpresasSistema) {
-            if (typeof window !== "undefined") window.alert(mensagemBloqueioExclusaoEmpresas);
+            if (typeof window !== "undefined") mostrarAlertaSafeScan(mensagemBloqueioExclusaoEmpresas);
             return;
         }
 
@@ -1186,7 +1253,7 @@ export function Empresas({
         const confirmacaoTexto = window.prompt('Para confirmar a exclusão definitiva, digite EXCLUIR.');
 
         if (confirmacaoTexto !== 'EXCLUIR') {
-            alert('Exclusão cancelada.');
+            mostrarAlertaSafeScan('Exclusão cancelada.');
             return;
         }
 
@@ -1238,7 +1305,7 @@ export function Empresas({
 
         if (!podeEditarEmpresasSistema) {
             if (typeof window !== "undefined") {
-                window.alert(mensagemBloqueioEdicaoEmpresas);
+                mostrarAlertaSafeScan(mensagemBloqueioEdicaoEmpresas);
             }
 
             return;
@@ -1246,7 +1313,7 @@ export function Empresas({
 
         if (typeof onAtualizarDocumentoEmpresa !== "function") {
             if (typeof window !== "undefined") {
-                window.alert(
+                mostrarAlertaSafeScan(
                     "A atualização das datas não está disponível neste momento."
                 );
             }
@@ -1312,7 +1379,7 @@ export function Empresas({
 
         if (!podeEditarEmpresasSistema) {
             if (typeof window !== "undefined") {
-                window.alert(mensagemBloqueioEdicaoEmpresas);
+                mostrarAlertaSafeScan(mensagemBloqueioEdicaoEmpresas);
             }
 
             return;
@@ -1348,7 +1415,7 @@ export function Empresas({
             !dataVencimento
         ) {
             if (typeof window !== "undefined") {
-                window.alert(
+                mostrarAlertaSafeScan(
                     "Informe a data de emissão e a data de vencimento ou próxima revisão."
                 );
             }
@@ -1370,7 +1437,7 @@ export function Empresas({
 
             if (!documentoAtualizado) {
                 if (typeof window !== "undefined") {
-                    window.alert(
+                    mostrarAlertaSafeScan(
                         "Não foi possível salvar as datas do documento."
                     );
                 }
@@ -1383,7 +1450,7 @@ export function Empresas({
             );
 
             if (typeof window !== "undefined") {
-                window.alert(
+                mostrarAlertaSafeScan(
                     "Datas do documento atualizadas com sucesso."
                 );
             }
@@ -1488,7 +1555,7 @@ export function Empresas({
 
         if (!podeConfirmarDatasDocumentoSistema) {
             if (typeof window !== "undefined") {
-                window.alert(
+                mostrarAlertaSafeScan(
                     "Sem permissão para enviar documentos ou confirmar datas documentais."
                 );
             }
@@ -1513,7 +1580,7 @@ export function Empresas({
             !dataVencimento
         ) {
             if (typeof window !== "undefined") {
-                window.alert(
+                mostrarAlertaSafeScan(
                     "Informe a emissão ou última revisão e o vencimento ou próxima revisão para concluir a confirmação."
                 );
             }
@@ -1526,7 +1593,7 @@ export function Empresas({
             dataEmissao
         ) {
             if (typeof window !== "undefined") {
-                window.alert(
+                mostrarAlertaSafeScan(
                     "O vencimento ou próxima revisão não pode ser anterior à emissão ou última revisão."
                 );
             }
@@ -1550,7 +1617,7 @@ export function Empresas({
 
         if (!documentoAtual?.id) {
             if (typeof window !== "undefined") {
-                window.alert(
+                mostrarAlertaSafeScan(
                     "O documento não está mais disponível para confirmação das datas."
                 );
             }
@@ -1578,7 +1645,7 @@ export function Empresas({
 
             if (!documentoAtualizado) {
                 if (typeof window !== "undefined") {
-                    window.alert(
+                    mostrarAlertaSafeScan(
                         "Não foi possível salvar as datas confirmadas."
                     );
                 }
@@ -1591,7 +1658,7 @@ export function Empresas({
             );
 
             if (typeof window !== "undefined") {
-                window.alert(
+                mostrarAlertaSafeScan(
                     "Datas confirmadas e salvas com sucesso."
                 );
             }
@@ -1606,7 +1673,7 @@ export function Empresas({
         if (!arquivo) return;
 
         if (!podeUploadEmpresasSistema) {
-            if (typeof window !== "undefined") window.alert(mensagemBloqueioUploadEmpresas);
+            if (typeof window !== "undefined") mostrarAlertaSafeScan(mensagemBloqueioUploadEmpresas);
             return;
         }
 
@@ -1658,17 +1725,17 @@ export function Empresas({
 
     const adicionarDocumento = async () => {
         if (!podeUploadEmpresasSistema) {
-            if (typeof window !== "undefined") window.alert(mensagemBloqueioUploadEmpresas);
+            if (typeof window !== "undefined") mostrarAlertaSafeScan(mensagemBloqueioUploadEmpresas);
             return;
         }
 
         if (!novoDoc.empresaId) {
-            alert("Selecione a empresa.");
+            mostrarAlertaSafeScan("Selecione uma empresa antes de adicionar o documento.", { titulo: "Empresa não selecionada", tipo: "aviso" });
             return;
         }
 
         if (!novoDoc.tipo) {
-            alert("Selecione o tipo do documento.");
+            mostrarAlertaSafeScan("Selecione o tipo de documento antes de continuar.", { titulo: "Tipo de documento não selecionado", tipo: "aviso" });
             return;
         }
 
@@ -2139,10 +2206,10 @@ export function Empresas({
         try {
             window.localStorage.setItem(CHAVE_FILTROS_EMPRESAS_DOCUMENTOS, JSON.stringify(filtrosAtuaisEmpresasDocumentos));
             setVersaoFiltroSalvoEmpresasDocumentos((valor) => valor + 1);
-            alert("Filtros do relat\u00f3rio de empresas e documentos salvos.");
+            mostrarAlertaSafeScan("Filtros do relat\u00f3rio de empresas e documentos salvos.");
         } catch (error) {
             console.error("Erro ao salvar filtros do relat\u00f3rio de empresas e documentos:", error);
-            alert("N\u00e3o foi poss\u00edvel salvar os filtros do relat\u00f3rio de empresas e documentos.");
+            mostrarAlertaSafeScan("N\u00e3o foi poss\u00edvel salvar os filtros do relat\u00f3rio de empresas e documentos.");
         }
     };
 
@@ -2150,14 +2217,14 @@ export function Empresas({
         const filtrosSalvos = carregarFiltrosSalvosEmpresasDocumentos();
 
         if (!filtrosSalvos) {
-            alert("Nenhum filtro salvo encontrado para o relat\u00f3rio de empresas e documentos.");
+            mostrarAlertaSafeScan("Nenhum filtro salvo encontrado para o relat\u00f3rio de empresas e documentos.");
             return;
         }
 
         setBuscaEmpresa(filtrosSalvos.buscaEmpresa || "");
         setFiltroStatusEmpresa(filtrosSalvos.filtroStatusEmpresa || "Todos");
         setFiltroTipoEmpresa(filtrosSalvos.filtroTipoEmpresa || "Todos");
-        alert("Filtros salvos aplicados no relat\u00f3rio de empresas e documentos.");
+        mostrarAlertaSafeScan("Filtros salvos aplicados no relat\u00f3rio de empresas e documentos.");
     };
 
     const limparFiltrosSalvosEmpresasDocumentos = () => {
@@ -2165,7 +2232,7 @@ export function Empresas({
 
         window.localStorage.removeItem(CHAVE_FILTROS_EMPRESAS_DOCUMENTOS);
         setVersaoFiltroSalvoEmpresasDocumentos((valor) => valor + 1);
-        alert("Filtros salvos do relat\u00f3rio de empresas e documentos removidos.");
+        mostrarAlertaSafeScan("Filtros salvos do relat\u00f3rio de empresas e documentos removidos.");
     };
     const empresasFiltradas = empresasBanco.filter((empresa) => {
         const texto = [
@@ -2293,7 +2360,7 @@ export function Empresas({
 
     const baixarRelatorioEmpresas = async () => {
         if (!podeExportarEmpresasSistema) {
-            if (typeof window !== "undefined") window.alert(mensagemBloqueioExportacaoEmpresas);
+            if (typeof window !== "undefined") mostrarAlertaSafeScan(mensagemBloqueioExportacaoEmpresas);
             return;
         }
 
@@ -2316,7 +2383,7 @@ export function Empresas({
 
     const baixarRelatorioPendencias = async () => {
         if (!podeExportarEmpresasSistema) {
-            if (typeof window !== "undefined") window.alert(mensagemBloqueioExportacaoEmpresas);
+            if (typeof window !== "undefined") mostrarAlertaSafeScan(mensagemBloqueioExportacaoEmpresas);
             return;
         }
 
@@ -2340,7 +2407,7 @@ export function Empresas({
 
     const baixarRelatorioDocumentos = async (empresa, docsEmpresa = []) => {
         if (!podeExportarEmpresasSistema) {
-            if (typeof window !== "undefined") window.alert(mensagemBloqueioExportacaoEmpresas);
+            if (typeof window !== "undefined") mostrarAlertaSafeScan(mensagemBloqueioExportacaoEmpresas);
             return;
         }
 
@@ -2379,6 +2446,15 @@ export function Empresas({
 
     return (
         <div>
+            <SafeScanAlert
+                aberto={Boolean(alertaSafeScan)}
+                titulo={alertaSafeScan?.titulo}
+                mensagem={alertaSafeScan?.mensagem}
+                tipo={alertaSafeScan?.tipo}
+                rotuloBotao={alertaSafeScan?.rotuloBotao}
+                onFechar={fecharAlertaSafeScan}
+            />
+
             <Header
                 className="hero-integrated-page-header hero-header--empresas"
                 titulo="Empresas e documentos"
@@ -3049,7 +3125,7 @@ export function Empresas({
 
                                                 <input
                                                     type="file"
-                                                    accept="application/pdf,image/*"
+                                                    accept="application/pdf,.pdf"
                                                     className="hidden"
                                                     onChange={(e) => {
                                                         const arquivo =
@@ -4045,7 +4121,7 @@ export function Empresas({
                                                                 : "Selecionar PDF para enviar"}
                                                         <input
                                                             type="file"
-                                                            accept="application/pdf,image/*"
+                                                            accept="application/pdf,.pdf"
                                                             className="hidden"
                                                             disabled={salvandoUploadRevisao === chaveUpload || !podeUploadEmpresasSistema}
                                                             onChange={(e) => enviarDocumentoPelaRevisao(empresaRevisao.empresa, tipoDoc.tipo, e.target.files?.[0])}

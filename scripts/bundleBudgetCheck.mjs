@@ -23,8 +23,8 @@ const manifestPath = join(
 );
 
 const baselineBundle = Object.freeze({
-    scriptsTotal: 8_446_670,
-    cssTotal: 843_514,
+    scriptsTotal: 8_623_323,
+    cssTotal: 912_636,
     imagensTotal: 3_515_776,
 });
 

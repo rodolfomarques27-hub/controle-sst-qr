@@ -1,18 +1,59 @@
-import { reduzirFotoParaAuditoria } from "./imagemService";
+function arquivoEhPdfDocumentoEmpresa(arquivo) {
+    const tipo =
+        String(arquivo?.type || "")
+            .trim()
+            .toLowerCase();
 
-function arquivoEhImagem(arquivo) {
-    return String(arquivo?.type || "").toLowerCase().startsWith("image/");
+    const nome =
+        String(arquivo?.name || "")
+            .trim()
+            .toLowerCase();
+
+    return (
+        tipo === "application/pdf" ||
+        nome.endsWith(".pdf")
+    );
 }
 
-async function otimizarImagemDocumentoEmpresa(arquivo) {
-    if (!arquivo || !arquivoEhImagem(arquivo)) return arquivo;
+async function validarEObterContentTypeDocumentoEmpresa(arquivo) {
+    if (!arquivoEhPdfDocumentoEmpresa(arquivo)) {
+        throw new Error(
+            "Documentos empresariais devem ser enviados em formato PDF."
+        );
+    }
 
-    return reduzirFotoParaAuditoria(arquivo, {
-        maxLado: 1600,
-        alvoBytes: 1200 * 1024,
-        qualidadeInicial: 0.86,
-        qualidadeMinima: 0.58,
-    });
+    if (typeof arquivo?.slice !== "function") {
+        throw new Error(
+            "Não foi possível validar o conteúdo do arquivo PDF selecionado."
+        );
+    }
+
+    const inicio =
+        arquivo.slice(0, 5);
+
+    if (typeof inicio?.arrayBuffer !== "function") {
+        throw new Error(
+            "Não foi possível validar a assinatura do arquivo PDF selecionado."
+        );
+    }
+
+    const assinaturaBytes =
+        new Uint8Array(
+            await inicio.arrayBuffer()
+        );
+
+    const assinatura =
+        String.fromCharCode(
+            ...assinaturaBytes
+        );
+
+    if (assinatura !== "%PDF-") {
+        throw new Error(
+            "O arquivo selecionado possui nome ou tipo de PDF, mas o conteúdo não é um PDF válido."
+        );
+    }
+
+    return "application/pdf";
 }
 
 async function removerArquivoDocumentoEmpresaSemBloquear({
@@ -79,9 +120,7 @@ export async function salvarDocumentoEmpresaCrud({
 
     if (novoDoc.arquivo) {
         const arquivoFinal =
-            await otimizarImagemDocumentoEmpresa(
-                novoDoc.arquivo
-            );
+            novoDoc.arquivo;
 
         if (
             !validarArquivoAntesUpload(
@@ -95,6 +134,11 @@ export async function salvarDocumentoEmpresaCrud({
                 "Documento empresarial fora do limite configurado."
             );
         }
+
+        const contentTypeSeguro =
+            await validarEObterContentTypeDocumentoEmpresa(
+                arquivoFinal
+            );
 
         const nomeSeguro =
             sanitizarNomeArquivo(arquivoFinal.name);
@@ -112,8 +156,7 @@ export async function salvarDocumentoEmpresaCrud({
                     cacheControl: "3600",
                     upsert: true,
                     contentType:
-                        arquivoFinal.type ||
-                        "application/pdf",
+                        contentTypeSeguro,
                 });
 
         if (uploadError) {
