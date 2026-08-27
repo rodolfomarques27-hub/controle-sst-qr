@@ -1,17 +1,3 @@
--- ============================================================================
--- SafeScan Brasil
--- SAFE_SCAN_CERTIDAO_EVIDENCIA_COLABORADOR_D2_R1P_R2
---
--- Evidências complementares vinculáveis a colaborador cadastrado.
---
--- colaborador_id:
--- - NULL para evidência empresarial;
--- - UUID para evidência individual;
--- - sem backfill automático;
--- - vínculo aceito quando há relação atual OU histórica conhecida
---   com a empresa do item documental.
--- ============================================================================
-
 begin;
 
 do $preflight$
@@ -466,18 +452,18 @@ begin
                 message =
                     'A evidência substituta deve manter o mesmo tipo da evidência anterior.';
         end if;
-    if v_evidencia_anterior_colaborador_id is not null
-       and
-       v_evidencia_anterior_colaborador_id
-            is distinct from
-            p_colaborador_id
-    then
-        raise exception using
-            errcode = '22023',
-            message =
-                'A substituição deve preservar o colaborador já vinculado à evidência.';
-    end if;
 
+        if v_evidencia_anterior_colaborador_id is not null
+           and
+           v_evidencia_anterior_colaborador_id
+                is distinct from
+                p_colaborador_id
+        then
+            raise exception using
+                errcode = '22023',
+                message =
+                    'A substituição deve preservar o colaborador já vinculado à evidência.';
+        end if;
     end if;
 
     insert into

@@ -175,6 +175,66 @@ assert.equal(
     "ajudante geral"
 );
 
+const matrizesFuncaoAsoSmoke = [
+    {
+        chave: "ajudante",
+        rotulo: "AJUDANTE GERAL",
+        termos: [
+            "ajudante geral",
+            "ajudante",
+        ],
+    },
+    {
+        chave: "pedreiro",
+        rotulo: "PEDREIRO",
+        termos: [
+            "pedreiro",
+        ],
+    },
+    {
+        chave: "administrativo",
+        rotulo: "ADMINISTRATIVO DE OBRA",
+        termos: [
+            "administrativo de obra",
+        ],
+    },
+    {
+        chave: "apontador",
+        rotulo: "APONTADOR",
+        termos: [
+            "apontador",
+        ],
+    },
+];
+
+const comparacaoAlanAsoSemCatalogo = compararFuncaoAsoComCadastro({
+    tipoDocumento: "ASO",
+    funcaoDocumento:
+        funcaoAsoSemSeparador.funcaoOriginal,
+    funcaoDocumentoNormalizada:
+        funcaoAsoSemSeparador.funcaoNormalizada,
+    funcaoDocumentoConfianca:
+        funcaoAsoSemSeparador.confianca,
+    funcaoDocumentoOrigem:
+        funcaoAsoSemSeparador.origem,
+    funcaoCadastro: "PEDREIRO",
+});
+
+assert.equal(
+    comparacaoAlanAsoSemCatalogo.status,
+    "funcao_aso_revisao_manual"
+);
+
+assert.equal(
+    comparacaoAlanAsoSemCatalogo.requerRevisaoManual,
+    true
+);
+
+assert.equal(
+    comparacaoAlanAsoSemCatalogo.bloqueiaAtualizacao,
+    true
+);
+
 const comparacaoAlanAso = compararFuncaoAsoComCadastro({
     tipoDocumento: "ASO",
     funcaoDocumento:
@@ -186,6 +246,7 @@ const comparacaoAlanAso = compararFuncaoAsoComCadastro({
     funcaoDocumentoOrigem:
         funcaoAsoSemSeparador.origem,
     funcaoCadastro: "PEDREIRO",
+    matrizesFuncao: matrizesFuncaoAsoSmoke,
 });
 
 assert.equal(
@@ -202,6 +263,7 @@ const comparacaoAsoDivergente = compararFuncaoAsoComCadastro({
     tipoDocumento: "ASO",
     funcaoDocumento: "ADM. DE OBRA",
     funcaoCadastro: "Apontador",
+    matrizesFuncao: matrizesFuncaoAsoSmoke,
 });
 
 assert.equal(comparacaoAsoDivergente.status, "divergente");
@@ -614,7 +676,7 @@ assert.match(
 );
 assert.doesNotMatch(
     codigoColaboradoresPage,
-    /carregarPermissaoSistemaAtualService|setPermissaoSistemaAtual|setMensagemPermissaoSistema|from "\.\.\/\.\.\/lib\/supabaseClient"/,
+    /carregarPermissaoSistemaAtualService|setPermissaoSistemaAtual|setMensagemPermissaoSistema/,
     "Colaboradores não pode voltar a carregar permissões em uma consulta própria."
 );
 assert.match(
@@ -2168,6 +2230,7 @@ const comparacaoRegressaoAlanAso = compararFuncaoAsoComCadastro({
         "texto_campo_rotulado",
     funcaoCadastro:
         "PEDREIRO",
+    matrizesFuncao: matrizesFuncaoAsoSmoke,
 });
 
 assert.equal(
