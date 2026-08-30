@@ -554,6 +554,14 @@ export async function extrairTextoCertidaoPdfLocal(
             textoAntesCorrecao
         );
 
+    const textoOriginalInsuficiente =
+        Number(
+            qualidadeAntesCorrecao
+                ?.quantidadeCaracteres ||
+            0
+        ) <
+        80;
+
     let reparoCamadaSuspeita =
         null;
 
@@ -569,8 +577,11 @@ export async function extrairTextoCertidaoPdfLocal(
         tipoLeituraOriginal ===
             "pdf_texto_local" &&
         !decodificacaoGfd?.aplicada &&
-        qualidadeAntesCorrecao
-            .suspeita
+        (
+            qualidadeAntesCorrecao
+                .suspeita ||
+            textoOriginalInsuficiente
+        )
     ) {
         reparoCamadaSuspeita =
             await repararCamadaTextualSuspeitaCertidao({
@@ -599,7 +610,13 @@ export async function extrairTextoCertidaoPdfLocal(
                 .suspeita &&
             qualidadeOcrCorretivo
                 .palavrasLongas >=
-                4
+                4 &&
+            (
+                !textoOriginalInsuficiente ||
+                qualidadeOcrCorretivo
+                    .quantidadeCaracteres >=
+                    80
+            )
         );
 
     const textoExtraido =
@@ -617,6 +634,17 @@ export async function extrairTextoCertidaoPdfLocal(
 
     const avisosQualidade =
         [];
+
+    if (
+        textoOriginalInsuficiente
+    ) {
+        avisosQualidade.push(
+            (
+                "A Certidão detectou camada textual insuficiente e acionou " +
+                "o fallback OCR local exclusivo deste módulo."
+            )
+        );
+    }
 
     if (
         qualidadeAntesCorrecao
@@ -797,6 +825,8 @@ export async function extrairTextoCertidaoPdfLocal(
             camadaSuspeitaDetectada:
                 qualidadeAntesCorrecao
                     .suspeita,
+            textoInsuficienteDetectado:
+                textoOriginalInsuficiente,
             correcaoOcrAplicada:
                 reparoOcrAceito,
             antes:

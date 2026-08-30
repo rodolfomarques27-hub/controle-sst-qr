@@ -122,6 +122,17 @@ const DEFINICOES_DOCUMENTAIS =
                     "PROCURADORIA GERAL DO ESTADO",
                     "DIVIDA ATIVA",
                 ],
+                [
+                    "SECRETARIA DA FAZENDA",
+                    "ESTADO",
+                    "NAO CONSTAM DEBITOS",
+                    "DIVIDA ATIVA",
+                ],
+                [
+                    "SECRETARIA DA FAZENDA",
+                    "ESTADO",
+                    "PENDENTES DE INSCRICAO NA DIVIDA ATIVA",
+                ],
             ],
         },
         {

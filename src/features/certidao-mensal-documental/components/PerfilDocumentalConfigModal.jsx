@@ -1,4 +1,5 @@
 import {
+    useEffect,
     useMemo,
     useState,
 } from "react";
@@ -203,10 +204,7 @@ export function PerfilDocumentalConfigModal({
         exigido,
         setExigido,
     ] =
-        useState(
-            documentoInicial?.exigido !==
-                false,
-        );
+        useState(true);
 
     const [
         competenciaInicio,
@@ -224,7 +222,7 @@ export function PerfilDocumentalConfigModal({
         setModoConfiguracao,
     ] =
         useState(
-            "anual",
+            "competencia",
         );
 
     const [
@@ -325,6 +323,232 @@ export function PerfilDocumentalConfigModal({
                 tipoDocumento,
             ],
         );
+
+    const regrasDocumentoAtual =
+        useMemo(
+            () =>
+                (
+                    Array.isArray(
+                        regras,
+                    )
+                        ? regras
+                        : []
+                ).filter(
+                    (regra) =>
+                        String(
+                            regra
+                                ?.tipoDocumento ||
+                                "",
+                        ).trim() ===
+                        tipoDocumento,
+                ),
+            [
+                regras,
+                tipoDocumento,
+            ],
+        );
+
+    const competenciaSelecionadaIso =
+        /^\d{4}-\d{2}$/.test(
+            String(
+                competenciaInicio ||
+                "",
+            ).trim(),
+        )
+            ? `${String(
+                competenciaInicio,
+            ).trim()}-01`
+            : "";
+
+    const anoSelecionadoIso =
+        /^\d{4}$/.test(
+            String(
+                anoInicio ||
+                "",
+            ).trim(),
+        )
+            ? `${String(
+                anoInicio,
+            ).trim()}-01-01`
+            : "";
+
+    const regraMensalSelecionada =
+        useMemo(
+            () =>
+                regrasDocumentoAtual.find(
+                    (regra) =>
+                        String(
+                            regra?.escopo ||
+                            "",
+                        ).toUpperCase() ===
+                            "COMPETENCIA" &&
+                        String(
+                            regra
+                                ?.competenciaInicio ||
+                                "",
+                        ) ===
+                            competenciaSelecionadaIso,
+                ) ||
+                null,
+            [
+                regrasDocumentoAtual,
+                competenciaSelecionadaIso,
+            ],
+        );
+
+    const regraAnualExata =
+        useMemo(
+            () =>
+                regrasDocumentoAtual.find(
+                    (regra) =>
+                        String(
+                            regra?.escopo ||
+                            "",
+                        ).toUpperCase() ===
+                            "ANUAL" &&
+                        String(
+                            regra
+                                ?.competenciaInicio ||
+                                "",
+                        ) ===
+                            anoSelecionadoIso,
+                ) ||
+                null,
+            [
+                regrasDocumentoAtual,
+                anoSelecionadoIso,
+            ],
+        );
+
+    const regraAnualAplicavelMensal =
+        useMemo(
+            () =>
+                regrasDocumentoAtual
+                    .filter(
+                        (regra) =>
+                            String(
+                                regra?.escopo ||
+                                "",
+                            ).toUpperCase() ===
+                                "ANUAL" &&
+                            competenciaSelecionadaIso &&
+                            String(
+                                regra
+                                    ?.competenciaInicio ||
+                                    "",
+                            ) <=
+                                competenciaSelecionadaIso,
+                    )
+                    .slice()
+                    .sort(
+                        (a, b) =>
+                            String(
+                                b
+                                    ?.competenciaInicio ||
+                                    "",
+                            ).localeCompare(
+                                String(
+                                    a
+                                        ?.competenciaInicio ||
+                                        "",
+                                ),
+                            ),
+                    )[0] ||
+                null,
+            [
+                regrasDocumentoAtual,
+                competenciaSelecionadaIso,
+            ],
+        );
+
+    const regraAnualAplicavelAno =
+        useMemo(
+            () =>
+                regrasDocumentoAtual
+                    .filter(
+                        (regra) =>
+                            String(
+                                regra?.escopo ||
+                                "",
+                            ).toUpperCase() ===
+                                "ANUAL" &&
+                            anoSelecionadoIso &&
+                            String(
+                                regra
+                                    ?.competenciaInicio ||
+                                    "",
+                            ) <=
+                                anoSelecionadoIso,
+                    )
+                    .slice()
+                    .sort(
+                        (a, b) =>
+                            String(
+                                b
+                                    ?.competenciaInicio ||
+                                    "",
+                            ).localeCompare(
+                                String(
+                                    a
+                                        ?.competenciaInicio ||
+                                        "",
+                                ),
+                            ),
+                    )[0] ||
+                null,
+            [
+                regrasDocumentoAtual,
+                anoSelecionadoIso,
+            ],
+        );
+
+    useEffect(
+        () => {
+            const modoAnualAtual =
+                modoConfiguracao ===
+                "anual";
+
+            const regraReferencia =
+                modoAnualAtual
+                    ? (
+                        regraAnualExata ||
+                        regraAnualAplicavelAno
+                    )
+                    : (
+                        regraMensalSelecionada ||
+                        regraAnualAplicavelMensal
+                    );
+
+            setExigido(
+                regraReferencia
+                    ?.exigido !==
+                    false,
+            );
+
+            setMotivo(
+                String(
+                    (
+                        modoAnualAtual
+                            ? regraAnualExata
+                                ?.motivo
+                            : regraMensalSelecionada
+                                ?.motivo
+                    ) ||
+                    "",
+                ),
+            );
+
+            setErroSalvar("");
+        },
+        [
+            modoConfiguracao,
+            tipoDocumento,
+            regraMensalSelecionada,
+            regraAnualExata,
+            regraAnualAplicavelMensal,
+            regraAnualAplicavelAno,
+        ],
+    );
 
     const historicoDocumento =
         useMemo(
@@ -549,14 +773,44 @@ export function PerfilDocumentalConfigModal({
     }
 
     const estadoAtual =
-        documentoAtual?.exigido ===
-        false
-            ? "Não exigido"
-            : "Exigido";
+        exigido
+            ? "Exigido"
+            : "Não exigido";
 
     const modoAnual =
         modoConfiguracao ===
         "anual";
+
+    const origemRegraEmEdicao =
+        !tipoDocumento
+            ? "Selecione um documento para carregar a regra."
+            : modoAnual
+                ? regraAnualExata
+                    ? `Regra anual cadastrada a partir de ${formatarCompetencia(
+                        regraAnualExata
+                            .competenciaInicio,
+                    )}.`
+                    : regraAnualAplicavelAno
+                        ? `Sem nova regra anual em ${anoInicio}. Estado herdado da regra anual iniciada em ${formatarCompetencia(
+                            regraAnualAplicavelAno
+                                .competenciaInicio,
+                        )}.`
+                        : "Sem regra anual cadastrada para este período — usando o padrão global: Exigido."
+                : regraMensalSelecionada
+                    ? `Exceção mensal cadastrada para ${formatarCompetencia(
+                        regraMensalSelecionada
+                            .competenciaInicio,
+                    )}.`
+                    : regraAnualAplicavelMensal
+                        ? `Sem exceção mensal para ${formatarCompetencia(
+                            competenciaSelecionadaIso,
+                        )} — herdando a regra anual iniciada em ${formatarCompetencia(
+                            regraAnualAplicavelMensal
+                                .competenciaInicio,
+                        )}.`
+                        : `Sem exceção mensal para ${formatarCompetencia(
+                            competenciaSelecionadaIso,
+                        )} — usando o padrão global: Exigido.`;
 
     const anoCompetenciaAtual =
         (
@@ -753,15 +1007,18 @@ export function PerfilDocumentalConfigModal({
 
                         <span
                             className={
-                                documentoAtual?.exigido ===
-                                false
-                                    ? "is-nao-exigido"
-                                    : "is-exigido"
+                                exigido
+                                    ? "is-exigido"
+                                    : "is-nao-exigido"
                             }
                         >
                             {estadoAtual}
                         </span>
                     </div>
+
+                    <p className="certidao-mensal-perfil-modal__mensagem">
+                        {origemRegraEmEdicao}
+                    </p>
 
                     <div className="certidao-mensal-perfil-modal__grid">
                         <div className="certidao-mensal-perfil-modal__campo is-wide">
@@ -1041,7 +1298,7 @@ export function PerfilDocumentalConfigModal({
                             <legend>
                                 {modoAnual
                                     ? "Situação anual"
-                                    : "Nova situação"}
+                                    : "Situação mensal"}
                             </legend>
 
                             <div className="certidao-mensal-perfil-modal__opcoes">
