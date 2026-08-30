@@ -543,6 +543,8 @@ export function ImportacaoMassaColaboradores({
                 </div>
             </div>
 <input
+                id="colaboradores-importacao-csv"
+                name="arquivoImportacaoColaboradores"
                 ref={inputRef}
                 type="file"
                 accept=".csv,text/csv,.txt"

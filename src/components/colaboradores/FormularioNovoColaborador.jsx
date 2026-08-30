@@ -21,11 +21,15 @@ const INFORMACOES_STATUS_OBRA = {
 };
 
 
-function CampoTexto({ label, value, onChange, placeholder, type = "text", list, children, className = "", inputClassName = "" }) {
+function CampoTexto({ label, name, value, onChange, placeholder, type = "text", list, children, className = "", inputClassName = "" }) {
+    const inputId = `novo-colaborador-${name}`;
+
     return (
         <label className={classNames("novo-colaborador-campo-anterior min-w-0", className)}>
             <span className="novo-colaborador-label-anterior">{label}</span>
             <input
+                id={inputId}
+                name={name}
                 type={type}
                 value={value || ""}
                 onChange={(evento) => onChange(evento.target.value)}
@@ -38,7 +42,9 @@ function CampoTexto({ label, value, onChange, placeholder, type = "text", list, 
     );
 }
 
-function CampoSelect({ label, value, onChange, children, ajuda, ajudaInline = "", className = "", inputClassName = "" }) {
+function CampoSelect({ label, name, value, onChange, children, ajuda, ajudaInline = "", className = "", inputClassName = "" }) {
+    const inputId = `novo-colaborador-${name}`;
+
     return (
         <label className={classNames("novo-colaborador-campo-anterior min-w-0", className)}>
             <span className={classNames("novo-colaborador-label-anterior", ajudaInline && "flex flex-wrap items-center gap-2")}> 
@@ -46,6 +52,8 @@ function CampoSelect({ label, value, onChange, children, ajuda, ajudaInline = ""
                 {ajudaInline && <small className="text-[11px] font-semibold normal-case tracking-normal text-slate-500">{ajudaInline}</small>}
             </span>
             <select
+                id={inputId}
+                name={name}
                 value={value || ""}
                 onChange={(evento) => onChange(evento.target.value)}
                 className={classNames("novo-colaborador-input-anterior", inputClassName)}
@@ -57,14 +65,18 @@ function CampoSelect({ label, value, onChange, children, ajuda, ajudaInline = ""
     );
 }
 
-function CampoFuncaoLivre({ label, value, onChange, funcoesDisponiveis = [], ajuda, className = "" }) {
+function CampoFuncaoLivre({ label, name, value, onChange, funcoesDisponiveis = [], ajuda, className = "" }) {
     const valorAtual = String(value || "");
+    const inputId = `novo-colaborador-${name}`;
+    const selectId = `${inputId}-cadastrada`;
 
     return (
         <label className={classNames("novo-colaborador-campo-anterior min-w-0", className)}>
             <span className="novo-colaborador-label-anterior">{label}</span>
             <div className="flex w-full items-stretch gap-2">
                 <input
+                    id={inputId}
+                    name={name}
                     type="text"
                     value={valorAtual}
                     onChange={(evento) => onChange(evento.target.value)}
@@ -73,6 +85,8 @@ function CampoFuncaoLivre({ label, value, onChange, funcoesDisponiveis = [], aju
                 />
                 <div className="relative w-[190px] shrink-0">
                     <select
+                        id={selectId}
+                        name={`${name}Cadastrada`}
                         aria-label="Selecionar função cadastrada"
                         value=""
                         onChange={(evento) => {
@@ -212,6 +226,7 @@ export function FormularioNovoColaborador({
             <div className="grid gap-3 lg:grid-cols-[1fr_0.72fr_1.55fr]">
                 <CampoTexto
                     label="Nome completo"
+                    name="nome"
                     value={novo.nome}
                     onChange={(valor) => alterarCampo("nome", valor)}
                     placeholder="Ex.: João da Silva"
@@ -220,6 +235,7 @@ export function FormularioNovoColaborador({
 
                 <CampoTexto
                     label="Data de nascimento"
+                    name="dataNascimento"
                     type="text"
                     value={formatarDataColaboradorCampo(novo.dataNascimento)}
                     placeholder="dd/mm/aaaa"
@@ -229,6 +245,7 @@ export function FormularioNovoColaborador({
 
                 <CampoSelect
                     label="Empresa terceirizada:"
+                    name="empresaNome"
                     value={novo.empresaNome}
                     onChange={(valor) => alterarCampo("empresaNome", valor)}
                     ajudaInline={empresasDisponiveis.length ? "(Selecione uma empresa cadastrada)" : "(Cadastre uma empresa antes)"}
@@ -245,6 +262,7 @@ export function FormularioNovoColaborador({
             <div className="grid gap-3 lg:grid-cols-3">
                 <CampoTexto
                     label="CPF"
+                    name="cpf"
                     value={novo.cpf}
                     onChange={(valor) => alterarCampo("cpf", formatarCpfColaboradorCampo(valor))}
                     placeholder="Ex.: 000.000.000-00"
@@ -252,6 +270,7 @@ export function FormularioNovoColaborador({
                 />
                 <CampoTexto
                     label="Telefone principal (opcional)"
+                    name="telefone"
                     value={novo.telefone}
                     onChange={(valor) => alterarCampo("telefone", formatarTelefoneColaboradorCampo(valor))}
                     placeholder="Ex.: (12) 99999-9999"
@@ -259,6 +278,7 @@ export function FormularioNovoColaborador({
                 />
                 <CampoTexto
                     label="Data de admissão (opcional)"
+                    name="dataAdmissao"
                     type="text"
                     value={formatarDataColaboradorCampo(novo.dataAdmissao)}
                     placeholder="dd/mm/aaaa"
@@ -270,6 +290,7 @@ export function FormularioNovoColaborador({
             <div className="grid gap-3 lg:grid-cols-[0.76fr_1.48fr_0.96fr]">
                 <CampoSelect
                     label="Situação na obra"
+                    name="statusMobilizacao"
                     value={novo.statusMobilizacao}
                     onChange={(valor) => alterarCampo("statusMobilizacao", valor)}
                     ajuda={INFORMACOES_STATUS_OBRA[novo.statusMobilizacao] || "Selecione a situação atual do colaborador na obra."}
@@ -282,6 +303,7 @@ export function FormularioNovoColaborador({
 
                 <CampoFuncaoLivre
                     label="Função"
+                    name="funcao"
                     value={novo.funcao}
                     onChange={(valor) => alterarCampo("funcao", valor)}
                     funcoesDisponiveis={funcoesDisponiveis}
@@ -290,6 +312,7 @@ export function FormularioNovoColaborador({
 
                 <CampoTexto
                     label="Matrícula eSocial (opcional)"
+                    name="matricula"
                     value={novo.matricula}
                     onChange={(valor) => alterarCampo("matricula", valor)}
                     placeholder="Ex.: matrícula eSocial"
@@ -320,6 +343,7 @@ export function FormularioNovoColaborador({
                 <div className="mt-4 grid gap-3 lg:grid-cols-3">
                     <CampoTexto
                         label="Nome do contato"
+                        name="contatoEmergenciaNome"
                         value={novo.contatoEmergenciaNome}
                         onChange={(valor) => alterarCampo("contatoEmergenciaNome", valor)}
                         placeholder="Ex.: Maria Aparecida"
@@ -327,6 +351,7 @@ export function FormularioNovoColaborador({
                     />
                     <CampoTexto
                         label="Parentesco"
+                        name="contatoEmergenciaParentesco"
                         value={novo.contatoEmergenciaParentesco}
                         onChange={(valor) => alterarCampo("contatoEmergenciaParentesco", valor)}
                         placeholder="Ex.: esposa, filho, mãe"
@@ -334,6 +359,7 @@ export function FormularioNovoColaborador({
                     />
                     <CampoTexto
                         label="Telefone de emergência"
+                        name="contatoEmergenciaTelefone"
                         value={novo.contatoEmergenciaTelefone}
                         onChange={(valor) => alterarCampo("contatoEmergenciaTelefone", formatarTelefoneColaboradorCampo(valor))}
                         placeholder="Ex.: (12) 99999-9999"

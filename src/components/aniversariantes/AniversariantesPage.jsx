@@ -702,6 +702,9 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
                         <label className="relative block">
                             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                             <input
+                                id="aniversariantes-busca"
+                                name="buscaAniversariante"
+                                aria-label="Buscar aniversariantes"
                                 value={busca}
                                 onChange={(e) => setBusca(e.target.value)}
                                 placeholder="Buscar por nome, empresa ou função"
@@ -709,20 +712,20 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
                             />
                         </label>
 
-                        <select value={mes} onChange={(e) => setMes(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                        <select id="aniversariantes-filtro-mes" name="filtroMes" aria-label="Filtrar aniversariantes por mês" value={mes} onChange={(e) => setMes(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
                             <option value="Todos">Todos os meses</option>
                             {MESES_ANIVERSARIO.map((item) => <option key={item.valor} value={item.valor}>{item.nome}</option>)}
                         </select>
 
-                        <select value={empresa} onChange={(e) => setEmpresa(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                        <select id="aniversariantes-filtro-empresa" name="filtroEmpresa" aria-label="Filtrar aniversariantes por empresa" value={empresa} onChange={(e) => setEmpresa(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
                             {opcoesEmpresa.map((item) => <option key={item}>{item}</option>)}
                         </select>
 
-                        <select value={funcao} onChange={(e) => setFuncao(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                        <select id="aniversariantes-filtro-funcao" name="filtroFuncao" aria-label="Filtrar aniversariantes por função" value={funcao} onChange={(e) => setFuncao(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
                             {opcoesFuncao.map((item) => <option key={item}>{item}</option>)}
                         </select>
 
-                        <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                        <select id="aniversariantes-filtro-status" name="filtroStatus" aria-label="Filtrar aniversariantes por status" value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
                             {opcoesStatus.map((item) => <option key={item}>{item}</option>)}
                         </select>
                     </div>

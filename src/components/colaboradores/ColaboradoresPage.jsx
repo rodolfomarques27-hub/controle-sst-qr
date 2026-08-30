@@ -2198,6 +2198,9 @@ ${erros.slice(0, 8).join("\n")}`
                         <div className="relative flex-1">
                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                             <input
+                                id="colaboradores-busca"
+                                name="buscaColaborador"
+                                aria-label="Buscar colaboradores"
                                 value={busca}
                                 onChange={(e) => setBusca(e.target.value)}
                                 placeholder="Buscar por nome, empresa, função, matrícula ou código"
@@ -2208,6 +2211,9 @@ ${erros.slice(0, 8).join("\n")}`
                         <div className="relative min-w-56">
                             <Filter className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                             <select
+                                id="colaboradores-filtro-empresa"
+                                name="filtroEmpresa"
+                                aria-label="Filtrar colaboradores por empresa"
                                 value={empresa}
                                 onChange={(e) => {
                                     setEmpresa(
@@ -2229,6 +2235,8 @@ ${erros.slice(0, 8).join("\n")}`
                         <div className="relative min-w-56">
                             <Filter className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                             <select
+                                id="colaboradores-filtro-funcao"
+                                name="filtroFuncao"
                                 value={filtroFuncao}
                                 onChange={(e) =>
                                     setFiltroFuncao(
@@ -2256,6 +2264,9 @@ ${erros.slice(0, 8).join("\n")}`
                         <div className="relative min-w-56">
                             <ShieldCheck className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                             <select
+                                id="colaboradores-filtro-classificacao"
+                                name="filtroClassificacao"
+                                aria-label="Filtrar colaboradores por classificação"
                                 value={filtroClassificacao}
                                 onChange={(e) => {
                                     setFiltroStatusRapidoAtivo(
@@ -2277,6 +2288,9 @@ ${erros.slice(0, 8).join("\n")}`
 
                         <div className="relative min-w-56">
                             <select
+                                id="colaboradores-ordenacao"
+                                name="ordenacaoFuncionarios"
+                                aria-label="Ordenar colaboradores"
                                 value={ordenacaoFuncionarios}
                                 onChange={(e) => setOrdenacaoFuncionarios(e.target.value)}
                                 className="w-full appearance-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"

@@ -104,13 +104,19 @@ export function EmpresasFiscalizadasPanel({
             </header>
 
             <div className="certidao-mensal-empresas__toolbar">
-                <label className="certidao-mensal-empresas__search">
+                <label
+                    className="certidao-mensal-empresas__search"
+                    htmlFor="certidao-mensal-busca-empresa"
+                >
                     <Search aria-hidden="true" />
                     <input
+                        id="certidao-mensal-busca-empresa"
+                        name="buscaEmpresa"
                         type="text"
                         value={busca}
                         onChange={(evento) => setBusca(evento.target.value)}
                         placeholder="Buscar empresa..."
+                        aria-label="Buscar empresa"
                     />
                 </label>
 

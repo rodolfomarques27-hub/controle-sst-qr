@@ -262,6 +262,8 @@ export function ImportacaoFotosMassaColaboradores({
 
                 <div className="colaboradores-importacao-card__acoes flex flex-col gap-2 sm:flex-row lg:shrink-0">
                     <input
+                        id="colaboradores-importacao-fotos"
+                        name="fotosColaboradores"
                         ref={inputRef}
                         type="file"
                         accept="image/jpeg,image/png,image/webp"
