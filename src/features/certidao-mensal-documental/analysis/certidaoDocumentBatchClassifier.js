@@ -199,6 +199,231 @@ function classificarIssLote(
     return null;
 }
 
+
+// SAFE_SCAN_ASO_PCMSO_CLASSIFIER_27H
+function classificarAsoPcmsoLote(
+    conteudo
+) {
+    const tituloAsoForte =
+        Boolean(
+            conteudo.includes(
+                "ATESTADO DE SAUDE OCUPACIONAL"
+            ) ||
+            /ATESTAD[O0][\s\S]{0,24}SAUDE[\s\S]{0,24}OCUPACIONAL/
+                .test(
+                    conteudo
+                )
+        );
+
+    const siglaAso =
+        /\bAS[O0]\b/
+            .test(
+                conteudo
+            );
+
+    const pcmso =
+        Boolean(
+            conteudo.includes(
+                "PROGRAMA DE CONTROLE MEDICO DE SAUDE OCUPACIONAL"
+            ) ||
+            /\bPCM[S5][O0]\b/
+                .test(
+                    conteudo
+                )
+        );
+
+    const tiposExame =
+        coletarMarcadoresLote(
+            conteudo,
+            [
+                "EXAME PERIODICO",
+                "PERIODICO",
+                "EXAME ADMISSIONAL",
+                "ADMISSIONAL",
+                "EXAME DEMISSIONAL",
+                "DEMISSIONAL",
+                "MUDANCA DE RISCO",
+                "MUDANCA DE FUNCAO",
+                "RETORNO AO TRABALHO",
+            ]
+        );
+
+    const aptidao =
+        coletarMarcadoresLote(
+            conteudo,
+            [
+                "APTO PARA",
+                "INAPTO PARA",
+                "APTO",
+                "INAPTO",
+            ]
+        );
+
+    const medico =
+        coletarMarcadoresLote(
+            conteudo,
+            [
+                "MEDICO EXAMINADOR",
+                "MEDICO COORDENADOR",
+                "RESPONSAVEL MEDICO",
+                "CRM",
+            ]
+        );
+
+    const riscos =
+        coletarMarcadoresLote(
+            conteudo,
+            [
+                "RISCOS OCUPACIONAIS",
+                "RISCO OCUPACIONAL",
+                "FATORES DE RISCO",
+                "EXAMES COMPLEMENTARES",
+                "EXAMES OCUPACIONAIS",
+            ]
+        );
+
+    const trabalhador =
+        coletarMarcadoresLote(
+            conteudo,
+            [
+                "FUNCIONARIO",
+                "COLABORADOR",
+                "EMPREGADO",
+                "FUNCAO",
+                "SETOR",
+                "MATRICULA",
+            ]
+        );
+
+    const gruposApoio =
+        [
+            tiposExame,
+            aptidao,
+            medico,
+            riscos,
+            trabalhador,
+        ]
+            .filter(
+                (grupo) =>
+                    grupo.length >
+                    0
+            )
+            .length;
+
+    const estruturaAsoForte =
+        Boolean(
+            tiposExame.length >
+                0 &&
+            aptidao.length >
+                0 &&
+            medico.length >
+                0 &&
+            (
+                riscos.length >
+                    0 ||
+                trabalhador.length >
+                    0
+            )
+        );
+
+    const reconhecido =
+        Boolean(
+            tituloAsoForte ||
+            (
+                siglaAso &&
+                gruposApoio >=
+                    2
+            ) ||
+            (
+                pcmso &&
+                gruposApoio >=
+                    3 &&
+                (
+                    medico.length >
+                        0 ||
+                    riscos.length >
+                        0
+                )
+            ) ||
+            estruturaAsoForte
+        );
+
+    if (!reconhecido) {
+        return null;
+    }
+
+    return criarResultadoLote({
+        id:
+            "aso-pcmso",
+
+        titulo:
+            "ASO / PCMSO",
+
+        confianca:
+            tituloAsoForte
+                ? 97
+                : siglaAso
+                    ? 94
+                    : pcmso
+                        ? 91
+                        : 89,
+
+        evidencias: [
+            ...(
+                tituloAsoForte
+                    ? [
+                        "ATESTADO DE SAUDE OCUPACIONAL",
+                    ]
+                    : []
+            ),
+            ...(
+                siglaAso
+                    ? [
+                        "ASO",
+                    ]
+                    : []
+            ),
+            ...(
+                pcmso
+                    ? [
+                        "PCMSO",
+                    ]
+                    : []
+            ),
+            ...tiposExame.slice(
+                0,
+                2
+            ),
+            ...aptidao.slice(
+                0,
+                2
+            ),
+            ...medico.slice(
+                0,
+                2
+            ),
+            ...riscos.slice(
+                0,
+                2
+            ),
+            ...trabalhador.slice(
+                0,
+                2
+            ),
+        ],
+
+        tipoClassificador:
+            "aso-pcmso",
+
+        tipoCatalogo:
+            "aso-pcmso",
+
+        origem:
+            "classificador_lote_aso_pcmso",
+    });
+}
+
+
 function classificarEsocialLote(
     conteudo
 ) {
@@ -1076,6 +1301,14 @@ function classificarFolhaPagamentoLote(
     });
 }
 
+// SAFE_SCAN_CERT2_M4_F4_J_VAVT_FORA_ESCOPO_V1
+//
+// VA e VT não constituem obrigação documental mensal do CERT2.
+// O detector reconhece o benefício para evitar que o documento
+// seja tratado como desconhecido.
+//
+// Nome de arquivo e pasta não participam da decisão semântica.
+//
 function classificarVaVtLote(
     conteudo
 ) {
@@ -1155,7 +1388,7 @@ function classificarVaVtLote(
                 )
         );
 
-    const reconhecido =
+    const reconhecidoExplicito =
         Boolean(
             (
                 va.length > 0 ||
@@ -1168,9 +1401,93 @@ function classificarVaVtLote(
             )
         );
 
+    const vaEstrutural =
+        Boolean(
+            conteudo.includes(
+                "VALOR DOS BENEFICIOS"
+            ) &&
+            conteudo.includes(
+                "QUANTIDADE DE BENEFICIARIOS"
+            ) &&
+            conteudo.includes(
+                "BENEFICIARIO"
+            ) &&
+            conteudo.includes(
+                "CPF"
+            ) &&
+            conteudo.includes(
+                "MATRICULA"
+            ) &&
+            (
+                conteudo.includes(
+                    "DATA DE CREDITO"
+                ) ||
+                conteudo.includes(
+                    "DATA DE ENTREGA"
+                )
+            ) &&
+            (
+                conteudo.includes(
+                    "VALOR DO BENEFICIO"
+                ) ||
+                conteudo.includes(
+                    "DEPARTAMENTO"
+                )
+            )
+        );
+
+    const vtEstrutural =
+        Boolean(
+            conteudo.includes(
+                "LISTAGEM DE FUNCIONARIOS"
+            ) &&
+            conteudo.includes(
+                "PERIODO UTILIZACAO"
+            ) &&
+            conteudo.includes(
+                "PEDIDO"
+            ) &&
+            (
+                conteudo.includes(
+                    "DETALHE DO CARTAO PROCESSADO NO PEDIDO"
+                ) ||
+                conteudo.includes(
+                    "DETALHE DOS CARTOES PROCESSADOS NO PEDIDO"
+                )
+            ) &&
+            conteudo.includes(
+                "EMISSOR"
+            ) &&
+            conteudo.includes(
+                "RECARGA DISPONIVEL PARA VALIDACAO"
+            )
+        );
+
+    const reconhecido =
+        Boolean(
+            reconhecidoExplicito ||
+            vaEstrutural ||
+            vtEstrutural
+        );
+
     if (!reconhecido) {
         return null;
     }
+
+    const evidenciasEstruturais =
+        vaEstrutural
+            ? [
+                "VALOR DOS BENEFICIOS",
+                "QUANTIDADE DE BENEFICIARIOS",
+                "BENEFICIARIO",
+            ]
+            : vtEstrutural
+                ? [
+                    "LISTAGEM DE FUNCIONARIOS",
+                    "PERIODO UTILIZACAO",
+                    "RECARGA DISPONIVEL PARA VALIDACAO",
+                ]
+                : [];
 
     return criarResultadoLote({
         id:
@@ -1180,19 +1497,34 @@ function classificarVaVtLote(
             "VA / VT",
 
         confianca:
-            93,
+            (
+                vaEstrutural ||
+                vtEstrutural
+            )
+                ? 95
+                : 93,
 
         evidencias: [
             ...va,
             ...vt,
+            ...evidenciasEstruturais,
             ...apoio.slice(
                 0,
                 3
             ),
         ],
 
-        tipoCatalogo:
+        tipoClassificador:
             "va-vt",
+
+        tipoCatalogo:
+            "",
+
+        origem:
+            "classificador_lote_fora_escopo_mensal",
+
+        complementar:
+            true,
     });
 }
 
@@ -1498,6 +1830,739 @@ function classificarTceCeisLote(
     });
 }
 
+
+// ============================================================
+// SAFE_SCAN_27I_CLASSIFIER_FAMILIAS_R3
+//
+// Cobertura comprovada pelo conteúdo dos PDFs reais da
+// Falcão Bauer.
+//
+// Nenhuma regra abaixo usa filename/pasta como evidência.
+// ============================================================
+
+function classificarCndEstadualExpandidaLote(
+    conteudo
+) {
+    const sefazSp =
+        Boolean(
+            conteudo.includes(
+                "SECRETARIA DA FAZENDA E PLANEJAMENTO DO ESTADO DE SAO PAULO"
+            ) ||
+            conteudo.includes(
+                "SECRETARIA DA FAZENDA"
+            )
+        );
+
+    const debitos =
+        Boolean(
+            conteudo.includes(
+                "DEBITOS"
+            ) &&
+            (
+                conteudo.includes(
+                    "DIVIDA ATIVA"
+                ) ||
+                conteudo.includes(
+                    "PENDENTES DE INSCRICAO"
+                )
+            )
+        );
+
+    const pessoaJuridica =
+        Boolean(
+            conteudo.includes(
+                "PESSOA JURIDICA"
+            ) ||
+            conteudo.includes(
+                "ESTABELECIMENTO MATRIZ/FILIAL"
+            )
+        );
+
+    if (
+        !sefazSp ||
+        !debitos ||
+        !pessoaJuridica
+    ) {
+        return null;
+    }
+
+    return criarResultadoLote({
+        id:
+            "cnd-estadual",
+
+        titulo:
+            "CND Estadual",
+
+        confianca:
+            94,
+
+        evidencias: [
+            "SECRETARIA DA FAZENDA",
+            "DEBITOS",
+            "DIVIDA ATIVA",
+        ],
+
+        tipoCatalogo:
+            "cnd-estadual",
+
+        origem:
+            "classificador_lote_cnd_estadual_expandida",
+    });
+}
+
+function classificarRelatorioFgtsComplementarLote(
+    conteudo
+) {
+    const detalheGuia =
+        conteudo.includes(
+            "DETALHE DA GUIA EMITIDA"
+        );
+
+    const relacaoTrabalhadores =
+        conteudo.includes(
+            "RELACAO DE TRABALHADORES"
+        );
+
+    const identidadeFgts =
+        Boolean(
+            conteudo.includes(
+                "TOTAL DA GUIA (FGTS)"
+            ) ||
+            conteudo.includes(
+                "VALOR FGTS NA GUIA"
+            )
+        );
+
+    const estrutura =
+        Boolean(
+            conteudo.includes(
+                "NOME EMPREGADOR"
+            ) &&
+            (
+                conteudo.includes(
+                    "NUMERO DA GUIA"
+                ) ||
+                conteudo.includes(
+                    "QTD. TRABALHADORES FGTS"
+                )
+            )
+        );
+
+    if (
+        !detalheGuia ||
+        !relacaoTrabalhadores ||
+        !identidadeFgts ||
+        !estrutura
+    ) {
+        return null;
+    }
+
+    return criarResultadoLote({
+        id:
+            "relatorio-fgts-digital",
+
+        titulo:
+            "Relatório de trabalhadores do FGTS Digital",
+
+        confianca:
+            96,
+
+        evidencias: [
+            "DETALHE DA GUIA EMITIDA",
+            "RELACAO DE TRABALHADORES",
+            "FGTS",
+        ],
+
+        tipoClassificador:
+            "relatorio-fgts-digital",
+
+        tipoCatalogo:
+            "fgts",
+
+        origem:
+            "classificador_lote_complementar_fgts",
+
+        complementar:
+            true,
+    });
+}
+
+function classificarComprovantePagamentoSalarialExpandidoLote(
+    conteudo
+) {
+    const creditoContaSalario =
+        Boolean(
+            conteudo.includes(
+                "DETALHE DO PAGAMENTO"
+            ) &&
+            conteudo.includes(
+                "CREDITO EM CONTA SALARIO"
+            ) &&
+            conteudo.includes(
+                "DADOS DO FUNCIONARIO"
+            ) &&
+            conteudo.includes(
+                "VALOR PAGAMENTO"
+            )
+        );
+
+    const demonstrativoRecibo =
+        Boolean(
+            conteudo.includes(
+                "DEMONSTRATIVO DE PAGAMENTO"
+            ) &&
+            conteudo.includes(
+                "RECEBI O VALOR LIQUIDO DESTE RECIBO"
+            ) &&
+            (
+                conteudo.includes(
+                    "TOTAL DESCONTOS"
+                ) ||
+                conteudo.includes(
+                    "LIQUIDO"
+                )
+            ) &&
+            (
+                conteudo.includes(
+                    "SALARIO"
+                ) ||
+                conteudo.includes(
+                    "BASE INSS"
+                )
+            )
+        );
+
+
+    // SAFE_SCAN_CERT2_M4_F3_E_RECIBO_SALARIAL_OCR_FORTE_V1
+    //
+    // Assinatura documental alternativa para holerite/recibo
+    // escaneado quando o OCR perde o cabeçalho "Demonstrativo de
+    // Pagamento" e/ou a frase completa "Recebi o valor líquido...".
+    //
+    // Fail-closed:
+    // - não basta conter SALARIO;
+    // - exige depósito em conta;
+    // - exige líquido;
+    // - exige evidência previdenciária;
+    // - exige duas âncoras independentes de quitação.
+    //
+    // Dessa forma, resumo de folha, relatório contábil ou
+    // transferência bancária isolada não satisfazem esta assinatura.
+
+    const reciboSalarialOcrForte =
+        Boolean(
+            conteudo.includes(
+                "SALARIO"
+            ) &&
+            conteudo.includes(
+                "LIQUIDO"
+            ) &&
+            conteudo.includes(
+                "DEPOSITADO NA CONTA"
+            ) &&
+            (
+                conteudo.includes(
+                    "INSS SOBRE A FOLHA"
+                ) ||
+                conteudo.includes(
+                    "BASE INSS"
+                )
+            ) &&
+            conteudo.includes(
+                "CORRESPONDENTE A DISCRIMINACAO ACIMA"
+            ) &&
+            conteudo.includes(
+                "DOU PLENA E TOTAL QUITACAO"
+            )
+        );
+    if (
+        !creditoContaSalario &&
+        !demonstrativoRecibo &&
+        !reciboSalarialOcrForte
+    ) {
+        return null;
+    }
+
+    return criarResultadoLote({
+        id:
+            "pagamento-salarial",
+
+        titulo:
+            "Comprovante de pagamento salarial",
+
+        confianca:
+            reciboSalarialOcrForte &&
+            !creditoContaSalario &&
+            !demonstrativoRecibo
+                ? 94
+                : 96,
+
+        evidencias:
+            creditoContaSalario
+                ? [
+                    "CREDITO EM CONTA SALARIO",
+                    "DADOS DO FUNCIONARIO",
+                    "VALOR PAGAMENTO",
+                ]
+                : demonstrativoRecibo
+                    ? [
+                        "DEMONSTRATIVO DE PAGAMENTO",
+                        "RECIBO DE VALOR LIQUIDO",
+                        "SALARIO",
+                    ]
+                    : [
+                        "SALARIO",
+                        "LIQUIDO",
+                        "DEPOSITADO NA CONTA",
+                        "EVIDENCIA PREVIDENCIARIA",
+                        "QUITACAO DE RECIBO SALARIAL",
+                    ],
+
+        tipoClassificador:
+            "pagamento-salarial",
+
+        tipoCatalogo:
+            "",
+
+        origem:
+            "classificador_lote_complementar_folha_27i",
+
+        complementar:
+            true,
+    });
+}
+
+function classificarRelacaoEmpregadosLote(
+    conteudo
+) {
+    const titulo =
+        Boolean(
+            conteudo.includes(
+                "RELACAO DE FUNCIONARIOS ATIVOS E AFASTADOS"
+            ) ||
+            conteudo.includes(
+                "RELACAO DE EMPREGADOS ATIVOS E AFASTADOS"
+            )
+        );
+
+    const colunas =
+        Boolean(
+            conteudo.includes(
+                "NOME"
+            ) &&
+            conteudo.includes(
+                "ADMISSAO"
+            ) &&
+            conteudo.includes(
+                "CONTRATO"
+            ) &&
+            conteudo.includes(
+                "SITUACAO"
+            )
+        );
+
+    const corpo =
+        Boolean(
+            conteudo.includes(
+                "ATIVO"
+            ) &&
+            conteudo.includes(
+                "TOTAL DO(A)"
+            )
+        );
+
+    if (
+        !titulo ||
+        !colunas ||
+        !corpo
+    ) {
+        return null;
+    }
+
+    return criarResultadoLote({
+        id:
+            "relacao-empregados",
+
+        titulo:
+            "Relação de Empregados",
+
+        confianca:
+            96,
+
+        evidencias: [
+            "RELACAO DE FUNCIONARIOS ATIVOS E AFASTADOS",
+            "ADMISSAO",
+            "CONTRATO",
+            "SITUACAO",
+        ],
+
+        tipoCatalogo:
+            "relacao-empregados",
+
+        origem:
+            "classificador_lote_relacao_empregados",
+
+        complementar:
+            true,
+    });
+}
+
+function classificarPcmsoEstruturalLote(
+    conteudo
+) {
+    const pcmso =
+        /\bPCM[S5][O0]\b/
+            .test(
+                conteudo
+            );
+
+    const titulo =
+        Boolean(
+            conteudo.includes(
+                "PROGRAMA DE CONTROLE MEDICO DE SAUDE OCUPACIONAL"
+            ) ||
+            conteudo.includes(
+                "PROGRAMA DE CONTROLE MEDICO E SAUDE OCUPACIONAL"
+            )
+        );
+
+    const estrutura =
+        Boolean(
+            conteudo.includes(
+                "VIGENCIA"
+            ) &&
+            (
+                conteudo.includes(
+                    "IDENTIFICACAO DA EMPRESA"
+                ) ||
+                conteudo.includes(
+                    "AREA RESPONSAVEL"
+                )
+            )
+        );
+
+    if (
+        !pcmso ||
+        !titulo ||
+        !estrutura
+    ) {
+        return null;
+    }
+
+    return criarResultadoLote({
+        id:
+            "aso-pcmso",
+
+        titulo:
+            "ASO / PCMSO",
+
+        confianca:
+            97,
+
+        evidencias: [
+            "PCMSO",
+            "PROGRAMA DE CONTROLE MEDICO DE SAUDE OCUPACIONAL",
+            "VIGENCIA",
+        ],
+
+        tipoCatalogo:
+            "aso-pcmso",
+
+        origem:
+            "classificador_lote_pcmso_estrutural_27i",
+
+        complementar:
+            true,
+    });
+}
+
+function classificarPgrForaEscopoLote(
+    conteudo
+) {
+    const titulo =
+        Boolean(
+            conteudo.includes(
+                "PROGRAMA DE GERENCIAMENTO DE RISCOS"
+            ) &&
+            /\bPGR\b/
+                .test(
+                    conteudo
+                )
+        );
+
+    const estrutura =
+        Boolean(
+            conteudo.includes(
+                "PLANO DE ACAO"
+            ) ||
+            conteudo.includes(
+                "INVENTARIO DE RISCOS"
+            ) ||
+            conteudo.includes(
+                "NR 01"
+            )
+        );
+
+    if (
+        !titulo ||
+        !estrutura
+    ) {
+        return null;
+    }
+
+    return criarResultadoLote({
+        id:
+            "pgr",
+
+        titulo:
+            "PGR — Programa de Gerenciamento de Riscos",
+
+        confianca:
+            97,
+
+        evidencias: [
+            "PGR",
+            "PROGRAMA DE GERENCIAMENTO DE RISCOS",
+        ],
+
+        tipoClassificador:
+            "pgr",
+
+        tipoCatalogo:
+            "",
+
+        origem:
+            "classificador_lote_fora_escopo_mensal",
+
+        complementar:
+            true,
+    });
+}
+
+function classificarIssMunicipalPagamentoLote(
+    conteudo
+) {
+    const comprovante =
+        conteudo.includes(
+            "COMPROVANTE DE PAGAMENTO"
+        );
+
+    const tributoMunicipal =
+        conteudo.includes(
+            "TRIBUTOS MUNICIPAIS"
+        );
+
+    const servicos =
+        Boolean(
+            conteudo.includes(
+                "NOTA FISCAL ELETRONICA DE SERVICOS"
+            ) ||
+            conteudo.includes(
+                "NOTA FISCAL ELETRONICA DE SERVICO"
+            ) ||
+            conteudo.includes(
+                "NFE.PREFEITURA"
+            )
+        );
+
+    const estruturaPagamento =
+        Boolean(
+            conteudo.includes(
+                "VALOR DO DOCUMENTO"
+            ) &&
+            (
+                conteudo.includes(
+                    "CODIGO DE BARRAS"
+                ) ||
+                conteudo.includes(
+                    "AUTENTICACAO"
+                )
+            )
+        );
+
+    if (
+        !comprovante ||
+        !tributoMunicipal ||
+        !servicos ||
+        !estruturaPagamento
+    ) {
+        return null;
+    }
+
+    return criarResultadoLote({
+        id:
+            "iss",
+
+        titulo:
+            "ISSQN",
+
+        confianca:
+            94,
+
+        evidencias: [
+            "TRIBUTOS MUNICIPAIS",
+            "NOTA FISCAL ELETRONICA DE SERVICOS",
+            "COMPROVANTE DE PAGAMENTO",
+        ],
+
+        tipoCatalogo:
+            "iss",
+
+        origem:
+            "classificador_lote_iss_pagamento_municipal_27i",
+    });
+}
+
+function classificarDarfFederalGenericoLote(
+    conteudo
+) {
+    const darf =
+        /\bDARF\b/
+            .test(
+                conteudo
+            );
+
+    const arrecadacaoFederal =
+        Boolean(
+            conteudo.includes(
+                "RECEITAS FEDERAIS"
+            ) &&
+            conteudo.includes(
+                "DOCUMENTO"
+            ) &&
+            (
+                conteudo.includes(
+                    "PAGAR"
+                ) ||
+                conteudo.includes(
+                    "PAGAMENTO"
+                )
+            )
+        );
+
+    const dctfOuPrevidenciario =
+        Boolean(
+            conteudo.includes(
+                "DCTFWEB"
+            ) ||
+            conteudo.includes(
+                "DCTF WEB"
+            ) ||
+            conteudo.includes(
+                "CONTRIBUICOES PREVIDENCIARIAS"
+            ) ||
+            conteudo.includes(
+                "DEBITOS PREVIDENCIARIOS"
+            ) ||
+            conteudo.includes(
+                "CP SEGURADOS"
+            ) ||
+            conteudo.includes(
+                "CP PATRONAL"
+            )
+        );
+
+    if (
+        (
+            !darf &&
+            !arrecadacaoFederal
+        ) ||
+        dctfOuPrevidenciario
+    ) {
+        return null;
+    }
+
+    return criarResultadoLote({
+        id:
+            "darf-federal-generico",
+
+        titulo:
+            "DARF / comprovante federal — revisar",
+
+        confianca:
+            86,
+
+        evidencias: [
+            ...(
+                darf
+                    ? [
+                        "DARF",
+                    ]
+                    : []
+            ),
+            ...(
+                arrecadacaoFederal
+                    ? [
+                        "RECEITAS FEDERAIS",
+                    ]
+                    : []
+            ),
+        ],
+
+        tipoClassificador:
+            "darf-federal-generico",
+
+        tipoCatalogo:
+            "",
+
+        origem:
+            "classificador_lote_federal_generico_27i",
+
+        complementar:
+            true,
+    });
+}
+
+function classificarTributoMunicipalGenericoLote(
+    conteudo
+) {
+    const comprovante =
+        conteudo.includes(
+            "COMPROVANTE DE PAGAMENTO"
+        );
+
+    const municipal =
+        conteudo.includes(
+            "TRIBUTOS MUNICIPAIS"
+        );
+
+    if (
+        !comprovante ||
+        !municipal
+    ) {
+        return null;
+    }
+
+    return criarResultadoLote({
+        id:
+            "tributo-municipal-generico",
+
+        titulo:
+            "Comprovante de tributo municipal — revisar",
+
+        confianca:
+            86,
+
+        evidencias: [
+            "COMPROVANTE DE PAGAMENTO",
+            "TRIBUTOS MUNICIPAIS",
+        ],
+
+        tipoClassificador:
+            "tributo-municipal-generico",
+
+        tipoCatalogo:
+            "",
+
+        origem:
+            "classificador_lote_municipal_generico_27i",
+
+        complementar:
+            true,
+    });
+}
+
+
 export function classificarDocumentoCertidaoEmLote(
     texto = ""
 ) {
@@ -1535,6 +2600,19 @@ export function classificarDocumentoCertidaoEmLote(
 
     if (issCertidao) {
         return issCertidao;
+    }
+
+    /*
+     * ASO/PCMSO é identificado somente pelo conteúdo efetivamente
+     * extraído do documento. Nome do arquivo não participa.
+     */
+    const asoPcmso =
+        classificarAsoPcmsoLote(
+            conteudo
+        );
+
+    if (asoPcmso) {
+        return asoPcmso;
     }
 
     /*
@@ -1607,8 +2685,16 @@ export function classificarDocumentoCertidaoEmLote(
      * Eles NÃO avaliam conformidade.
      */
     const detectores = [
+        classificarCndEstadualExpandidaLote,
+        classificarRelatorioFgtsComplementarLote,
+        classificarComprovantePagamentoSalarialExpandidoLote,
+        classificarRelacaoEmpregadosLote,
+        classificarPcmsoEstruturalLote,
+        classificarPgrForaEscopoLote,
+        classificarIssMunicipalPagamentoLote,
         classificarEsocialLote,
         classificarInssDctfwebLote,
+        classificarDarfFederalGenericoLote,
         classificarSeguroVidaLote,
         classificarFolhaPontoLote,
         classificarComprovantePagamentoFolhaLote,
@@ -1616,6 +2702,7 @@ export function classificarDocumentoCertidaoEmLote(
         classificarFolhaPagamentoLote,
         classificarVaVtLote,
         classificarIssMensalLote,
+        classificarTributoMunicipalGenericoLote,
         classificarFalenciaLote,
         classificarTceCeisLote,
     ];

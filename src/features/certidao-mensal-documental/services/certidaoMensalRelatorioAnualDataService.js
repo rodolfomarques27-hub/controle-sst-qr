@@ -1300,7 +1300,7 @@ async function buscarRegrasPerfilDocumental({
                     "certidao_mensal_perfil_documental_regras",
                 )
                 .select(
-                    "id, empresa_id, tipo_documento, exigido, competencia_inicio, motivo, criado_em, atualizado_em",
+                    "*",
                 )
                 .in(
                     "empresa_id",

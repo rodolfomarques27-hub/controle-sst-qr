@@ -29,6 +29,577 @@ import {
     criarPlanoPersistenciaPrincipalUploadMassa,
 } from "../services/certidaoMensalUploadMassaPersistencePlanService.js";
 
+// ============================================================
+// SAFE_SCAN_REVISAR_DOCUMENTO_SALVO_PREVIEW_R8_R2
+// ============================================================
+function objetoComparacaoDocumentoSalvo(
+    valor
+) {
+    return (
+        valor &&
+        typeof valor ===
+            "object" &&
+        !Array.isArray(
+            valor
+        )
+    )
+        ? valor
+        : {};
+}
+
+function textoComparacaoDocumentoSalvo(
+    valor
+) {
+    return String(
+        valor ??
+        ""
+    ).trim();
+}
+
+function normalizarCompetenciaComparacaoDocumentoSalvo(
+    valor
+) {
+    const texto =
+        textoComparacaoDocumentoSalvo(
+            valor
+        );
+
+    const match =
+        /^(\d{4})-(\d{2})(?:-\d{2})?$/
+            .exec(
+                texto
+            );
+
+    return match
+        ? (
+            match[1] +
+            "-" +
+            match[2]
+        )
+        : texto;
+}
+
+function formatarCompetenciaComparacaoDocumentoSalvo(
+    valor
+) {
+    const normalizada =
+        normalizarCompetenciaComparacaoDocumentoSalvo(
+            valor
+        );
+
+    const match =
+        /^(\d{4})-(\d{2})$/
+            .exec(
+                normalizada
+            );
+
+    if (!match) {
+        return "Não identificada";
+    }
+
+    return (
+        match[2] +
+        "/" +
+        match[1]
+    );
+}
+
+function normalizarDataComparacaoDocumentoSalvo(
+    valor
+) {
+    const texto =
+        textoComparacaoDocumentoSalvo(
+            valor
+        );
+
+    const iso =
+        /^(\d{4})-(\d{2})-(\d{2})/
+            .exec(
+                texto
+            );
+
+    if (iso) {
+        return (
+            iso[1] +
+            "-" +
+            iso[2] +
+            "-" +
+            iso[3]
+        );
+    }
+
+    const br =
+        /^(\d{2})\/(\d{2})\/(\d{4})$/
+            .exec(
+                texto
+            );
+
+    return br
+        ? (
+            br[3] +
+            "-" +
+            br[2] +
+            "-" +
+            br[1]
+        )
+        : "";
+}
+
+function formatarDataComparacaoDocumentoSalvo(
+    valor
+) {
+    const normalizada =
+        normalizarDataComparacaoDocumentoSalvo(
+            valor
+        );
+
+    const match =
+        /^(\d{4})-(\d{2})-(\d{2})$/
+            .exec(
+                normalizada
+            );
+
+    if (!match) {
+        return "Não identificada";
+    }
+
+    return (
+        match[3] +
+        "/" +
+        match[2] +
+        "/" +
+        match[1]
+    );
+}
+
+function formatarConfiancaComparacaoDocumentoSalvo(
+    valor
+) {
+    const numero =
+        Number(
+            valor
+        );
+
+    if (!Number.isFinite(numero)) {
+        return "Não identificada";
+    }
+
+    const percentual =
+        numero >= 0 &&
+        numero <= 1
+            ? numero * 100
+            : numero;
+
+    return (
+        Math.round(
+            percentual
+        ) +
+        "%"
+    );
+}
+
+function criarComparacaoDocumentoSalvoUploadMassa(
+    item
+) {
+    const historico =
+        objetoComparacaoDocumentoSalvo(
+            item
+                ?.duplicidade
+                ?.historico
+        );
+
+    const payloadSalvo =
+        objetoComparacaoDocumentoSalvo(
+            historico?.payload
+        );
+
+    const diagnosticoDireto =
+        objetoComparacaoDocumentoSalvo(
+            historico?.diagnostico
+        );
+
+    const diagnosticoPayload =
+        objetoComparacaoDocumentoSalvo(
+            payloadSalvo?.diagnostico
+        );
+
+    const diagnosticoSalvo =
+        Object.keys(
+            diagnosticoDireto
+        ).length > 0
+            ? diagnosticoDireto
+            : diagnosticoPayload;
+
+    const classificacaoSalva =
+        objetoComparacaoDocumentoSalvo(
+            diagnosticoSalvo
+                ?.classificacao
+        );
+
+    const avaliacaoSalva =
+        objetoComparacaoDocumentoSalvo(
+            diagnosticoSalvo
+                ?.avaliacao
+        );
+
+    const temporaisSalvos =
+        objetoComparacaoDocumentoSalvo(
+            avaliacaoSalva
+                ?.dadosTemporais
+        );
+
+    const resolucaoAtual =
+        objetoComparacaoDocumentoSalvo(
+            item?.resolucao
+        );
+
+    const avaliacaoAtual =
+        objetoComparacaoDocumentoSalvo(
+            resolucaoAtual
+                ?.avaliacao
+        );
+
+    const temporaisAtuais =
+        objetoComparacaoDocumentoSalvo(
+            avaliacaoAtual
+                ?.dadosTemporais
+        );
+
+    // ============================================================
+    // SAFE_SCAN_INSS_DCTFWEB_REVIEW_TEMPORAL_R11B
+    //
+    // INSS/DCTFWeb possui semântica temporal própria:
+    // - competência / período de apuração;
+    // - data de transmissão;
+    // - vencimento do DARF.
+    //
+    // Não converter vencimento em validade genérica.
+    // ============================================================
+    const dadosInssSalvos =
+        objetoComparacaoDocumentoSalvo(
+            avaliacaoSalva
+                ?.dadosInssDctfweb
+        );
+
+    const dadosInssAtuais =
+        objetoComparacaoDocumentoSalvo(
+            avaliacaoAtual
+                ?.dadosInssDctfweb
+        );
+
+    const tipoComparacaoCanonico =
+        textoComparacaoDocumentoSalvo(
+            resolucaoAtual
+                ?.tipoDocumento ||
+            classificacaoSalva
+                ?.tipoDocumento ||
+            payloadSalvo
+                ?.item
+                ?.tipoDocumento
+        ).toLowerCase();
+
+    const ehInssDctfweb =
+        tipoComparacaoCanonico ===
+            "inss-dctfweb";
+
+    const destinoAtual =
+        objetoComparacaoDocumentoSalvo(
+            resolucaoAtual
+                ?.destino
+        );
+
+    const competenciaSalvaBruta =
+        textoComparacaoDocumentoSalvo(
+            payloadSalvo
+                ?.competencia
+        );
+
+    const competenciaAtualBruta =
+        textoComparacaoDocumentoSalvo(
+            destinoAtual
+                ?.competenciaIso ||
+            destinoAtual
+                ?.competencia
+        );
+
+    const emissaoSalvaBruta =
+        textoComparacaoDocumentoSalvo(
+            ehInssDctfweb
+                ? dadosInssSalvos
+                    ?.dataTransmissao
+                : (
+                    temporaisSalvos
+                        ?.dataEmissaoIso ||
+                    temporaisSalvos
+                        ?.dataEmissao
+                )
+        );
+
+    const emissaoAtualBruta =
+        textoComparacaoDocumentoSalvo(
+            ehInssDctfweb
+                ? dadosInssAtuais
+                    ?.dataTransmissao
+                : (
+                    temporaisAtuais
+                        ?.dataEmissaoIso ||
+                    temporaisAtuais
+                        ?.dataEmissao
+                )
+        );
+
+    const validadeSalvaBruta =
+        textoComparacaoDocumentoSalvo(
+            ehInssDctfweb
+                ? dadosInssSalvos
+                    ?.vencimento
+                : (
+                    temporaisSalvos
+                        ?.dataValidadeIso ||
+                    temporaisSalvos
+                        ?.dataValidade
+                )
+        );
+
+    const validadeAtualBruta =
+        textoComparacaoDocumentoSalvo(
+            ehInssDctfweb
+                ? dadosInssAtuais
+                    ?.vencimento
+                : (
+                    temporaisAtuais
+                        ?.dataValidadeIso ||
+                    temporaisAtuais
+                        ?.dataValidade
+                )
+        );
+
+    const tipoSalvoCanonico =
+        textoComparacaoDocumentoSalvo(
+            classificacaoSalva
+                ?.tipoDocumento ||
+            payloadSalvo
+                ?.item
+                ?.tipoDocumento
+        ).toLowerCase();
+
+    const tipoAtualCanonico =
+        textoComparacaoDocumentoSalvo(
+            resolucaoAtual
+                ?.tipoDocumento
+        ).toLowerCase();
+
+    const tipoSalvoVisual =
+        textoComparacaoDocumentoSalvo(
+            classificacaoSalva
+                ?.titulo ||
+            classificacaoSalva
+                ?.tipoDocumento ||
+            payloadSalvo
+                ?.item
+                ?.titulo ||
+            payloadSalvo
+                ?.item
+                ?.tipoDocumento
+        ) ||
+        "Não identificado";
+
+    const tipoAtualVisual =
+        textoComparacaoDocumentoSalvo(
+            resolucaoAtual
+                ?.titulo ||
+            resolucaoAtual
+                ?.tipoDocumento
+        ) ||
+        "Não identificado";
+
+    const competenciaSalvaCanonica =
+        normalizarCompetenciaComparacaoDocumentoSalvo(
+            competenciaSalvaBruta
+        );
+
+    const competenciaAtualCanonica =
+        normalizarCompetenciaComparacaoDocumentoSalvo(
+            competenciaAtualBruta
+        );
+
+    const emissaoSalvaCanonica =
+        normalizarDataComparacaoDocumentoSalvo(
+            emissaoSalvaBruta
+        );
+
+    const emissaoAtualCanonica =
+        normalizarDataComparacaoDocumentoSalvo(
+            emissaoAtualBruta
+        );
+
+    const validadeSalvaCanonica =
+        normalizarDataComparacaoDocumentoSalvo(
+            validadeSalvaBruta
+        );
+
+    const validadeAtualCanonica =
+        normalizarDataComparacaoDocumentoSalvo(
+            validadeAtualBruta
+        );
+
+    const confiancaSalva =
+        formatarConfiancaComparacaoDocumentoSalvo(
+            classificacaoSalva
+                ?.confianca
+        );
+
+    const confiancaAtual =
+        formatarConfiancaComparacaoDocumentoSalvo(
+            resolucaoAtual
+                ?.confianca
+        );
+
+    const linhasComparacao = [
+        {
+            chave: "competencia",
+            titulo: "Competência",
+            salvo:
+                formatarCompetenciaComparacaoDocumentoSalvo(
+                    competenciaSalvaBruta
+                ),
+            atual:
+                formatarCompetenciaComparacaoDocumentoSalvo(
+                    competenciaAtualBruta
+                ),
+            mudou:
+                competenciaSalvaCanonica !==
+                competenciaAtualCanonica,
+        },
+        {
+            chave: "emissao",
+            titulo:
+                ehInssDctfweb
+                    ? "Data de transmissão"
+                    : "Data de emissão",
+            salvo:
+                formatarDataComparacaoDocumentoSalvo(
+                    emissaoSalvaBruta
+                ),
+            atual:
+                formatarDataComparacaoDocumentoSalvo(
+                    emissaoAtualBruta
+                ),
+            mudou:
+                emissaoSalvaCanonica !==
+                emissaoAtualCanonica,
+        },
+        {
+            chave: "validade",
+            titulo:
+                ehInssDctfweb
+                    ? "Vencimento"
+                    : "Data de validade",
+            salvo:
+                formatarDataComparacaoDocumentoSalvo(
+                    validadeSalvaBruta
+                ),
+            atual:
+                formatarDataComparacaoDocumentoSalvo(
+                    validadeAtualBruta
+                ),
+            mudou:
+                validadeSalvaCanonica !==
+                validadeAtualCanonica,
+        },
+        {
+            chave: "tipo",
+            titulo: "Tipo documental",
+            salvo:
+                tipoSalvoVisual,
+            atual:
+                tipoAtualVisual,
+            mudou:
+                tipoSalvoCanonico !==
+                tipoAtualCanonico,
+        },
+        {
+            chave: "confianca",
+            titulo: "Confiança da classificação",
+            salvo:
+                confiancaSalva,
+            atual:
+                confiancaAtual,
+            mudou:
+                confiancaSalva !==
+                confiancaAtual,
+        },
+    ];
+
+    const mudancaEstrutural =
+        (
+            Boolean(
+                competenciaSalvaCanonica
+            ) &&
+            Boolean(
+                competenciaAtualCanonica
+            ) &&
+            competenciaSalvaCanonica !==
+                competenciaAtualCanonica
+        ) ||
+        (
+            Boolean(
+                tipoSalvoCanonico
+            ) &&
+            Boolean(
+                tipoAtualCanonico
+            ) &&
+            tipoSalvoCanonico !==
+                tipoAtualCanonico
+        );
+
+    return {
+        versaoId:
+            textoComparacaoDocumentoSalvo(
+                historico?.versaoId
+            ),
+
+        itemId:
+            textoComparacaoDocumentoSalvo(
+                historico?.itemId
+            ),
+
+        numeroVersao:
+            Number(
+                historico
+                    ?.numeroVersao
+            ) ||
+            null,
+
+        nomeOriginal:
+            textoComparacaoDocumentoSalvo(
+                historico?.nomeOriginal
+            ),
+
+        criadoEm:
+            textoComparacaoDocumentoSalvo(
+                historico?.criadoEm
+            ),
+
+        statusResultado:
+            textoComparacaoDocumentoSalvo(
+                historico
+                    ?.statusResultado
+            ),
+
+        linhas:
+            linhasComparacao,
+
+        totalAlteracoes:
+            linhasComparacao.filter(
+                (linha) =>
+                    linha?.mudou ===
+                    true
+            ).length,
+
+        mudancaEstrutural,
+    };
+}
 function formatarCompetencia(
     resolucao
 ) {
@@ -52,6 +623,18 @@ function formatarCompetencia(
             "/" +
             correspondencia[1]
         );
+    }
+
+    if (
+        String(
+            resolucao?.politica ||
+            ""
+        )
+            .trim()
+            .toUpperCase() ===
+        "FORA_MATRIZ"
+    ) {
+        return "Não aplicável";
     }
 
     if (
@@ -80,6 +663,23 @@ function obterStatusVisual(
         return {
             label:
                 "Pronto",
+
+            icone:
+                CheckCircle2,
+
+            classe:
+                "is-pronto",
+        };
+    }
+
+    // SAFE_SCAN_27K_STATUS_IGNORADO_VISUAL_R3F
+    if (
+        status ===
+        "IGNORADO"
+    ) {
+        return {
+            label:
+                "Ignorado",
 
             icone:
                 CheckCircle2,
@@ -126,6 +726,7 @@ function obterAvisoSemanticoUploadMassa({
 } = {}) {
     const codigos =
         [
+            item?.foraMatrizCert2?.codigo,
             item?.duplicidade?.codigo,
             item?.codigo,
             itemPlano?.codigo,
@@ -201,6 +802,71 @@ function obterAvisoSemanticoUploadMassa({
         };
     }
 
+    // SAFE_SCAN_FORA_MATRIZ_VISUAL_F10D1
+    if (
+        possuiCodigo(
+            "FORA_MATRIZ_CERT2"
+        )
+    ) {
+        return {
+            label:
+                "Bloqueado",
+
+            icone:
+                XCircle,
+
+            classe:
+                "is-bloqueado",
+
+            mensagem:
+                "Documento fora da matriz CERT2. " +
+                "Este arquivo não será incluído na persistência.",
+        };
+    }
+
+    // SAFE_SCAN_RENOVACAO_VISUAL_F10B_R3B
+    if (
+        possuiCodigo(
+            "DUPLICADO_DOCUMENTAL_SEMANTICO_LOTE"
+        )
+    ) {
+        return {
+            label:
+                "Ignorado",
+
+            icone:
+                CheckCircle2,
+
+            classe:
+                "is-pronto",
+
+            mensagem:
+                "A mesma certidão foi identificada pelo número de controle, emissão e validade. " +
+                "Somente uma ocorrência será considerada no lote.",
+        };
+    }
+
+    if (
+        possuiCodigo(
+            "VERSAO_VALIDADE_SUPERADA_LOTE"
+        )
+    ) {
+        return {
+            label:
+                "Ignorado",
+
+            icone:
+                CheckCircle2,
+
+            classe:
+                "is-pronto",
+
+            mensagem:
+                "Foi identificada uma renovação posterior deste documento de validade. " +
+                "A versão anterior não será salva como documento principal.",
+        };
+    }
+
     if (
         possuiCodigo(
             "CONFLITO_MULTIPLO_LOTE"
@@ -224,9 +890,107 @@ function obterAvisoSemanticoUploadMassa({
     }
 
     if (
-        acaoPlano ===
-        "AGUARDAR_REVISAO"
+            acaoPlano ===
+            "IGNORAR_COMPLEMENTAR"
+        ) {
+            return {
+                label:
+                    "Ignorado",
+
+                icone:
+                    CheckCircle2,
+
+                classe:
+                    "is-pronto",
+
+                mensagem:
+                    "Documento complementar ignorado. " +
+                    "Não gera pendência mensal e não entra na fila principal.",
+            };
+        }
+
+        if (
+            acaoPlano ===
+            "IGNORAR_FORA_ESCOPO"
+        ) {
+            return {
+                label:
+                    "Ignorado",
+
+                icone:
+                    CheckCircle2,
+
+                classe:
+                    "is-pronto",
+
+                mensagem:
+                    "Documento fora do escopo do CERT2. " +
+                    "Não gera pendência e não entra na fila principal.",
+            };
+        }
+
+        if (
+            acaoPlano ===
+            "BLOQUEAR_DADOS_INVALIDOS"
+        ) {
+            return {
+                label:
+                    "Bloqueado",
+
+                icone:
+                    XCircle,
+
+                classe:
+                    "is-bloqueado",
+
+                mensagem:
+                    "",
+            };
+        }
+
+        const colaboradorNaoCadastradoBloqueadoVisual =
+        String(
+            item
+                ?.resolucao
+                ?.status ||
+            ""
+        )
+            .trim()
+            .toUpperCase() ===
+            "BLOQUEADO" &&
+        String(
+            item
+                ?.resolucao
+                ?.identificacaoColaborador
+                ?.status ||
+            ""
+        )
+            .trim()
+            .toUpperCase() ===
+            "NAO_CADASTRADO_CONFIRMADO";
+
+    if (
+        colaboradorNaoCadastradoBloqueadoVisual
     ) {
+        return {
+            label:
+                "Bloqueado",
+
+            icone:
+                XCircle,
+
+            classe:
+                "is-bloqueado",
+
+            mensagem:
+                "Cadastro SafeScan consultado sem correspondência.",
+        };
+    }
+
+    if (
+            acaoPlano ===
+            "AGUARDAR_REVISAO"
+        ) {
         return {
             label:
                 "Revisar",
@@ -521,6 +1285,54 @@ function obterDetalheColaboradorUploadMassa(
 
     if (
         identificacao.status ===
+        "NAO_CADASTRADO_CONFIRMADO"
+    ) {
+        return {
+            status:
+                "NAO_CADASTRADO_CONFIRMADO",
+
+            nome:
+                "Colaborador não cadastrado",
+
+            criterio:
+                "Cadastro SafeScan consultado sem correspondência",
+        };
+    }
+
+    if (
+        identificacao.status ===
+        "IDENTIDADE_DOCUMENTAL_INSUFICIENTE"
+    ) {
+        return {
+            status:
+                "IDENTIDADE_DOCUMENTAL_INSUFICIENTE",
+
+            nome:
+                "Identidade do colaborador não confirmada",
+
+            criterio:
+                "Conteúdo do PDF insuficiente para associação automática",
+        };
+    }
+
+    if (
+        identificacao.status ===
+        "CONSULTA_INCONCLUSIVA"
+    ) {
+        return {
+            status:
+                "CONSULTA_INCONCLUSIVA",
+
+            nome:
+                "Consulta ao cadastro inconclusiva",
+
+            criterio:
+                "Nenhuma ausência de colaborador foi confirmada",
+        };
+    }
+
+    if (
+        identificacao.status ===
         "NAO_LOCALIZADO"
     ) {
         return {
@@ -588,6 +1400,29 @@ function formatarOrigemUploadMassa(
                 "pt-BR"
             ) +
         texto.slice(1)
+    );
+}
+
+// SAFE_SCAN_FORA_MATRIZ_ORIGEM_F10D1
+function formatarOrigemResolucaoUploadMassa(
+    resolucao
+) {
+    if (
+        String(
+            resolucao?.politica ||
+            ""
+        )
+            .trim()
+            .toUpperCase() ===
+        "FORA_MATRIZ"
+    ) {
+        return "Fora da matriz documental";
+    }
+
+    return formatarOrigemUploadMassa(
+        resolucao
+            ?.destino
+            ?.fonte
     );
 }
 
@@ -678,6 +1513,236 @@ async function coletarArquivosDiretorioSafeScan(
     return arquivos;
 }
 
+// ============================================================
+// SAFE_SCAN_27K_RESUMO_EFETIVO_HELPER_R3I_START
+// ============================================================
+
+function calcularResumoKpiEfetivoUploadMassa({
+    itens = [],
+    itensPlano = [],
+    filaPersistencia = [],
+} = {}) {
+    const listaItens =
+        Array.isArray(
+            itens
+        )
+            ? itens
+            : [];
+
+    const listaPlano =
+        Array.isArray(
+            itensPlano
+        )
+            ? itensPlano
+            : [];
+
+    const listaFila =
+        Array.isArray(
+            filaPersistencia
+        )
+            ? filaPersistencia
+            : [];
+
+    const planoPorIndice =
+        new Map(
+            listaPlano
+                .filter(
+                    (itemPlano) =>
+                        Number.isInteger(
+                            itemPlano?.indice
+                        )
+                )
+                .map(
+                    (itemPlano) => [
+                        itemPlano.indice,
+                        itemPlano,
+                    ]
+                )
+        );
+
+    const indicesFila =
+        new Set(
+            listaFila
+                .map(
+                    (alvo) =>
+                        alvo?.indice
+                )
+                .filter(
+                    Number.isInteger
+                )
+        );
+
+    return listaItens.reduce(
+        (
+            acumulado,
+            item,
+            indiceLinha
+        ) => {
+            const indice =
+                Number.isInteger(
+                    item?.indice
+                )
+                    ? item.indice
+                    : indiceLinha;
+
+            const statusMotor =
+                String(
+                    item
+                        ?.resolucao
+                        ?.status ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
+
+            const itemPlano =
+                planoPorIndice
+                    .get(
+                        indice
+                    ) ||
+                null;
+
+            const acaoPlano =
+                String(
+                    itemPlano
+                        ?.acao ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
+
+            const codigoPlano =
+                String(
+                    itemPlano
+                        ?.codigo ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
+
+            acumulado.total +=
+                1;
+
+            // SAFE_SCAN_CERT2_R7_PLAN_PRECEDENCE_VISUAL
+            if (
+                acaoPlano ===
+                    "IGNORAR_COMPLEMENTAR" ||
+                acaoPlano ===
+                    "IGNORAR_FORA_ESCOPO" ||
+                acaoPlano ===
+                    "IGNORAR_DUPLICADO"
+            ) {
+                acumulado.ignorados +=
+                    1;
+
+                return acumulado;
+            }
+
+            if (
+                acaoPlano ===
+                    "BLOQUEAR_DADOS_INVALIDOS"
+            ) {
+                acumulado.bloqueados +=
+                    1;
+
+                return acumulado;
+            }
+
+            // SAFE_SCAN_CERT2_M4_E2_H_R2_NAO_CADASTRADO_PRECEDE_REVISAO
+            const colaboradorNaoCadastradoBloqueado =
+                statusMotor ===
+                    "BLOQUEADO" &&
+                String(
+                    item
+                        ?.resolucao
+                        ?.identificacaoColaborador
+                        ?.status ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase() ===
+                    "NAO_CADASTRADO_CONFIRMADO" &&
+                codigoPlano !==
+                    "CONFLITO_MULTIPLO_LOTE";
+
+            if (
+                colaboradorNaoCadastradoBloqueado
+            ) {
+                acumulado.bloqueados +=
+                    1;
+
+                return acumulado;
+            }
+
+            if (
+                acaoPlano ===
+                    "AGUARDAR_REVISAO" ||
+                codigoPlano ===
+                    "CONFLITO_MULTIPLO_LOTE"
+            ) {
+                acumulado.revisar +=
+                    1;
+
+                return acumulado;
+            }
+
+            if (
+                indicesFila.has(
+                    indice
+                )
+            ) {
+                acumulado.prontos +=
+                    1;
+
+                return acumulado;
+            }
+
+            if (
+                statusMotor ===
+                    "IGNORADO"
+            ) {
+                acumulado.ignorados +=
+                    1;
+
+                return acumulado;
+            }
+
+            if (
+                statusMotor ===
+                    "REVISAR"
+            ) {
+                acumulado.revisar +=
+                    1;
+
+                return acumulado;
+            }
+
+            acumulado.bloqueados +=
+                1;
+
+            return acumulado;
+        },
+        {
+            total:
+                0,
+
+            prontos:
+                0,
+
+            revisar:
+                0,
+
+            bloqueados:
+                0,
+
+            ignorados:
+                0,
+        }
+    );
+}
+
+// SAFE_SCAN_27K_RESUMO_EFETIVO_HELPER_R3I_END
+
 export function CertidaoUploadMassaPanel({
     uploadMassa,
     disponivel = true,
@@ -724,6 +1789,314 @@ export function CertidaoUploadMassaPanel({
         useState(
             false
         );
+
+    const [
+        revisaoDocumentoSalvo,
+        setRevisaoDocumentoSalvo,
+    ] =
+        useState(
+            null
+        );
+
+    // ============================================================
+    // SAFE_SCAN_REVISAR_DOCUMENTO_SALVO_UI_WRITE_R10
+    // ============================================================
+    const [
+        salvamentoDocumentoSalvo,
+        setSalvamentoDocumentoSalvo,
+    ] =
+        useState(
+            () => ({
+                salvando:
+                    false,
+
+                erro:
+                    "",
+
+                sucesso:
+                    "",
+            })
+        );
+
+    const abrirRevisaoDocumentoSalvo =
+        (item) => {
+            setSalvamentoDocumentoSalvo({
+                salvando:
+                    false,
+
+                erro:
+                    "",
+
+                sucesso:
+                    "",
+            });
+
+            setRevisaoDocumentoSalvo(
+                criarComparacaoDocumentoSalvoUploadMassa(
+                    item
+                )
+            );
+        };
+
+    const fecharRevisaoDocumentoSalvo =
+        () => {
+            if (
+                salvamentoDocumentoSalvo
+                    ?.salvando ===
+                true
+            ) {
+                return;
+            }
+
+            setRevisaoDocumentoSalvo(
+                null
+            );
+
+            setSalvamentoDocumentoSalvo({
+                salvando:
+                    false,
+
+                erro:
+                    "",
+
+                sucesso:
+                    "",
+            });
+        };
+
+    // ============================================================
+    // SAFE_SCAN_REVIEW_MODAL_ESCAPE_CAPTURE_R12B
+    //
+    // O modal de revisão e o upload em massa são portals irmãos.
+    // Interceptar Escape em capture impede que o modal de trás
+    // receba o mesmo evento quando o foco ainda estiver nele.
+    // ============================================================
+    const revisaoDocumentoSalvoAberta =
+        Boolean(
+            revisaoDocumentoSalvo
+        );
+
+    const revisaoDocumentoSalvoSalvando =
+        salvamentoDocumentoSalvo
+            ?.salvando ===
+        true;
+
+    useEffect(
+        () => {
+            if (
+                !revisaoDocumentoSalvoAberta
+            ) {
+                return undefined;
+            }
+
+            const interceptarEscapeRevisao =
+                (evento) => {
+                    if (
+                        evento.key !==
+                            "Escape"
+                    ) {
+                        return;
+                    }
+
+                    evento.preventDefault();
+                    evento.stopPropagation();
+
+                    if (
+                        typeof evento
+                            .stopImmediatePropagation ===
+                            "function"
+                    ) {
+                        evento
+                            .stopImmediatePropagation();
+                    }
+
+                    if (
+                        revisaoDocumentoSalvoSalvando
+                    ) {
+                        return;
+                    }
+
+                    setRevisaoDocumentoSalvo(
+                        null
+                    );
+
+                    setSalvamentoDocumentoSalvo({
+                        salvando:
+                            false,
+
+                        erro:
+                            "",
+
+                        sucesso:
+                            "",
+                    });
+                };
+
+            window.addEventListener(
+                "keydown",
+                interceptarEscapeRevisao,
+                true
+            );
+
+            return () => {
+                window.removeEventListener(
+                    "keydown",
+                    interceptarEscapeRevisao,
+                    true
+                );
+            };
+        },
+        [
+            revisaoDocumentoSalvoAberta,
+            revisaoDocumentoSalvoSalvando,
+        ]
+    );
+    const salvarRevisaoDocumentoSalvoAtual =
+        async () => {
+            const revisao =
+                revisaoDocumentoSalvo;
+
+            if (
+                !revisao ||
+                revisao
+                    ?.mudancaEstrutural ===
+                    true ||
+                Number(
+                    revisao
+                        ?.totalAlteracoes ||
+                    0
+                ) <= 0 ||
+                salvamentoDocumentoSalvo
+                    ?.salvando ===
+                    true
+            ) {
+                return;
+            }
+
+            const executor =
+                uploadMassa
+                    ?.salvarAnaliseCorrigidaDocumentoSalvo;
+
+            if (
+                typeof executor !==
+                    "function"
+            ) {
+                setSalvamentoDocumentoSalvo({
+                    salvando:
+                        false,
+
+                    erro:
+                        "O executor seguro da revisão não está disponível.",
+
+                    sucesso:
+                        "",
+                });
+
+                return;
+            }
+
+            const versaoId =
+                String(
+                    revisao
+                        ?.versaoId ||
+                    ""
+                ).trim();
+
+            setSalvamentoDocumentoSalvo({
+                salvando:
+                    true,
+
+                erro:
+                    "",
+
+                sucesso:
+                    "",
+            });
+
+            try {
+                const resultado =
+                    await executor({
+                        versaoId,
+                    });
+
+                setRevisaoDocumentoSalvo(
+                    (atual) => {
+                        if (
+                            !atual ||
+                            String(
+                                atual
+                                    ?.versaoId ||
+                                ""
+                            ).trim() !==
+                                versaoId
+                        ) {
+                            return atual;
+                        }
+
+                        const linhas =
+                            Array.isArray(
+                                atual?.linhas
+                            )
+                                ? atual.linhas.map(
+                                    (linha) => ({
+                                        ...linha,
+
+                                        salvo:
+                                            linha
+                                                ?.atual,
+
+                                        mudou:
+                                            false,
+                                    })
+                                )
+                                : [];
+
+                        return {
+                            ...atual,
+
+                            linhas,
+
+                            totalAlteracoes:
+                                0,
+
+                            salvoComSucesso:
+                                true,
+                        };
+                    }
+                );
+
+                setSalvamentoDocumentoSalvo({
+                    salvando:
+                        false,
+
+                    erro:
+                        "",
+
+                    sucesso:
+                        resultado
+                            ?.alterado ===
+                            false
+                            ? "A análise já estava atualizada no banco. A mesma versão foi preservada."
+                            : "Análise corrigida salva na mesma versão. O PDF, o SHA e o Storage foram preservados.",
+                });
+            }
+            catch (erro) {
+                setSalvamentoDocumentoSalvo({
+                    salvando:
+                        false,
+
+                    erro:
+                        String(
+                            erro
+                                ?.message ||
+                            "Não foi possível salvar a análise corrigida."
+                        ).trim(),
+
+                    sucesso:
+                        "",
+                });
+            }
+        };
 
     /*
      * ============================================================
@@ -783,18 +2156,15 @@ export function CertidaoUploadMassaPanel({
 
     /*
      * ============================================================
-     * SAFE_SCAN_CERTIDAO_PANEL_R9_UNITARIO_V1
+     * SAFE_SCAN_CERTIDAO_PANEL_PERSISTENCIA_LOTE_V1
      *
-     * Primeiro write real.
+     * Persistência principal multidocumento.
      *
-     * Requisitos simultâneos:
+     * A elegibilidade continua pertencendo ao Plan.
+     * O Panel apenas aciona a bridge de lote do Hook.
+     * Preflight e auditoria continuam fora da UI.
      *
-     * - gate real autorizado;
-     * - primitive unitária disponível;
-     * - análise concluída;
-     * - exatamente 1 alvo persistível no Plan/Fila;
-     * - nenhuma tentativa R9 anterior nesta montagem;
-     * - nenhuma persistência em andamento.
+     * Durante CERT2-INC-27C2 o gate permanece false.
      * ============================================================
      */
     const [
@@ -806,34 +2176,29 @@ export function CertidaoUploadMassaPanel({
         );
 
     const [
-        r9TentativaConsumida,
-        setR9TentativaConsumida,
+        lotePersistenciaConsumido,
+        setLotePersistenciaConsumido,
     ] =
         useState(
             false
         );
 
-    /*
-     * A ref é exclusivamente a barreira síncrona do event handler.
-     *
-     * Nunca usar .current durante render.
-     */
-    const r9TentativaRef =
+    const lotePersistenciaRef =
         useRef(
             false
         );
 
-    const persistenciaTesteR9Habilitada =
+    const persistenciaPrincipalHabilitada =
         uploadMassa
             ?.persistenciaPrincipalHabilitada ===
         true;
 
-    const bridgeUnitarioR9Disponivel =
+    const bridgeLoteDisponivel =
         typeof uploadMassa
-            ?.executarPersistenciaPrincipalControlada ===
+            ?.executarPersistenciaPrincipalLoteControlado ===
         "function";
 
-    const planoTesteR9 =
+    const planoPersistenciaPrincipal =
         criarPlanoPersistenciaPrincipalUploadMassa({
             resultado,
         });
@@ -847,14 +2212,14 @@ export function CertidaoUploadMassaPanel({
      * SOMENTE a coleção usada para apresentação é normalizada.
      *
      * IMPORTANTE:
-     * filaTesteR9 continua recebendo planoTesteR9 ORIGINAL.
+     * filaPersistenciaPrincipal continua recebendo planoPersistenciaPrincipal ORIGINAL.
      * Nenhuma decisão de domínio foi movida para a interface.
      * ============================================================
      */
     const itensPlanoVisual =        Array.isArray(
-            planoTesteR9?.itens
+            planoPersistenciaPrincipal?.itens
         )
-            ? planoTesteR9.itens
+            ? planoPersistenciaPrincipal.itens
             : [];
     const planoVisualPorIndice =
         new Map(
@@ -874,84 +2239,12 @@ export function CertidaoUploadMassaPanel({
         );
     /*
      * ============================================================
-     * SAFE_SCAN_CERTIDAO_KPI_JA_EXISTENTE_VISUAL_C1_R2
-     *
-     * SOMENTE APRESENTAÇÃO.
-     *
-     * DUPLICADO_EXATO_HISTORICO continua tecnicamente
-     * BLOQUEADO para impedir nova persistência.
-     *
-     * Quando a própria linha o apresenta como "Já existente",
-     * o KPI visual move essa unidade de Bloqueados para Prontos.
-     * Nenhum objeto de domínio é mutado.
-     * ============================================================
-     */
-    const totalJaExistentesVisual =
-        itens.reduce(
-            (total, item, indiceLinha) => {
-                const statusMotor =
-                    String(
-                        item?.resolucao?.status ||
-                        ""
-                    )
-                        .trim()
-                        .toUpperCase();
-
-                if (statusMotor !== "BLOQUEADO") {
-                    return total;
-                }
-
-                const indiceItem =
-                    Number.isInteger(item?.indice)
-                        ? item.indice
-                        : indiceLinha;
-
-                const itemPlanoVisual =
-                    planoVisualPorIndice.get(indiceItem) ||
-                    null;
-
-                const avisoSemantico =
-                    obterAvisoSemanticoUploadMassa({
-                        item,
-                        itemPlano: itemPlanoVisual,
-                    });
-
-                return avisoSemantico?.label === "Já existente"
-                    ? total + 1
-                    : total;
-            },
-            0
-        );
-
-    const resumoVisual =
-        resumo
-            ? {
-                ...resumo,
-
-                prontos:
-                    Number(resumo.prontos || 0) +
-                    totalJaExistentesVisual,
-
-                revisar:
-                    Number(resumo.revisar || 0),
-
-                bloqueados:
-                    Math.max(
-                        0,
-                        Number(resumo.bloqueados || 0) -
-                            totalJaExistentesVisual
-                    ),
-            }
-            : null;
-
-    /*
-     * ============================================================
      * SAFE_SCAN_COMPLEMENTAR_INDIVIDUAL_UI_READ_ONLY_D2_R1T_R3B_R2
      *
      * Estado estrutural derivado pelo Hook.
      *
      * Não executa persistência.
-     * Não altera a fila principal R9.
+     * Não altera a fila principal de persistência.
      * ============================================================
      */
     const planoComplementarIndividual =
@@ -1259,38 +2552,57 @@ export function CertidaoUploadMassaPanel({
             ) || 0
         );
 
-    const filaTesteR9 =
+    const filaPersistenciaPrincipal =
         criarFilaAlvosPersistenciaPrincipalUploadMassa({
             plano:
-                planoTesteR9,
+                planoPersistenciaPrincipal,
         });
 
-    const alvoTesteR9 =
-        filaTesteR9.length ===
-        1
-            ? filaTesteR9[0]
-            : null;
+    const totalPersistiveis =
+        filaPersistenciaPrincipal
+            .length;
 
-    const podeExecutarTesteR9 =
-        persistenciaTesteR9Habilitada &&
-        bridgeUnitarioR9Disponivel &&
+    /*
+     * ============================================================
+     * SAFE_SCAN_27K_RESUMO_EFETIVO_RUNTIME_R3I
+     *
+     * Somente apresentação:
+     * - PRONTO = efetivamente presente na fila;
+     * - REVISAR = status/ação de revisão;
+     * - IGNORADO = fora da fila e sem pendência;
+     * - BLOQUEADO = restante fail-closed.
+     *
+     * Não modifica Plan nem domínio.
+     * ============================================================
+     */
+    const resumoKpiEfetivo =
+        calcularResumoKpiEfetivoUploadMassa({
+            itens,
+
+            itensPlano:
+                itensPlanoVisual,
+
+            filaPersistencia:
+                filaPersistenciaPrincipal,
+        });
+
+    const podeExecutarPersistenciaLote =
+        persistenciaPrincipalHabilitada &&
+        bridgeLoteDisponivel &&
         processando !==
             true &&
         persistindoLote !==
             true &&
-        r9TentativaConsumida !==
+        lotePersistenciaConsumido !==
             true &&
-        filaTesteR9.length ===
-            1 &&
-        Boolean(
-            alvoTesteR9
-        );
+        totalPersistiveis >
+            0;
 
     /*
      * ============================================================
-     * SAFE_SCAN_CERTIDAO_R9_RESTAURAR_SELETORES_V1
+     * SAFE_SCAN_CERTIDAO_LOTE_RESTAURAR_SELETORES_V1
      *
-     * Fluxo legítimo pré-R9 restaurado:
+     * Fluxo legítimo de seleção restaurado:
      *
      * - PDFs individuais;
      * - pasta completa;
@@ -1422,6 +2734,14 @@ export function CertidaoUploadMassaPanel({
             if (!lista.length) {
                 return;
             }
+
+            lotePersistenciaRef
+                .current =
+                    false;
+
+            setLotePersistenciaConsumido(
+                false
+            );
 
             setArquivosSelecionados(
                 lista
@@ -1556,31 +2876,29 @@ export function CertidaoUploadMassaPanel({
             }
         };
 
-    const executarTesteR9Unitario =
+    const executarPersistenciaLote =
         async () => {
             if (
-                !podeExecutarTesteR9 ||
-                !alvoTesteR9 ||
-                r9TentativaRef
+                !podeExecutarPersistenciaLote ||
+                lotePersistenciaRef
                     .current ===
                     true ||
                 typeof uploadMassa
-                    ?.executarPersistenciaPrincipalControlada !==
+                    ?.executarPersistenciaPrincipalLoteControlado !==
                     "function"
             ) {
                 return null;
             }
 
             /*
-             * Consumir antes de entregar o alvo ao Hook.
-             *
-             * Não resetar em catch/finally.
+             * Barreira síncrona contra clique duplo.
+             * Um novo lote rearma esta proteção.
              */
-            r9TentativaRef
+            lotePersistenciaRef
                 .current =
-                true;
+                    true;
 
-            setR9TentativaConsumida(
+            setLotePersistenciaConsumido(
                 true
             );
 
@@ -1589,22 +2907,15 @@ export function CertidaoUploadMassaPanel({
             );
 
             try {
-                const retorno =
-                    await uploadMassa
-                        .executarPersistenciaPrincipalControlada({
-                            alvo:
-                                alvoTesteR9,
-
-                            interromperNoErro:
-                                true,
-                        });
-
-
-                return retorno;
+                return await uploadMassa
+                    .executarPersistenciaPrincipalLoteControlado({
+                        interromperNoErro:
+                            false,
+                    });
             }
             catch (error) {
                 console.error(
-                    "R9_ERRO_UNITARIO",
+                    "CERT2_ERRO_PERSISTENCIA_LOTE",
                     error
                 );
 
@@ -2106,13 +3417,12 @@ export function CertidaoUploadMassaPanel({
                                     <div className="certidao-upload-massa-summary">
                                         <article>
                                             <span>
-                                                Documentos
-                                            </span>
+                                                    Documentos
+                                                </span>
 
                                             <strong>
                                                 {
-                                                    resumo
-                                                        .total ||
+                                                    resumoKpiEfetivo.total ||
                                                     0
                                                 }
                                             </strong>
@@ -2125,7 +3435,7 @@ export function CertidaoUploadMassaPanel({
 
                                             <strong>
                                                 {
-                                                    resumoVisual.prontos ||
+                                                    resumoKpiEfetivo.prontos ||
                                                     0
                                                 }
                                             </strong>
@@ -2138,7 +3448,7 @@ export function CertidaoUploadMassaPanel({
 
                                             <strong>
                                                 {
-                                                    resumoVisual.revisar ||
+                                                    resumoKpiEfetivo.revisar ||
                                                     0
                                                 }
                                             </strong>
@@ -2151,11 +3461,24 @@ export function CertidaoUploadMassaPanel({
 
                                             <strong>
                                                 {
-                                                    resumoVisual.bloqueados ||
+                                                    resumoKpiEfetivo.bloqueados ||
                                                     0
                                                 }
                                             </strong>
                                         </article>
+
+                                            <article className="is-ignorado">
+                                                <span>
+                                                    Ignorados
+                                                </span>
+
+                                                <strong>
+                                                    {
+                                                        resumoKpiEfetivo.ignorados ||
+                                                        0
+                                                    }
+                                                </strong>
+                                            </article>
                                     </div>
                                 ) : null}
 
@@ -2346,6 +3669,27 @@ export function CertidaoUploadMassaPanel({
                                                                     resolucao
                                                                 );
 
+                                                                                                                        const duplicidadeHistorica =
+                                                                                                                            String(
+                                                                                                                                item
+                                                                                                                                    ?.duplicidade
+                                                                                                                                    ?.codigo ||
+                                                                                                                                ""
+                                                                                                                            )
+                                                                                                                                .trim()
+                                                                                                                                .toUpperCase() ===
+                                                                                                                            "DUPLICADO_EXATO_HISTORICO"
+                                                                                                                                ? item
+                                                                                                                                    ?.duplicidade
+                                                                                                                                    ?.historico ||
+                                                                                                                                    null
+                                                                                                                                : null;
+
+                                                                                                                        const podeRevisarDocumentoSalvo =
+                                                                                                                            Boolean(
+                                                                                                                                duplicidadeHistorica
+                                                                                                                                    ?.versaoId
+                                                                                                                            );
                                                                                                                         const colaboradorVisual =
                                                                 obterDetalheColaboradorUploadMassa(
                                                                     resolucao
@@ -2571,10 +3915,8 @@ const conflitoLogico =
 
                                                                         <small>
                                                                             {
-                                                                                formatarOrigemUploadMassa(
+                                                                                formatarOrigemResolucaoUploadMassa(
                                                                                     resolucao
-                                                                                        ?.destino
-                                                                                        ?.fonte
                                                                                 )
                                                                             }
                                                                         </small>
@@ -2617,6 +3959,34 @@ const conflitoLogico =
                                                                                 </small>
                                                                             ) : null
                                                                         }
+                                                                                                                                                {
+                                                                                                                                                    podeRevisarDocumentoSalvo ? (
+                                                                                                                                                        <button
+                                                                                                                                                            type="button"
+                                                                                                                                                            className="certidao-upload-massa-button certidao-upload-massa-button--secondary"
+                                                                                                                                                            data-safe-scan-review-existing="true"
+                                                                                                                                                            aria-label="Revisar documento salvo"
+                                                                                                                                                            title="Comparar a análise salva anteriormente com a análise produzida agora."
+                                                                                                                                                            onClick={
+                                                                                                                                                                () => {
+                                                                                                                                                                    abrirRevisaoDocumentoSalvo(item);
+                                                                                                                                                                }
+                                                                                                                                                            }
+                                                                                                                                                            style={{
+                                                                                                                                                                minHeight: "30px",
+                                                                                                                                                                marginTop: "0.45rem",
+                                                                                                                                                                padding: "0 0.6rem",
+                                                                                                                                                                fontSize: "0.64rem",
+                                                                                                                                                            }}
+                                                                                                                                                        >
+                                                                                                                                                            <FileSearch
+                                                                                                                                                                aria-hidden="true"
+                                                                                                                                                            />
+
+                                                                                                                                                            Revisar documento salvo
+                                                                                                                                                        </button>
+                                                                                                                                                    ) : null
+                                                                                                                                                }
                                                                                                                                                 {
                                                                                                                                                     complementarVisual ? (
                                                                                                                                                         <div
@@ -3164,11 +4534,16 @@ const conflitoLogico =
                                     />
 
                                     <span>
-                                        {r9TentativaConsumida
-                                            ? "R9 · tentativa consumida · nova execução bloqueada"
-                                            : filaTesteR9.length === 1
-                                                ? "R9 autorizado · exatamente 1 alvo persistível"
-                                                : `R9 aguardando exatamente 1 alvo persistível · encontrados ${filaTesteR9.length}`}
+                                        {lotePersistenciaConsumido
+                                            ? "Tentativa de persistência do lote concluída · nova execução bloqueada"
+                                            : totalPersistiveis > 0
+                                                ? (
+                                                    persistenciaPrincipalHabilitada &&
+                                                    bridgeLoteDisponivel
+                                                        ? `${totalPersistiveis} documento${totalPersistiveis === 1 ? "" : "s"} pronto${totalPersistiveis === 1 ? "" : "s"} para salvar`
+                                                        : `${totalPersistiveis} documento${totalPersistiveis === 1 ? "" : "s"} pronto${totalPersistiveis === 1 ? "" : "s"} · persistência bloqueada nesta validação`
+                                                )
+                                                : "Nenhum documento persistível após a revisão"}
                                     </span>
                                 </div>
 
@@ -3196,6 +4571,9 @@ const conflitoLogico =
                                                 onClick={
                                                     selecionarOutroLote
                                                 }
+                                                disabled={
+                                                    persistindoLote
+                                                }
                                             >
                                                 <RotateCcw
                                                     aria-hidden="true"
@@ -3208,16 +4586,19 @@ const conflitoLogico =
                                                 type="button"
                                                 className="certidao-upload-massa-button certidao-upload-massa-button--primary"
                                                 onClick={
-                                                    executarTesteR9Unitario
+                                                    executarPersistenciaLote
                                                 }
                                                 disabled={
-                                                    !podeExecutarTesteR9
+                                                    !podeExecutarPersistenciaLote
                                                 }
                                                 title={
-                                                    filaTesteR9.length ===
-                                                    1
-                                                        ? "Executar uma única persistência real controlada."
-                                                        : "O R9 exige exatamente um alvo persistível."
+                                                    !bridgeLoteDisponivel
+                                                        ? "Fluxo de persistência em lote indisponível."
+                                                        : !persistenciaPrincipalHabilitada
+                                                            ? "Persistência em lote ainda bloqueada para validação."
+                                                            : totalPersistiveis > 0
+                                                                ? `Salvar ${totalPersistiveis} documento${totalPersistiveis === 1 ? "" : "s"} deste lote.`
+                                                                : "Nenhum documento persistível neste lote."
                                                 }
                                             >
                                                 <CheckCircle2
@@ -3225,12 +4606,12 @@ const conflitoLogico =
                                                 />
 
                                                 {persistindoLote
-                                                    ? "Salvando 1 documento..."
-                                                    : r9TentativaConsumida
-                                                        ? "R9 executado"
-                                                        : filaTesteR9.length === 1
-                                                            ? "Salvar 1 documento (R9)"
-                                                            : "R9 exige 1 documento"}
+                                                    ? `Salvando ${totalPersistiveis} documento${totalPersistiveis === 1 ? "" : "s"}...`
+                                                    : lotePersistenciaConsumido
+                                                        ? "Lote já processado"
+                                                        : totalPersistiveis > 0
+                                                            ? `Salvar ${totalPersistiveis} documento${totalPersistiveis === 1 ? "" : "s"}`
+                                                            : "Nenhum documento para salvar"}
                                             </button>
 
                                             <button
@@ -3247,6 +4628,347 @@ const conflitoLogico =
                                             </button>
                                         </>
                                     )}
+                                </div>
+                            </footer>
+                        </section>
+                    </div>,
+                    document.body
+                )}
+            {revisaoDocumentoSalvo &&
+                createPortal(
+                    <div
+                        className="certidao-upload-massa-overlay certidao-upload-massa-review-overlay"
+                        role="presentation"
+                        onMouseDown={
+                            (evento) => {
+                                if (
+                                    evento.target ===
+                                    evento.currentTarget
+                                ) {
+                                    fecharRevisaoDocumentoSalvo();
+                                }
+                            }
+                        }
+                    >
+                        <section
+                            className="certidao-upload-massa-modal certidao-upload-massa-review-modal"
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="certidao-upload-massa-review-title"
+                            onKeyDown={
+                                (evento) => {
+                                    evento.stopPropagation();
+
+                                    if (
+                                        evento.key ===
+                                        "Escape"
+                                    ) {
+                                        fecharRevisaoDocumentoSalvo();
+                                    }
+                                }
+                            }
+                        >
+                            <header className="certidao-upload-massa-modal__header">
+                                <div className="certidao-upload-massa-modal__identity">
+                                    <div className="certidao-upload-massa-modal__badge">
+                                        <FileSearch
+                                            aria-hidden="true"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <span>
+                                            SAFESCAN BRASIL
+                                        </span>
+
+                                        <h2 id="certidao-upload-massa-review-title">
+                                            Revisar documento salvo
+                                        </h2>
+
+                                        <p>
+                                            Compare os dados registrados anteriormente com a análise atual do mesmo PDF.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    className="certidao-upload-massa-modal__close"
+                                    aria-label="Fechar revisão do documento salvo"
+                                    onClick={
+                                        () =>
+                                            fecharRevisaoDocumentoSalvo()
+                                    }
+                                >
+                                    <X
+                                        aria-hidden="true"
+                                    />
+                                </button>
+                            </header>
+
+                            <div className="certidao-upload-massa-modal__body">
+                                <section className="certida-upload-massa-review-summary">
+                                    <div>
+                                        <span>
+                                            Documento analisado
+                                        </span>
+
+                                        <strong>
+                                            {revisaoDocumentoSalvo
+                                                ?.nomeOriginal ||
+                                                "Documento histórico"}
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        <span>
+                                            Versão
+                                        </span>
+
+                                        <strong>
+                                            {revisaoDocumentoSalvo
+                                                ?.numeroVersao
+                                                ? (
+                                                    "v" +
+                                                    revisaoDocumentoSalvo
+                                                        .numeroVersao
+                                                )
+                                                : "Não informada"}
+                                        </strong>
+                                    </div>
+
+                                    <div>
+                                        <span>
+                                            Diferenças encontradas
+                                        </span>
+
+                                        <strong>
+                                            {Number(
+                                                revisaoDocumentoSalvo
+                                                    ?.totalAlteracoes ||
+                                                0
+                                            )}
+                                        </strong>
+                                    </div>
+                                </section>
+
+                                {revisaoDocumentoSalvo
+                                    ?.mudancaEstrutural ===
+                                true ? (
+                                    <div className="certida-upload-review-alert">
+                                        <AlertTriangle
+                                            aria-hidden="true"
+                                        />
+
+                                        <div>
+                                            <strong>
+                                                Revisão estrutural identificada
+                                            </strong>
+
+                                            <span>
+                                                A análise atual mudou a competência ou o tipo documental. Nenhuma alteração será aplicada nesta etapa.
+                                            </span>
+                                        </div>
+                                    </div>
+                                ) : null}
+
+                                <div className="certida-upload-review-comparison">
+                                    <div className="certida-upload-review-row certida-upload-review-row--header">
+                                        <div>Campo</div>
+                                        <div>Documento salvo</div>
+                                        <div>Análise atual</div>
+                                        <div>Situação</div>
+                                    </div>
+
+                                    {Array.isArray(
+                                        revisaoDocumentoSalvo
+                                            ?.linhas
+                                    )
+                                        ? revisaoDocumentoSalvo
+                                            .linhas
+                                            .map(
+                                                (linha) => (
+                                                    <div
+                                                        key={
+                                                            linha
+                                                                .chave
+                                                        }
+                                                        className={
+                                                            "certida-upload-review-row " +
+                                                            (
+                                                                linha
+                                                                    ?.mudou ===
+                                                                true
+                                                                    ? "certida-upload-review-row--changed"
+                                                                    : ""
+                                                            )
+                                                        }
+                                                    >
+                                                        <div className="certida-upload-review-field">
+                                                            {linha
+                                                                .titulo}
+                                                        </div>
+
+                                                        <div>
+                                                            {linha
+                                                                .salvo}
+                                                        </div>
+
+                                                        <div>
+                                                            {linha
+                                                                .atual}
+                                                        </div>
+
+                                                        <div>
+                                                            <span
+                                                                className={
+                                                                    "certida-upload-review-state " +
+                                                                    (
+                                                                        linha
+                                                                            ?.mudou ===
+                                                                        true
+                                                                            ? "certida-upload-review-state--changed"
+                                                                            : "certida-upload-review-state--same"
+                                                                    )
+                                                                }
+                                                            >
+                                                                {linha
+                                                                    ?.mudou ===
+                                                                true
+                                                                    ? "Alterado"
+                                                                    : "Sem alteração"}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            )
+                                        : null}
+                                </div>
+
+                                {salvamentoDocumentoSalvo
+                                    ?.erro ? (
+                                    <div className="certida-upload-review-alert certida-upload-review-alert--warning">
+                                        <AlertTriangle
+                                            aria-hidden="true"
+                                        />
+
+                                        <div>
+                                            <strong>
+                                                Não foi possível salvar a análise
+                                            </strong>
+
+                                            <span>
+                                                {salvamentoDocumentoSalvo
+                                                    .erro}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ) : null}
+
+                                {salvamentoDocumentoSalvo
+                                    ?.sucesso ? (
+                                    <div className="certida-upload-review-readonly">
+                                        <CheckCircle2
+                                            aria-hidden="true"
+                                        />
+
+                                        <span>
+                                            {salvamentoDocumentoSalvo
+                                                .sucesso}
+                                        </span>
+                                    </div>
+                                ) : null}
+                                <div className="certida-upload-review-readonly">
+                                    <CheckCircle2
+                                        aria-hidden="true"
+                                    />
+
+                                    <span>
+                                        Ao salvar, somente os dados analíticos da versão existente serão corrigidos. O PDF, o SHA, a versão e o Storage serão preservados.
+                                    </span>
+                                </div>
+                            </div>
+
+                            <footer className="certidao-upload-massa-modal__footer">
+                                <div>
+                                    <CheckCircle2
+                                        aria-hidden="true"
+                                    />
+
+                                    <span>
+                                        {salvamentoDocumentoSalvo
+                                            ?.salvando ===
+                                        true
+                                            ? "Salvando análise corrigida..."
+                                            : salvamentoDocumentoSalvo
+                                                ?.sucesso
+                                                ? "Análise corrigida salva"
+                                                : revisaoDocumentoSalvo
+                                                    ?.mudancaEstrutural ===
+                                                    true
+                                                    ? "Revisão estrutural — salvamento bloqueado"
+                                                    : Number(
+                                                        revisaoDocumentoSalvo
+                                                            ?.totalAlteracoes ||
+                                                        0
+                                                    ) > 0
+                                                        ? "Correção disponível"
+                                                        : "Sem alterações para salvar"}
+                                    </span>
+                                </div>
+
+                                <div className="certidao-upload-massa-modal__actions">
+                                    {revisaoDocumentoSalvo
+                                        ?.mudancaEstrutural !==
+                                        true &&
+                                    Number(
+                                        revisaoDocumentoSalvo
+                                            ?.totalAlteracoes ||
+                                        0
+                                    ) > 0 ? (
+                                        <button
+                                            type="button"
+                                            className="certidao-upload-massa-button certidao-upload-massa-button--primary"
+                                            data-safe-scan-save-review-existing="true"
+                                            onClick={
+                                                salvarRevisaoDocumentoSalvoAtual
+                                            }
+                                            disabled={
+                                                salvamentoDocumentoSalvo
+                                                    ?.salvando ===
+                                                true
+                                            }
+                                        >
+                                            <CheckCircle2
+                                                aria-hidden="true"
+                                            />
+
+                                            {salvamentoDocumentoSalvo
+                                                ?.salvando ===
+                                            true
+                                                ? "Salvando..."
+                                                : "Salvar análise corrigida"}
+                                        </button>
+                                    ) : null}
+
+                                    <button
+                                        type="button"
+                                        className="certidao-upload-massa-button certidao-upload-massa-button--secondary"
+                                        onClick={
+                                            fecharRevisaoDocumentoSalvo
+                                        }
+                                        disabled={
+                                            salvamentoDocumentoSalvo
+                                                ?.salvando ===
+                                            true
+                                        }
+                                    >
+                                        <X
+                                            aria-hidden="true"
+                                        />
+
+                                        Fechar comparação
+                                    </button>
                                 </div>
                             </footer>
                         </section>

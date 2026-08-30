@@ -153,6 +153,8 @@ function extrairHoraEmissao(
         );
 
     const padroes = [
+        // SAFE_SCAN_CND_TEMPORAL_F10B_R3A
+        /CERTID[AÃ]O\s+EMITID[AO]\s+[ÀA]S\s+(\d{1,2}:\d{2}(?::\d{2})?)\s+HORAS?\s+(?:DO|NO)\s+DIA\s+\d{1,2}[\/.-]\d{1,2}[\/.-](?:19|20)\d{2}/i,
         /DATA\s+E\s+HORA\s+DA\s+EMISS[AÃ]O\s*[:\-]?\s*\d{1,2}[\/.-]\d{1,2}[\/.-](?:19|20)\d{2}\s+(\d{1,2}:\d{2}(?::\d{2})?)/i,
         /CERTID[AÃ]O\s+CONCEDID[AO]\s+(?:NO\s+DIA|EM)\s*[:\-]?\s*\d{1,2}[\/.-]\d{1,2}[\/.-](?:19|20)\d{2}\s+(?:[ÀA]S\s+)?(\d{1,2}:\d{2}(?::\d{2})?)/i,
     ];
@@ -419,6 +421,7 @@ function extrairDadosTemporais(
         extrairPrimeiraData(
             texto,
             [
+                /CERTID[AÃ]O\s+EMITID[AO](?:\s+[ÀA]S\s+\d{1,2}:\d{2}(?::\d{2})?\s+HORAS?)?\s+(?:DO|NO)\s+DIA\s*[:\-]?\s*(\d{1,2}[\/.-]\d{1,2}[\/.-](?:19|20)\d{2})/i,
                 /DATA\s+E\s+HORA\s+DA\s+EMISS[AÃ]O\s*[:\-]?\s*(\d{1,2}[\/.-]\d{1,2}[\/.-](?:19|20)\d{2})/i,
                 /(?:DATA\s+(?:DA|DE)\s+)?EMISS[AÃ]O\s*[:\-]?\s*(\d{1,2}[\/.-]\d{1,2}[\/.-](?:19|20)\d{2})/i,
                 /EMITID[AO]\s+EM\s*[:\-]?\s*(\d{1,2}[\/.-]\d{1,2}[\/.-](?:19|20)\d{2})/i,
@@ -439,6 +442,7 @@ function extrairDadosTemporais(
         extrairPrimeiraData(
             texto,
             [
+                /LIBERA[CÇ][AÃ]O\s*:\s*VALIDADE\s*:\s*TRIBUTOS\s+ABRANGIDOS\s*:\s*\d{1,2}[\/.-]\d{1,2}[\/.-](?:19|20)\d{2}\s+(\d{1,2}[\/.-]\d{1,2}[\/.-](?:19|20)\d{2})/i,
                 /(?:DATA\s+(?:DA|DE)\s+)?VALIDADE\s*[:\-]?\s*(?:AT[ÉE]\s*)?(\d{1,2}[\/.-]\d{1,2}[\/.-](?:19|20)\d{2})/i,
                 /V[AÁ]LID[AO]\s+AT[ÉE]\s*[:\-]?\s*(\d{1,2}[\/.-]\d{1,2}[\/.-](?:19|20)\d{2})/i,
                 /V[AÁ]LIDA\s+AT[ÉE]\s*[:\-]?\s*(\d{1,2}[\/.-]\d{1,2}[\/.-](?:19|20)\d{2})/i,

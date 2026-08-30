@@ -525,6 +525,10 @@ export function PerfilDocumentalConfigModal({
                     tiposDocumentoSelecionados.slice(),
                 tipoDocumento,
                 exigido,
+                escopo:
+                    anual
+                        ? "ANUAL"
+                        : "COMPETENCIA",
                 competenciaInicio:
                     competenciaRegra,
                 motivo,
@@ -695,11 +699,27 @@ export function PerfilDocumentalConfigModal({
                     }
                 >
                     <p className="certidao-mensal-perfil-modal__orientacao">
-                        Defina os documentos exigidos e a vigência das alterações.
+                        Defina a regra anual ou uma exceção válida somente para uma competência.
                         O histórico das competências anteriores permanece preservado.
                     </p>
 
                     <div className="certidao-mensal-perfil-modal__modo">
+                        <button
+                            type="button"
+                            className={
+                                !modoAnual
+                                    ? "certidao-mensal-perfil-modal__modo-botao is-active"
+                                    : "certidao-mensal-perfil-modal__modo-botao"
+                            }
+                            onClick={() =>
+                                setModoConfiguracao(
+                                    "competencia",
+                                )
+                            }
+                        >
+                            Exceção mensal
+                        </button>
+
                         <button
                             type="button"
                             className={
@@ -714,22 +734,6 @@ export function PerfilDocumentalConfigModal({
                             }
                         >
                             Regra anual
-                        </button>
-
-                        <button
-                            type="button"
-                            className={
-                                !modoAnual
-                                    ? "certidao-mensal-perfil-modal__modo-botao is-active"
-                                    : "certidao-mensal-perfil-modal__modo-botao"
-                            }
-                            onClick={() =>
-                                setModoConfiguracao(
-                                    "competencia",
-                                )
-                            }
-                        >
-                            Exceção por competência
                         </button>
                     </div>
 
@@ -1131,7 +1135,7 @@ export function PerfilDocumentalConfigModal({
                         ) : (
                             <label className="certidao-mensal-perfil-modal__campo">
                                 <span>
-                                    A partir da competência
+                                    Competência da exceção
                                 </span>
 
                                 <input
@@ -1149,7 +1153,7 @@ export function PerfilDocumentalConfigModal({
                                 />
 
                                 <small>
-                                    A exceção passa a valer a partir deste mês e permanece até uma nova regra do mesmo documento.
+                                    Esta exceção vale somente para a competência selecionada. No mês seguinte, o documento volta automaticamente à Regra Anual.
                                 </small>
                             </label>
                         )}
@@ -1253,11 +1257,18 @@ export function PerfilDocumentalConfigModal({
 
                                                 <div>
                                                     <strong>
+                                                        {regra?.escopo ===
+                                                        "COMPETENCIA"
+                                                            ? "Exceção mensal · "
+                                                            : "Regra anual · "}
                                                         {regra?.exigido ===
                                                         false
                                                             ? "Não exigido"
                                                             : "Exigido"}{" "}
-                                                        a partir de{" "}
+                                                        {regra?.escopo ===
+                                                        "COMPETENCIA"
+                                                            ? "somente em "
+                                                            : "a partir de "}
                                                         {formatarCompetencia(
                                                             regra
                                                                 ?.competenciaInicio,
@@ -1336,7 +1347,7 @@ export function PerfilDocumentalConfigModal({
                                     ? "Salvando regra..."
                                     : modoAnual
                                         ? "Salvar regra anual"
-                                        : "Salvar exceção por competência"
+                                        : "Salvar exceção mensal"
                         }
                     >
                         <Save aria-hidden="true" />
@@ -1344,7 +1355,7 @@ export function PerfilDocumentalConfigModal({
                             ? "Salvando..."
                             : modoAnual
                                 ? "Salvar regra anual"
-                                : "Salvar exceção"}
+                                : "Salvar exceção mensal"}
                     </button>
                 </footer>
             </section>

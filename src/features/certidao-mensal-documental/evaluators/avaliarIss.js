@@ -237,18 +237,19 @@ function extrairCompetenciaDocumento(
             texto
         );
 
-    const padroes = [
+    const padroesNumericos = [
         /PERIODO\s+DE\s+APURACAO\s*[:\-]?\s*(0?[1-9]|1[0-2])\s*[/.:-]\s*(20\d{2})/,
         /PERIODO\s+APURACAO\s*[:\-]?\s*(0?[1-9]|1[0-2])\s*[/.:-]\s*(20\d{2})/,
         /COMPETENCIA\s*[:\-]?\s*(0?[1-9]|1[0-2])\s*[/.:-]\s*(20\d{2})/,
         /MES\s+DE\s+REFERENCIA\s*[:\-]?\s*(0?[1-9]|1[0-2])\s*[/.:-]\s*(20\d{2})/,
         /REFERENCIA\s*[:\-]?\s*(0?[1-9]|1[0-2])\s*[/.:-]\s*(20\d{2})/,
         /MES\s*\/\s*ANO\s*[:\-]?\s*(0?[1-9]|1[0-2])\s*[/.:-]\s*(20\d{2})/,
+        /INCIDENCIA\s*[:\-]?\s*(0?[1-9]|1[0-2])\s*[/.:-]\s*(20\d{2})/,
     ];
 
     for (
         const padrao of
-        padroes
+        padroesNumericos
     ) {
         const correspondencia =
             conteudo.match(
@@ -273,7 +274,59 @@ function extrairCompetenciaDocumento(
         );
     }
 
-    return "";
+    const meses =
+        new Map([
+            ["JAN", "01"],
+            ["FEV", "02"],
+            ["MAR", "03"],
+            ["ABR", "04"],
+            ["MAI", "05"],
+            ["JUN", "06"],
+            ["JUL", "07"],
+            ["AGO", "08"],
+            ["SET", "09"],
+            ["OUT", "10"],
+            ["NOV", "11"],
+            ["DEZ", "12"],
+        ]);
+
+    const padraoTextual =
+        /(?:PERIODO\s+DE\s+APURACAO|PERIODO\s+APURACAO|COMPETENCIA|MES\s+DE\s+REFERENCIA|REFERENCIA|MES\s*\/\s*ANO|INCIDENCIA)\s*[:\-]?\s*(JAN(?:EIRO)?|FEV(?:EREIRO)?|MAR(?:CO)?|ABR(?:IL)?|MAI(?:O)?|JUN(?:HO)?|JUL(?:HO)?|AGO(?:STO)?|SET(?:EMBRO)?|OUT(?:UBRO)?|NOV(?:EMBRO)?|DEZ(?:EMBRO)?)\s*[/.:-]\s*(20\d{2})/;
+
+    let correspondenciaTextual =
+        conteudo.match(
+            padraoTextual
+        );
+
+    if (!correspondenciaTextual) {
+        correspondenciaTextual =
+            conteudo.match(
+                /INCIDENCIA\b[\s\S]{0,160}?\b(JAN(?:EIRO)?|FEV(?:EREIRO)?|MAR(?:CO)?|ABR(?:IL)?|MAI(?:O)?|JUN(?:HO)?|JUL(?:HO)?|AGO(?:STO)?|SET(?:EMBRO)?|OUT(?:UBRO)?|NOV(?:EMBRO)?|DEZ(?:EMBRO)?)\s*[/.:-]\s*(20\d{2})/
+            );
+    }
+
+    if (!correspondenciaTextual) {
+        return "";
+    }
+
+    const mes =
+        meses.get(
+            correspondenciaTextual[1]
+                .slice(
+                    0,
+                    3
+                )
+        );
+
+    if (!mes) {
+        return "";
+    }
+
+    return (
+        mes +
+        "/" +
+        correspondenciaTextual[2]
+    );
 }
 
 function formatarData(
@@ -681,12 +734,61 @@ function identificarEstrutura(
             )
         );
 
+    // SAFE_SCAN_CERT2_M4_F9_F_ISS_PAGAMENTO_MUNICIPAL_FORTE_V1
+    //
+    // Assinatura forte e genérica para pacote municipal de
+    // serviços + comprovante de pagamento.
+    //
+    // Não depende de empresa, município, filename ou path.
+    // Exige simultaneamente:
+    // - evidência de NFS-e / serviço municipal;
+    // - comprovante explícito de pagamento;
+    // - tributo municipal;
+    // - valor do documento;
+    // - código de barras ou autenticação.
+    //
+    // A assinatura somente reconhece a ESTRUTURA documental.
+    // Ela não infere competência, município competente,
+    // base de cálculo ou regularidade fiscal.
+    const pacotePagamentoMunicipalServico =
+        Boolean(
+            (
+                conteudo.includes(
+                    "NOTA FISCAL ELETRONICA DE SERVICOS"
+                ) ||
+                conteudo.includes(
+                    "NOTA FISCAL ELETRONICA DE SERVICO"
+                ) ||
+                conteudo.includes(
+                    "NFE.PREFEITURA"
+                )
+            ) &&
+            conteudo.includes(
+                "COMPROVANTE DE PAGAMENTO"
+            ) &&
+            conteudo.includes(
+                "TRIBUTOS MUNICIPAIS"
+            ) &&
+            conteudo.includes(
+                "VALOR DO DOCUMENTO"
+            ) &&
+            (
+                conteudo.includes(
+                    "CODIGO DE BARRAS"
+                ) ||
+                conteudo.includes(
+                    "AUTENTICACAO"
+                )
+            )
+        );
+
     const notaFiscalIsolada =
         Boolean(
             notaFiscalServico &&
             !guiaIss &&
             !comprovantePagamento &&
-            !recolhimentoIss
+            !recolhimentoIss &&
+            !pacotePagamentoMunicipalServico
         );
 
     const reconhecido =
@@ -697,7 +799,8 @@ function identificarEstrutura(
                 guiaIss ||
                 comprovantePagamento ||
                 recolhimentoIss ||
-                estruturaFiscalMensal
+                estruturaFiscalMensal ||
+                pacotePagamentoMunicipalServico
             )
         );
 
@@ -725,15 +828,32 @@ function identificarEstrutura(
 
     return {
         reconhecido,
-        possuiIss,
+        possuiIss:
+            possuiIss ||
+            pacotePagamentoMunicipalServico,
+
         guiaIss,
-        comprovantePagamento,
+
+        comprovantePagamento:
+            comprovantePagamento ||
+            pacotePagamentoMunicipalServico,
+
         recolhimentoIss,
+
         estruturaFiscalMensal,
-        notaFiscalServico,
+
+        notaFiscalServico:
+            notaFiscalServico ||
+            pacotePagamentoMunicipalServico,
+
         notaFiscalIsolada,
+
         certidaoMunicipal,
-        variante,
+
+        variante:
+            pacotePagamentoMunicipalServico
+                ? "Comprovante de pagamento municipal de ISSQN"
+                : variante,
     };
 }
 

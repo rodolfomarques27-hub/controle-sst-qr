@@ -346,7 +346,7 @@ export function CertidaoMensalDocumentalPage({
                                 "certidao_mensal_perfil_documental_regras",
                             )
                             .select(
-                                "id, empresa_id, tipo_documento, exigido, competencia_inicio, motivo, criado_em, atualizado_em",
+                                "*",
                             )
                             .in(
                                 "empresa_id",
@@ -3138,6 +3138,14 @@ export function CertidaoMensalDocumentalPage({
             ""
         );
 
+    const [
+        regularizacaoHistoricaConfirmacao,
+        setRegularizacaoHistoricaConfirmacao,
+    ] =
+        useState(
+            null
+        );
+
     const relacaoHistoricaManualConfirmada =
         Boolean(
             snapshotMaoDeObraAtual
@@ -3226,6 +3234,23 @@ export function CertidaoMensalDocumentalPage({
         };
 
 
+    const voltarConfirmacaoRegularizacaoHistorica =
+        () => {
+            if (
+                regularizacaoHistoricaSalvando
+            ) {
+                return;
+            }
+
+            setRegularizacaoHistoricaConfirmacao(
+                null
+            );
+
+            setRegularizacaoHistoricaErro(
+                ""
+            );
+        };
+
     const fecharRegularizacaoHistorica =
         () => {
             if (
@@ -3233,6 +3258,17 @@ export function CertidaoMensalDocumentalPage({
             ) {
                 return;
             }
+
+            if (
+                regularizacaoHistoricaConfirmacao
+            ) {
+                voltarConfirmacaoRegularizacaoHistorica();
+                return;
+            }
+
+            setRegularizacaoHistoricaConfirmacao(
+                null
+            );
 
             setRegularizacaoHistoricaAberta(
                 false
@@ -3294,7 +3330,7 @@ export function CertidaoMensalDocumentalPage({
         };
 
     const confirmarRegularizacaoHistorica =
-        async () => {
+        async (opcoes = {}) => {
             if (
                 regularizacaoHistoricaSalvando
             ) {
@@ -3374,47 +3410,99 @@ export function CertidaoMensalDocumentalPage({
                 return;
             }
 
-            if (
+            // SAFE_SCAN_CERT2_CONFIRMACAO_HISTORICA_V6_R2A
+            const totalAnterior =
                 relacaoHistoricaManualConfirmada
+                    ? obterColaboradoresRelacaoHistoricaSalva()
+                        .length
+                    : null;
+
+            const totalNovo =
+                colaboradoresSelecionados
+                    .length;
+
+            const assinaturaSelecionados =
+                Array.from(
+                    idsSelecionados
+                )
+                    .sort()
+                    .join("|");
+
+            const requerConfirmacaoAlteracao =
+                relacaoHistoricaManualConfirmada;
+
+            const requerConfirmacaoSemColaboradores =
+                totalNovo === 0;
+
+            const requerConfirmacaoIntermediaria =
+                Boolean(
+                    requerConfirmacaoAlteracao ||
+                    requerConfirmacaoSemColaboradores
+                );
+
+            const confirmacaoAutorizada =
+                opcoes?.confirmacaoAutorizada ===
+                true;
+
+            if (
+                requerConfirmacaoIntermediaria &&
+                !confirmacaoAutorizada
             ) {
-                const totalAnterior =
-                    obterColaboradoresRelacaoHistoricaSalva()
-                        .length;
+                setRegularizacaoHistoricaConfirmacao({
+                    alteracaoHistorica:
+                        requerConfirmacaoAlteracao,
+                    semColaboradores:
+                        requerConfirmacaoSemColaboradores,
+                    totalAnterior,
+                    totalNovo,
+                    assinaturaSelecionados,
+                });
 
-                const totalNovo =
-                    colaboradoresSelecionados
-                        .length;
+                setRegularizacaoHistoricaErro(
+                    ""
+                );
 
-                const confirmarAlteracao =
-                    window.confirm(
-                        `Você está alterando uma Relação de Empregados histórica já confirmada.
-
-Total anteriormente salvo: ${totalAnterior}
-Novo total selecionado: ${totalNovo}
-
-A alteração substituirá somente o Item 14 desta competência.
-A confirmação anterior permanecerá registrada na auditoria.
-
-Deseja salvar as alterações?`
-                    );
-
-                if (!confirmarAlteracao) {
-                    return;
-                }
+                return;
             }
 
             if (
-                colaboradoresSelecionados.length ===
-                0
+                requerConfirmacaoIntermediaria &&
+                confirmacaoAutorizada
             ) {
-                const confirmarSemColaboradores =
-                    window.confirm(
-                        "Você está confirmando que não havia colaboradores vinculados a esta empresa nesta competência. Deseja continuar?"
+                const confirmacaoAtual =
+                    regularizacaoHistoricaConfirmacao;
+
+                const confirmacaoAindaValida =
+                    Boolean(
+                        confirmacaoAtual &&
+                        confirmacaoAtual
+                            .alteracaoHistorica ===
+                            requerConfirmacaoAlteracao &&
+                        confirmacaoAtual
+                            .semColaboradores ===
+                            requerConfirmacaoSemColaboradores &&
+                        confirmacaoAtual
+                            .totalAnterior ===
+                            totalAnterior &&
+                        confirmacaoAtual
+                            .totalNovo ===
+                            totalNovo &&
+                        confirmacaoAtual
+                            .assinaturaSelecionados ===
+                            assinaturaSelecionados
                     );
 
                 if (
-                    !confirmarSemColaboradores
+                    !confirmacaoAindaValida
                 ) {
+                    setRegularizacaoHistoricaConfirmacao(
+                        null
+                    );
+
+                    setRegularizacaoHistoricaErro(
+                        "A seleção mudou após a revisão. Confira novamente antes de salvar."
+                    );
+
                     return;
                 }
             }
@@ -3497,6 +3585,10 @@ Deseja salvar as alterações?`
 
                 setRegularizacaoHistoricaErro(
                     ""
+                );
+
+                setRegularizacaoHistoricaConfirmacao(
+                    null
                 );
 
                 setRegularizacaoHistoricaAberta(
@@ -6104,7 +6196,11 @@ return {
                     data-j48-modo="confirmacao-manual"
                 >
                     <section
-                        className="certidao-mensal-regularizacao-modal__dialog"
+                        className={`certidao-mensal-regularizacao-modal__dialog ${
+                            regularizacaoHistoricaConfirmacao
+                                ? "is-confirmacao"
+                                : ""
+                        }`}
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="certidao-regularizacao-historica-titulo"
@@ -6112,7 +6208,9 @@ return {
                         <header className="certidao-mensal-regularizacao-modal__header">
                             <div>
                                 <p>
-                                    Regularização histórica assistida
+                                    {regularizacaoHistoricaConfirmacao
+                                        ? "Confirmação de alteração histórica"
+                                        : "Regularização histórica assistida"}
                                 </p>
 
                                 <h2 id="certidao-regularizacao-historica-titulo">
@@ -6130,11 +6228,139 @@ return {
                                 onClick={
                                     fecharRegularizacaoHistorica
                                 }
-                                aria-label="Fechar revisão histórica"
+                                aria-label={
+                                    regularizacaoHistoricaConfirmacao
+                                        ? "Voltar à revisão histórica"
+                                        : "Fechar revisão histórica"
+                                }
                             >
                                 ×
                             </button>
                         </header>
+
+                        {regularizacaoHistoricaConfirmacao && (
+                            <div className="certidao-mensal-regularizacao-modal__confirmacao">
+                                <div className="certidao-mensal-regularizacao-modal__confirmacao-aviso">
+                                    <span className="certidao-mensal-regularizacao-modal__confirmacao-sinal" aria-hidden="true">
+                                        !
+                                    </span>
+
+                                    <div>
+                                        <p>
+                                            CONFIRMAÇÃO NECESSÁRIA
+                                        </p>
+
+                                        <h3>
+                                            {regularizacaoHistoricaConfirmacao.alteracaoHistorica
+                                                ? regularizacaoHistoricaConfirmacao.semColaboradores
+                                                    ? "Confirmar substituição por relação vazia"
+                                                    : "Confirmar alteração histórica"
+                                                : "Confirmar relação sem colaboradores"}
+                                        </h3>
+
+                                        <span>
+                                            {regularizacaoHistoricaConfirmacao.alteracaoHistorica
+                                                ? "Revise o impacto antes de substituir a Relação de Empregados já confirmada."
+                                                : "Confirme que não havia colaboradores vinculados à empresa nesta competência."}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="certidao-mensal-regularizacao-modal__confirmacao-resumo">
+                                    <article>
+                                        <span>Competência</span>
+                                        <strong>{competencia}</strong>
+                                    </article>
+
+                                    <article>
+                                        <span>Salvo anteriormente</span>
+                                        <strong>
+                                            {regularizacaoHistoricaConfirmacao.alteracaoHistorica
+                                                ? regularizacaoHistoricaConfirmacao.totalAnterior
+                                                : "—"}
+                                        </strong>
+                                    </article>
+
+                                    <article>
+                                        <span>Selecionados agora</span>
+                                        <strong>
+                                            {regularizacaoHistoricaConfirmacao.totalNovo}
+                                        </strong>
+                                    </article>
+                                </div>
+
+                                <div className="certidao-mensal-regularizacao-modal__confirmacao-impactos">
+                                    <article>
+                                        <strong>Escopo controlado</strong>
+                                        <span>
+                                            Somente a Relação de Empregados (Item 14)
+                                            desta competência será atualizada.
+                                            Nenhum outro documento será alterado.
+                                        </span>
+                                    </article>
+
+                                    <article className="is-seguro">
+                                        <strong>Auditoria preservada</strong>
+                                        <span>
+                                            {regularizacaoHistoricaConfirmacao.alteracaoHistorica
+                                                ? "A confirmação anterior continuará registrada na auditoria."
+                                                : "Esta confirmação ficará registrada na auditoria da competência."}
+                                        </span>
+                                    </article>
+
+                                    {regularizacaoHistoricaConfirmacao.semColaboradores && (
+                                        <article className="is-alerta">
+                                            <strong>Relação sem colaboradores</strong>
+                                            <span>
+                                                Ao confirmar, esta competência ficará registrada
+                                                com zero colaboradores vinculados.
+                                            </span>
+                                        </article>
+                                    )}
+                                </div>
+
+                                {regularizacaoHistoricaErro && (
+                                    <p className="certidao-mensal-regularizacao-modal__confirmacao-erro">
+                                        {regularizacaoHistoricaErro}
+                                    </p>
+                                )}
+
+                                <div className="certidao-mensal-regularizacao-modal__confirmacao-acoes">
+                                    <button
+                                        type="button"
+                                        className="is-secundario"
+                                        onClick={
+                                            voltarConfirmacaoRegularizacaoHistorica
+                                        }
+                                        disabled={
+                                            regularizacaoHistoricaSalvando
+                                        }
+                                    >
+                                        Voltar
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className="is-principal"
+                                        onClick={() =>
+                                            confirmarRegularizacaoHistorica({
+                                                confirmacaoAutorizada:
+                                                    true,
+                                            })
+                                        }
+                                        disabled={
+                                            regularizacaoHistoricaSalvando
+                                        }
+                                    >
+                                        {regularizacaoHistoricaSalvando
+                                            ? "Salvando..."
+                                            : regularizacaoHistoricaConfirmacao.semColaboradores
+                                                ? "Confirmar relação vazia"
+                                                : "Confirmar alteração"}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="certidao-mensal-regularizacao-modal__aviso">
                             <strong>

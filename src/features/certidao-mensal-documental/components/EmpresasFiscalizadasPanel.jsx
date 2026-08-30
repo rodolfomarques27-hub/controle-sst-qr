@@ -107,6 +107,8 @@ export function EmpresasFiscalizadasPanel({
                 <label className="certidao-mensal-empresas__search">
                     <Search aria-hidden="true" />
                     <input
+                        id="certidao-mensal-busca-empresa"
+                        name="certidao-mensal-busca-empresa"
                         type="text"
                         value={busca}
                         onChange={(evento) => setBusca(evento.target.value)}

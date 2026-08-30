@@ -8,6 +8,14 @@ export const CERTIDAO_MENSAL_PERFIL_DOCUMENTAL_CONTRATO_VERSAO =
 export const CERTIDAO_MENSAL_EXIGENCIA_PADRAO =
     true;
 
+export const CERTIDAO_MENSAL_ESCOPO_REGRA =
+    Object.freeze({
+        ANUAL: "ANUAL",
+        COMPETENCIA: "COMPETENCIA",
+    });
+
+// SAFE_SCAN_CERT2_V8_EXCECAO_MENSAL
+
 const DOCUMENTOS_POR_ID =
     new Map(
         DOCUMENTOS_CERTIDAO_MENSAL_BASE.map(
@@ -88,6 +96,47 @@ export function normalizarRegraExigenciaDocumental(
         return null;
     }
 
+    const escopoLegadoAusente =
+        regra.escopo ===
+            undefined ||
+        regra.escopo ===
+            null;
+
+    const escopoInformado =
+        textoSeguro(
+            regra.escopo
+        ).toUpperCase();
+
+    /*
+     * SAFE_SCAN_CERT2_V8_SCOPE_FAIL_CLOSED
+     *
+     * Compatibilidade legado é permitida SOMENTE quando
+     * escopo não existe ou é null.
+     *
+     * Valor explícito vazio/desconhecido deve falhar.
+     */
+    if (
+        !escopoLegadoAusente &&
+        escopoInformado !==
+            CERTIDAO_MENSAL_ESCOPO_REGRA.ANUAL &&
+        escopoInformado !==
+            CERTIDAO_MENSAL_ESCOPO_REGRA.COMPETENCIA
+    ) {
+        throw new Error(
+            "Escopo documental inválido no perfil mensal."
+        );
+    }
+
+    const escopo =
+        escopoLegadoAusente
+            ? competenciaInicio.slice(
+                5,
+                7
+            ) === "01"
+                ? CERTIDAO_MENSAL_ESCOPO_REGRA.ANUAL
+                : CERTIDAO_MENSAL_ESCOPO_REGRA.COMPETENCIA
+            : escopoInformado;
+
     return {
         id:
             textoSeguro(
@@ -106,6 +155,8 @@ export function normalizarRegraExigenciaDocumental(
 
         exigido:
             regra.exigido,
+
+        escopo,
 
         competenciaInicio,
 
@@ -165,7 +216,7 @@ export function resolverExigenciaDocumentoNaCompetencia({
         );
     }
 
-    const candidatas =
+    const normalizadas =
         (
             Array.isArray(
                 regras
@@ -181,13 +232,38 @@ export function resolverExigenciaDocumentoNaCompetencia({
                 (regra) =>
                     regra.tipoDocumento ===
                         tipoDocumentoNormalizado &&
-                    regra.competenciaInicio <=
-                        competenciaNormalizada &&
                     (
                         !empresaIdNormalizada ||
                         regra.empresaId ===
                             empresaIdNormalizada
                     )
+            );
+
+    /*
+     * Precedência obrigatória:
+     *
+     * 1. Exceção COMPETENCIA exatamente do mês consultado;
+     * 2. Última regra ANUAL aplicável;
+     * 3. Padrão global.
+     */
+    const excecaoCompetencia =
+        normalizadas.find(
+            (regra) =>
+                regra.escopo ===
+                    CERTIDAO_MENSAL_ESCOPO_REGRA.COMPETENCIA &&
+                regra.competenciaInicio ===
+                    competenciaNormalizada
+        ) ||
+        null;
+
+    const regraAnual =
+        normalizadas
+            .filter(
+                (regra) =>
+                    regra.escopo ===
+                        CERTIDAO_MENSAL_ESCOPO_REGRA.ANUAL &&
+                    regra.competenciaInicio <=
+                        competenciaNormalizada
             )
             .sort(
                 (a, b) =>
@@ -195,11 +271,12 @@ export function resolverExigenciaDocumentoNaCompetencia({
                         .localeCompare(
                             a.competenciaInicio
                         )
-            );
+            )[0] ||
+        null;
 
     const regraAplicavel =
-        candidatas[0] ||
-        null;
+        excecaoCompetencia ||
+        regraAnual;
 
     if (!regraAplicavel) {
         return {
@@ -208,6 +285,9 @@ export function resolverExigenciaDocumentoNaCompetencia({
 
             origem:
                 "PADRAO_GLOBAL",
+
+            escopo:
+                null,
 
             regra:
                 null,
@@ -221,10 +301,14 @@ export function resolverExigenciaDocumentoNaCompetencia({
         origem:
             "CONFIGURACAO_EMPRESA",
 
+        escopo:
+            regraAplicavel.escopo,
+
         regra:
             regraAplicavel,
     };
 }
+
 
 export function montarPerfilDocumentalCompetencia({
     empresaId = "",

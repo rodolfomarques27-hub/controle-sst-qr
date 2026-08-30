@@ -9,6 +9,11 @@ import {
     obterDataReferenciaCertidaoMensal,
 } from "../domain/certidaoMensalPersistenceContract.js";
 
+import {
+    CERTIDAO_MENSAL_POLITICA_DOCUMENTAL,
+    obterDefinicaoDocumentoCompetencia,
+} from "../domain/certidaoMensalRegraCompetencia.js";
+
 const PADRAO_HASH_SHA256 =
     /^[a-f0-9]{64}$/;
 
@@ -181,8 +186,37 @@ export function resultadoLaboratorioCertidaoPodeSerPersistido(
             resultado
         );
 
+    // SAFE_SCAN_INDIVIDUAL_FAIL_CLOSED_F11_C1
+    //
+    // requerConferenciaHumana não é, isoladamente, bloqueio.
+    // Certidões compatíveis podem exigir conferência/consulta
+    // oficial e ainda assim permanecer persistíveis.
+    //
+    // O bloqueio automático deve ocorrer somente quando
+    // a própria avaliação documental é inconclusiva.
+    const nivelAvaliacao =
+        textoSeguro(
+            avaliacao?.nivel
+        )
+            .trim()
+            .toUpperCase();
+
+    const codigoAvaliacao =
+        textoSeguro(
+            avaliacao?.codigo
+        )
+            .trim()
+            .toUpperCase();
+
+    const avaliacaoInconclusiva =
+        nivelAvaliacao ===
+            "INCONCLUSIVA" ||
+        codigoAvaliacao ===
+            "AVALIACAO_INCONCLUSIVA";
+
     return Boolean(
         resultado?.sucesso &&
+        !avaliacaoInconclusiva &&
         !avaliacao?.documentoIncompativel &&
         !avaliacao?.bloqueiaSubstituicao &&
         !CODIGOS_BLOQUEIO_PERSISTENCIA
@@ -215,6 +249,63 @@ function converterCompetenciaMensalParaIso(
     );
 }
 
+// SAFE_SCAN_INDIVIDUAL_VALIDADE_ORIGEM_F11_C2
+function converterDataEmissaoParaCompetenciaIso(
+    valor
+) {
+    const correspondencia =
+        /^(\d{4})-(0[1-9]|1[0-2])-\d{2}$/
+            .exec(
+                textoSeguro(
+                    valor
+                )
+            );
+
+    if (!correspondencia) {
+        return "";
+    }
+
+    return (
+        correspondencia[1] +
+        "-" +
+        correspondencia[2] +
+        "-01"
+    );
+}
+
+function resolverCompetenciaOrigemDocumentoValidade({
+    tipoDocumento,
+    avaliacao,
+}) {
+    const definicao =
+        obterDefinicaoDocumentoCompetencia(
+            tipoDocumento
+        );
+
+    if (
+        definicao?.politica !==
+        CERTIDAO_MENSAL_POLITICA_DOCUMENTAL
+            .VALIDADE
+    ) {
+        return "";
+    }
+
+    const competenciaEmissao =
+        converterDataEmissaoParaCompetenciaIso(
+            avaliacao
+                ?.dadosTemporais
+                ?.dataEmissaoIso
+        );
+
+    if (!competenciaEmissao) {
+        throw new Error(
+            "Não foi possível determinar a competência de origem do documento controlado por validade pela data de emissão."
+        );
+    }
+
+    return competenciaEmissao;
+}
+
 function resolverCompetenciaPersistenciaDocumento({
     tipoDocumento,
     competenciaNormalizada,
@@ -224,29 +315,10 @@ function resolverCompetenciaPersistenciaDocumento({
         tipoDocumento ===
         "crf-fgts"
     ) {
-        const dataEmissaoIso =
-            textoSeguro(
-                avaliacao
-                    ?.dadosTemporais
-                    ?.dataEmissaoIso
-            );
-
-        const correspondencia =
-            /^(\d{4})-(0[1-9]|1[0-2])-\d{2}$/
-                .exec(
-                    dataEmissaoIso
-                );
-
-        if (!correspondencia) {
-            return competenciaNormalizada;
-        }
-
-        return (
-            correspondencia[1] +
-            "-" +
-            correspondencia[2] +
-            "-01"
-        );
+        return resolverCompetenciaOrigemDocumentoValidade({
+            tipoDocumento,
+            avaliacao,
+        });
     }
 
     if (
@@ -397,34 +469,10 @@ function resolverCompetenciaPersistenciaDocumento({
         if (
             certidaoIssqn
         ) {
-            const dataEmissaoIssqn =
-                String(
-                    avaliacao
-                        ?.dadosTemporais
-                        ?.dataEmissaoIso ||
-                    ""
-                ).trim();
-
-            const correspondenciaEmissaoIssqn =
-                /^(\d{4})-(0[1-9]|1[0-2])-\d{2}$/
-                    .exec(
-                        dataEmissaoIssqn
-                    );
-
-            if (
-                !correspondenciaEmissaoIssqn
-            ) {
-                throw new Error(
-                    "Não foi possível determinar a competência de origem da Certidão ISSQN pela data de emissão."
-                );
-            }
-
-            return (
-                correspondenciaEmissaoIssqn[1] +
-                "-" +
-                correspondenciaEmissaoIssqn[2] +
-                "-01"
-            );
+            return resolverCompetenciaOrigemDocumentoValidade({
+                tipoDocumento,
+                avaliacao,
+            });
         }
 
         /*
@@ -465,6 +513,22 @@ function resolverCompetenciaPersistenciaDocumento({
             competenciaEsocial ||
             competenciaNormalizada
         );
+    }
+
+    const definicaoDocumento =
+        obterDefinicaoDocumentoCompetencia(
+            tipoDocumento
+        );
+
+    if (
+        definicaoDocumento?.politica ===
+        CERTIDAO_MENSAL_POLITICA_DOCUMENTAL
+            .VALIDADE
+    ) {
+        return resolverCompetenciaOrigemDocumentoValidade({
+            tipoDocumento,
+            avaliacao,
+        });
     }
 
     return competenciaNormalizada;

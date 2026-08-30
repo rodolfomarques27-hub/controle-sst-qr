@@ -24,6 +24,19 @@ const DEFINICOES_DOCUMENTAIS =
                 ],
             ],
         },
+        // SAFE_SCAN_CERT2_M4_F5_E_CRF_ASSINATURA_FORTE_V1
+        //
+        // CRF deve ser reconhecido pela estrutura do certificado
+        // efetivamente emitido para o empregador.
+        //
+        // A simples menção a "CRF - FGTS" em checklist, controle
+        // interno ou relação de certidões não satisfaz esta regra.
+        //
+        // Fail-closed:
+        // - exige identificação empresarial documental;
+        // - exige validade;
+        // - exige evidência institucional ou declaração material
+        //   de regularidade perante o Fundo.
         {
             id: "crf-fgts",
             titulo: "CRF FGTS",
@@ -31,6 +44,18 @@ const DEFINICOES_DOCUMENTAIS =
                 [
                     "CERTIFICADO DE REGULARIDADE",
                     "FGTS",
+                    "INSCRICAO",
+                    "RAZAO SOCIAL",
+                    "VALIDADE",
+                    "CAIXA ECONOMICA FEDERAL",
+                ],
+                [
+                    "CERTIFICADO DE REGULARIDADE",
+                    "FGTS",
+                    "INSCRICAO",
+                    "RAZAO SOCIAL",
+                    "VALIDADE",
+                    "SITUACAO REGULAR PERANTE O FUNDO",
                 ],
             ],
         },
