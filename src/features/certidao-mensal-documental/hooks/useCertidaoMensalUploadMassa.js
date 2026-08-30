@@ -3393,6 +3393,71 @@ export function useCertidaoMensalUploadMassa({
                             : texto;
                     };
 
+                const normalizarJsonComparavel =
+                    (valor) => {
+                        if (
+                            Array.isArray(
+                                valor
+                            )
+                        ) {
+                            return valor.map(
+                                normalizarJsonComparavel
+                            );
+                        }
+
+                        if (
+                            ehObjeto(
+                                valor
+                            )
+                        ) {
+                            return Object
+                                .keys(
+                                    valor
+                                )
+                                .sort()
+                                .reduce(
+                                    (
+                                        acumulado,
+                                        chave
+                                    ) => {
+                                        acumulado[chave] =
+                                            normalizarJsonComparavel(
+                                                valor[chave]
+                                            );
+
+                                        return acumulado;
+                                    },
+                                    {}
+                                );
+                        }
+
+                        return valor;
+                    };
+
+                const jsonEquivalente =
+                    (
+                        primeiro,
+                        segundo
+                    ) => {
+                        try {
+                            return (
+                                JSON.stringify(
+                                    normalizarJsonComparavel(
+                                        primeiro
+                                    )
+                                ) ===
+                                JSON.stringify(
+                                    normalizarJsonComparavel(
+                                        segundo
+                                    )
+                                )
+                            );
+                        }
+                        catch {
+                            return false;
+                        }
+                    };
+
                 const versaoAlvo =
                     textoSeguro(
                         versaoId
@@ -3628,8 +3693,14 @@ export function useCertidaoMensalUploadMassa({
                         null,
                 };
 
-                const resposta =
-                    await supabase.rpc(
+                const controladorRevisao =
+                    typeof AbortController ===
+                    "function"
+                        ? new AbortController()
+                        : null;
+
+                let requisicaoRevisao =
+                    supabase.rpc(
                         "revisar_certidao_mensal_versao_existente",
                         {
                             p_versao_id:
@@ -3665,26 +3736,313 @@ export function useCertidaoMensalUploadMassa({
                     );
 
                 if (
-                    resposta?.error
+                    !controladorRevisao ||
+                    typeof requisicaoRevisao
+                        ?.abortSignal !==
+                        "function"
                 ) {
                     throw new Error(
-                        (
-                            "Não foi possível salvar a análise corrigida. " +
-                            textoSeguro(
-                                resposta
-                                    .error
-                                    ?.message
-                            )
-                        ).trim()
+                        "O cliente Supabase não oferece cancelamento seguro para esta revisão. A gravação foi bloqueada antes do envio."
                     );
                 }
 
-                const retorno =
-                    Array.isArray(
-                        resposta?.data
-                    )
-                        ? resposta.data[0]
-                        : resposta?.data;
+                requisicaoRevisao =
+                    requisicaoRevisao
+                        .abortSignal(
+                            controladorRevisao
+                                .signal
+                        );
+
+                const temporizadorRevisao =
+                    setTimeout(
+                        () => {
+                            controladorRevisao
+                                .abort();
+                        },
+                        20000
+                    );
+
+                let resposta =
+                    null;
+
+                let erroTransporte =
+                    null;
+
+                try {
+                    resposta =
+                        await requisicaoRevisao;
+                }
+                catch (error) {
+                    erroTransporte =
+                        error;
+                }
+                finally {
+                    clearTimeout(
+                        temporizadorRevisao
+                    );
+                }
+
+                const respostaExpirou =
+                    controladorRevisao
+                        .signal
+                        .aborted ===
+                    true;
+
+                let retorno =
+                    null;
+
+                if (
+                    respostaExpirou
+                ) {
+                    const controladorConfirmacao =
+                        typeof AbortController ===
+                        "function"
+                            ? new AbortController()
+                            : null;
+
+                    if (!controladorConfirmacao) {
+                        throw new Error(
+                            "A resposta do salvamento expirou e a confirmação segura não está disponível. Reabra o documento antes de tentar novamente."
+                        );
+                    }
+
+                    let consultaVersaoConfirmada =
+                        supabase
+                            .from(
+                                "certidao_mensal_versoes"
+                            )
+                            .select(
+                                "id,item_id,numero_versao,hash_sha256,status_resultado,diagnostico,payload"
+                            )
+                            .eq(
+                                "id",
+                                versaoAlvo
+                            )
+                            .eq(
+                                "item_id",
+                                itemId
+                            )
+                            .maybeSingle();
+
+                    let consultaItemConfirmado =
+                        supabase
+                            .from(
+                                "certidao_mensal_itens"
+                            )
+                            .select(
+                                "id,versao_atual_id,tipo_documento"
+                            )
+                            .eq(
+                                "id",
+                                itemId
+                            )
+                            .maybeSingle();
+
+                    if (
+                        typeof consultaVersaoConfirmada
+                            ?.abortSignal !==
+                            "function" ||
+                        typeof consultaItemConfirmado
+                            ?.abortSignal !==
+                            "function"
+                    ) {
+                        throw new Error(
+                            "A resposta do salvamento expirou e o cliente não permite confirmar o resultado com timeout seguro. Reabra o documento antes de tentar novamente."
+                        );
+                    }
+
+                    consultaVersaoConfirmada =
+                        consultaVersaoConfirmada
+                            .abortSignal(
+                                controladorConfirmacao
+                                    .signal
+                            );
+
+                    consultaItemConfirmado =
+                        consultaItemConfirmado
+                            .abortSignal(
+                                controladorConfirmacao
+                                    .signal
+                            );
+
+                    const temporizadorConfirmacao =
+                        setTimeout(
+                            () => {
+                                controladorConfirmacao
+                                    .abort();
+                            },
+                            10000
+                        );
+
+                    let respostaVersaoConfirmada =
+                        null;
+
+                    let respostaItemConfirmado =
+                        null;
+
+                    let erroConfirmacao =
+                        null;
+
+                    try {
+                        [
+                            respostaVersaoConfirmada,
+                            respostaItemConfirmado,
+                        ] =
+                            await Promise.all([
+                                consultaVersaoConfirmada,
+                                consultaItemConfirmado,
+                            ]);
+                    }
+                    catch (error) {
+                        erroConfirmacao =
+                            error;
+                    }
+                    finally {
+                        clearTimeout(
+                            temporizadorConfirmacao
+                        );
+                    }
+
+                    if (
+                        controladorConfirmacao
+                            .signal
+                            .aborted ===
+                            true ||
+                        erroConfirmacao ||
+                        respostaVersaoConfirmada
+                            ?.error ||
+                        respostaItemConfirmado
+                            ?.error ||
+                        !respostaVersaoConfirmada
+                            ?.data ||
+                        !respostaItemConfirmado
+                            ?.data
+                    ) {
+                        throw new Error(
+                            "O servidor não confirmou o salvamento dentro do limite de segurança. A gravação pode ter sido concluída; reabra o documento antes de tentar novamente."
+                        );
+                    }
+
+                    const versaoConfirmada =
+                        respostaVersaoConfirmada
+                            .data;
+
+                    const itemConfirmado =
+                        respostaItemConfirmado
+                            .data;
+
+                    const identidadeConfirmada =
+                        textoSeguro(
+                            versaoConfirmada
+                                ?.id
+                        ) ===
+                            versaoAlvo &&
+                        textoSeguro(
+                            versaoConfirmada
+                                ?.item_id
+                        ) ===
+                            itemId &&
+                        Number(
+                            versaoConfirmada
+                                ?.numero_versao
+                        ) ===
+                            numeroVersao &&
+                        normalizarHashUploadHistorico(
+                            versaoConfirmada
+                                ?.hash_sha256
+                        ) ===
+                            hashSha256 &&
+                        textoSeguro(
+                            versaoConfirmada
+                                ?.status_resultado
+                        ) ===
+                            statusResultado &&
+                        textoSeguro(
+                            itemConfirmado
+                                ?.id
+                        ) ===
+                            itemId &&
+                        textoSeguro(
+                            itemConfirmado
+                                ?.versao_atual_id
+                        ) ===
+                            versaoAlvo &&
+                        textoSeguro(
+                            itemConfirmado
+                                ?.tipo_documento
+                        )
+                            .toLowerCase() ===
+                            tipoDocumento;
+
+                    const diagnosticoConfirmado =
+                        jsonEquivalente(
+                            versaoConfirmada
+                                ?.diagnostico,
+                            diagnosticoNovo
+                        ) &&
+                        jsonEquivalente(
+                            versaoConfirmada
+                                ?.payload
+                                ?.diagnostico,
+                            diagnosticoNovo
+                        );
+
+                    if (
+                        !identidadeConfirmada ||
+                        !diagnosticoConfirmado
+                    ) {
+                        throw new Error(
+                            "A resposta do salvamento expirou e a leitura de confirmação não comprovou a mesma versão com a análise esperada. Nenhuma repetição automática foi executada."
+                        );
+                    }
+
+                    retorno = {
+                        alterado:
+                            true,
+
+                        versaoId:
+                            versaoAlvo,
+
+                        itemId,
+
+                        numeroVersao,
+
+                        auditoriaId:
+                            "",
+
+                        confirmadoAposTimeout:
+                            true,
+                    };
+                }
+                else {
+                    if (
+                        erroTransporte
+                    ) {
+                        throw erroTransporte;
+                    }
+
+                    if (
+                        resposta?.error
+                    ) {
+                        throw new Error(
+                            (
+                                "Não foi possível salvar a análise corrigida. " +
+                                textoSeguro(
+                                    resposta
+                                        .error
+                                        ?.message
+                                )
+                            ).trim()
+                        );
+                    }
+
+                    retorno =
+                        Array.isArray(
+                            resposta?.data
+                        )
+                            ? resposta.data[0]
+                            : resposta?.data;
+                }
 
                 /*
                  * Atualização local somente DEPOIS do RPC PASS.
@@ -3814,6 +4172,11 @@ export function useCertidaoMensalUploadMassa({
                             retorno
                                 ?.auditoriaId
                         ),
+
+                    confirmadoAposTimeout:
+                        retorno
+                            ?.confirmadoAposTimeout ===
+                        true,
                 });
             },
             [
