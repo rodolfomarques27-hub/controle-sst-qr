@@ -100,18 +100,7 @@ async function resolverUrlFotoSidebar(valor = "") {
         return { url: foto, revogar: false };
     }
 
-    try {
-        const { data, error } = await supabase.storage
-            .from(BUCKET_FOTOS_USUARIOS_SIDEBAR)
-            .download(foto);
-
-        if (!error && data && typeof URL !== "undefined") {
-            return { url: URL.createObjectURL(data), revogar: true };
-        }
-    } catch {
-        // Se o download autenticado falhar, tenta URL assinada.
-    }
-
+    // SAFE_SCAN_V7_AVATAR_SIGNED_URL_FIRST
     try {
         const { data, error } = await supabase.storage
             .from(BUCKET_FOTOS_USUARIOS_SIDEBAR)
@@ -121,7 +110,19 @@ async function resolverUrlFotoSidebar(valor = "") {
             return { url: data.signedUrl, revogar: false };
         }
     } catch {
-        // Mantem fallback para iniciais.
+        // Se a URL assinada falhar, tenta download autenticado como fallback.
+    }
+
+    try {
+        const { data, error } = await supabase.storage
+            .from(BUCKET_FOTOS_USUARIOS_SIDEBAR)
+            .download(foto);
+
+        if (!error && data && typeof URL !== "undefined") {
+            return { url: URL.createObjectURL(data), revogar: true };
+        }
+    } catch {
+        // Mantem fallback final para iniciais.
     }
 
     return { url: "", revogar: false };

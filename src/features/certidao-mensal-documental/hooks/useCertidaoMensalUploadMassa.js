@@ -21,9 +21,15 @@ import {
     processarArquivosCertidaoEmLote,
 } from "../services/certidaoMensalUploadMassaService.js";
 import {
+    criarDiagnosticoPersistencia,
     criarFilaAlvosPersistenciaPrincipalUploadMassa,
     criarPlanoPersistenciaPrincipalUploadMassa,
+    executarFilaViaExecutorUnitarioUploadMassa,
+    executarPlanoPersistenciaPrincipalUploadMassa,
 } from "../services/certidaoMensalUploadMassaPersistencePlanService.js";
+import {
+    criarUrlAssinadaPdfCertidaoMensal,
+} from "../services/certidaoMensalDocumentPersistenceService.js";
 
 import {
     criarPlanoComplementarIndividualUploadMassa,
@@ -439,6 +445,11 @@ async function consultarVersoesDuplicadasUploadHistorico({
                     "hash_sha256",
                     "nome_original",
                     "criado_em",
+                    "status_resultado",
+                    "diagnostico",
+                    "payload",
+                    "bucket_id",
+                    "caminho_storage",
                 ].join(",")
             )
             .in(
@@ -1446,6 +1457,266 @@ export function aplicarClassificacaoFinanceiraSispagUploadMassa({
  */
 
 
+// ============================================================
+// SAFE_SCAN_CERT2_R11_SNAPSHOT_COLABORADORES
+//
+// Consulta read-only própria do CERT2 no início de cada lote.
+// Não usa status/mobilização como filtro.
+// O array React nunca é tratado como prova de inexistência.
+// ============================================================
+
+const CERT2_R11_TAMANHO_PAGINA_COLABORADORES =
+    500;
+
+function congelarColaboradorSnapshotCert2R11(
+    colaborador = {}
+) {
+    return Object.freeze({
+        id:
+            colaborador?.id ||
+            null,
+
+        nome:
+            colaborador?.nome ||
+            "",
+
+        cpf:
+            colaborador?.cpf ||
+            "",
+
+        matricula:
+            colaborador?.matricula ||
+            "",
+
+        matricula_esocial:
+            colaborador?.matricula_esocial ||
+            "",
+
+        matriculaEsocial:
+            colaborador?.matricula_esocial ||
+            "",
+
+        codigo_funcionario:
+            colaborador?.codigo_funcionario ||
+            "",
+
+        empresa_id:
+            colaborador?.empresa_id ||
+            null,
+
+        empresaId:
+            colaborador?.empresa_id ||
+            null,
+    });
+}
+
+function criarSnapshotConsultaColaboradoresCert2R11({
+    status,
+    colaboradores = [],
+    detalhe = "",
+    quantidadeContexto = 0,
+}) {
+    const lista =
+        Object.freeze(
+            (
+                Array.isArray(
+                    colaboradores
+                )
+                    ? colaboradores
+                    : []
+            ).map(
+                congelarColaboradorSnapshotCert2R11
+            )
+        );
+
+    return Object.freeze({
+        status,
+
+        colaboradores:
+            lista,
+
+        detalhe:
+            String(
+                detalhe ||
+                ""
+            ),
+
+        quantidade:
+            lista.length,
+
+        quantidadeContexto:
+            Number.isFinite(
+                quantidadeContexto
+            )
+                ? quantidadeContexto
+                : 0,
+    });
+}
+
+async function consultarSnapshotColaboradoresCert2R11({
+    supabase,
+    signal,
+    colaboradoresContexto = [],
+}) {
+    const quantidadeContexto =
+        Array.isArray(
+            colaboradoresContexto
+        )
+            ? colaboradoresContexto.length
+            : 0;
+
+    if (
+        !supabase ||
+        typeof supabase.from !==
+            "function"
+    ) {
+        return criarSnapshotConsultaColaboradoresCert2R11({
+            status:
+                "CONSULTA_INCONCLUSIVA",
+
+            detalhe:
+                "Cliente Supabase indisponível para confirmar o cadastro de colaboradores.",
+
+            quantidadeContexto,
+        });
+    }
+
+    const acumulados =
+        [];
+
+    let inicio =
+        0;
+
+    try {
+        while (true) {
+            verificarCancelamento(
+                signal
+            );
+
+            const fim =
+                inicio +
+                CERT2_R11_TAMANHO_PAGINA_COLABORADORES -
+                1;
+
+            const {
+                data,
+                error,
+            } =
+                await supabase
+                    .from(
+                        "colaboradores"
+                    )
+                    .select(
+                        "id,nome,cpf,matricula,matricula_esocial,codigo_funcionario,empresa_id"
+                    )
+                    .order(
+                        "id",
+                        {
+                            ascending:
+                                true,
+                        }
+                    )
+                    .range(
+                        inicio,
+                        fim
+                    );
+
+            if (error) {
+                return criarSnapshotConsultaColaboradoresCert2R11({
+                    status:
+                        "CONSULTA_INCONCLUSIVA",
+
+                    detalhe:
+                        "Não foi possível confirmar a base de colaboradores do SafeScan: " +
+                        String(
+                            error?.message ||
+                            "erro de leitura do banco"
+                        ),
+
+                    quantidadeContexto,
+                });
+            }
+
+            const lote =
+                Array.isArray(
+                    data
+                )
+                    ? data.filter(
+                        Boolean
+                    )
+                    : [];
+
+            acumulados.push(
+                ...lote
+            );
+
+            if (
+                lote.length <
+                CERT2_R11_TAMANHO_PAGINA_COLABORADORES
+            ) {
+                break;
+            }
+
+            inicio +=
+                lote.length;
+
+            if (
+                inicio >
+                100000
+            ) {
+                return criarSnapshotConsultaColaboradoresCert2R11({
+                    status:
+                        "CONSULTA_INCONCLUSIVA",
+
+                    detalhe:
+                        "A consulta de colaboradores excedeu o limite defensivo do CERT2 e foi interrompida sem concluir a base.",
+
+                    quantidadeContexto,
+                });
+            }
+        }
+
+        verificarCancelamento(
+            signal
+        );
+
+        return criarSnapshotConsultaColaboradoresCert2R11({
+            status:
+                "BASE_CONFIRMADA",
+
+            colaboradores:
+                acumulados,
+
+            detalhe:
+                "Base de colaboradores consultada diretamente pelo CERT2 para esta operação.",
+
+            quantidadeContexto,
+        });
+    }
+    catch (error) {
+        if (
+            error?.name ===
+            "AbortError"
+        ) {
+            throw error;
+        }
+
+        return criarSnapshotConsultaColaboradoresCert2R11({
+            status:
+                "CONSULTA_INCONCLUSIVA",
+
+            detalhe:
+                "Não foi possível concluir a consulta de colaboradores do SafeScan: " +
+                String(
+                    error?.message ||
+                    "erro inesperado de leitura"
+                ),
+
+            quantidadeContexto,
+        });
+    }
+}
+
 export function useCertidaoMensalUploadMassa({
     supabase = null,
     empresas = [],
@@ -1784,7 +2055,19 @@ export function useCertidaoMensalUploadMassa({
         );
     const executarPersistenciaPrincipalControlada =
         useCallback(
-            async () => {
+            async ({
+                /*
+                 * SAFE_SCAN_UPLOAD_MASSA_HOOK_ALVO_UNICO_V1
+                 *
+                 * Sem alvo documental explícito:
+                 * zero execução.
+                 */
+                alvo =
+                    null,
+
+                interromperNoErro =
+                    true,
+            } = {}) => {
                 if (
                     !montadoRef.current ||
                     estado?.processando ||
@@ -1793,45 +2076,38 @@ export function useCertidaoMensalUploadMassa({
                     return null;
                 }
 
-                const plano =
-                    criarPlanoPersistenciaPrincipalUploadMassa({
-                        resultado:
-                            estado.resultado,
-                    });
+                return executarPlanoPersistenciaPrincipalUploadMassa({
+                    resultado:
+                        estado.resultado,
 
-                return {
+                    executarPersistencia:
+                        executorPersistenciaPrincipal,
+
+                    validarPreflightAntesPersistencia:
+                        validarPreflightPersistenciaPrincipal,
+
+                    auditarFalhaPersistencia:
+                        auditorPersistenciaPrincipal,
+
                     habilitado:
-                        false,
+                        habilitarPersistenciaPrincipal ===
+                        true,
 
-                    executorDisponivel:
-                        false,
+                    alvo,
 
-                    executorInvocado:
-                        false,
-
-                    chamadas:
-                        0,
-
-                    interrompidoPorErro:
-                        false,
-
-                    motivo:
-                        "GATE_DESABILITADO",
-
-                    alvo:
-                        null,
-
-                    plano,
-
-                    resultados:
-                        [],
-                };
+                    interromperNoErro,
+                });
             },
             [
                 estado.processando,
                 estado.resultado,
+                executorPersistenciaPrincipal,
+                validarPreflightPersistenciaPrincipal,
+                auditorPersistenciaPrincipal,
+                habilitarPersistenciaPrincipal,
             ]
         );
+
     /*
      * ============================================================
      * SAFE_SCAN_UPLOAD_MASSA_HOOK_LOTE_CONTROLADO_V1
@@ -1846,7 +2122,10 @@ export function useCertidaoMensalUploadMassa({
      */
     const executarPersistenciaPrincipalLoteControlado =
         useCallback(
-            async () => {
+            async ({
+                interromperNoErro =
+                    false,
+            } = {}) => {
                 if (
                     !montadoRef.current ||
                     estado?.processando ||
@@ -1866,35 +2145,35 @@ export function useCertidaoMensalUploadMassa({
                         plano,
                     });
 
-                return {
-                    executorDisponivel:
-                        false,
+                return executarFilaViaExecutorUnitarioUploadMassa({
+                    resultado:
+                        estado.resultado,
 
-                    totalFila:
-                        fila.length,
+                    fila,
 
-                    tentados:
-                        0,
+                    executarPersistencia:
+                        executorPersistenciaPrincipal,
 
-                    sucessos:
-                        0,
+                    validarPreflightAntesPersistencia:
+                        validarPreflightPersistenciaPrincipal,
 
-                    falhas:
-                        0,
+                    auditarFalhaPersistencia:
+                        auditorPersistenciaPrincipal,
 
-                    interrompidoPorErro:
-                        false,
+                    habilitado:
+                        habilitarPersistenciaPrincipal ===
+                        true,
 
-                    motivo:
-                        "GATE_DESABILITADO",
-
-                    resultados:
-                        [],
-                };
+                    interromperNoErro,
+                });
             },
             [
                 estado.processando,
                 estado.resultado,
+                executorPersistenciaPrincipal,
+                validarPreflightPersistenciaPrincipal,
+                auditorPersistenciaPrincipal,
+                habilitarPersistenciaPrincipal,
             ]
         );
     const processarArquivos =
@@ -2088,6 +2367,24 @@ export function useCertidaoMensalUploadMassa({
                         })
                     );
 
+                    const snapshotColaboradoresCert2 =
+                        await consultarSnapshotColaboradoresCert2R11({
+                            supabase,
+                            signal,
+
+                            colaboradoresContexto:
+                                colaboradores,
+                        });
+
+                    if (
+                        !operacaoAindaValida(
+                            operacaoId,
+                            signal
+                        )
+                    ) {
+                        return null;
+                    }
+
                     const resultadoLocal =
                         await processarArquivosCertidaoEmLote({
                             arquivos:
@@ -2096,7 +2393,17 @@ export function useCertidaoMensalUploadMassa({
                             empresas:
                                 empresasPreparadas,
 
-                            colaboradores,
+                            colaboradores:
+                                snapshotColaboradoresCert2
+                                    .colaboradores,
+
+                            estadoConsultaColaboradores:
+                                snapshotColaboradoresCert2
+                                    .status,
+
+                            detalheConsultaColaboradores:
+                                snapshotColaboradoresCert2
+                                    .detalhe,
 
                             /*
                              * Não recebemos competencia da página.
@@ -3002,6 +3309,549 @@ export function useCertidaoMensalUploadMassa({
                 supabase,
             ]
         );
+    /*
+     * ============================================================
+     * SAFE_SCAN_COMPLEMENTAR_FLUXO_COMBINADO_R5
+     *
+     * Ação única da revisão:
+     *
+     * PRINCIPAIS
+     *     ↓
+     * resolve itemId da Folha
+     *     ↓
+     * rederiva complementares
+     *     ↓
+     * preflight read-only
+     *     ↓
+     * somente NOVA_EVIDENCIA
+     *
+     * BACKFILL nunca é executado aqui.
+     * JA_ASSOCIADA nunca duplica.
+     * BLOQUEADO nunca executa.
+     * ============================================================
+     */
+    // ============================================================
+    // SAFE_SCAN_REVISAR_DOCUMENTO_SALVO_WRITE_R10
+    //
+    // Corrige SOMENTE o diagnóstico da versão histórica existente.
+    // O PDF, SHA, Storage, item e número da versão são preservados.
+    // ============================================================
+    const salvarAnaliseCorrigidaDocumentoSalvo =
+        useCallback(
+            async ({
+                versaoId,
+            } = {}) => {
+                if (
+                    estado.processando
+                ) {
+                    throw new Error(
+                        "Aguarde o processamento atual terminar antes de salvar a análise corrigida."
+                    );
+                }
+
+                if (
+                    !supabase ||
+                    typeof supabase.rpc !==
+                        "function"
+                ) {
+                    throw new Error(
+                        "Cliente Supabase indisponível para salvar a análise corrigida."
+                    );
+                }
+
+                const ehObjeto =
+                    (valor) =>
+                        Boolean(
+                            valor &&
+                            typeof valor ===
+                                "object" &&
+                            !Array.isArray(
+                                valor
+                            )
+                        );
+
+                const normalizarCompetencia =
+                    (valor) => {
+                        const texto =
+                            textoSeguro(
+                                valor
+                            );
+
+                        const correspondencia =
+                            /^(\d{4})-(\d{2})(?:-\d{2})?$/
+                                .exec(
+                                    texto
+                                );
+
+                        return correspondencia
+                            ? (
+                                correspondencia[1] +
+                                "-" +
+                                correspondencia[2] +
+                                "-01"
+                            )
+                            : texto;
+                    };
+
+                const versaoAlvo =
+                    textoSeguro(
+                        versaoId
+                    );
+
+                if (
+                    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+                        versaoAlvo
+                    )
+                ) {
+                    throw new Error(
+                        "Versão histórica inválida para revisão."
+                    );
+                }
+
+                const itens =
+                    Array.isArray(
+                        estado
+                            ?.resultado
+                            ?.itens
+                    )
+                        ? estado.resultado.itens
+                        : [];
+
+                const itemAlvo =
+                    itens.find(
+                        (item) =>
+                            textoSeguro(
+                                item
+                                    ?.duplicidade
+                                    ?.codigo
+                            ) ===
+                                "DUPLICADO_EXATO_HISTORICO" &&
+                            textoSeguro(
+                                item
+                                    ?.duplicidade
+                                    ?.historico
+                                    ?.versaoId
+                            ) ===
+                                versaoAlvo
+                    ) ||
+                    null;
+
+                if (!itemAlvo) {
+                    throw new Error(
+                        "O documento histórico não está mais disponível no resultado atual do lote."
+                    );
+                }
+
+                const historico =
+                    itemAlvo
+                        ?.duplicidade
+                        ?.historico ||
+                    {};
+
+                const payloadHistorico =
+                    ehObjeto(
+                        historico?.payload
+                    )
+                        ? historico.payload
+                        : {};
+
+                const diagnosticoEsperado =
+                    ehObjeto(
+                        historico?.diagnostico
+                    )
+                        ? historico.diagnostico
+                        : ehObjeto(
+                            payloadHistorico
+                                ?.diagnostico
+                        )
+                            ? payloadHistorico.diagnostico
+                            : null;
+
+                if (
+                    !diagnosticoEsperado
+                ) {
+                    throw new Error(
+                        "O diagnóstico histórico não está disponível para o optimistic guard da revisão."
+                    );
+                }
+
+                const itemId =
+                    textoSeguro(
+                        historico?.itemId
+                    );
+
+                const numeroVersao =
+                    Number(
+                        historico?.numeroVersao
+                    );
+
+                const empresaId =
+                    textoSeguro(
+                        itemAlvo
+                            ?.resolucao
+                            ?.empresa
+                            ?.id
+                    );
+
+                const competenciaIso =
+                    normalizarCompetencia(
+                        itemAlvo
+                            ?.resolucao
+                            ?.destino
+                            ?.competenciaIso
+                    );
+
+                const tipoDocumento =
+                    textoSeguro(
+                        itemAlvo
+                            ?.resolucao
+                            ?.tipoDocumento
+                    ).toLowerCase();
+
+                const hashSha256 =
+                    normalizarHashUploadHistorico(
+                        itemAlvo
+                            ?.duplicidade
+                            ?.hashSha256 ||
+                        itemAlvo
+                            ?.hash
+                            ?.sha256
+                    );
+
+                const statusResultado =
+                    textoSeguro(
+                        historico
+                            ?.statusResultado
+                    );
+
+                if (
+                    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+                        itemId
+                    ) ||
+                    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+                        empresaId
+                    ) ||
+                    !/^\d{4}-(0[1-9]|1[0-2])-01$/.test(
+                        competenciaIso
+                    ) ||
+                    !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(
+                        tipoDocumento
+                    ) ||
+                    !/^[a-f0-9]{64}$/.test(
+                        hashSha256
+                    ) ||
+                    !Number.isInteger(
+                        numeroVersao
+                    ) ||
+                    numeroVersao <= 0 ||
+                    !statusResultado
+                ) {
+                    throw new Error(
+                        "A identidade protegida da versão histórica está incompleta. A correção foi bloqueada."
+                    );
+                }
+
+                const empresaSalvaId =
+                    textoSeguro(
+                        payloadHistorico
+                            ?.empresa
+                            ?.id
+                    );
+
+                const competenciaSalva =
+                    normalizarCompetencia(
+                        payloadHistorico
+                            ?.competencia
+                    );
+
+                const tipoSalvo =
+                    textoSeguro(
+                        payloadHistorico
+                            ?.item
+                            ?.tipoDocumento ||
+                        diagnosticoEsperado
+                            ?.classificacao
+                            ?.tipoDocumento
+                    ).toLowerCase();
+
+                if (
+                    (
+                        empresaSalvaId &&
+                        empresaSalvaId !==
+                            empresaId
+                    ) ||
+                    (
+                        competenciaSalva &&
+                        competenciaSalva !==
+                            competenciaIso
+                    ) ||
+                    (
+                        tipoSalvo &&
+                        tipoSalvo !==
+                            tipoDocumento
+                    )
+                ) {
+                    throw new Error(
+                        "A análise atual mudou empresa, competência ou tipo documental. Esta é uma revisão estrutural e não pode ser aplicada por este fluxo."
+                    );
+                }
+
+                const diagnosticoAtual =
+                    criarDiagnosticoPersistencia(
+                        itemAlvo
+                    );
+
+                /*
+                 * O guard SHA altera resolucao.status para BLOQUEADO.
+                 * Não persistimos esse estado operacional como diagnóstico.
+                 *
+                 * Atualizamos somente as áreas analíticas produzidas
+                 * pelo analisador atual e preservamos resolucaoLote
+                 * e qualquer metadado histórico adicional.
+                 */
+                const diagnosticoNovo = {
+                    ...diagnosticoEsperado,
+
+                    leitura:
+                        diagnosticoAtual
+                            ?.leitura ||
+                        null,
+
+                    classificacao:
+                        diagnosticoAtual
+                            ?.classificacao ||
+                        null,
+
+                    avaliacao:
+                        diagnosticoAtual
+                            ?.avaliacao ??
+                        null,
+                };
+
+                const resposta =
+                    await supabase.rpc(
+                        "revisar_certidao_mensal_versao_existente",
+                        {
+                            p_versao_id:
+                                versaoAlvo,
+
+                            p_item_id:
+                                itemId,
+
+                            p_numero_versao:
+                                numeroVersao,
+
+                            p_hash_sha256:
+                                hashSha256,
+
+                            p_empresa_id:
+                                empresaId,
+
+                            p_competencia:
+                                competenciaIso,
+
+                            p_tipo_documento:
+                                tipoDocumento,
+
+                            p_status_resultado_esperado:
+                                statusResultado,
+
+                            p_diagnostico_esperado:
+                                diagnosticoEsperado,
+
+                            p_diagnostico_novo:
+                                diagnosticoNovo,
+                        }
+                    );
+
+                if (
+                    resposta?.error
+                ) {
+                    throw new Error(
+                        (
+                            "Não foi possível salvar a análise corrigida. " +
+                            textoSeguro(
+                                resposta
+                                    .error
+                                    ?.message
+                            )
+                        ).trim()
+                    );
+                }
+
+                const retorno =
+                    Array.isArray(
+                        resposta?.data
+                    )
+                        ? resposta.data[0]
+                        : resposta?.data;
+
+                /*
+                 * Atualização local somente DEPOIS do RPC PASS.
+                 * O item continua DUPLICADO_EXATO_HISTORICO / BLOQUEADO.
+                 * Apenas o snapshot analítico histórico é atualizado.
+                 */
+                setEstado(
+                    (atual) => {
+                        const resultadoAtual =
+                            atual?.resultado;
+
+                        const itensAtuais =
+                            Array.isArray(
+                                resultadoAtual
+                                    ?.itens
+                            )
+                                ? resultadoAtual.itens
+                                : [];
+
+                        let encontrou =
+                            false;
+
+                        const itensAtualizados =
+                            itensAtuais.map(
+                                (candidato) => {
+                                    const historicoCandidato =
+                                        candidato
+                                            ?.duplicidade
+                                            ?.historico;
+
+                                    if (
+                                        textoSeguro(
+                                            historicoCandidato
+                                                ?.versaoId
+                                        ) !==
+                                            versaoAlvo
+                                    ) {
+                                        return candidato;
+                                    }
+
+                                    encontrou =
+                                        true;
+
+                                    const payloadAnterior =
+                                        ehObjeto(
+                                            historicoCandidato
+                                                ?.payload
+                                        )
+                                            ? historicoCandidato.payload
+                                            : null;
+
+                                    return {
+                                        ...candidato,
+
+                                        duplicidade: {
+                                            ...candidato
+                                                .duplicidade,
+
+                                            historico: {
+                                                ...historicoCandidato,
+
+                                                diagnostico:
+                                                    diagnosticoNovo,
+
+                                                payload:
+                                                    payloadAnterior
+                                                        ? {
+                                                            ...payloadAnterior,
+
+                                                            diagnostico:
+                                                                diagnosticoNovo,
+                                                        }
+                                                        : payloadAnterior,
+                                            },
+                                        },
+                                    };
+                                }
+                            );
+
+                        if (!encontrou) {
+                            return atual;
+                        }
+
+                        return {
+                            ...atual,
+
+                            resultado: {
+                                ...resultadoAtual,
+
+                                itens:
+                                    itensAtualizados,
+                            },
+                        };
+                    }
+                );
+
+                return Object.freeze({
+                    alterado:
+                        retorno
+                            ?.alterado ===
+                        true,
+
+                    versaoId:
+                        textoSeguro(
+                            retorno
+                                ?.versaoId ||
+                            versaoAlvo
+                        ),
+
+                    itemId:
+                        textoSeguro(
+                            retorno
+                                ?.itemId ||
+                            itemId
+                        ),
+
+                    numeroVersao:
+                        Number(
+                            retorno
+                                ?.numeroVersao ||
+                            numeroVersao
+                        ) ||
+                        numeroVersao,
+
+                    auditoriaId:
+                        textoSeguro(
+                            retorno
+                                ?.auditoriaId
+                        ),
+                });
+            },
+            [
+                estado.processando,
+                estado.resultado,
+                supabase,
+            ]
+        );
+    // ============================================================
+    // SAFE_SCAN_DUPLICADO_HISTORICO_OPEN_READ_ONLY_R6
+    // ============================================================
+    const criarUrlDocumentoHistoricoReadOnly =
+        useCallback(
+            async ({
+                caminhoStorage,
+            } = {}) => {
+                const caminho =
+                    textoSeguro(
+                        caminhoStorage
+                    );
+
+                if (!caminho) {
+                    throw new Error(
+                        "O documento existente não possui caminho de Storage disponível."
+                    );
+                }
+
+                return criarUrlAssinadaPdfCertidaoMensal({
+                    caminhoStorage:
+                        caminho,
+
+                    duracaoSegundos:
+                        600,
+                });
+            },
+            []
+        );
+
     return {
         ...estadoPublico,
 
@@ -3012,6 +3862,10 @@ export function useCertidaoMensalUploadMassa({
         planoExecucaoComplementarDryRun,
 
         consultarDestinosComplementaresReadOnly,
+
+        salvarAnaliseCorrigidaDocumentoSalvo,
+
+        criarUrlDocumentoHistoricoReadOnly,
 
         executarEvidenciaComplementarUploadMassaControlada:
             async () =>

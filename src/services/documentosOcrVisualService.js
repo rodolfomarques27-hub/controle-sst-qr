@@ -10,6 +10,175 @@ async function carregarTesseractDocumental() {
     }
 }
 
+// SAFE_SCAN_CERT2_M4_F2_E_TESSERACT_WORKER_REUSE_V1
+//
+// Tesseract.recognize() cria e encerra um worker por chamada.
+// A leitura documental pode executar OCR repetidamente em páginas
+// e orientações consecutivas. Este worker local é reutilizado entre
+// chamadas e descartado após inatividade ou erro.
+//
+// O contrato semântico do OCR permanece inalterado.
+
+const TEMPO_OCIOSO_WORKER_TESSERACT_DOCUMENTAL_MS =
+    60000;
+
+let workerTesseractDocumentalPromise =
+    null;
+
+let filaTesseractDocumental =
+    Promise.resolve();
+
+let timerWorkerTesseractDocumental =
+    null;
+
+function cancelarEncerramentoWorkerTesseractDocumental() {
+    if (
+        timerWorkerTesseractDocumental !==
+        null
+    ) {
+        clearTimeout(
+            timerWorkerTesseractDocumental
+        );
+
+        timerWorkerTesseractDocumental =
+            null;
+    }
+}
+
+async function encerrarWorkerTesseractDocumental() {
+    cancelarEncerramentoWorkerTesseractDocumental();
+
+    const workerPromise =
+        workerTesseractDocumentalPromise;
+
+    workerTesseractDocumentalPromise =
+        null;
+
+    if (!workerPromise) {
+        return;
+    }
+
+    try {
+        const worker =
+            await workerPromise;
+
+        if (
+            typeof worker?.terminate ===
+            "function"
+        ) {
+            await worker.terminate();
+        }
+    }
+    catch {
+        // Liberação de recurso não pode bloquear a leitura documental.
+    }
+}
+
+function agendarEncerramentoWorkerTesseractDocumental() {
+    cancelarEncerramentoWorkerTesseractDocumental();
+
+    timerWorkerTesseractDocumental =
+        setTimeout(
+            () => {
+                void encerrarWorkerTesseractDocumental();
+            },
+            TEMPO_OCIOSO_WORKER_TESSERACT_DOCUMENTAL_MS
+        );
+}
+
+async function obterWorkerTesseractDocumental() {
+    cancelarEncerramentoWorkerTesseractDocumental();
+
+    if (
+        !workerTesseractDocumentalPromise
+    ) {
+        workerTesseractDocumentalPromise =
+            (
+                async () => {
+                    const moduloTesseract =
+                        await carregarTesseractDocumental();
+
+                    const criarWorker =
+                        moduloTesseract?.createWorker ||
+                        moduloTesseract?.default?.createWorker;
+
+                    if (
+                        typeof criarWorker !==
+                        "function"
+                    ) {
+                        throw new Error(
+                            "OCR local indisponível: função createWorker não encontrada."
+                        );
+                    }
+
+                    return await criarWorker(
+                        "por",
+                        1,
+                        {
+                            logger: () => {},
+                            tessedit_pageseg_mode:
+                                "6",
+                            preserve_interword_spaces:
+                                "1",
+                        }
+                    );
+                }
+            )()
+                .catch(
+                    (error) => {
+                        workerTesseractDocumentalPromise =
+                            null;
+
+                        throw error;
+                    }
+                );
+    }
+
+    return await workerTesseractDocumentalPromise;
+}
+
+async function reconhecerComWorkerTesseractDocumental(
+    canvas
+) {
+    const executar =
+        async () => {
+            const worker =
+                await obterWorkerTesseractDocumental();
+
+            try {
+                return await worker.recognize(
+                    canvas
+                );
+            }
+            catch (error) {
+                await encerrarWorkerTesseractDocumental();
+
+                throw error;
+            }
+            finally {
+                if (
+                    workerTesseractDocumentalPromise
+                ) {
+                    agendarEncerramentoWorkerTesseractDocumental();
+                }
+            }
+        };
+
+    const atual =
+        filaTesseractDocumental.then(
+            executar,
+            executar
+        );
+
+    filaTesseractDocumental =
+        atual.then(
+            () => undefined,
+            () => undefined
+        );
+
+    return await atual;
+}
+
 function obterBboxPalavraOcr(palavra = {}) {
     const bbox = palavra?.bbox || palavra?.box || palavra?.boundingBox || null;
 
@@ -511,43 +680,75 @@ export async function reconhecerTextoCanvasComOcrComOrientacao(canvas, extrairDa
 }
 
 async function reconhecerTextoCanvasComOcr(canvas) {
-    const moduloTesseract = await carregarTesseractDocumental();
-    const reconhecer = moduloTesseract?.recognize || moduloTesseract?.default?.recognize;
-
-    if (typeof reconhecer !== "function") {
-        throw new Error("OCR local indisponível: função recognize não encontrada.");
-    }
-
-    const avisoOriginal = typeof console !== "undefined" ? console.warn : null;
+    const avisoOriginal =
+        typeof console !== "undefined"
+            ? console.warn
+            : null;
 
     try {
         if (avisoOriginal) {
-            console.warn = (...args) => {
-                const texto = args.map((arg) => String(arg || "")).join(" ");
-                if (
-                    texto.includes("Image too small to scale") ||
-                    texto.includes("Line cannot be recognized")
-                ) {
-                    return;
-                }
-                avisoOriginal(...args);
-            };
+            console.warn =
+                (...args) => {
+                    const texto =
+                        args
+                            .map(
+                                (arg) =>
+                                    String(
+                                        arg ||
+                                        ""
+                                    )
+                            )
+                            .join(
+                                " "
+                            );
+
+                    if (
+                        texto.includes(
+                            "Image too small to scale"
+                        ) ||
+                        texto.includes(
+                            "Line cannot be recognized"
+                        )
+                    ) {
+                        return;
+                    }
+
+                    avisoOriginal(
+                        ...args
+                    );
+                };
         }
 
-        const resultado = await reconhecer(canvas, "por", {
-            logger: () => {},
-            tessedit_pageseg_mode: "6",
-            preserve_interword_spaces: "1",
-        });
+        const resultado =
+            await reconhecerComWorkerTesseractDocumental(
+                canvas
+            );
 
         return {
-            texto: limparTextoPossivelDocumento(resultado?.data?.text || ""),
-            palavras: Array.isArray(resultado?.data?.words) ? resultado.data.words : [],
-            confianca: Number(resultado?.data?.confidence || 0),
+            texto:
+                limparTextoPossivelDocumento(
+                    resultado?.data?.text ||
+                    ""
+                ),
+
+            palavras:
+                Array.isArray(
+                    resultado?.data?.words
+                )
+                    ? resultado.data.words
+                    : [],
+
+            confianca:
+                Number(
+                    resultado?.data?.confidence ||
+                    0
+                ),
         };
-    } finally {
+    }
+    finally {
         if (avisoOriginal) {
-            console.warn = avisoOriginal;
+            console.warn =
+                avisoOriginal;
         }
     }
 }

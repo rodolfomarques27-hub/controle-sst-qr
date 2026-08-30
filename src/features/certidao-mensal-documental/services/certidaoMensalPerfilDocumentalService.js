@@ -19,6 +19,14 @@ const PADRAO_TIPO_DOCUMENTO =
 const LIMITE_MOTIVO =
     500;
 
+const ESCOPOS_PERFIL_DOCUMENTAL =
+    new Set([
+        "ANUAL",
+        "COMPETENCIA",
+    ]);
+
+// SAFE_SCAN_CERT2_V8_EXCECAO_MENSAL
+
 let clienteSupabasePadraoPromise =
     null;
 
@@ -319,12 +327,68 @@ async function executarRpcPerfilDocumental({
     return resposta?.data ?? null;
 }
 
+function normalizarEscopoPerfilDocumental(
+    valor,
+    competenciaInicio = "",
+) {
+    const legadoSemEscopo =
+        valor ===
+            undefined ||
+        valor ===
+            null;
+
+    if (legadoSemEscopo) {
+        /*
+         * Compatibilidade read-only com banco pré-migration.
+         */
+        return String(
+            competenciaInicio || "",
+        ).slice(
+            5,
+            7,
+        ) === "01"
+            ? "ANUAL"
+            : "COMPETENCIA";
+    }
+
+    const escopo =
+        textoSeguro(
+            valor,
+            30,
+        ).toUpperCase();
+
+    if (
+        ESCOPOS_PERFIL_DOCUMENTAL.has(
+            escopo,
+        )
+    ) {
+        return escopo;
+    }
+
+    throw criarErroPerfilDocumental(
+        null,
+        "O escopo informado é inválido. Use ANUAL ou COMPETENCIA.",
+        {
+            etapa:
+                "validacao_escopo",
+        },
+    );
+}
+
+
 export function normalizarRegraPerfilDocumental(
     registro,
 ) {
     const regra =
         objetoSeguro(
             registro,
+        );
+
+    const competenciaInicio =
+        textoSeguro(
+            regra.competencia_inicio ||
+                regra.competenciaInicio,
+            10,
         );
 
     return {
@@ -353,12 +417,13 @@ export function normalizarRegraPerfilDocumental(
         exigido:
             regra.exigido === true,
 
-        competenciaInicio:
-            textoSeguro(
-                regra.competencia_inicio ||
-                    regra.competenciaInicio,
-                10,
+        escopo:
+            normalizarEscopoPerfilDocumental(
+                regra.escopo,
+                competenciaInicio,
             ),
+
+        competenciaInicio,
 
         motivo:
             textoSeguro(
@@ -400,6 +465,7 @@ export function normalizarRegraPerfilDocumental(
             null,
     };
 }
+
 
 export async function listarRegrasPerfilDocumentalCertidaoMensal(
     empresaId,
@@ -478,6 +544,27 @@ export async function salvarRegraPerfilDocumentalCertidaoMensal(
             registro.competenciaInicio,
         );
 
+    const escopo =
+        normalizarEscopoPerfilDocumental(
+            registro.escopo,
+            competenciaInicio,
+        );
+
+    if (
+        !ESCOPOS_PERFIL_DOCUMENTAL.has(
+            escopo,
+        )
+    ) {
+        throw criarErroPerfilDocumental(
+            null,
+            "O escopo da regra deve ser ANUAL ou COMPETENCIA.",
+            {
+                etapa:
+                    "validacao_escopo",
+            },
+        );
+    }
+
     const motivo =
         normalizarMotivo(
             registro.motivo,
@@ -503,6 +590,9 @@ export async function salvarRegraPerfilDocumentalCertidaoMensal(
 
                 p_competencia_inicio:
                     competenciaInicio,
+
+                p_escopo:
+                    escopo,
 
                 p_motivo:
                     motivo,

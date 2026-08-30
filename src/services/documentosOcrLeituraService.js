@@ -109,15 +109,79 @@ export function criarFluxoLeituraDocumental({
         const registrosValidos = (registrosPaginas || []).filter((registro) => registro?.texto);
         const mapa = new Map();
 
-        const relevantes = registrosValidos.filter((registro) => registro.relevante);
-        const iniciais = registrosValidos.filter((registro) => registro.numero <= PAGINAS_MAXIMAS_PDFJS && !registro.relevante);
-        const demais = registrosValidos.filter((registro) => registro.numero > PAGINAS_MAXIMAS_PDFJS && !registro.relevante);
+        // SAFE_SCAN_PDFJS_PRESERVAR_PRIMEIRA_PAGINA_F10D2
+        const primeiraPagina =
+            registrosValidos.filter(
+                (registro) =>
+                    registro.numero ===
+                    1
+            );
 
-        [...relevantes, ...iniciais, ...demais]
+        const relevantes =
+            registrosValidos.filter(
+                (registro) =>
+                    registro.numero !==
+                        1 &&
+                    registro.relevante
+            );
+
+        const iniciais =
+            registrosValidos.filter(
+                (registro) =>
+                    registro.numero >
+                        1 &&
+                    registro.numero <=
+                        PAGINAS_MAXIMAS_PDFJS &&
+                    !registro.relevante
+            );
+
+        const demais =
+            registrosValidos.filter(
+                (registro) =>
+                    registro.numero >
+                        PAGINAS_MAXIMAS_PDFJS &&
+                    !registro.relevante
+            );
+
+        [
+            ...primeiraPagina,
+            ...relevantes,
+            ...iniciais,
+            ...demais,
+        ]
             .sort((a, b) => {
-                if (a.relevante && !b.relevante) return -1;
-                if (!a.relevante && b.relevante) return 1;
-                return a.numero - b.numero;
+                if (
+                    a.numero === 1 &&
+                    b.numero !== 1
+                ) {
+                    return -1;
+                }
+
+                if (
+                    a.numero !== 1 &&
+                    b.numero === 1
+                ) {
+                    return 1;
+                }
+
+                if (
+                    a.relevante &&
+                    !b.relevante
+                ) {
+                    return -1;
+                }
+
+                if (
+                    !a.relevante &&
+                    b.relevante
+                ) {
+                    return 1;
+                }
+
+                return (
+                    a.numero -
+                    b.numero
+                );
             })
             .forEach((registro) => {
                 if (!mapa.has(registro.numero)) {

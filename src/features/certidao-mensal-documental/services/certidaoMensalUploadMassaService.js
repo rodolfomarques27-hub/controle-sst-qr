@@ -10,6 +10,10 @@ import {
     resolverDocumentoCertidaoEmLote,
 } from "../analysis/certidaoDocumentBatchResolver.js";
 
+import {
+    CERTIDAO_MENSAL_DOCUMENTOS_EXTERNOS,
+} from "../domain/certidaoMensalRegraCompetencia.js";
+
 // ============================================================
 // SAFE_SCAN_UPLOAD_MASSA_PROCESSADOR_V1
 //
@@ -76,6 +80,82 @@ async function extrairTextoPadrao(
         );
 }
 
+// ============================================================
+// SAFE_SCAN_OCR_ADAPTATIVO_LOADER_CERT2_V1
+//
+// Carregamento tardio para manter o harness Node desacoplado
+// da cadeia browser/Tesseract.
+// ============================================================
+
+async function enriquecerTextoOcrAdaptativoPadrao({
+    arquivo,
+    textoExtraido = "",
+    resolucao = null,
+} = {}) {
+    const base = {
+        aplicada:
+            false,
+
+        texto:
+            textoSeguro(
+                textoExtraido
+            ),
+
+        textoOcr:
+            "",
+
+        paginasOcr:
+            [],
+
+        totalPaginas:
+            0,
+
+        confiancaOcr:
+            null,
+
+        avisos:
+            [],
+    };
+
+    try {
+        const modulo =
+            await import(
+                "../pdf/certidaoPdfMixedPageOcr.js"
+            );
+
+        if (
+            typeof modulo
+                ?.enriquecerTextoCertidaoPorOcrAdaptativo !==
+            "function"
+        ) {
+            return base;
+        }
+
+        return await modulo
+            .enriquecerTextoCertidaoPorOcrAdaptativo({
+                arquivo,
+                textoExtraido,
+                resolucao,
+            });
+    }
+    catch (error) {
+        return {
+            ...base,
+
+            avisos: [
+                (
+                    "OCR adaptativo CERT2 indisponível: " +
+                    String(
+                        error?.message ||
+                        "erro desconhecido"
+                    ) +
+                    "."
+                ),
+            ],
+        };
+    }
+}
+
 const DEPENDENCIAS_PADRAO =
     Object.freeze({
         validarArquivo:
@@ -97,6 +177,330 @@ function textoSeguro(
     return String(
         valor ?? ""
     ).trim();
+}
+
+// ============================================================
+// SAFE_SCAN_OCR_ADAPTATIVO_RESOLUCAO_CERT2_V1
+//
+// A primeira resolução é diagnóstica.
+// O OCR somente pode ser aceito se reduzir déficit documental,
+// preservar um tipo já reconhecido, não trocar empresa já
+// identificada e não piorar o status da resolução.
+//
+// Nenhuma decisão usa nome do arquivo ou caminho.
+// ============================================================
+
+const PESOS_PENDENCIA_OCR_ADAPTATIVO_CERT2 =
+    new Map([
+        [
+            "TIPO_NAO_IDENTIFICADO",
+            8,
+        ],
+        [
+            "EMPRESA_SEM_CNPJ_DOCUMENTAL",
+            4,
+        ],
+        [
+            "COMPETENCIA_NAO_IDENTIFICADA",
+            3,
+        ],
+        [
+            "COMPETENCIA_DOCUMENTAL_NAO_IDENTIFICADA",
+            3,
+        ],
+        [
+            "ORIGEM_VALIDADE_NAO_IDENTIFICADA",
+            3,
+        ],
+    ]);
+
+const TIPOS_NAO_IDENTIFICADOS_OCR_ADAPTATIVO_CERT2 =
+    new Set([
+        "",
+        "nao-identificado",
+        "documento-nao-identificado",
+        "nao_identificado",
+    ]);
+
+function calcularDeficitOcrAdaptativoCert2(
+    resolucao
+) {
+    const motivos =
+        Array.isArray(
+            resolucao?.motivos
+        )
+            ? resolucao.motivos
+            : [];
+
+    return motivos.reduce(
+        (
+            total,
+            motivo
+        ) => {
+            const codigo =
+                textoSeguro(
+                    motivo?.codigo
+                );
+
+            return (
+                total +
+                (
+                    PESOS_PENDENCIA_OCR_ADAPTATIVO_CERT2
+                        .get(
+                            codigo
+                        ) ||
+                    0
+                )
+            );
+        },
+        0
+    );
+}
+
+function obterTipoOcrAdaptativoCert2(
+    resolucao
+) {
+    return textoSeguro(
+        resolucao?.tipoDocumento ||
+        resolucao?.tipoClassificador
+    )
+        .toLowerCase();
+}
+
+function tipoEhIdentificadoOcrAdaptativoCert2(
+    tipo
+) {
+    return !TIPOS_NAO_IDENTIFICADOS_OCR_ADAPTATIVO_CERT2
+        .has(
+            textoSeguro(
+                tipo
+            )
+                .toLowerCase()
+        );
+}
+
+function tiposCompativeisOcrAdaptativoCert2({
+    inicial,
+    candidata,
+}) {
+    const tipoInicial =
+        obterTipoOcrAdaptativoCert2(
+            inicial
+        );
+
+    const tipoCandidato =
+        obterTipoOcrAdaptativoCert2(
+            candidata
+        );
+
+    if (
+        !tipoEhIdentificadoOcrAdaptativoCert2(
+            tipoInicial
+        )
+    ) {
+        return true;
+    }
+
+    return (
+        tipoInicial ===
+        tipoCandidato
+    );
+}
+
+function empresasCompativeisOcrAdaptativoCert2({
+    inicial,
+    candidata,
+}) {
+    const statusInicial =
+        textoSeguro(
+            inicial?.empresa?.status
+        )
+            .toUpperCase();
+
+    const statusCandidato =
+        textoSeguro(
+            candidata?.empresa?.status
+        )
+            .toUpperCase();
+
+    const empresaInicialId =
+        textoSeguro(
+            inicial?.empresa?.id
+        );
+
+    const empresaCandidataId =
+        textoSeguro(
+            candidata?.empresa?.id
+        );
+
+    if (
+        statusInicial ===
+        "IDENTIFICADA"
+    ) {
+        if (
+            statusCandidato !==
+            "IDENTIFICADA"
+        ) {
+            return false;
+        }
+
+        if (
+            empresaInicialId &&
+            empresaCandidataId &&
+            empresaInicialId !==
+            empresaCandidataId
+        ) {
+            return false;
+        }
+
+        return true;
+    }
+
+    if (
+        statusCandidato ===
+        "IDENTIFICADA"
+    ) {
+        return true;
+    }
+
+    return (
+        statusInicial ===
+        statusCandidato
+    );
+}
+
+function pontuarStatusOcrAdaptativoCert2(
+    status
+) {
+    switch (
+        textoSeguro(
+            status
+        )
+            .toUpperCase()
+    ) {
+        case "PRONTO":
+            return 3;
+
+        case "REVISAR":
+            return 2;
+
+        case "BLOQUEADO":
+            return 1;
+
+        default:
+            return 0;
+    }
+}
+
+function deveTentarOcrAdaptativoCert2({
+    leitura,
+    resolucao,
+}) {
+    const ehPdf =
+        textoSeguro(
+            leitura?.extensao
+        )
+            .toLowerCase() ===
+            "pdf" ||
+        textoSeguro(
+            leitura?.mimeType
+        )
+            .toLowerCase() ===
+            "application/pdf";
+
+    if (!ehPdf) {
+        return false;
+    }
+
+    if (
+        leitura?.qualidadeTexto
+            ?.correcaoOcrAplicada ===
+        true
+    ) {
+        return false;
+    }
+
+    const tipoLeitura =
+        textoSeguro(
+            leitura?.tipoLeitura
+        )
+            .toLowerCase();
+
+    if (
+        tipoLeitura !==
+            "pdf_texto_local" &&
+        tipoLeitura !==
+            "ocr_imagem_local"
+    ) {
+        return false;
+    }
+
+    return (
+        calcularDeficitOcrAdaptativoCert2(
+            resolucao
+        ) >
+        0
+    );
+}
+
+function aceitarResolucaoOcrAdaptativoCert2({
+    inicial,
+    candidata,
+}) {
+    const deficitInicial =
+        calcularDeficitOcrAdaptativoCert2(
+            inicial
+        );
+
+    const deficitCandidato =
+        calcularDeficitOcrAdaptativoCert2(
+            candidata
+        );
+
+    if (
+        deficitInicial <= 0 ||
+        deficitCandidato >=
+            deficitInicial
+    ) {
+        return false;
+    }
+
+    if (
+        !tiposCompativeisOcrAdaptativoCert2({
+            inicial,
+            candidata,
+        })
+    ) {
+        return false;
+    }
+
+    if (
+        !empresasCompativeisOcrAdaptativoCert2({
+            inicial,
+            candidata,
+        })
+    ) {
+        return false;
+    }
+
+    const statusInicial =
+        pontuarStatusOcrAdaptativoCert2(
+            inicial?.status
+        );
+
+    const statusCandidato =
+        pontuarStatusOcrAdaptativoCert2(
+            candidata?.status
+        );
+
+    if (
+        statusCandidato <
+        statusInicial
+    ) {
+        return false;
+    }
+
+    return true;
 }
 
 function normalizarArquivos(
@@ -304,6 +708,12 @@ function criarResumo(
                 "BLOQUEADO"
             ),
 
+        ignorados:
+            contar(
+                "IGNORADO"
+            ),
+
+
         falhasTecnicas:
             lista.filter(
                 (item) =>
@@ -316,6 +726,420 @@ function criarResumo(
 
 // ============================================================
 // ============================================================
+// ============================================================
+// ============================================================
+// SAFE_SCAN_FORA_MATRIZ_FISCAL_F10B_R3A
+//
+// Decisão exclusivamente pelo conteúdo documental.
+// Metadados externos ao conteúdo não participam da prova.
+// ============================================================
+
+const CODIGO_FORA_MATRIZ_CERT2 =
+    "FORA_MATRIZ_CERT2";
+
+function normalizarConteudoForaMatrizCert2(
+    valor = ""
+) {
+    return String(
+        valor ??
+        ""
+    )
+        .normalize(
+            "NFD"
+        )
+        .replace(
+            /[\u0300-\u036f]/g,
+            ""
+        )
+        .toUpperCase()
+        .replace(
+            /\s+/g,
+            " "
+        )
+        .trim();
+}
+
+function ehRelatorioApoioFiscalForaMatrizCert2(
+    item
+) {
+    const leitura =
+        item?.leitura ||
+        {};
+
+    const texto =
+        normalizarConteudoForaMatrizCert2(
+            leitura?.textoExtraido ||
+            leitura?.texto ||
+            ""
+        );
+
+    if (!texto) {
+        return false;
+    }
+
+    return Boolean(
+        texto.includes(
+            "INFORMACOES DE APOIO PARA EMISSAO DE CERTIDAO"
+        ) &&
+        texto.includes(
+            "DIAGNOSTICO FISCAL"
+        )
+    );
+}
+
+export function aplicarGuardForaMatrizFiscalCert2(
+    itens = []
+) {
+    const lista =
+        Array.isArray(
+            itens
+        )
+            ? itens
+            : [];
+
+    return lista.map(
+        (item) => {
+            if (
+                !ehRelatorioApoioFiscalForaMatrizCert2(
+                    item
+                )
+            ) {
+                return item;
+            }
+
+            const resolucao =
+                item?.resolucao ||
+                {};
+
+            const motivos =
+                Array.isArray(
+                    resolucao?.motivos
+                )
+                    ? resolucao.motivos
+                    : [];
+
+            return {
+                ...item,
+
+                foraMatrizCert2: {
+                    codigo:
+                        CODIGO_FORA_MATRIZ_CERT2,
+
+                    bloqueado:
+                        true,
+
+                    persistenciaPermitida:
+                        false,
+
+                    origem:
+                        "CONTEUDO_DOCUMENTAL",
+                },
+
+                resolucao: {
+                    ...resolucao,
+
+                    status:
+                        "BLOQUEADO",
+
+                    politica:
+                        "FORA_MATRIZ",
+
+                    titulo:
+                        "Documento fora da matriz CERT2",
+
+                    persistenciaAutomatica:
+                        false,
+
+                    persistido:
+                        false,
+
+                    motivos: [
+                        {
+                            codigo:
+                                CODIGO_FORA_MATRIZ_CERT2,
+
+                            mensagem:
+                                "Relatório de apoio ou diagnóstico fiscal identificado pelo conteúdo. " +
+                                "O documento não substitui a certidão exigida pela matriz CERT2.",
+                        },
+
+                        ...motivos.filter(
+                            (motivo) =>
+                                String(
+                                    motivo?.codigo ||
+                                    ""
+                                ) !==
+                                CODIGO_FORA_MATRIZ_CERT2
+                        ),
+                    ],
+                },
+
+                persistido:
+                    false,
+            };
+        }
+    );
+}
+
+// SAFE_SCAN_ESCOPO_EXTERNO_CERT2_27K
+//
+// Regra item-level:
+// - tipo reconhecido dentro do catálogo externo: segue;
+// - tipo reconhecido fora do catálogo externo: IGNORADO;
+// - tipo não identificado: continua fail-closed somente no item.
+//
+// Nome de arquivo e pasta não participam da prova.
+// ============================================================
+
+const CODIGO_FORA_ESCOPO_CERT2 =
+    "FORA_ESCOPO_CERT2";
+
+const TIPOS_EXTERNOS_CERT2 =
+    new Set(
+        CERTIDAO_MENSAL_DOCUMENTOS_EXTERNOS
+            .map(
+                (documento) =>
+                    textoSeguro(
+                        documento?.tipoDocumento
+                    )
+                        .toLowerCase()
+                        .trim()
+            )
+            .filter(Boolean)
+    );
+
+const MAPA_SUBTIPOS_EXTERNOS_CERT2 =
+    new Map([
+        [
+            "fgts-digital-gfd",
+            "fgts",
+        ],
+        [
+            "guia-fgts-digital",
+            "fgts",
+        ],
+        [
+            "relatorio-fgts-digital",
+            "fgts",
+        ],
+        [
+            "fgts-relatorio",
+            "fgts",
+        ],
+        [
+            "pagamento-salarial",
+            "folha-pagamento",
+        ],
+        [
+            "adiantamento-salarial",
+            "folha-pagamento",
+        ],
+        [
+            "comprovante-pagamento-folha",
+            "folha-pagamento",
+        ],
+        [
+            "comprovante-bancario-sispag",
+            "folha-pagamento",
+        ],
+    ]);
+
+// ============================================================
+// SAFE_SCAN_27K_ESCOPO_AMBIGUO_R3F
+// ============================================================
+
+const TIPOS_ESCOPO_AMBIGUO_CERT2 =
+    new Set([
+        "tributo-municipal-generico",
+        "darf-federal-generico",
+    ]);
+
+const TIPOS_NAO_IDENTIFICADOS_CERT2 =
+    new Set([
+        "",
+        "nao-identificado",
+        "documento-nao-identificado",
+        "nao_identificado",
+    ]);
+
+function normalizarTipoEscopoCert2(
+    valor
+) {
+    return textoSeguro(
+        valor
+    )
+        .toLowerCase()
+        .trim();
+}
+
+function obterTipoReconhecidoEscopoCert2(
+    item
+) {
+    const resolucao =
+        item?.resolucao ||
+        {};
+
+    const candidatos =
+        [
+            resolucao?.tipoDocumento,
+            resolucao?.tipoCatalogo,
+            resolucao?.tipoClassificador,
+            resolucao?.classificacao?.tipoCatalogo,
+            resolucao?.classificacao?.id,
+        ]
+            .map(
+                normalizarTipoEscopoCert2
+            )
+            .filter(
+                (tipo) =>
+                    !TIPOS_NAO_IDENTIFICADOS_CERT2
+                        .has(
+                            tipo
+                        )
+            );
+
+    return (
+        candidatos[0] ||
+        ""
+    );
+}
+
+function resolverTipoExternoEscopoCert2(
+    tipoReconhecido
+) {
+    const tipo =
+        normalizarTipoEscopoCert2(
+            tipoReconhecido
+        );
+
+    return (
+        MAPA_SUBTIPOS_EXTERNOS_CERT2
+            .get(
+                tipo
+            ) ||
+        tipo
+    );
+}
+
+export function aplicarGuardEscopoExternoCert2(
+    itens = []
+) {
+    const lista =
+        Array.isArray(
+            itens
+        )
+            ? itens
+            : [];
+
+    return lista.map(
+        (item) => {
+            const resolucao =
+                item?.resolucao ||
+                {};
+
+            const tipoReconhecido =
+                obterTipoReconhecidoEscopoCert2(
+                    item
+                );
+
+            if (!tipoReconhecido) {
+                return item;
+            }
+
+            if (
+                TIPOS_ESCOPO_AMBIGUO_CERT2
+                    .has(
+                        tipoReconhecido
+                    )
+            ) {
+                return item;
+            }
+
+            const tipoExterno =
+                resolverTipoExternoEscopoCert2(
+                    tipoReconhecido
+                );
+
+            if (
+                TIPOS_EXTERNOS_CERT2
+                    .has(
+                        tipoExterno
+                    )
+            ) {
+                return item;
+            }
+
+            const motivosAtuais =
+                Array.isArray(
+                    resolucao?.motivos
+                )
+                    ? resolucao.motivos
+                    : [];
+
+            const motivo = {
+                codigo:
+                    CODIGO_FORA_ESCOPO_CERT2,
+
+                mensagem:
+                    (
+                        "Tipo documental reconhecido fora do catálogo externo CERT2. " +
+                        "Este item foi ignorado e não interfere no processamento nem no salvamento dos demais documentos."
+                    ),
+            };
+
+            return {
+                ...item,
+
+                foraEscopoCert2: {
+                    codigo:
+                        CODIGO_FORA_ESCOPO_CERT2,
+
+                    ignorado:
+                        true,
+
+                    tipoReconhecido,
+
+                    tipoExterno,
+
+                    persistenciaPermitida:
+                        false,
+                },
+
+                resolucao: {
+                    ...resolucao,
+
+                    status:
+                        "IGNORADO",
+
+                    politica:
+                        "FORA_ESCOPO",
+
+                    motivos: [
+                        motivo,
+
+                        ...motivosAtuais.filter(
+                            (motivoAtual) =>
+                                textoSeguro(
+                                    motivoAtual?.codigo
+                                ) !==
+                                CODIGO_FORA_ESCOPO_CERT2
+                        ),
+                    ],
+
+                    persistenciaAutomatica:
+                        false,
+
+                    persistido:
+                        false,
+                },
+
+                persistido:
+                    false,
+            };
+        }
+    );
+}
+
 // SAFE_SCAN_DUPLICIDADE_EXATA_INTRALOTE_V1
 //
 // Guard binário SOMENTE em memória.
@@ -366,7 +1190,11 @@ export function aplicarGuardDuplicidadeExataIntralote(
         Array.isArray(
             itens
         )
-            ? itens
+            ? aplicarGuardForaMatrizFiscalCert2(
+                aplicarGuardEscopoExternoCert2(
+                    itens
+                )
+            )
             : [];
 
     const primeirasOcorrencias =
@@ -374,6 +1202,13 @@ export function aplicarGuardDuplicidadeExataIntralote(
 
     return lista.map(
         (item, posicao) => {
+            if (
+                item?.resolucao?.status ===
+                    "IGNORADO"
+            ) {
+                return item;
+            }
+
             const hashSha256 =
                 normalizarHashSha256Lote(
                     item
@@ -429,7 +1264,7 @@ export function aplicarGuardDuplicidadeExataIntralote(
                     CODIGO_DUPLICIDADE_EXATA_LOTE,
 
                 mensagem:
-                    "Arquivo duplicado identificado. Este PDF possui o mesmo conteúdo de outro arquivo já incluído neste lote. A duplicidade foi confirmada pelo SHA-256, por isso esta cópia foi bloqueada para evitar análise duplicada e criação de uma nova versão.",
+                    "Arquivo duplicado identificado. Este PDF possui o mesmo conteúdo de outro arquivo já incluído neste lote. A duplicidade foi confirmada pelo SHA-256, por isso esta cópia foi ignorada para evitar análise duplicada e criação de uma nova versão.",
             };
 
             return {
@@ -461,7 +1296,7 @@ export function aplicarGuardDuplicidadeExataIntralote(
                     ...resolucaoAtual,
 
                     status:
-                        "BLOQUEADO",
+                        "IGNORADO",
 
                     motivos: [
                         motivoDuplicidade,
@@ -617,6 +1452,8 @@ export function aplicarGuardDuplicidadeExataHistorico({
                  * no histórico.
                  */
                 if (
+                    item?.resolucao?.status ===
+                        "IGNORADO" ||
                     itemEhDuplicadoExatoLote(
                         item
                     )
@@ -664,7 +1501,7 @@ export function aplicarGuardDuplicidadeExataHistorico({
                         CODIGO_DUPLICIDADE_EXATA_HISTORICO,
 
                     mensagem:
-                        "Arquivo já registrado no histórico. Este PDF possui o mesmo conteúdo de uma versão documental salva anteriormente. A duplicidade foi confirmada pelo SHA-256, por isso o arquivo foi bloqueado para evitar uma nova versão idêntica.",
+                        "Arquivo já registrado no histórico. Este PDF possui o mesmo conteúdo de uma versão documental salva anteriormente. A duplicidade foi confirmada pelo SHA-256, por isso o arquivo foi ignorado para evitar uma nova versão idêntica.",
                 };
 
                 return {
@@ -715,6 +1552,56 @@ export function aplicarGuardDuplicidadeExataHistorico({
                                     versaoExistente
                                         ?.criado_em
                                 ),
+
+                            statusResultado:
+                                textoSeguro(
+                                    versaoExistente
+                                        ?.status_resultado
+                                ),
+
+                            diagnostico:
+                                (
+                                    versaoExistente
+                                        ?.diagnostico &&
+                                    typeof versaoExistente
+                                        .diagnostico ===
+                                        "object" &&
+                                    !Array.isArray(
+                                        versaoExistente
+                                            .diagnostico
+                                    )
+                                )
+                                    ? versaoExistente
+                                        .diagnostico
+                                    : null,
+
+                            payload:
+                                (
+                                    versaoExistente
+                                        ?.payload &&
+                                    typeof versaoExistente
+                                        .payload ===
+                                        "object" &&
+                                    !Array.isArray(
+                                        versaoExistente
+                                            .payload
+                                    )
+                                )
+                                    ? versaoExistente
+                                        .payload
+                                    : null,
+
+                            bucketId:
+                                textoSeguro(
+                                    versaoExistente
+                                        ?.bucket_id
+                                ),
+
+                            caminhoStorage:
+                                textoSeguro(
+                                    versaoExistente
+                                        ?.caminho_storage
+                                ),
                         },
                     },
 
@@ -722,7 +1609,7 @@ export function aplicarGuardDuplicidadeExataHistorico({
                         ...resolucaoAtual,
 
                         status:
-                            "BLOQUEADO",
+                            "IGNORADO",
 
                         motivos: [
                             motivoDuplicidade,
@@ -1660,12 +2547,537 @@ function nomeApareceComoFraseIdentidadeLote({
     );
 }
 
+// ============================================================
+// SAFE_SCAN_CERT2_M4_D8_EMPREGADO_DOCUMENTAL
+//
+// Identidade individual explícita em Espelho/Folha de Ponto:
+//
+// EMPREGADO <numero> <nome>
+//
+// Este parser NÃO localiza cadastro.
+// Ele somente preserva identidade documental forte para que,
+// após falharem CPF > matrícula/eSocial > nome cadastrado,
+// seja possível distinguir:
+//
+// - identidade insuficiente;
+// - trabalhador explicitamente identificado no PDF,
+//   porém não cadastrado no SafeScan.
+//
+// Fail-closed:
+// - uso posterior restrito a folha-ponto;
+// - empresa documental deve estar IDENTIFICADA;
+// - marcador EMPREGADO obrigatório;
+// - número entre 4 e 15 dígitos;
+// - nome com pelo menos 3 partes;
+// - delimitador estrutural posterior obrigatório;
+// - múltiplas identidades diferentes => nenhuma decisão.
+// ============================================================
+
+// ============================================================
+// SAFE_SCAN_CERT2_M4_E2_B_MULTIEMPREGADO_DOCUMENTAL
+//
+// Evolução estritamente documental do D8.
+//
+// O Espelho de Ponto pode conter mais de um empregado.
+// O parser plural preserva todas as identidades explícitas.
+// O wrapper singular continua retornando somente quando existe
+// exatamente uma identidade, preservando o contrato legado.
+// ============================================================
+
+function extrairIdentidadesEmpregadoFolhaPontoLote(
+    textoExtraido
+) {
+    const texto =
+        normalizarTextoIdentidadeLote(
+            textoExtraido
+        );
+
+    if (!texto) {
+        return [];
+    }
+
+    const padrao =
+        /\bEMPREGADO\s+(\d{4,15})\s+([A-Z][A-Z ]{5,}?)(?=\s+(?:DATA\s+ADMISSAO|CARGO|FUNCAO|CPF|PIS|MATRICULA|CENTRO\s+DE\s+CUSTO)\b)/g;
+
+    const unicos =
+        new Map();
+
+    for (
+        const correspondencia of
+        texto.matchAll(
+            padrao
+        )
+    ) {
+        const numero =
+            String(
+                correspondencia?.[1] ||
+                ""
+            )
+                .trim();
+
+        const nome =
+            String(
+                correspondencia?.[2] ||
+                ""
+            )
+                .replace(
+                    /\s+/g,
+                    " "
+                )
+                .trim();
+
+        const partesNome =
+            nome
+                .split(
+                    " "
+                )
+                .filter(
+                    Boolean
+                );
+
+        if (
+            !/^\d{4,15}$/.test(
+                numero
+            ) ||
+            partesNome.length <
+                3
+        ) {
+            continue;
+        }
+
+        const chave =
+            numero +
+            "|" +
+            nome;
+
+        if (
+            !unicos.has(
+                chave
+            )
+        ) {
+            unicos.set(
+                chave,
+                {
+                    numero,
+                    nome,
+
+                    origem:
+                        "EMPREGADO_DOCUMENTAL",
+                }
+            );
+        }
+    }
+
+    return Array.from(
+        unicos.values()
+    );
+}
+
+function extrairIdentidadeEmpregadoFolhaPontoLote(
+    textoExtraido
+) {
+    const identidades =
+        extrairIdentidadesEmpregadoFolhaPontoLote(
+            textoExtraido
+        );
+
+    if (
+        identidades.length !==
+        1
+    ) {
+        return null;
+    }
+
+    return identidades[0];
+}
+
+function criarResultadoMultiempregadoFolhaPontoLote({
+    status,
+    detalhe = "",
+    identidadesDocumentais = [],
+}) {
+    return {
+        status,
+
+        criterio:
+            "MULTIEMPREGADO_DOCUMENTAL",
+
+        colaborador:
+            null,
+
+        candidatos:
+            [],
+
+        detalhe,
+
+        identidadeDocumental:
+            null,
+
+        identidadesDocumentais:
+            Array.isArray(
+                identidadesDocumentais
+            )
+                ? identidadesDocumentais
+                : [],
+
+        multiempregadoDocumental:
+            true,
+    };
+}
+
+function resolverIdentidadeEmpregadoDocumentalEmpresaLote({
+    identidade,
+    colaboradores = [],
+    empresaId = "",
+}) {
+    const numero =
+        somenteDigitosIdentidadeLote(
+            identidade?.numero
+        );
+
+    const nome =
+        normalizarTextoIdentidadeLote(
+            identidade?.nome
+        );
+
+    const lista =
+        Array.isArray(
+            colaboradores
+        )
+            ? colaboradores
+            : [];
+
+    const mesmaEmpresa =
+        lista.filter(
+            (colaborador) =>
+                textoSeguro(
+                    obterEmpresaIdColaboradorIdentidadeLote(
+                        colaborador
+                    )
+                ) ===
+                empresaId
+        );
+
+    if (
+        mesmaEmpresa.length ===
+        0
+    ) {
+        return {
+            status:
+                "NAO_CADASTRADO_CONFIRMADO",
+
+            criterio:
+                "EMPRESA_SEM_COLABORADORES",
+
+            numero,
+            nome,
+
+            colaborador:
+                null,
+        };
+    }
+
+    const candidatosNumero =
+        numero
+            ? mesmaEmpresa.filter(
+                (colaborador) =>
+                    obterMatriculasColaboradorIdentidadeLote(
+                        colaborador
+                    )
+                        .map(
+                            somenteDigitosIdentidadeLote
+                        )
+                        .includes(
+                            numero
+                        )
+            )
+            : [];
+
+    const candidatosNome =
+        nome
+            ? mesmaEmpresa.filter(
+                (colaborador) =>
+                    normalizarTextoIdentidadeLote(
+                        obterNomeColaboradorIdentidadeLote(
+                            colaborador
+                        )
+                    ) ===
+                    nome
+            )
+            : [];
+
+    if (
+        candidatosNumero.length ===
+            1 &&
+        candidatosNome.length ===
+            1 &&
+        obterIdColaboradorIdentidadeLote(
+            candidatosNumero[0]
+        ) ===
+        obterIdColaboradorIdentidadeLote(
+            candidatosNome[0]
+        )
+    ) {
+        return {
+            status:
+                "LOCALIZADO",
+
+            criterio:
+                "EMPREGADO_NUMERO_NOME",
+
+            numero,
+            nome,
+
+            colaborador:
+                candidatosNome[0],
+        };
+    }
+
+    if (
+        candidatosNumero.length >
+            1 ||
+        candidatosNome.length >
+            1
+    ) {
+        return {
+            status:
+                "AMBIGUO",
+
+            criterio:
+                "EMPREGADO_DOCUMENTAL",
+
+            numero,
+            nome,
+
+            colaborador:
+                null,
+        };
+    }
+
+    if (
+        candidatosNumero.length ===
+            1 &&
+        candidatosNome.length ===
+            0
+    ) {
+        return {
+            status:
+                "CONFLITO_IDENTIDADE",
+
+            criterio:
+                "EMPREGADO_NUMERO_NOME",
+
+            numero,
+            nome,
+
+            colaborador:
+                null,
+        };
+    }
+
+    if (
+        candidatosNome.length ===
+        1
+    ) {
+        return {
+            status:
+                "LOCALIZADO",
+
+            criterio:
+                "NOME_EXATO_EMPRESA",
+
+            numero,
+            nome,
+
+            colaborador:
+                candidatosNome[0],
+        };
+    }
+
+    return {
+        status:
+            "IDENTIDADE_DOCUMENTAL_INSUFICIENTE",
+
+        criterio:
+            "EMPREGADO_DOCUMENTAL",
+
+        numero,
+        nome,
+
+        colaborador:
+            null,
+    };
+}
+
+function resolverMultiempregadoFolhaPontoLote({
+    textoExtraido,
+    colaboradores = [],
+    empresaDocumento = null,
+
+    estadoConsultaColaboradores =
+        "BASE_CONFIRMADA",
+
+    detalheConsultaColaboradores =
+        "",
+}) {
+    const identidades =
+        extrairIdentidadesEmpregadoFolhaPontoLote(
+            textoExtraido
+        );
+
+    /*
+     * Documento singular continua integralmente no motor legado.
+     */
+    if (
+        identidades.length <
+        2
+    ) {
+        return null;
+    }
+
+    if (
+        estadoConsultaColaboradores !==
+        "BASE_CONFIRMADA"
+    ) {
+        return criarResultadoMultiempregadoFolhaPontoLote({
+            status:
+                "CONSULTA_INCONCLUSIVA",
+
+            detalhe:
+                detalheConsultaColaboradores ||
+                "A consulta de colaboradores do SafeScan não foi confirmada para o Espelho multiempregado.",
+
+            identidadesDocumentais:
+                identidades,
+        });
+    }
+
+    if (
+        textoSeguro(
+            empresaDocumento?.status
+        )
+            .toUpperCase() !==
+        "IDENTIFICADA"
+    ) {
+        return null;
+    }
+
+    const empresaId =
+        textoSeguro(
+            empresaDocumento?.id
+        );
+
+    if (!empresaId) {
+        return criarResultadoMultiempregadoFolhaPontoLote({
+            status:
+                "CONSULTA_INCONCLUSIVA",
+
+            detalhe:
+                "A empresa do Espelho foi identificada, mas não possui ID cadastral disponível para o cruzamento multiempregado.",
+
+            identidadesDocumentais:
+                identidades,
+        });
+    }
+
+    const resultados =
+        identidades.map(
+            (identidade) =>
+                resolverIdentidadeEmpregadoDocumentalEmpresaLote({
+                    identidade,
+                    colaboradores,
+                    empresaId,
+                })
+        );
+
+    if (
+        resultados.some(
+            (resultado) =>
+                resultado.status ===
+                "NAO_CADASTRADO_CONFIRMADO"
+        )
+    ) {
+        return criarResultadoMultiempregadoFolhaPontoLote({
+            status:
+                "NAO_CADASTRADO_CONFIRMADO",
+
+            detalhe:
+                (
+                    "O Espelho de Ponto identifica " +
+                    resultados.length +
+                    " trabalhadores, mas a empresa não possui colaboradores cadastrados correspondentes no snapshot confirmado do SafeScan."
+                ),
+
+            identidadesDocumentais:
+                resultados,
+        });
+    }
+
+    if (
+        resultados.every(
+            (resultado) =>
+                resultado.status ===
+                "LOCALIZADO"
+        )
+    ) {
+        return criarResultadoMultiempregadoFolhaPontoLote({
+            status:
+                "LOCALIZADO",
+
+            detalhe:
+                (
+                    resultados.length +
+                    " trabalhadores do Espelho de Ponto foram confirmados individualmente dentro da empresa identificada."
+                ),
+
+            identidadesDocumentais:
+                resultados,
+        });
+    }
+
+    if (
+        resultados.some(
+            (resultado) =>
+                resultado.status ===
+                "AMBIGUO"
+        )
+    ) {
+        return criarResultadoMultiempregadoFolhaPontoLote({
+            status:
+                "AMBIGUO",
+
+            detalhe:
+                "O Espelho possui múltiplos trabalhadores e pelo menos uma identidade cadastral permaneceu ambígua.",
+
+            identidadesDocumentais:
+                resultados,
+        });
+    }
+
+    return criarResultadoMultiempregadoFolhaPontoLote({
+        status:
+            "IDENTIDADE_DOCUMENTAL_INSUFICIENTE",
+
+        detalhe:
+            (
+                "O Espelho possui " +
+                resultados.length +
+                " trabalhadores identificados documentalmente, mas nem todos puderam ser confirmados com segurança no cadastro da empresa."
+            ),
+
+        identidadesDocumentais:
+            resultados,
+    });
+}
+
 function criarResultadoColaboradorIdentidadeLote({
     status,
     criterio = "",
     colaborador = null,
     candidatos = [],
     detalhe = "",
+
+    identidadeDocumental = null,
 }) {
     return {
         status,
@@ -1677,12 +3089,160 @@ function criarResultadoColaboradorIdentidadeLote({
         candidatos,
 
         detalhe,
+
+        identidadeDocumental,
     };
+}
+
+function resolverEstadoInicialIdentidadeColaboradorLote({
+    estadoConsultaColaboradores =
+        "BASE_CONFIRMADA",
+
+    detalheConsultaColaboradores =
+        "",
+
+    quantidadeColaboradores =
+        0,
+
+    cpfsDocumento = [],
+
+    identidadeDocumental = null,
+}) {
+    const estadoConsulta =
+        String(
+            estadoConsultaColaboradores ||
+            ""
+        )
+            .trim()
+            .toUpperCase();
+
+    if (
+        estadoConsulta !==
+        "BASE_CONFIRMADA"
+    ) {
+        return {
+            status:
+                "CONSULTA_INCONCLUSIVA",
+
+            criterio:
+                "BASE_SAFESCAN",
+
+            detalhe:
+                String(
+                    detalheConsultaColaboradores ||
+                    "A base de colaboradores não pôde ser confirmada nesta operação."
+                ),
+        };
+    }
+
+    if (
+        Number(
+            quantidadeColaboradores
+        ) ===
+        0
+    ) {
+        if (
+            Array.isArray(
+                cpfsDocumento
+            ) &&
+            cpfsDocumento.length > 0
+        ) {
+            return {
+                status:
+                    "NAO_CADASTRADO_CONFIRMADO",
+
+                criterio:
+                    "CPF",
+
+                detalhe:
+                    "A base do SafeScan foi consultada com sucesso, mas o CPF válido do PDF não corresponde a colaborador cadastrado.",
+            };
+        }
+
+        if (
+            identidadeDocumental
+                ?.numero &&
+            identidadeDocumental
+                ?.nome
+        ) {
+            return {
+                status:
+                    "NAO_CADASTRADO_CONFIRMADO",
+
+                criterio:
+                    "EMPREGADO_DOCUMENTAL",
+
+                detalhe:
+                    (
+                        "A base do SafeScan foi consultada com sucesso. " +
+                        "O Espelho de Ponto identifica o trabalhador " +
+                        identidadeDocumental.nome +
+                        " (empregado " +
+                        identidadeDocumental.numero +
+                        "), mas não existe colaborador cadastrado correspondente."
+                    ),
+
+                identidadeDocumental,
+            };
+        }
+
+        return {
+            status:
+                "IDENTIDADE_DOCUMENTAL_INSUFICIENTE",
+
+            criterio:
+                "CONTEUDO_DOCUMENTAL",
+
+            detalhe:
+                "A base do SafeScan foi consultada com sucesso, porém o PDF não forneceu identidade individual suficiente para confirmar o trabalhador com segurança.",
+        };
+    }
+
+    return null;
+}
+
+function decidirAcaoIdentidadeColaboradorLote(
+    status
+) {
+    const normalizado =
+        String(
+            status ||
+            ""
+        )
+            .trim()
+            .toUpperCase();
+
+    if (
+        normalizado ===
+        "LOCALIZADO"
+    ) {
+        return "CONTINUAR";
+    }
+
+    if (
+        normalizado ===
+        "NAO_CADASTRADO_CONFIRMADO"
+    ) {
+        return "BLOQUEAR";
+    }
+
+    return "REVISAR";
 }
 
 function resolverColaboradorPorConteudoLote({
     textoExtraido,
     colaboradores = [],
+
+    tipoDocumento = "",
+
+    empresaDocumentoIdentificada =
+        false,
+
+    estadoConsultaColaboradores =
+        "BASE_CONFIRMADA",
+
+    detalheConsultaColaboradores =
+        "",
 }) {
     const lista =
         Array.isArray(
@@ -1693,16 +3253,6 @@ function resolverColaboradorPorConteudoLote({
             )
             : [];
 
-    if (!lista.length) {
-        return criarResultadoColaboradorIdentidadeLote({
-            status:
-                "NAO_LOCALIZADO",
-
-            detalhe:
-                "Não há colaboradores disponíveis no contexto atual do SafeScan.",
-        });
-    }
-
     const textoNormalizado =
         normalizarTextoIdentidadeLote(
             textoExtraido
@@ -1712,6 +3262,40 @@ function resolverColaboradorPorConteudoLote({
         extrairCpfsIdentidadeLote(
             textoExtraido
         );
+
+    const identidadeDocumental =
+        (
+            textoSeguro(
+                tipoDocumento
+            )
+                .toLowerCase() ===
+                "folha-ponto" &&
+            empresaDocumentoIdentificada ===
+                true
+        )
+            ? extrairIdentidadeEmpregadoFolhaPontoLote(
+                textoExtraido
+            )
+            : null;
+
+    const estadoInicial =
+        resolverEstadoInicialIdentidadeColaboradorLote({
+            estadoConsultaColaboradores,
+            detalheConsultaColaboradores,
+
+            quantidadeColaboradores:
+                lista.length,
+
+            cpfsDocumento,
+
+            identidadeDocumental,
+        });
+
+    if (estadoInicial) {
+        return criarResultadoColaboradorIdentidadeLote(
+            estadoInicial
+        );
+    }
 
     if (
         cpfsDocumento.length > 0
@@ -1734,7 +3318,8 @@ function resolverColaboradorPorConteudoLote({
             );
 
         if (
-            candidatosCpf.length === 1
+            candidatosCpf.length ===
+            1
         ) {
             return criarResultadoColaboradorIdentidadeLote({
                 status:
@@ -1749,7 +3334,8 @@ function resolverColaboradorPorConteudoLote({
         }
 
         if (
-            candidatosCpf.length > 1
+            candidatosCpf.length >
+            1
         ) {
             return criarResultadoColaboradorIdentidadeLote({
                 status:
@@ -1765,21 +3351,6 @@ function resolverColaboradorPorConteudoLote({
                     "O CPF do documento corresponde a mais de um cadastro.",
             });
         }
-
-        /*
-         * SAFE_SCAN_IDENTIDADE_HIERARQUICA_D2_R1H
-         *
-         * Existe CPF válido no documento, porém nenhum cadastro
-         * correspondeu exatamente.
-         *
-         * Não encerramos a resolução aqui.
-         * Ainda tentaremos matrícula/eSocial e nome completo.
-         *
-         * Se estes critérios localizarem um colaborador que possui
-         * OUTRO CPF válido cadastrado, o resultado será conflito,
-         * nunca associação automática.
-         */
-
     }
 
     const candidatosMatricula =
@@ -1797,7 +3368,8 @@ function resolverColaboradorPorConteudoLote({
         );
 
     if (
-        candidatosMatricula.length === 1
+        candidatosMatricula.length ===
+        1
     ) {
         const colaborador =
             candidatosMatricula[0];
@@ -1840,7 +3412,8 @@ function resolverColaboradorPorConteudoLote({
     }
 
     if (
-        candidatosMatricula.length > 1
+        candidatosMatricula.length >
+        1
     ) {
         return criarResultadoColaboradorIdentidadeLote({
             status:
@@ -1871,7 +3444,8 @@ function resolverColaboradorPorConteudoLote({
         );
 
     if (
-        candidatosNome.length === 1
+        candidatosNome.length ===
+        1
     ) {
         const colaborador =
             candidatosNome[0];
@@ -1914,7 +3488,8 @@ function resolverColaboradorPorConteudoLote({
     }
 
     if (
-        candidatosNome.length > 1
+        candidatosNome.length >
+        1
     ) {
         return criarResultadoColaboradorIdentidadeLote({
             status:
@@ -1936,23 +3511,214 @@ function resolverColaboradorPorConteudoLote({
     ) {
         return criarResultadoColaboradorIdentidadeLote({
             status:
-                "NAO_LOCALIZADO",
+                "NAO_CADASTRADO_CONFIRMADO",
 
             criterio:
                 "CPF",
 
             detalhe:
-                "Foi encontrado CPF válido no PDF, mas ele não corresponde a colaborador cadastrado e nenhum colaborador pôde ser identificado com segurança por matrícula/eSocial ou nome completo único.",
+                "A base do SafeScan foi consultada com sucesso. Foi encontrado CPF válido no PDF, mas ele não corresponde a colaborador cadastrado e nenhum colaborador pôde ser confirmado por matrícula/eSocial ou nome completo único.",
+        });
+    }
+
+    if (
+        identidadeDocumental
+            ?.numero &&
+        identidadeDocumental
+            ?.nome
+    ) {
+        return criarResultadoColaboradorIdentidadeLote({
+            status:
+                "NAO_CADASTRADO_CONFIRMADO",
+
+            criterio:
+                "EMPREGADO_DOCUMENTAL",
+
+            detalhe:
+                (
+                    "A base do SafeScan foi consultada com sucesso. " +
+                    "O Espelho de Ponto identifica o trabalhador " +
+                    identidadeDocumental.nome +
+                    " (empregado " +
+                    identidadeDocumental.numero +
+                    "), mas nenhum colaborador cadastrado pôde ser confirmado por CPF, matrícula/eSocial ou nome completo."
+                ),
+
+            identidadeDocumental,
         });
     }
 
     return criarResultadoColaboradorIdentidadeLote({
         status:
-            "NAO_LOCALIZADO",
+            "IDENTIDADE_DOCUMENTAL_INSUFICIENTE",
+
+        criterio:
+            "CONTEUDO_DOCUMENTAL",
 
         detalhe:
-            "Nenhum colaborador foi localizado por CPF, matrícula/eSocial ou nome completo único no conteúdo do PDF.",
+            "A base do SafeScan foi consultada com sucesso, mas o conteúdo do PDF não permitiu confirmar um único colaborador por CPF, matrícula/eSocial ou nome completo.",
     });
+}
+
+// ============================================================
+// SAFE_SCAN_CERT2_R11_IDENTIDADE_UNICA
+// Uma resolução de identidade por documento canônico e operação.
+// ============================================================
+
+function itemElegivelIdentidadeColaboradorLote(
+    item
+) {
+    const tipoDocumento =
+        obterTipoResolucaoLote(
+            item
+        );
+
+    return (
+        tipoDocumento ===
+            "folha-ponto" ||
+        ehComplementarFinanceiroFolha(
+            item
+        ) ||
+        itemElegivelFallbackColaboradorLote(
+            item
+        )
+    );
+}
+
+function obterChaveIdentidadeColaboradorLote(
+    item,
+    posicao
+) {
+    return Number.isInteger(
+        item?.indice
+    )
+        ? item.indice
+        : "POSICAO:" +
+            String(
+                posicao
+            );
+}
+
+function criarMapaIdentidadesColaboradorLote({
+    itens = [],
+    colaboradores = [],
+
+    estadoConsultaColaboradores =
+        "BASE_CONFIRMADA",
+
+    detalheConsultaColaboradores =
+        "",
+}) {
+    const mapa =
+        new Map();
+
+    const lista =
+        Array.isArray(
+            itens
+        )
+            ? itens
+            : [];
+
+    lista.forEach(
+        (item, posicao) => {
+            if (
+                item?.erro ||
+                !itemElegivelIdentidadeColaboradorLote(
+                    item
+                )
+            ) {
+                return;
+            }
+
+            const textoExtraido =
+                item
+                    ?.leitura
+                    ?.textoExtraido ||
+                "";
+
+            const tipoDocumento =
+                obterTipoResolucaoLote(
+                    item
+                );
+
+            const empresaDocumento =
+                item
+                    ?.resolucao
+                    ?.empresa ||
+                {};
+
+            const multiempregado =
+                tipoDocumento ===
+                    "folha-ponto" &&
+                textoSeguro(
+                    empresaDocumento?.status
+                )
+                    .toUpperCase() ===
+                    "IDENTIFICADA"
+                    ? resolverMultiempregadoFolhaPontoLote({
+                        textoExtraido,
+                        colaboradores,
+                        empresaDocumento,
+                        estadoConsultaColaboradores,
+                        detalheConsultaColaboradores,
+                    })
+                    : null;
+
+            const identidade =
+                multiempregado ||
+                resolverColaboradorPorConteudoLote({
+                    textoExtraido,
+
+                    tipoDocumento,
+
+                    empresaDocumentoIdentificada:
+                        textoSeguro(
+                            empresaDocumento?.status
+                        )
+                            .toUpperCase() ===
+                        "IDENTIFICADA",
+
+                    colaboradores,
+                    estadoConsultaColaboradores,
+                    detalheConsultaColaboradores,
+                });
+
+            mapa.set(
+                obterChaveIdentidadeColaboradorLote(
+                    item,
+                    posicao
+                ),
+
+                identidade
+            );
+        }
+    );
+
+    return mapa;
+}
+
+function obterIdentidadeColaboradorResolvidaLote({
+    item,
+    posicao,
+    identidadesPorIndice,
+}) {
+    if (
+        !identidadesPorIndice ||
+        typeof identidadesPorIndice.get !==
+            "function"
+    ) {
+        return null;
+    }
+
+    return (
+        identidadesPorIndice.get(
+            obterChaveIdentidadeColaboradorLote(
+                item,
+                posicao
+            )
+        ) ||
+        null
+    );
 }
 
 function encontrarEmpresaColaboradorIdentidadeLote({
@@ -2124,27 +3890,53 @@ const TIPOS_DOCUMENTAIS_FALLBACK_COLABORADOR_PRINCIPAL =
         "folha-ponto",
     ]);
 
+// ============================================================
+// SAFE_SCAN_CERT2_M4_B2_ESCOPO_INDIVIDUAL_V1
+//
+// Ser complementar não prova que o sujeito documental seja
+// um colaborador.
+//
+// A elegibilidade individual permanece restrita aos tipos
+// explicitamente individuais.
+//
+// Os complementares financeiros de Folha continuam tratados
+// separadamente por ehComplementarFinanceiroFolha(item).
+// ============================================================
+
+// ============================================================
+// SAFE_SCAN_CERT2_M4_B8_FINANCEIRO_INDIVIDUAL_V1
+//
+// Fallback por colaborador continua restrito a documentos
+// explicitamente individualizados.
+//
+// Ser "complementar" por si só NÃO é suficiente.
+// ============================================================
+
 function itemElegivelFallbackColaboradorLote(
     item
 ) {
-    const resolucao =
-        item?.resolucao ||
-        {};
-
-    if (
-        resolucao?.complementar ===
-        true
-    ) {
-        return true;
-    }
-
     return (
         TIPOS_DOCUMENTAIS_FALLBACK_COLABORADOR_PRINCIPAL
             .has(
                 obterTipoResolucaoLote(
                     item
                 )
-            )
+            ) ||
+        ehComplementarFinanceiroFolha(
+            item
+        )
+    );
+}
+
+function itemIgnoradoFinanceiroElegivelRaciocinioLote(
+    item
+) {
+    return Boolean(
+        item?.resolucao?.status ===
+            "IGNORADO" &&
+        ehComplementarFinanceiroFolha(
+            item
+        )
     );
 }
 
@@ -2261,6 +4053,47 @@ function aplicarGuardEmpresaNaoCadastradaLote(
 function criarIdentificacaoColaboradorParaGuardLote(
     identidade
 ) {
+    const identidadesDocumentais =
+        Array.isArray(
+            identidade?.identidadesDocumentais
+        )
+            ? identidade
+                .identidadesDocumentais
+                .map(
+                    (item) => ({
+                        numero:
+                            somenteDigitosIdentidadeLote(
+                                item?.numero
+                            ),
+
+                        nome:
+                            textoSeguro(
+                                item?.nome
+                            ),
+
+                        status:
+                            textoSeguro(
+                                item?.status
+                            ),
+
+                        criterio:
+                            textoSeguro(
+                                item?.criterio
+                            ),
+
+                        id:
+                            obterIdColaboradorIdentidadeLote(
+                                item?.colaborador
+                            ),
+
+                        empresaId:
+                            obterEmpresaIdColaboradorIdentidadeLote(
+                                item?.colaborador
+                            ),
+                    })
+                )
+            : [];
+
     return {
         status:
             identidade?.status ||
@@ -2285,7 +4118,10 @@ function criarIdentificacaoColaboradorParaGuardLote(
                     ?.nomeCompleto ||
                 identidade
                     ?.colaborador
-                    ?.nome_completo
+                    ?.nome_completo ||
+                identidade
+                    ?.identidadeDocumental
+                    ?.nome
             ),
 
         empresaId:
@@ -2302,6 +4138,16 @@ function criarIdentificacaoColaboradorParaGuardLote(
                 identidade?.candidatos
             ),
 
+        identidadesDocumentais,
+
+        quantidadeIdentidadesDocumentais:
+            identidadesDocumentais.length,
+
+        multiempregadoDocumental:
+            identidade
+                ?.multiempregadoDocumental ===
+            true,
+
         origem:
             "CONTEUDO_DOCUMENTAL",
     };
@@ -2309,6 +4155,7 @@ function criarIdentificacaoColaboradorParaGuardLote(
 
 // ============================================================
 // SAFE_SCAN_BLOQUEIO_COLABORADOR_NAO_CADASTRADO_D2_R1K_R2
+// Restaurado em M4-E2-B-R1 após regressão de escopo do replacement E2-B.
 // ============================================================
 
 const CODIGO_COLABORADOR_NAO_CADASTRADO_SAFE_SCAN =
@@ -2378,9 +4225,132 @@ function bloquearDocumentoColaboradorNaoCadastradoLote({
     };
 }
 
+// ============================================================
+// SAFE_SCAN_CERT2_R11_ESTADOS_IDENTIDADE
+// Estados inconclusivos nunca viram falsa ausência cadastral.
+// ============================================================
+
+function obterCodigoRevisaoIdentidadeColaboradorLote(
+    status
+) {
+    const normalizado =
+        String(
+            status ||
+            ""
+        )
+            .trim()
+            .toUpperCase();
+
+    if (
+        normalizado ===
+        "AMBIGUO"
+    ) {
+        return "COLABORADOR_AMBIGUO";
+    }
+
+    if (
+        normalizado ===
+        "CONFLITO_CPF"
+    ) {
+        return "CONFLITO_CPF_DOCUMENTO_CADASTRO";
+    }
+
+    if (
+        normalizado ===
+        "CONSULTA_INCONCLUSIVA"
+    ) {
+        return "CONSULTA_COLABORADOR_INCONCLUSIVA";
+    }
+
+    if (
+        normalizado ===
+        "IDENTIDADE_DOCUMENTAL_INSUFICIENTE"
+    ) {
+        return "IDENTIDADE_COLABORADOR_INSUFICIENTE";
+    }
+
+    return "IDENTIDADE_COLABORADOR_REQUER_REVISAO";
+}
+
+function marcarDocumentoIdentidadeColaboradorRevisaoLote({
+    item,
+    resolucao,
+    identidade,
+    identificacaoColaborador,
+}) {
+    const codigo =
+        obterCodigoRevisaoIdentidadeColaboradorLote(
+            identidade?.status
+        );
+
+    const mensagem =
+        identidade?.detalhe ||
+        "A identidade do colaborador não pôde ser confirmada automaticamente. Revisão humana obrigatória.";
+
+    const motivosAtuais =
+        Array.isArray(
+            resolucao?.motivos
+        )
+            ? resolucao.motivos
+            : [];
+
+    const codigosIdentidade =
+        new Set([
+            "COLABORADOR_AMBIGUO",
+            "CONFLITO_CPF_DOCUMENTO_CADASTRO",
+            "CONSULTA_COLABORADOR_INCONCLUSIVA",
+            "IDENTIDADE_COLABORADOR_INSUFICIENTE",
+            "IDENTIDADE_COLABORADOR_REQUER_REVISAO",
+        ]);
+
+    return {
+        ...item,
+
+        resolucao: {
+            ...resolucao,
+
+            status:
+                "REVISAR",
+
+            identificacaoColaborador,
+
+            motivos: [
+                {
+                    codigo,
+                    mensagem,
+                },
+
+                ...motivosAtuais.filter(
+                    (motivo) =>
+                        !codigosIdentidade.has(
+                            textoSeguro(
+                                motivo?.codigo
+                            )
+                        )
+                ),
+            ],
+
+            prontoParaRevisao:
+                true,
+
+            persistenciaAutomatica:
+                false,
+
+            persistido:
+                false,
+        },
+
+        persistido:
+            false,
+    };
+}
+
 function aplicarGuardDivergenciaEmpresaColaboradorLote({
     itens = [],
-    colaboradores = [],
+
+    identidadesPorIndice =
+        new Map(),
+
     empresas = [],
 }) {
     const lista =
@@ -2391,7 +4361,7 @@ function aplicarGuardDivergenciaEmpresaColaboradorLote({
             : [];
 
     return lista.map(
-        (item) => {
+        (item, posicao) => {
             // ====================================================
             // SAFE_SCAN_IDENTIFICACAO_COLABORADOR_EMPRESA_JA_IDENTIFICADA_D2_R1J
             //
@@ -2437,20 +4407,28 @@ function aplicarGuardDivergenciaEmpresaColaboradorLote({
             }
 
             const identidade =
-                resolverColaboradorPorConteudoLote({
-                    textoExtraido:
-                        item
-                            ?.leitura
-                            ?.textoExtraido ||
-                        "",
+                obterIdentidadeColaboradorResolvidaLote({
+                    item,
+                    posicao,
+                    identidadesPorIndice,
+                }) ||
+                criarResultadoColaboradorIdentidadeLote({
+                    status:
+                        "CONSULTA_INCONCLUSIVA",
 
-                    colaboradores,
+                    criterio:
+                        "BASE_SAFESCAN",
+
+                    detalhe:
+                        "A identidade centralizada do colaborador não ficou disponível para este documento.",
                 });
 
             // SAFE_SCAN_BLOQUEIO_IDENTIFICADA_D2_R1K_R2
             if (
-                identidade.status ===
-                    "NAO_LOCALIZADO"
+                decidirAcaoIdentidadeColaboradorLote(
+                    identidade.status
+                ) ===
+                    "BLOQUEAR"
             ) {
                 const identificacaoColaborador =
                     criarIdentificacaoColaboradorParaGuardLote(
@@ -2465,10 +4443,22 @@ function aplicarGuardDivergenciaEmpresaColaboradorLote({
             }
 
             if (
-                identidade.status !==
-                    "LOCALIZADO"
+                decidirAcaoIdentidadeColaboradorLote(
+                    identidade.status
+                ) ===
+                    "REVISAR"
             ) {
-                return item;
+                const identificacaoColaborador =
+                    criarIdentificacaoColaboradorParaGuardLote(
+                        identidade
+                    );
+
+                return marcarDocumentoIdentidadeColaboradorRevisaoLote({
+                    item,
+                    resolucao,
+                    identidade,
+                    identificacaoColaborador,
+                });
             }
 
             const identificacaoColaborador =
@@ -2490,6 +4480,37 @@ function aplicarGuardDivergenciaEmpresaColaboradorLote({
                     identificacaoColaborador,
                 },
             };
+
+            if (
+                identidade
+                    ?.multiempregadoDocumental ===
+                    true &&
+                Array.isArray(
+                    identidade
+                        ?.identidadesDocumentais
+                ) &&
+                identidade
+                    .identidadesDocumentais
+                    .length >=
+                    2
+            ) {
+                /*
+                 * Todos os empregados já foram avaliados individualmente
+                 * contra a empresa documental no resolver multi.
+                 *
+                 * Não escolher um colaborador arbitrário apenas para
+                 * satisfazer o contrato singular legado.
+                 */
+                return {
+                    ...item,
+
+                    resolucao: {
+                        ...resolucao,
+
+                        identificacaoColaborador,
+                    },
+                };
+            }
 
             const vinculoEmpresa =
                 encontrarEmpresaColaboradorIdentidadeLote({
@@ -2661,7 +4682,10 @@ function aplicarGuardDivergenciaEmpresaColaboradorLote({
 
 function aplicarFallbackColaboradorLote({
     itens = [],
-    colaboradores = [],
+
+    identidadesPorIndice =
+        new Map(),
+
     empresas = [],
 }) {
     const lista =
@@ -2672,7 +4696,7 @@ function aplicarFallbackColaboradorLote({
             : [];
 
     return lista.map(
-        (item) => {
+        (item, posicao) => {
             const resolucao =
                 item?.resolucao ||
                 {};
@@ -2706,14 +4730,20 @@ function aplicarFallbackColaboradorLote({
             }
 
             const identidade =
-                resolverColaboradorPorConteudoLote({
-                    textoExtraido:
-                        item
-                            ?.leitura
-                            ?.textoExtraido ||
-                        "",
+                obterIdentidadeColaboradorResolvidaLote({
+                    item,
+                    posicao,
+                    identidadesPorIndice,
+                }) ||
+                criarResultadoColaboradorIdentidadeLote({
+                    status:
+                        "CONSULTA_INCONCLUSIVA",
 
-                    colaboradores,
+                    criterio:
+                        "BASE_SAFESCAN",
+
+                    detalhe:
+                        "A identidade centralizada do colaborador não ficou disponível para este documento.",
                 });
 
             const identificacaoColaborador = {
@@ -2771,10 +4801,11 @@ function aplicarFallbackColaboradorLote({
                     : [];
 
             if (
-                identidade.status !==
-                    "LOCALIZADO"
+                decidirAcaoIdentidadeColaboradorLote(
+                    identidade.status
+                ) !==
+                    "CONTINUAR"
             ) {
-                // SAFE_SCAN_BLOQUEIO_FALLBACK_INDIVIDUAL_D2_R1K_R2
                 const tipoDocumentoIdentidade =
                     obterTipoResolucaoLote(
                         item
@@ -2790,8 +4821,10 @@ function aplicarFallbackColaboradorLote({
                     );
 
                 if (
-                    identidade.status ===
-                        "NAO_LOCALIZADO" &&
+                    decidirAcaoIdentidadeColaboradorLote(
+                        identidade.status
+                    ) ===
+                        "BLOQUEAR" &&
                     elegivelBloqueioColaborador
                 ) {
                     return bloquearDocumentoColaboradorNaoCadastradoLote({
@@ -2801,58 +4834,41 @@ function aplicarFallbackColaboradorLote({
                     });
                 }
 
-                const codigo =
-                identidade.status ===
-                    "AMBIGUO"
-                    ? "COLABORADOR_AMBIGUO"
-                    : identidade.status ===
-                        "CONFLITO_CPF"
-                        ? "CONFLITO_CPF_DOCUMENTO_CADASTRO"
-                        : "COLABORADOR_NAO_LOCALIZADO";
+                return marcarDocumentoIdentidadeColaboradorRevisaoLote({
+                    item,
+                    resolucao,
+                    identidade,
+                    identificacaoColaborador,
+                });
+            }
 
-                const mensagem =
-                    identidade.detalhe ||
-                    (
-                        identidade.status ===
-                            "AMBIGUO"
-                            ? "O conteúdo do PDF corresponde a mais de um colaborador. Revise manualmente."
-                            : "O colaborador não foi localizado no cadastro do SafeScan."
-                    );
-
+            if (
+                identidade
+                    ?.multiempregadoDocumental ===
+                    true &&
+                Array.isArray(
+                    identidade
+                        ?.identidadesDocumentais
+                ) &&
+                identidade
+                    .identidadesDocumentais
+                    .length >=
+                    2
+            ) {
+                /*
+                 * Todos os empregados já foram avaliados individualmente
+                 * contra a empresa documental no resolver multi.
+                 *
+                 * Não escolher um colaborador arbitrário apenas para
+                 * satisfazer o contrato singular legado.
+                 */
                 return {
                     ...item,
 
                     resolucao: {
                         ...resolucao,
 
-                        status:
-                            "REVISAR",
-
                         identificacaoColaborador,
-
-                        motivos: [
-                            {
-                                codigo,
-                                mensagem,
-                            },
-
-                            ...motivosAtuais.filter(
-                                (motivo) =>
-                                    textoSeguro(
-                                        motivo?.codigo
-                                    ) !==
-                                    codigo
-                            ),
-                        ],
-
-                        prontoParaRevisao:
-                            true,
-
-                        persistenciaAutomatica:
-                            false,
-
-                        persistido:
-                            false,
                     },
                 };
             }
@@ -3128,8 +5144,12 @@ function obterIdentidadeItemConflitoLogico(
     }
 
     if (
-        resolucao?.status ===
-            "BLOQUEADO" ||
+        (
+            resolucao?.status ===
+                "BLOQUEADO" ||
+            resolucao?.status ===
+                "IGNORADO"
+        ) ||
         resolucao
             ?.empresa
             ?.status !==
@@ -3487,6 +5507,13 @@ export async function processarArquivosCertidaoEmLote({
     arquivos = [],
     empresas = [],
     colaboradores = [],
+
+    estadoConsultaColaboradores =
+        "BASE_CONFIRMADA",
+
+    detalheConsultaColaboradores =
+        "",
+
     dataReferencia = new Date(),
     onProgress = null,
     signal = null,
@@ -3788,7 +5815,7 @@ export async function processarArquivosCertidaoEmLote({
              * Nome e webkitRelativePath ficam exclusivamente
              * em proveniência.
              */
-            const resolucao =
+            let resolucao =
                 await Promise.resolve(
                     deps.resolverDocumento({
                         textoExtraido:
@@ -3799,6 +5826,175 @@ export async function processarArquivosCertidaoEmLote({
                         dataReferencia,
                     })
                 );
+
+            if (
+                deveTentarOcrAdaptativoCert2({
+                    leitura,
+                    resolucao,
+                })
+            ) {
+                const executarOcrAdaptativo =
+                    typeof deps
+                        ?.enriquecerTextoOcrAdaptativo ===
+                    "function"
+                        ? deps
+                            .enriquecerTextoOcrAdaptativo
+                        : enriquecerTextoOcrAdaptativoPadrao;
+
+                const enriquecimentoOcr =
+                    await executarOcrAdaptativo({
+                        arquivo,
+
+                        textoExtraido:
+                            leitura.textoExtraido,
+
+                        resolucao,
+                    });
+
+                verificarCancelamento(
+                    signal
+                );
+
+                const textoCandidato =
+                    textoSeguro(
+                        enriquecimentoOcr
+                            ?.texto
+                    );
+
+                if (
+                    enriquecimentoOcr
+                        ?.aplicada ===
+                        true &&
+                    textoCandidato &&
+                    textoCandidato !==
+                        textoSeguro(
+                            leitura
+                                ?.textoExtraido
+                        )
+                ) {
+                    const resolucaoCandidata =
+                        await Promise.resolve(
+                            deps.resolverDocumento({
+                                textoExtraido:
+                                    textoCandidato,
+
+                                empresas,
+
+                                dataReferencia,
+                            })
+                        );
+
+                    verificarCancelamento(
+                        signal
+                    );
+
+                    if (
+                        aceitarResolucaoOcrAdaptativoCert2({
+                            inicial:
+                                resolucao,
+
+                            candidata:
+                                resolucaoCandidata,
+                        })
+                    ) {
+                        const deficitInicial =
+                            calcularDeficitOcrAdaptativoCert2(
+                                resolucao
+                            );
+
+                        const deficitFinal =
+                            calcularDeficitOcrAdaptativoCert2(
+                                resolucaoCandidata
+                            );
+
+                        leitura = {
+                            ...leitura,
+
+                            textoExtraido:
+                                textoCandidato,
+
+                            quantidadeCaracteres:
+                                textoCandidato.length,
+
+                            qualidadeTexto: {
+                                ...(
+                                    leitura
+                                        ?.qualidadeTexto ||
+                                    {}
+                                ),
+
+                                ocrAdaptativoCert2: {
+                                    aplicado:
+                                        true,
+
+                                    // SAFE_SCAN_PDFJS_COMPETENCIA_ADAPTATIVA_AUDIT_F10D_R2
+                                    fonte:
+                                        textoSeguro(
+                                            enriquecimentoOcr
+                                                ?.fonteEnriquecimento ||
+                                            "OCR_VISUAL_ADAPTATIVO"
+                                        ),
+
+                                    competenciaPdfJs:
+                                        textoSeguro(
+                                            enriquecimentoOcr
+                                                ?.competenciaPdfJs
+                                        ),
+
+                                    paginasPdfJs:
+                                        Array.isArray(
+                                            enriquecimentoOcr
+                                                ?.paginasPdfJs
+                                        )
+                                            ? [
+                                                ...enriquecimentoOcr
+                                                    .paginasPdfJs,
+                                            ]
+                                            : [],
+
+                                    paginasOcr:
+                                        Array.isArray(
+                                            enriquecimentoOcr
+                                                ?.paginasOcr
+                                        )
+                                            ? [
+                                                ...enriquecimentoOcr
+                                                    .paginasOcr,
+                                            ]
+                                            : [],
+
+                                    totalPaginas:
+                                        Number(
+                                            enriquecimentoOcr
+                                                ?.totalPaginas ||
+                                            0
+                                        ),
+
+                                    confiancaOcr:
+                                        Number.isFinite(
+                                            Number(
+                                                enriquecimentoOcr
+                                                    ?.confiancaOcr
+                                            )
+                                        )
+                                            ? Number(
+                                                enriquecimentoOcr
+                                                    .confiancaOcr
+                                            )
+                                            : null,
+
+                                    deficitInicial,
+
+                                    deficitFinal,
+                                },
+                            },
+                        };
+
+                        resolucao =
+                            resolucaoCandidata;
+                    }
+                }
+            }
 
             const item = {
                 indice,
@@ -3990,9 +6186,28 @@ export async function processarArquivosCertidaoEmLote({
      * mesma Folha sejam interpretadas como duas Folhas
      * candidatas e quebrem uma associação inequívoca.
      */
+    // SAFE_SCAN_27K_IGNORADOS_FORA_RACIOCINIO_LOTE
+    /*
+     * SAFE_SCAN_CERT2_M4_B8_CANONICO_FINANCEIRO_V1
+     *
+     * IGNORADOS continuam fora do raciocínio documental,
+     * exceto complementares financeiros explicitamente
+     * individualizados.
+     *
+     * Mesmo esses financeiros só poderão substituir o item
+     * original se algum passo posterior produzir uma decisão
+     * semântica diferente de IGNORADO.
+     */
     const itensCanonicos =
         itensComGuardDuplicidade.filter(
             (item) =>
+                (
+                    item?.resolucao?.status !==
+                        "IGNORADO" ||
+                    itemIgnoradoFinanceiroElegivelRaciocinioLote(
+                        item
+                    )
+                ) &&
                 !itemEhDuplicadoExatoLote(
                     item
                 )
@@ -4002,6 +6217,16 @@ export async function processarArquivosCertidaoEmLote({
         associarComplementaresFolhaIntralote(
             itensCanonicos
         );
+
+    const identidadesColaboradorPorIndice =
+        criarMapaIdentidadesColaboradorLote({
+            itens:
+                itensAssociados,
+
+            colaboradores,
+            estadoConsultaColaboradores,
+            detalheConsultaColaboradores,
+        });
 
     const itensComGuardEmpresaNaoCadastrada =
         aplicarGuardEmpresaNaoCadastradaLote(
@@ -4013,7 +6238,8 @@ export async function processarArquivosCertidaoEmLote({
             itens:
                 itensComGuardEmpresaNaoCadastrada,
 
-            colaboradores,
+            identidadesPorIndice:
+                identidadesColaboradorPorIndice,
 
             empresas,
         });
@@ -4032,7 +6258,8 @@ export async function processarArquivosCertidaoEmLote({
             itens:
                 itensComGuardDivergenciaEmpresaColaborador,
 
-            colaboradores,
+            identidadesPorIndice:
+                identidadesColaboradorPorIndice,
 
             empresas,
         });
@@ -4058,7 +6285,7 @@ export async function processarArquivosCertidaoEmLote({
      * duplicados permanecem bloqueados exatamente
      * na posição em que foram selecionados.
      */
-    const itensComFallbackColaborador =
+    let itensComFallbackColaborador =
         itensComGuardDuplicidade.map(
             (item, posicao) => {
                 if (
@@ -4076,12 +6303,132 @@ export async function processarArquivosCertidaoEmLote({
                         ? item.indice
                         : posicao;
 
-                return (
+                const canonico =
                     canonicosPorIndice.get(
                         indice
-                    ) ||
+                    );
+
+                /*
+                 * SAFE_SCAN_CERT2_M4_B8_RECONSTRUCAO_FINANCEIRO_V1
+                 *
+                 * Um IGNORADO empresarial permanece intocado.
+                 *
+                 * Um financeiro individual originalmente IGNORADO
+                 * também permanece intocado quando o raciocínio
+                 * não conseguiu produzir decisão melhor.
+                 *
+                 * Só aceitamos o canônico quando houve mudança
+                 * semântica explícita para outro status.
+                 */
+                if (
+                    item?.resolucao?.status ===
+                        "IGNORADO"
+                ) {
+                    if (
+                        !itemIgnoradoFinanceiroElegivelRaciocinioLote(
+                            item
+                        ) ||
+                        !canonico ||
+                        canonico
+                            ?.resolucao
+                            ?.status ===
+                            "IGNORADO"
+                    ) {
+                        return item;
+                    }
+                }
+
+                return (
+                    canonico ||
                     item
                 );
+            }
+        );
+
+    /*
+     * ============================================================
+     * SAFE_SCAN_CERT2_M4_E2_C_R2_STATUS_FINAL_IDENTIDADE
+     *
+     * Reconciliação final de consistência semântica.
+     *
+     * Se o próprio motor já concluiu:
+     *
+     *   identificacaoColaborador.status =
+     *       NAO_CADASTRADO_CONFIRMADO
+     *
+     * um Espelho de Ponto não pode terminar o lote como REVISAR.
+     *
+     * Reutilizamos o blocker existente.
+     *
+     * Não altera:
+     * - outros tipos documentais;
+     * - ignorados;
+     * - duplicados exatos;
+     * - itens já bloqueados;
+     * - OCR/classificação/empresa/competência;
+     * - persistência.
+     * ============================================================
+     */
+    itensComFallbackColaborador =
+        itensComFallbackColaborador.map(
+            (item) => {
+                if (
+                    item?.erro ||
+                    itemEhDuplicadoExatoLote(
+                        item
+                    ) ||
+                    textoSeguro(
+                        item
+                            ?.resolucao
+                            ?.status
+                    )
+                        .toUpperCase() ===
+                        "IGNORADO" ||
+                    obterTipoResolucaoLote(
+                        item
+                    ) !==
+                        "folha-ponto"
+                ) {
+                    return item;
+                }
+
+                const resolucao =
+                    item?.resolucao ||
+                    {};
+
+                const identificacaoColaborador =
+                    resolucao
+                        ?.identificacaoColaborador ||
+                    null;
+
+                const statusIdentidade =
+                    textoSeguro(
+                        identificacaoColaborador
+                            ?.status
+                    )
+                        .toUpperCase();
+
+                const statusDocumento =
+                    textoSeguro(
+                        resolucao
+                            ?.status
+                    )
+                        .toUpperCase();
+
+                if (
+                    statusIdentidade !==
+                        "NAO_CADASTRADO_CONFIRMADO" ||
+                    statusDocumento ===
+                        "BLOQUEADO"
+                ) {
+                    return item;
+                }
+
+                return bloquearDocumentoColaboradorNaoCadastradoLote({
+                    item,
+                    resolucao,
+                    identificacaoColaborador,
+                });
             }
         );
 

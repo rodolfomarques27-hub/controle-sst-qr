@@ -47,6 +47,10 @@ export const CERTIDAO_UPLOAD_MASSA_ACAO_PERSISTENCIA =
         IGNORAR_COMPLEMENTAR:
             "IGNORAR_COMPLEMENTAR",
 
+        IGNORAR_FORA_ESCOPO:
+            "IGNORAR_FORA_ESCOPO",
+
+
         BLOQUEAR_DADOS_INVALIDOS:
             "BLOQUEAR_DADOS_INVALIDOS",
     });
@@ -325,6 +329,28 @@ export function avaliarItemPrincipalPersistenciaUploadMassa(
         item?.resolucao ||
         {};
 
+    // SAFE_SCAN_PLAN_IGNORADO_ITEM_LEVEL_27K
+    const foraEscopoCert2 =
+        item?.foraEscopoCert2 ||
+        null;
+
+    if (
+        foraEscopoCert2?.ignorado ===
+            true
+    ) {
+        return {
+            elegivel:
+                false,
+
+            acao:
+                CERTIDAO_UPLOAD_MASSA_ACAO_PERSISTENCIA
+                    .IGNORAR_FORA_ESCOPO,
+
+            codigo:
+                "FORA_ESCOPO_CERT2",
+        };
+    }
+
     if (
         item?.erro
     ) {
@@ -335,6 +361,33 @@ export function avaliarItemPrincipalPersistenciaUploadMassa(
                     .BLOQUEAR_DADOS_INVALIDOS,
             codigo:
                 "ITEM_COM_ERRO",
+        };
+    }
+
+    // SAFE_SCAN_FORA_MATRIZ_PLAN_F10D1
+    const foraMatrizCert2 =
+        item?.foraMatrizCert2?.bloqueado ===
+            true ||
+        textoSeguro(
+            item?.foraMatrizCert2?.codigo
+        ).toUpperCase() ===
+            "FORA_MATRIZ_CERT2" ||
+        textoSeguro(
+            resolucao?.politica
+        ).toUpperCase() ===
+            "FORA_MATRIZ";
+
+    if (foraMatrizCert2) {
+        return {
+            elegivel:
+                false,
+
+            acao:
+                CERTIDAO_UPLOAD_MASSA_ACAO_PERSISTENCIA
+                    .BLOQUEAR_DADOS_INVALIDOS,
+
+            codigo:
+                "FORA_MATRIZ_CERT2",
         };
     }
 
@@ -509,7 +562,7 @@ export function avaliarItemPrincipalPersistenciaUploadMassa(
     };
 }
 
-function criarDiagnosticoPersistencia(
+export function criarDiagnosticoPersistencia(
     item
 ) {
     const resolucao =
@@ -2842,6 +2895,327 @@ function criarPreflightPersistenciaPrincipalUploadMassa({
 }
 /*
  * ============================================================
+ * SAFE_SCAN_RENOVACAO_VALIDADE_F10B_R3B
+ *
+ * Identidade exclusivamente documental para itens VALIDADE.
+ *
+ * Não utiliza nome do arquivo, pasta, posição no disco ou
+ * qualquer outro metadado externo ao conteúdo.
+ *
+ * Qualquer falta ou ambiguidade permanece fail-closed.
+ * ============================================================
+ */
+
+function normalizarCodigoControleValidadeLote(
+    valor
+) {
+    return textoSeguro(
+        valor
+    )
+        .toUpperCase()
+        .replace(
+            /[^A-Z0-9]/g,
+            ""
+        );
+}
+
+function criarControleDocumentalValidadeLote(
+    item
+) {
+    const resolucao =
+        item?.resolucao ||
+        {};
+
+    const avaliacao =
+        resolucao?.avaliacao ||
+        {};
+
+    const temporais =
+        avaliacao?.dadosTemporais ||
+        {};
+
+    return {
+        politica:
+            textoSeguro(
+                resolucao?.politica
+            ).toUpperCase(),
+
+        codigoControle:
+            normalizarCodigoControleValidadeLote(
+                avaliacao?.codigoControle ||
+                avaliacao?.numeroCertidao
+            ),
+
+        dataEmissaoIso:
+            textoSeguro(
+                temporais?.dataEmissaoIso
+            ),
+
+        dataValidadeIso:
+            textoSeguro(
+                temporais?.dataValidadeIso
+            ),
+    };
+}
+
+function dataIsoValidaF10B(
+    valor
+) {
+    return /^\d{4}-\d{2}-\d{2}$/.test(
+        textoSeguro(
+            valor
+        )
+    );
+}
+
+export function resolverRenovacaoValidadeLotePlano(
+    alvos = []
+) {
+    const lista =
+        Array.isArray(
+            alvos
+        )
+            ? alvos
+            : [];
+
+    if (lista.length < 2) {
+        return null;
+    }
+
+    const normalizados =
+        lista.map(
+            (alvo) => {
+                const controle =
+                    alvo
+                        ?.controleDocumental ||
+                    {};
+
+                return {
+                    indice:
+                        alvo?.indice,
+
+                    politica:
+                        textoSeguro(
+                            controle?.politica
+                        ).toUpperCase(),
+
+                    codigoControle:
+                        normalizarCodigoControleValidadeLote(
+                            controle?.codigoControle
+                        ),
+
+                    dataEmissaoIso:
+                        textoSeguro(
+                            controle?.dataEmissaoIso
+                        ),
+
+                    dataValidadeIso:
+                        textoSeguro(
+                            controle?.dataValidadeIso
+                        ),
+                };
+            }
+        );
+
+    const todosFortes =
+        normalizados.every(
+            (alvo) =>
+                Number.isInteger(
+                    alvo.indice
+                ) &&
+                alvo.politica ===
+                    "VALIDADE" &&
+                alvo.codigoControle.length >=
+                    6 &&
+                dataIsoValidaF10B(
+                    alvo.dataEmissaoIso
+                ) &&
+                dataIsoValidaF10B(
+                    alvo.dataValidadeIso
+                )
+        );
+
+    if (!todosFortes) {
+        return null;
+    }
+
+    const codigos =
+        new Set(
+            normalizados.map(
+                (alvo) =>
+                    alvo.codigoControle
+            )
+        );
+
+    /*
+     * Mesmo código + mesmo intervalo documental:
+     * mesma certidão em representação binária diferente.
+     */
+    if (codigos.size === 1) {
+        const intervalos =
+            new Set(
+                normalizados.map(
+                    (alvo) =>
+                        [
+                            alvo.dataEmissaoIso,
+                            alvo.dataValidadeIso,
+                        ].join("|")
+                )
+            );
+
+        if (intervalos.size !== 1) {
+            return null;
+        }
+
+        const ordenados =
+            [
+                ...normalizados,
+            ].sort(
+                (a, b) =>
+                    a.indice -
+                    b.indice
+            );
+
+        return {
+            aplicada:
+                true,
+
+            tipo:
+                "DUPLICIDADE_SEMANTICA",
+
+            indiceCanonico:
+                ordenados[0].indice,
+
+            ignorados:
+                ordenados
+                    .slice(1)
+                    .map(
+                        (alvo) => ({
+                            indice:
+                                alvo.indice,
+
+                            codigo:
+                                "DUPLICADO_DOCUMENTAL_SEMANTICO_LOTE",
+                        })
+                    ),
+        };
+    }
+
+    /*
+     * Mistura de código repetido com código diferente:
+     * ambiguidade => mantém revisão.
+     */
+    if (
+        codigos.size !==
+        normalizados.length
+    ) {
+        return null;
+    }
+
+    const ordenados =
+        [
+            ...normalizados,
+        ].sort(
+            (a, b) => {
+                const emissao =
+                    a.dataEmissaoIso
+                        .localeCompare(
+                            b.dataEmissaoIso
+                        );
+
+                if (emissao !== 0) {
+                    return emissao;
+                }
+
+                return a.dataValidadeIso
+                    .localeCompare(
+                        b.dataValidadeIso
+                    );
+            }
+        );
+
+    /*
+     * Renovação somente quando as duas dimensões temporais
+     * avançam estritamente.
+     */
+    for (
+        let indice = 1;
+        indice < ordenados.length;
+        indice++
+    ) {
+        const anterior =
+            ordenados[
+                indice - 1
+            ];
+
+        const atual =
+            ordenados[
+                indice
+            ];
+
+        if (
+            anterior.dataEmissaoIso >=
+                atual.dataEmissaoIso ||
+            anterior.dataValidadeIso >=
+                atual.dataValidadeIso
+        ) {
+            return null;
+        }
+    }
+
+    const canonico =
+        ordenados[
+            ordenados.length - 1
+        ];
+
+    return {
+        aplicada:
+            true,
+
+        tipo:
+            "RENOVACAO_VALIDADE",
+
+        indiceCanonico:
+            canonico.indice,
+
+        ignorados:
+            ordenados
+                .slice(
+                    0,
+                    -1
+                )
+                .map(
+                    (alvo) => ({
+                        indice:
+                            alvo.indice,
+
+                        codigo:
+                            "VERSAO_VALIDADE_SUPERADA_LOTE",
+
+                        codigoControle:
+                            alvo.codigoControle,
+
+                        dataEmissaoIso:
+                            alvo.dataEmissaoIso,
+
+                        dataValidadeIso:
+                            alvo.dataValidadeIso,
+
+                        codigoControleCanonico:
+                            canonico.codigoControle,
+
+                        dataEmissaoCanonicaIso:
+                            canonico.dataEmissaoIso,
+
+                        dataValidadeCanonicaIso:
+                            canonico.dataValidadeIso,
+                    })
+                ),
+    };
+}
+
+/*
+ * ============================================================
  * SAFE_SCAN_UPLOAD_MASSA_GUARD_CONFLITO_MULTIPLO_LOTE_V1
  *
  * Guard puro contra colisão lógica dentro do mesmo lote.
@@ -2989,6 +3363,9 @@ function aplicarGuardConflitoMultiploLotePlanoPersistenciaPrincipal(
 
                 indices:
                     new Set(),
+
+                alvos:
+                    [],
             };
 
             grupos.set(
@@ -3004,9 +3381,21 @@ function aplicarGuardConflitoMultiploLotePlanoPersistenciaPrincipal(
         grupo.indices.add(
             indice
         );
+
+        grupo.alvos.push({
+            indice,
+
+            controleDocumental:
+                itemPlano
+                    ?.controleDocumentalLote ||
+                {},
+        });
     }
 
     const conflitosPorIndice =
+        new Map();
+
+    const ignoradosPorIndice =
         new Map();
 
     for (
@@ -3022,6 +3411,39 @@ function aplicarGuardConflitoMultiploLotePlanoPersistenciaPrincipal(
             grupo.hashes.size <= 1 ||
             grupo.indices.size <= 1
         ) {
+            continue;
+        }
+
+        const renovacao =
+            resolverRenovacaoValidadeLotePlano(
+                grupo.alvos
+            );
+
+        if (
+            renovacao?.aplicada ===
+                true &&
+            Array.isArray(
+                renovacao?.ignorados
+            )
+        ) {
+            for (
+                const ignorado of
+                renovacao.ignorados
+            ) {
+                ignoradosPorIndice.set(
+                    ignorado.indice,
+                    {
+                        ...ignorado,
+
+                        indiceCanonico:
+                            renovacao.indiceCanonico,
+
+                        tipoResolucao:
+                            renovacao.tipo,
+                    }
+                );
+            }
+
             continue;
         }
 
@@ -3053,13 +3475,47 @@ function aplicarGuardConflitoMultiploLotePlanoPersistenciaPrincipal(
 
     if (
         conflitosPorIndice.size ===
-        0
+            0 &&
+        ignoradosPorIndice.size ===
+            0
     ) {
         return itensPlano;
     }
 
     return itensPlano.map(
         (itemPlano) => {
+            const ignorado =
+                ignoradosPorIndice.get(
+                    itemPlano?.indice
+                );
+
+            if (ignorado) {
+                return {
+                    ...itemPlano,
+
+                    /*
+                     * Reutiliza a ação existente de ignorar.
+                     * Não cria novo contrato downstream.
+                     */
+                    acao:
+                        CERTIDAO_UPLOAD_MASSA_ACAO_PERSISTENCIA
+                            .IGNORAR_DUPLICADO,
+
+                    codigo:
+                        ignorado.codigo,
+
+                    payload:
+                        null,
+
+                    preflight:
+                        null,
+
+                    renovacaoLote: {
+                        ...ignorado,
+                    },
+                };
+            }
+
             const conflito =
                 conflitosPorIndice.get(
                     itemPlano?.indice
@@ -3197,6 +3653,11 @@ export function criarPlanoPersistenciaPrincipalUploadMassa({
                         ),
 
                     preflight,
+
+                    controleDocumentalLote:
+                        criarControleDocumentalValidadeLote(
+                            item
+                        ),
                 };
             }
         );
@@ -3284,6 +3745,13 @@ export function criarPlanoPersistenciaPrincipalUploadMassa({
                     CERTIDAO_UPLOAD_MASSA_ACAO_PERSISTENCIA
                         .IGNORAR_COMPLEMENTAR
                 ),
+
+            foraEscopoIgnorados:
+                contar(
+                    CERTIDAO_UPLOAD_MASSA_ACAO_PERSISTENCIA
+                        .IGNORAR_FORA_ESCOPO
+                ),
+
 
             invalidos:
                 contar(
