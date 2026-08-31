@@ -22,6 +22,147 @@ const referencia =
         "2026-03-31T12:00:00.000Z"
     );
 
+const textoCrfLayoutVariavel = `
+CERTIFICADO DE REGULARIDADE DO FGTS - CRF
+Empregador: RIBEIRO AQUINO ENGENHARIA LTDA
+Inscrição 13.697.181/0001-07
+Validade: 15/03/2026 a 13/04/2026
+Certificação Número: 20260315011913697181000107
+Consulta oficial disponível nos canais da CAIXA.
+`;
+
+assert.equal(
+    classificarDocumentoCertidao(
+        textoCrfLayoutVariavel
+    ).id,
+    "crf-fgts",
+    "CRF oficial não pode depender do rótulo literal Razão Social."
+);
+
+const crfLayoutVariavel =
+    executarPreAvaliacaoDocumental({
+        textoExtraido:
+            textoCrfLayoutVariavel,
+        documentoEsperado: {
+            id:
+                "crf-fgts",
+            titulo:
+                "CRF FGTS",
+        },
+        empresaEsperada:
+            empresa,
+        dataReferencia:
+            referencia,
+    });
+
+assert.equal(
+    crfLayoutVariavel
+        .avaliacao
+        .codigo,
+    "COMPATIVEL_VALIDACAO_CAIXA"
+);
+
+assert.equal(
+    crfLayoutVariavel
+        .avaliacao
+        .numeroCertidao,
+    "20260315011913697181000107"
+);
+
+assert.equal(
+    crfLayoutVariavel
+        .avaliacao
+        .dadosTemporais
+        .dataValidadeIso,
+    "2026-04-13"
+);
+
+const textoCrfRotulosUnidos = `
+CERTIFICADODEREGULARIDADEDOFGTS
+CRF/FGTS
+Empregador RIBEIRO AQUINO ENGENHARIA LTDA
+Inscrição:13.697.181/0001-07
+Validade do Certificado:15/03/2026-13/04/2026
+CertificaçãoNúmero:20260315011913697181000107
+`;
+
+assert.equal(
+    classificarDocumentoCertidao(
+        textoCrfRotulosUnidos
+    ).id,
+    "crf-fgts",
+    "Junção de rótulos pela camada textual não pode ocultar um CRF estruturalmente completo."
+);
+
+const crfRotulosUnidos =
+    executarPreAvaliacaoDocumental({
+        textoExtraido:
+            textoCrfRotulosUnidos,
+        documentoEsperado: {
+            id:
+                "crf-fgts",
+            titulo:
+                "CRF FGTS",
+        },
+        empresaEsperada:
+            empresa,
+        dataReferencia:
+            referencia,
+    });
+
+assert.equal(
+    crfRotulosUnidos
+        .avaliacao
+        .codigo,
+    "COMPATIVEL_VALIDACAO_CAIXA"
+);
+
+const mencaoCrfSemEstrutura = `
+CHECKLIST DE DOCUMENTOS MENSAIS
+CRF - FGTS
+CNPJ: 13.697.181/0001-07
+VALIDADE: 15/03/2026 A 13/04/2026
+`;
+
+assert.equal(
+    classificarDocumentoCertidao(
+        mencaoCrfSemEstrutura
+    ).id,
+    "nao-identificado",
+    "Checklist sem título e número de certificação deve permanecer bloqueado."
+);
+
+const tituloCrfSemProvas = `
+CERTIFICADO DE REGULARIDADE DO FGTS - CRF
+Documento solicitado no controle interno.
+`;
+
+assert.equal(
+    classificarDocumentoCertidao(
+        tituloCrfSemProvas
+    ).id,
+    "nao-identificado",
+    "Título isolado de CRF não deve ser aceito."
+);
+
+const documentoAdversarial = `
+RELATÓRIO DE CONTROLE DOCUMENTAL
+CERTIFICADO DE REGULARIDADE DO FGTS - CRF
+CNPJ: 13.697.181/0001-07
+VALIDADE: 15/03/2026 A 13/04/2026
+CERTIFICAÇÃO NÚMERO:
+13.697.181/0001-07
+15/03/2026
+`;
+
+assert.equal(
+    classificarDocumentoCertidao(
+        documentoAdversarial
+    ).id,
+    "nao-identificado",
+    "Relatório sem número documental concreto deve permanecer bloqueado."
+);
+
 assert.equal(
     classificarDocumentoCertidao(`
         CERTIDÃO POSITIVA COM EFEITOS DE NEGATIVA

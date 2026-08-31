@@ -3794,225 +3794,342 @@ export function useCertidaoMensalUploadMassa({
                 if (
                     respostaExpirou
                 ) {
-                    const controladorConfirmacao =
-                        typeof AbortController ===
-                        "function"
-                            ? new AbortController()
-                            : null;
+                    /*
+                     * SAFE_SCAN_REVISAR_DOCUMENTO_SALVO_RECONCILIACAO_R14_B1
+                     *
+                     * O abort do cliente nao comprova rollback no servidor.
+                     * Portanto, depois do timeout da unica chamada de escrita,
+                     * fazemos SOMENTE leituras por uma janela limitada.
+                     *
+                     * Nao existe retry automatico da RPC de escrita.
+                     */
+                    const prazoConfirmacao =
+                        Date.now() +
+                        15000;
 
-                    if (!controladorConfirmacao) {
-                        throw new Error(
-                            "A resposta do salvamento expirou e a confirmação segura não está disponível. Reabra o documento antes de tentar novamente."
-                        );
-                    }
+                    let conflitoAnalise =
+                        false;
 
-                    let consultaVersaoConfirmada =
-                        supabase
-                            .from(
-                                "certidao_mensal_versoes"
-                            )
-                            .select(
-                                "id,item_id,numero_versao,hash_sha256,status_resultado,diagnostico,payload"
-                            )
-                            .eq(
-                                "id",
-                                versaoAlvo
-                            )
-                            .eq(
-                                "item_id",
-                                itemId
-                            )
-                            .maybeSingle();
+                    let ultimoErroConfirmacao =
+                        null;
 
-                    let consultaItemConfirmado =
-                        supabase
-                            .from(
-                                "certidao_mensal_itens"
-                            )
-                            .select(
-                                "id,versao_atual_id,tipo_documento"
-                            )
-                            .eq(
-                                "id",
-                                itemId
-                            )
-                            .maybeSingle();
-
-                    if (
-                        typeof consultaVersaoConfirmada
-                            ?.abortSignal !==
-                            "function" ||
-                        typeof consultaItemConfirmado
-                            ?.abortSignal !==
+                    while (
+                        Date.now() <
+                        prazoConfirmacao &&
+                        !retorno
+                    ) {
+                        const controladorTentativa =
+                            typeof AbortController ===
                             "function"
-                    ) {
-                        throw new Error(
-                            "A resposta do salvamento expirou e o cliente não permite confirmar o resultado com timeout seguro. Reabra o documento antes de tentar novamente."
-                        );
-                    }
+                                ? new AbortController()
+                                : null;
 
-                    consultaVersaoConfirmada =
-                        consultaVersaoConfirmada
-                            .abortSignal(
-                                controladorConfirmacao
-                                    .signal
+                        if (!controladorTentativa) {
+                            throw new Error(
+                                "A resposta do salvamento expirou e a confirmação segura não está disponível. Reabra o documento antes de tentar novamente."
+                            );
+                        }
+
+                        let consultaVersao =
+                            supabase
+                                .from(
+                                    "certidao_mensal_versoes"
+                                )
+                                .select(
+                                    "id,item_id,numero_versao,hash_sha256,status_resultado,diagnostico,payload"
+                                )
+                                .eq(
+                                    "id",
+                                    versaoAlvo
+                                )
+                                .eq(
+                                    "item_id",
+                                    itemId
+                                )
+                                .maybeSingle();
+
+                        let consultaItem =
+                            supabase
+                                .from(
+                                    "certidao_mensal_itens"
+                                )
+                                .select(
+                                    "id,versao_atual_id,tipo_documento"
+                                )
+                                .eq(
+                                    "id",
+                                    itemId
+                                )
+                                .maybeSingle();
+
+                        if (
+                            typeof consultaVersao
+                                ?.abortSignal !==
+                                "function" ||
+                            typeof consultaItem
+                                ?.abortSignal !==
+                                "function"
+                        ) {
+                            throw new Error(
+                                "A resposta do salvamento expirou e o cliente não permite confirmar o resultado com timeout seguro. Reabra o documento antes de tentar novamente."
+                            );
+                        }
+
+                        consultaVersao =
+                            consultaVersao
+                                .abortSignal(
+                                    controladorTentativa
+                                        .signal
+                                );
+
+                        consultaItem =
+                            consultaItem
+                                .abortSignal(
+                                    controladorTentativa
+                                        .signal
+                                );
+
+                        const temporizadorTentativa =
+                            setTimeout(
+                                () => {
+                                    controladorTentativa
+                                        .abort();
+                                },
+                                3000
                             );
 
-                    consultaItemConfirmado =
-                        consultaItemConfirmado
-                            .abortSignal(
-                                controladorConfirmacao
-                                    .signal
+                        let respostaVersao =
+                            null;
+
+                        let respostaItem =
+                            null;
+
+                        let erroTentativa =
+                            null;
+
+                        try {
+                            [
+                                respostaVersao,
+                                respostaItem,
+                            ] =
+                                await Promise.all([
+                                    consultaVersao,
+                                    consultaItem,
+                                ]);
+                        }
+                        catch (error) {
+                            erroTentativa =
+                                error;
+
+                            ultimoErroConfirmacao =
+                                error;
+                        }
+                        finally {
+                            clearTimeout(
+                                temporizadorTentativa
+                            );
+                        }
+
+                        const leituraFalhou =
+                            controladorTentativa
+                                .signal
+                                .aborted ===
+                                true ||
+                            Boolean(
+                                erroTentativa
+                            ) ||
+                            Boolean(
+                                respostaVersao
+                                    ?.error
+                            ) ||
+                            Boolean(
+                                respostaItem
+                                    ?.error
+                            ) ||
+                            !respostaVersao
+                                ?.data ||
+                            !respostaItem
+                                ?.data;
+
+                        if (leituraFalhou) {
+                            if (
+                                Date.now() <
+                                prazoConfirmacao
+                            ) {
+                                await new Promise(
+                                    (resolver) =>
+                                        setTimeout(
+                                            resolver,
+                                            500
+                                        )
+                                );
+
+                                continue;
+                            }
+
+                            break;
+                        }
+
+                        const versaoConfirmada =
+                            respostaVersao
+                                .data;
+
+                        const itemConfirmado =
+                            respostaItem
+                                .data;
+
+                        const identidadeBaseConfirmada =
+                            textoSeguro(
+                                versaoConfirmada
+                                    ?.id
+                            ) ===
+                                versaoAlvo &&
+                            textoSeguro(
+                                versaoConfirmada
+                                    ?.item_id
+                            ) ===
+                                itemId &&
+                            Number(
+                                versaoConfirmada
+                                    ?.numero_versao
+                            ) ===
+                                numeroVersao &&
+                            normalizarHashUploadHistorico(
+                                versaoConfirmada
+                                    ?.hash_sha256
+                            ) ===
+                                hashSha256 &&
+                            textoSeguro(
+                                versaoConfirmada
+                                    ?.status_resultado
+                            ) ===
+                                statusResultado &&
+                            textoSeguro(
+                                itemConfirmado
+                                    ?.id
+                            ) ===
+                                itemId &&
+                            textoSeguro(
+                                itemConfirmado
+                                    ?.tipo_documento
+                            )
+                                .toLowerCase() ===
+                                tipoDocumento;
+
+                        if (!identidadeBaseConfirmada) {
+                            conflitoAnalise =
+                                true;
+
+                            break;
+                        }
+
+                        /*
+                         * SAFE_SCAN_REVISAO_ANALITICA_HISTORICA_A4
+                         *
+                         * A versao selecionada pode ser historica.
+                         * versao_atual_id e apenas observado para
+                         * rastreabilidade; nunca e requisito de sucesso
+                         * e nunca e alterado por esta operacao.
+                         */
+                        const versaoEraAtual =
+                            textoSeguro(
+                                itemConfirmado
+                                    ?.versao_atual_id
+                            ) ===
+                            versaoAlvo;
+
+                        const diagnosticoNovoConfirmado =
+                            jsonEquivalente(
+                                versaoConfirmada
+                                    ?.diagnostico,
+                                diagnosticoNovo
+                            ) &&
+                            jsonEquivalente(
+                                versaoConfirmada
+                                    ?.payload
+                                    ?.diagnostico,
+                                diagnosticoNovo
                             );
 
-                    const temporizadorConfirmacao =
-                        setTimeout(
-                            () => {
-                                controladorConfirmacao
-                                    .abort();
-                            },
-                            10000
-                        );
+                        if (diagnosticoNovoConfirmado) {
+                            retorno = {
+                                alterado:
+                                    true,
 
-                    let respostaVersaoConfirmada =
-                        null;
+                                versaoId:
+                                    versaoAlvo,
 
-                    let respostaItemConfirmado =
-                        null;
+                                itemId,
 
-                    let erroConfirmacao =
-                        null;
+                                numeroVersao,
 
-                    try {
-                        [
-                            respostaVersaoConfirmada,
-                            respostaItemConfirmado,
-                        ] =
-                            await Promise.all([
-                                consultaVersaoConfirmada,
-                                consultaItemConfirmado,
-                            ]);
+                                versaoEraAtual,
+
+                                auditoriaId:
+                                    "",
+
+                                confirmadoAposTimeout:
+                                    true,
+                            };
+
+                            break;
+                        }
+
+                        const diagnosticoAindaEsperado =
+                            jsonEquivalente(
+                                versaoConfirmada
+                                    ?.diagnostico,
+                                diagnosticoEsperado
+                            ) &&
+                            jsonEquivalente(
+                                versaoConfirmada
+                                    ?.payload
+                                    ?.diagnostico,
+                                diagnosticoEsperado
+                            );
+
+                        if (!diagnosticoAindaEsperado) {
+                            conflitoAnalise =
+                                true;
+
+                            break;
+                        }
+
+                        if (
+                            Date.now() <
+                            prazoConfirmacao
+                        ) {
+                            await new Promise(
+                                (resolver) =>
+                                    setTimeout(
+                                        resolver,
+                                        500
+                                    )
+                            );
+                        }
                     }
-                    catch (error) {
-                        erroConfirmacao =
-                            error;
-                    }
-                    finally {
-                        clearTimeout(
-                            temporizadorConfirmacao
-                        );
-                    }
 
-                    if (
-                        controladorConfirmacao
-                            .signal
-                            .aborted ===
-                            true ||
-                        erroConfirmacao ||
-                        respostaVersaoConfirmada
-                            ?.error ||
-                        respostaItemConfirmado
-                            ?.error ||
-                        !respostaVersaoConfirmada
-                            ?.data ||
-                        !respostaItemConfirmado
-                            ?.data
-                    ) {
+                    if (conflitoAnalise) {
                         throw new Error(
-                            "O servidor não confirmou o salvamento dentro do limite de segurança. A gravação pode ter sido concluída; reabra o documento antes de tentar novamente."
+                            "A análise salva mudou enquanto esta revisão estava aberta. Feche e reabra a comparação antes de tentar novamente."
                         );
                     }
 
-                    const versaoConfirmada =
-                        respostaVersaoConfirmada
-                            .data;
+                    if (!retorno) {
+                        const detalheLeitura =
+                            textoSeguro(
+                                ultimoErroConfirmacao
+                                    ?.message
+                            );
 
-                    const itemConfirmado =
-                        respostaItemConfirmado
-                            .data;
-
-                    const identidadeConfirmada =
-                        textoSeguro(
-                            versaoConfirmada
-                                ?.id
-                        ) ===
-                            versaoAlvo &&
-                        textoSeguro(
-                            versaoConfirmada
-                                ?.item_id
-                        ) ===
-                            itemId &&
-                        Number(
-                            versaoConfirmada
-                                ?.numero_versao
-                        ) ===
-                            numeroVersao &&
-                        normalizarHashUploadHistorico(
-                            versaoConfirmada
-                                ?.hash_sha256
-                        ) ===
-                            hashSha256 &&
-                        textoSeguro(
-                            versaoConfirmada
-                                ?.status_resultado
-                        ) ===
-                            statusResultado &&
-                        textoSeguro(
-                            itemConfirmado
-                                ?.id
-                        ) ===
-                            itemId &&
-                        textoSeguro(
-                            itemConfirmado
-                                ?.versao_atual_id
-                        ) ===
-                            versaoAlvo &&
-                        textoSeguro(
-                            itemConfirmado
-                                ?.tipo_documento
-                        )
-                            .toLowerCase() ===
-                            tipoDocumento;
-
-                    const diagnosticoConfirmado =
-                        jsonEquivalente(
-                            versaoConfirmada
-                                ?.diagnostico,
-                            diagnosticoNovo
-                        ) &&
-                        jsonEquivalente(
-                            versaoConfirmada
-                                ?.payload
-                                ?.diagnostico,
-                            diagnosticoNovo
-                        );
-
-                    if (
-                        !identidadeConfirmada ||
-                        !diagnosticoConfirmado
-                    ) {
                         throw new Error(
-                            "A resposta do salvamento expirou e a leitura de confirmação não comprovou a mesma versão com a análise esperada. Nenhuma repetição automática foi executada."
+                            (
+                                "O servidor não confirmou o salvamento dentro da janela de reconciliação. " +
+                                "A gravação pode ter sido concluída; feche e reabra o documento antes de qualquer nova tentativa. " +
+                                detalheLeitura
+                            ).trim()
                         );
                     }
-
-                    retorno = {
-                        alterado:
-                            true,
-
-                        versaoId:
-                            versaoAlvo,
-
-                        itemId,
-
-                        numeroVersao,
-
-                        auditoriaId:
-                            "",
-
-                        confirmadoAposTimeout:
-                            true,
-                    };
                 }
                 else {
                     if (

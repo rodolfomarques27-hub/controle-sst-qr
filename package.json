@@ -11,7 +11,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "lint:quiet": "eslint . --quiet",
-    "test:smoke": "node scripts/qualitySmokeTest.mjs && node scripts/ddsPersistenceSmokeTest.mjs && node scripts/ddsAvaliacaoMensalSmokeTest.mjs",
+    "test:smoke": "node scripts/qualitySmokeTest.mjs && node scripts/ddsPersistenceSmokeTest.mjs && node scripts/ddsAvaliacaoMensalSmokeTest.mjs && node scripts/certidaoMensalRevisaoHistoricaSmokeTest.mjs",
     "check:security": "node scripts/securityBaselineCheck.mjs",
     "check:database": "node scripts/databaseSecurityCheck.mjs",
     "check:bundle": "node scripts/bundleBudgetCheck.mjs .verify-dist",

@@ -5,6 +5,7 @@ import {
     extrairCnpjsDocumento,
     extrairRazaoSocialDocumento,
     formatarCnpj,
+    normalizarTextoDocumental,
 } from "./certidaoDocumentTextUtils.js";
 
 const MILISSEGUNDOS_POR_DIA =
@@ -166,9 +167,9 @@ export function extrairDadosCrf(
         extrairPrimeiroGrupo(
             conteudo,
             [
-                /CERTIFICA(?:Ç|C)[AÃ]O\s+N[ÚU]MERO\s*:?\s*([0-9][0-9.\-\/\s]{15,39})/i,
-                /N[ÚU]MERO\s+DA\s+CERTIFICA(?:Ç|C)[AÃ]O\s*:?\s*([0-9][0-9.\-\/\s]{15,39})/i,
-                /CERTIFICADO\s+N[º°O.]?\s*:?\s*([0-9][0-9.\-\/\s]{15,39})/i,
+                /CERTIFICA(?:Ç|C)[AÃ]O\s*N[ÚU]MERO\s*:?\s*([0-9][0-9./ \t-]{15,39})/i,
+                /N[ÚU]MERO\s+DA\s+CERTIFICA(?:Ç|C)[AÃ]O\s*:?\s*([0-9][0-9./ \t-]{15,39})/i,
+                /CERTIFICADO\s+N[º°O.]?\s*:?\s*([0-9][0-9./ \t-]{15,39})/i,
             ]
         )
             .replace(/\D/g, "");
@@ -250,5 +251,119 @@ export function extrairDadosCrf(
                 dataInicioValidadeBr
             ),
         prazoValidadeDias,
+    };
+}
+
+export function analisarAssinaturaEstruturalCrf(
+    texto = ""
+) {
+    const conteudo =
+        normalizarTextoDocumental(
+            texto
+        );
+
+    const dados =
+        extrairDadosCrf(
+            texto
+        );
+
+    const possuiIdentidadeDocumental =
+        Boolean(
+            /CERTIFICAD[O0]\s*(?:DE\s*)?REGULARIDADE(?:\s*DO)?\s*FGTS/
+                .test(
+                    conteudo
+                ) ||
+            (
+                /\bCRF\s*[-–—/]?\s*FGTS\b/
+                    .test(
+                        conteudo
+                    ) &&
+                /CERTIFICA(?:CAO|CÃO)\s*(?:NUMERO|N[º°O.]?)/
+                    .test(
+                        conteudo
+                    )
+            )
+        );
+
+    const possuiCnpj =
+        Boolean(
+            dados
+                .cnpjDocumento
+        );
+
+    const possuiIntervaloValidade =
+        Boolean(
+            dados
+                .dataInicioValidadeBr &&
+            dados
+                .dataFimValidadeBr
+        );
+
+    const possuiNumeroCertificacao =
+        Boolean(
+            dados
+                .numeroCertificacao &&
+            dados
+                .numeroCertificacao
+                .length >= 16 &&
+            dados
+                .numeroCertificacao
+                .length <= 32
+        );
+
+    const possuiEvidenciaInstitucional =
+        Boolean(
+            /CAIXA\s*(?:ECONOMICA\s*FEDERAL)?/
+                .test(
+                    conteudo
+                ) ||
+            conteudo.includes(
+                "SITUACAO REGULAR PERANTE O FUNDO"
+            ) ||
+            conteudo.includes(
+                "ENCONTRA-SE EM SITUACAO REGULAR PERANTE O FGTS"
+            )
+        );
+
+    const reconhecido =
+        Boolean(
+            possuiIdentidadeDocumental &&
+            possuiCnpj &&
+            possuiIntervaloValidade &&
+            possuiNumeroCertificacao
+        );
+
+    const evidencias = [
+        possuiIdentidadeDocumental
+            ? "IDENTIDADE_ESTRUTURAL_CRF_FGTS"
+            : "",
+        possuiCnpj
+            ? "CNPJ_DOCUMENTAL"
+            : "",
+        possuiIntervaloValidade
+            ? "INTERVALO_VALIDADE"
+            : "",
+        possuiNumeroCertificacao
+            ? "NUMERO_CERTIFICACAO"
+            : "",
+        possuiEvidenciaInstitucional
+            ? "EVIDENCIA_INSTITUCIONAL"
+            : "",
+    ].filter(
+        Boolean
+    );
+
+    return {
+        reconhecido,
+        confianca:
+            reconhecido
+                ? (
+                    possuiEvidenciaInstitucional
+                        ? 98
+                        : 95
+                )
+                : 0,
+        evidencias,
+        dados,
     };
 }
