@@ -618,6 +618,22 @@ export function criarDiagnosticoPersistencia(
                 ),
         },
 
+        // SAFE_SCAN_CERT2_P15_AVALIACAO_ANALITICA_PERSISTIVEL
+        // A comparação histórica lê datas e demais evidências analíticas
+        // em resolucao.avaliacao; portanto o snapshot persistível deve
+        // transportar essa mesma área, sem recalcular ou reinterpretar dados.
+        avaliacao:
+            resolucao?.avaliacao &&
+            typeof resolucao.avaliacao ===
+                "object" &&
+            !Array.isArray(
+                resolucao.avaliacao
+            )
+                ? {
+                    ...resolucao.avaliacao,
+                }
+                : null,
+
         resolucaoLote: {
             status:
                 textoSeguro(
@@ -1135,7 +1151,7 @@ export async function executarPlanoPersistenciaPrincipalUploadMassa({
 
     const executorDisponivel =
         typeof executarPersistencia ===
-        "function";
+            "function";
 
     const acoesExecutaveis =
         new Set([
@@ -2046,6 +2062,9 @@ export async function executarPlanoPersistenciaPrincipalUploadMassa({
 
         executorDisponivel:
             true,
+
+        totalFila:
+            undefined,
 
         executorInvocado:
             chamadas ===
