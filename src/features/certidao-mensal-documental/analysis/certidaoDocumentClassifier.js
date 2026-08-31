@@ -2,6 +2,10 @@ import {
     normalizarTextoDocumental,
 } from "./certidaoDocumentTextUtils.js";
 
+import {
+    analisarAssinaturaEstruturalCrf,
+} from "./certidaoCrfTextUtils.js";
+
 const DEFINICOES_DOCUMENTAIS =
     Object.freeze([
         {
@@ -21,41 +25,6 @@ const DEFINICOES_DOCUMENTAIS =
                 [
                     "GUIA DO FGTS DIGITAL",
                     "COMPETENCIA",
-                ],
-            ],
-        },
-        // SAFE_SCAN_CERT2_M4_F5_E_CRF_ASSINATURA_FORTE_V1
-        //
-        // CRF deve ser reconhecido pela estrutura do certificado
-        // efetivamente emitido para o empregador.
-        //
-        // A simples menção a "CRF - FGTS" em checklist, controle
-        // interno ou relação de certidões não satisfaz esta regra.
-        //
-        // Fail-closed:
-        // - exige identificação empresarial documental;
-        // - exige validade;
-        // - exige evidência institucional ou declaração material
-        //   de regularidade perante o Fundo.
-        {
-            id: "crf-fgts",
-            titulo: "CRF FGTS",
-            conjuntosObrigatorios: [
-                [
-                    "CERTIFICADO DE REGULARIDADE",
-                    "FGTS",
-                    "INSCRICAO",
-                    "RAZAO SOCIAL",
-                    "VALIDADE",
-                    "CAIXA ECONOMICA FEDERAL",
-                ],
-                [
-                    "CERTIFICADO DE REGULARIDADE",
-                    "FGTS",
-                    "INSCRICAO",
-                    "RAZAO SOCIAL",
-                    "VALIDADE",
-                    "SITUACAO REGULAR PERANTE O FUNDO",
                 ],
             ],
         },
@@ -191,6 +160,38 @@ export function classificarDocumentoCertidao(
         normalizarTextoDocumental(
             texto
         );
+
+    // SAFE_SCAN_CERT2_R14_A3_CRF_ASSINATURA_ESTRUTURAL_V2
+    //
+    // O CRF e reconhecido por valores documentais extraiveis,
+    // nao pela presenca simultanea de rotulos de um layout unico.
+    // A assinatura permanece fail-closed: titulo estrutural,
+    // CNPJ, intervalo de validade e numero de certificacao sao
+    // obrigatorios. Nome de arquivo e mencao isolada nao participam.
+    const assinaturaCrf =
+        analisarAssinaturaEstruturalCrf(
+            texto
+        );
+
+    if (
+        assinaturaCrf
+            .reconhecido
+    ) {
+        return {
+            identificado: true,
+            id:
+                "crf-fgts",
+            titulo:
+                "CRF FGTS",
+            confianca:
+                assinaturaCrf
+                    .confianca,
+            evidencias: [
+                ...assinaturaCrf
+                    .evidencias,
+            ],
+        };
+    }
 
     for (
         const definicao of

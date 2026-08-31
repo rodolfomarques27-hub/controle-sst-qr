@@ -2077,7 +2077,11 @@ export function CertidaoUploadMassaPanel({
                             ?.alterado ===
                             false
                             ? "A análise já estava atualizada no banco. A mesma versão foi preservada."
-                            : "Análise corrigida salva na mesma versão. O PDF, o SHA e o Storage foram preservados.",
+                            : resultado
+                                ?.versaoEraAtual ===
+                                false
+                                ? "Análise corrigida na versão histórica selecionada. A versão atual do item permaneceu inalterada."
+                                : "Análise corrigida salva na mesma versão. O PDF, o SHA e o Storage foram preservados.",
                 });
             }
             catch (erro) {
