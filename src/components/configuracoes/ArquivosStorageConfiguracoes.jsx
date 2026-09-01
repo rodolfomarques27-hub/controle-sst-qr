@@ -677,9 +677,9 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
                         <option value="Sem vínculo">Somente sem vínculo</option>
                     </select>
 
-                    <div className="grid grid-cols-2 gap-2">
-                        <input type="date" value={filtrosStorage.dataInicio} onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, dataInicio: e.target.value }))} className="min-w-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100" title="Data inicial de envio" />
-                        <input type="date" value={filtrosStorage.dataFim} onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, dataFim: e.target.value }))} className="min-w-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100" title="Data final de envio" />
+                    <div className="grid min-w-[300px] grid-cols-2 gap-2" data-storage-date-range="SAFE_SCAN_STORAGE_DATAS_V23" data-storage-date-center="SAFE_SCAN_STORAGE_DATAS_CENTER_V24">
+                        <input type="date" value={filtrosStorage.dataInicio} onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, dataInicio: e.target.value }))} className="min-w-[142px] rounded-2xl border border-slate-200 bg-white px-3 py-3 text-center text-sm tabular-nums outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100 [&::-webkit-datetime-edit]:flex-1 [&::-webkit-datetime-edit]:text-center [&::-webkit-datetime-edit-fields-wrapper]:w-full [&::-webkit-datetime-edit-fields-wrapper]:justify-center" title="Data inicial de envio" />
+                        <input type="date" value={filtrosStorage.dataFim} onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, dataFim: e.target.value }))} className="min-w-[142px] rounded-2xl border border-slate-200 bg-white px-3 py-3 text-center text-sm tabular-nums outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100 [&::-webkit-datetime-edit]:flex-1 [&::-webkit-datetime-edit]:text-center [&::-webkit-datetime-edit-fields-wrapper]:w-full [&::-webkit-datetime-edit-fields-wrapper]:justify-center" title="Data final de envio" />
                     </div>
                 </div>
 

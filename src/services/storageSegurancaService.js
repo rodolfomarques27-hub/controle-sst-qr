@@ -1,7 +1,10 @@
+/*
+ * SAFE_SCAN_STORAGE_RESUMO_NOVOS_BUCKETS_V11
+ */
 export const BUCKETS_STORAGE_SST = [
     {
         chave: "certificados-treinamentos",
-        label: "Certificados de treinamentos",
+        label: "Certificados e documentos de colaboradores",
         tipo: "Privado",
         criticidade: "Alta",
         recomendacao: "Manter bucket privado e abrir arquivos somente por URL assinada temporária.",
@@ -40,6 +43,34 @@ export const BUCKETS_STORAGE_SST = [
         tipo: "Controlado",
         criticidade: "Baixa",
         recomendacao: "Pode ter menor criticidade, mas deve manter padrão de caminho e origem confiável.",
+    },
+    {
+        chave: "certidao-mensal-documentos",
+        label: "Documentos da Certidão Mensal",
+        tipo: "Privado",
+        criticidade: "Alta",
+        recomendacao: "Preservar todas as versões e evidências vinculadas ao fechamento documental mensal.",
+    },
+    {
+        chave: "dds-assinados",
+        label: "Documentos assinados de DDS",
+        tipo: "Privado",
+        criticidade: "Alta",
+        recomendacao: "Preservar documentos assinados e respectivas evidências de frequência.",
+    },
+    {
+        chave: "mapas-obras",
+        label: "Plantas e mapas das obras",
+        tipo: "Privado",
+        criticidade: "Média",
+        recomendacao: "Manter plantas vinculadas à obra e aos pontos cadastrados.",
+    },
+    {
+        chave: "assinaturas-email-sst",
+        label: "Assinaturas dos modelos de e-mail SST",
+        tipo: "Privado",
+        criticidade: "Média",
+        recomendacao: "Tratar as assinaturas como ativos internos controlados do sistema.",
     },
 ];
 
@@ -265,13 +296,47 @@ async function carregarResumoStoragePorRpc({ supabase }) {
     const totalBytes = buckets.reduce((total, bucket) => total + bucket.bytes, 0);
     const arquivos = buckets.reduce((total, bucket) => total + bucket.arquivos, 0);
 
+    const bucketsRetornados =
+        new Set(
+            buckets.map(
+                (item) =>
+                    item.bucket
+            )
+        );
+
+    const completo =
+        STORAGE_BUCKETS_RESUMO_REAL
+            .every(
+                (bucket) =>
+                    bucketsRetornados.has(
+                        bucket
+                    )
+            );
+
     return {
         totalBytes,
-        totalMb: Math.round((totalBytes / BYTES_MB) * 100) / 100,
+
+        totalMb:
+            Math.round(
+                (
+                    totalBytes /
+                    BYTES_MB
+                ) *
+                100
+            ) /
+            100,
+
         arquivos,
+
         buckets,
-        atualizadoEm: new Date().toISOString(),
-        origem: "rpc-resumo_storage_sst",
+
+        atualizadoEm:
+            new Date().toISOString(),
+
+        origem:
+            "rpc-resumo_storage_sst",
+
+        completo,
     };
 }
 
@@ -280,8 +345,23 @@ export async function calcularUsoStorageRealSistema({ supabase } = {}) {
 
     try {
         const resumoRpc = await carregarResumoStoragePorRpc({ supabase });
-        if (resumoRpc.arquivos > 0 || resumoRpc.totalBytes > 0) {
+        if (
+            (
+                resumoRpc.arquivos > 0 ||
+                resumoRpc.totalBytes > 0
+            ) &&
+            resumoRpc.completo === true
+        ) {
             return resumoRpc;
+        }
+
+        if (
+            resumoRpc.arquivos > 0 ||
+            resumoRpc.totalBytes > 0
+        ) {
+            console.warn(
+                "A RPC resumo_storage_sst retornou catálogo parcial. Recalculando pelos buckets configurados."
+            );
         }
     } catch (error) {
         console.warn("Não foi possível calcular o Storage pela RPC resumo_storage_sst. Tentando Storage API.", error?.message || error);
