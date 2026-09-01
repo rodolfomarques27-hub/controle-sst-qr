@@ -18,6 +18,10 @@ import {
 } from "../domain/certidaoMensalRegraCompetencia.js";
 
 import {
+    normalizarVigenciaContratualEmpresa,
+} from "../domain/certidaoMensalVigenciaContratual.js";
+
+import {
     obterCnpjsAceitosEmpresa,
 } from "../../../services/empresaCnpjsService.js";
 
@@ -2166,6 +2170,158 @@ function montarCoberturaValidade({
     };
 }
 
+export function resolverDestinoValidadeComVigenciaContratual({
+    origem = {},
+    cobertura = {},
+    empresa = {},
+} = {}) {
+    const competenciaOrigem =
+        textoSeguro(
+            origem?.competenciaIso
+        );
+
+    const dataFonteIso =
+        textoSeguro(
+            origem?.dataFonteIso
+        );
+
+    const base = {
+        ...origem,
+
+        redirecionadoPorVigenciaContratual:
+            false,
+
+        bloqueiaPorVigenciaContratual:
+            false,
+
+        codigoVigenciaContratual:
+            "",
+
+        mensagemVigenciaContratual:
+            "",
+    };
+
+    if (
+        !competenciaOrigem ||
+        !dataFonteIso
+    ) {
+        return base;
+    }
+
+    const vigencia =
+        normalizarVigenciaContratualEmpresa(
+            empresa
+        );
+
+    if (
+        vigencia?.valida !== true ||
+        !vigencia?.dataInicioContrato ||
+        !vigencia?.competenciaInicioContrato
+    ) {
+        return base;
+    }
+
+    /*
+     * Documento cuja origem é igual ou posterior ao
+     * início real do contrato mantém o destino original.
+     */
+    if (
+        dataFonteIso >=
+        vigencia.dataInicioContrato
+    ) {
+        return base;
+    }
+
+    /*
+     * Origem anterior ao contrato.
+     *
+     * Para redirecionar o armazenamento para o primeiro
+     * mês contratual, a cobertura precisa alcançar o DIA
+     * REAL de início do contrato.
+     *
+     * Quando não existe início de validade explícito,
+     * usamos a data documental de origem apenas como
+     * limite inicial da cobertura.
+     */
+    const inicioCoberturaIso =
+        textoSeguro(
+            cobertura?.inicioIso
+        ) ||
+        dataFonteIso;
+
+    const fimCoberturaIso =
+        textoSeguro(
+            cobertura?.fimIso
+        );
+
+    const padraoDataIso =
+        /^\d{4}-\d{2}-\d{2}$/;
+
+    const coberturaComprovada =
+        padraoDataIso.test(
+            inicioCoberturaIso
+        ) &&
+        padraoDataIso.test(
+            fimCoberturaIso
+        ) &&
+        inicioCoberturaIso <=
+            vigencia.dataInicioContrato &&
+        fimCoberturaIso >=
+            vigencia.dataInicioContrato;
+
+    if (!coberturaComprovada) {
+        return {
+            ...base,
+
+            /*
+             * Fail-closed.
+             *
+             * Não deixamos o backend receber simplesmente
+             * o mês do documento quando a validade termina
+             * antes do dia real de início do contrato.
+             */
+            competenciaIso:
+                "",
+
+            fonte:
+                "",
+
+            bloqueiaPorVigenciaContratual:
+                true,
+
+            codigoVigenciaContratual:
+                "VALIDADE_NAO_ALCANCA_INICIO_CONTRATO",
+
+            mensagemVigenciaContratual:
+                (
+                    "O documento possui origem anterior ao início do contrato, " +
+                    "mas sua validade não comprova cobertura na data real de início " +
+                    "do contrato (" +
+                    vigencia.dataInicioContrato +
+                    ")."
+                ),
+        };
+    }
+
+    return {
+        ...base,
+
+        competenciaIso:
+            vigencia
+                .competenciaInicioContrato,
+
+        fonte:
+            "INICIO_CONTRATO_DOCUMENTO_ANTERIOR_VALIDO",
+
+        redirecionadoPorVigenciaContratual:
+            true,
+
+        dataInicioContrato:
+            vigencia
+                .dataInicioContrato,
+    };
+}
+
 function adicionarMotivo(
     motivos,
     codigo,
@@ -3337,25 +3493,71 @@ export function resolverDocumentoCertidaoEmLote({
                 avaliacao,
             });
 
+        const cobertura =
+            montarCoberturaValidade({
+                tipoDocumento,
+                avaliacao,
+            });
+
+        const destinoValidade =
+            resolverDestinoValidadeComVigenciaContratual({
+                origem,
+                cobertura,
+
+                empresa:
+                    identificacaoEmpresa
+                        ?.empresa ||
+                    {},
+            });
+
         destino = {
             competenciaIso:
-                origem
+                destinoValidade
                     .competenciaIso,
 
             fonte:
-                origem
+                destinoValidade
                     .fonte,
 
+            /*
+             * A data documental real nunca é reescrita.
+             * Somente o destino mensal de armazenamento
+             * pode ser ajustado pela vigência contratual.
+             */
             dataFonteIso:
                 origem
                     .dataFonteIso,
 
-            cobertura:
-                montarCoberturaValidade({
-                    tipoDocumento,
-                    avaliacao,
-                }),
+            cobertura,
+
+            redirecionadoPorVigenciaContratual:
+                destinoValidade
+                    .redirecionadoPorVigenciaContratual ===
+                true,
+
+            dataInicioContrato:
+                destinoValidade
+                    .dataInicioContrato ||
+                "",
         };
+
+        if (
+            destinoValidade
+                .bloqueiaPorVigenciaContratual ===
+            true
+        ) {
+            adicionarMotivo(
+                motivos,
+
+                destinoValidade
+                    .codigoVigenciaContratual ||
+                "VALIDADE_NAO_ALCANCA_INICIO_CONTRATO",
+
+                destinoValidade
+                    .mensagemVigenciaContratual ||
+                "A validade do documento não alcança a data real de início do contrato."
+            );
+        }
 
         if (
             !origem
