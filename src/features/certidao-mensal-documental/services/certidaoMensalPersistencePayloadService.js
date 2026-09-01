@@ -306,6 +306,92 @@ function resolverCompetenciaOrigemDocumentoValidade({
     return competenciaEmissao;
 }
 
+/*
+ * ============================================================
+ * SAFE_SCAN_CERT2_M3_A5_COMPETENCIA_CANONICA
+ *
+ * Um resultado explicitamente originado do motor canônico
+ * não pode executar uma segunda decisão de competência.
+ *
+ * Fail-closed:
+ * - origem canônica com versão inesperada => bloqueia;
+ * - competência canônica ausente/inválida => bloqueia;
+ * - nunca faz fallback para a competência da interface.
+ * ============================================================
+ */
+function resultadoTemOrigemMotorCanonicoCert2(
+    resultado
+) {
+    const origem =
+        textoSeguro(
+            resultado
+                ?.motorDocumental
+                ?.origem
+        );
+
+    if (
+        origem !==
+        "CANONICO_CERT2"
+    ) {
+        return false;
+    }
+
+    const versao =
+        textoSeguro(
+            resultado
+                ?.motorDocumental
+                ?.versao
+        );
+
+    if (
+        versao !==
+        "CERT2_DOCUMENTO_CANONICO_V1"
+    ) {
+        throw new Error(
+            "O resultado informa origem canônica CERT2, mas a versão do contrato não é suportada."
+        );
+    }
+
+    return true;
+}
+
+function resolverCompetenciaCanonicaPersistenciaDocumento(
+    resultado
+) {
+    const competenciaCanonica =
+        textoSeguro(
+            resultado
+                ?.motorDocumental
+                ?.competenciaArmazenamentoIso
+        );
+
+    if (
+        !/^\d{4}-(0[1-9]|1[0-2])-01$/.test(
+            competenciaCanonica
+        )
+    ) {
+        throw new Error(
+            "O Motor Documental Canônico CERT2 não forneceu uma competência de armazenamento válida para a persistência."
+        );
+    }
+
+    const normalizada =
+        normalizarCompetenciaCertidaoMensal(
+            competenciaCanonica
+        );
+
+    if (
+        normalizada !==
+        competenciaCanonica
+    ) {
+        throw new Error(
+            "A competência canônica foi alterada durante a normalização. Persistência bloqueada."
+        );
+    }
+
+    return competenciaCanonica;
+}
+
 function resolverCompetenciaPersistenciaDocumento({
     tipoDocumento,
     competenciaNormalizada,
@@ -604,11 +690,17 @@ export function criarPayloadDocumentoCertidaoMensal({
         );
 
     const competenciaPersistencia =
-        resolverCompetenciaPersistenciaDocumento({
-            tipoDocumento,
-            competenciaNormalizada,
-            avaliacao,
-        });
+        resultadoTemOrigemMotorCanonicoCert2(
+            resultado
+        )
+            ? resolverCompetenciaCanonicaPersistenciaDocumento(
+                resultado
+            )
+            : resolverCompetenciaPersistenciaDocumento({
+                tipoDocumento,
+                competenciaNormalizada,
+                avaliacao,
+            });
 
     const classificacao =
         obterClassificacaoDocumental(

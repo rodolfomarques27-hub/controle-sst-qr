@@ -2019,6 +2019,27 @@ export function CertidaoUploadMassaPanel({
                         versaoId,
                     });
 
+                // SAFE_SCAN_CERT2_P15_NOOP_PANEL_FAIL_CLOSED
+                // Nunca converte alterado=false/ausente em sucesso visual.
+                if (
+                    resultado
+                        ?.alterado !==
+                    true
+                ) {
+                    setSalvamentoDocumentoSalvo({
+                        salvando:
+                            false,
+
+                        erro:
+                            "O servidor não confirmou uma nova alteração. Feche e reabra a comparação antes de considerar a revisão atualizada.",
+
+                        sucesso:
+                            "",
+                    });
+
+                    return;
+                }
+
                 setRevisaoDocumentoSalvo(
                     (atual) => {
                         if (
@@ -2074,14 +2095,10 @@ export function CertidaoUploadMassaPanel({
 
                     sucesso:
                         resultado
-                            ?.alterado ===
+                            ?.versaoEraAtual ===
                             false
-                            ? "A análise já estava atualizada no banco. A mesma versão foi preservada."
-                            : resultado
-                                ?.versaoEraAtual ===
-                                false
-                                ? "Análise corrigida na versão histórica selecionada. A versão atual do item permaneceu inalterada."
-                                : "Análise corrigida salva na mesma versão. O PDF, o SHA e o Storage foram preservados.",
+                            ? "Análise corrigida na versão histórica selecionada. A versão atual do item permaneceu inalterada."
+                            : "Análise corrigida salva na mesma versão. O PDF, o SHA e o Storage foram preservados.",
                 });
             }
             catch (erro) {

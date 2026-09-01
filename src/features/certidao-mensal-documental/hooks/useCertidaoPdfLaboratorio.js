@@ -5,8 +5,8 @@ import {
     useState,
 } from "react";
 import {
-    diagnosticarCertidaoPdfLocal,
-} from "../pdf/certidaoPdfDiagnostic";
+    diagnosticarCertidaoPdfCanonicoParaLaboratorio,
+} from "../analysis/certidaoDocumentCanonicalLaboratorioAdapter.js";
 import {
     criarPayloadDocumentoCertidaoMensal,
     criarPayloadTentativaRecusadaCertidaoMensal,
@@ -15,8 +15,11 @@ import {
 import {
     buscarDocumentoAtualCertidaoMensal,
     criarUrlAssinadaPdfCertidaoMensal,
-    salvarPdfCertidaoMensal,
 } from "../services/certidaoMensalDocumentPersistenceService.js";
+
+import {
+    salvarPdfCertidaoMensalIndividual,
+} from "../services/certidaoMensalIndividualPersistenceService.js";
 
 const PROGRESSO_INICIAL = Object.freeze({
     status: "aguardando_arquivo",
@@ -625,7 +628,7 @@ export function useCertidaoPdfLaboratorio() {
             });
 
             const resultadoCandidato =
-                await diagnosticarCertidaoPdfLocal(
+                await diagnosticarCertidaoPdfCanonicoParaLaboratorio(
                     arquivo,
                     {
                         contexto,
@@ -867,7 +870,7 @@ export function useCertidaoPdfLaboratorio() {
                     });
 
                 const resultadoPersistencia =
-                    await salvarPdfCertidaoMensal({
+                    await salvarPdfCertidaoMensalIndividual({
                         arquivo:
                             estado.arquivo,
                         payload,

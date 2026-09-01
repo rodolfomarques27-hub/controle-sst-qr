@@ -19,6 +19,7 @@ import {
     aplicarGuardConflitoLogicoHistorico,
     aplicarGuardDuplicidadeExataHistorico,
     processarArquivosCertidaoEmLote,
+    resolverItemSingularRevisaoHistorica,
 } from "../services/certidaoMensalUploadMassaService.js";
 import {
     criarDiagnosticoPersistencia,
@@ -30,6 +31,10 @@ import {
 import {
     criarUrlAssinadaPdfCertidaoMensal,
 } from "../services/certidaoMensalDocumentPersistenceService.js";
+
+import {
+    criarCertidaoMensalRevisaoHistoricaSingleFlight,
+} from "../services/certidaoMensalRevisaoHistoricaSingleFlightService.js";
 
 import {
     criarPlanoComplementarIndividualUploadMassa,
@@ -1783,6 +1788,27 @@ export function useCertidaoMensalUploadMassa({
             0
         );
 
+    /*
+     * SAFE_SCAN_CERT2_M2_A3_REVISAO_SINGLE_FLIGHT
+     *
+     * A trava mora no núcleo do executor, e não apenas na UI.
+     * A instância permanece estável entre renders do mesmo hook.
+     */
+    const revisaoHistoricaSingleFlightRef =
+        useRef(
+            null
+        );
+
+    if (
+        revisaoHistoricaSingleFlightRef
+            .current ===
+        null
+    ) {
+        revisaoHistoricaSingleFlightRef
+            .current =
+                criarCertidaoMensalRevisaoHistoricaSingleFlight();
+    }
+
     const abortControllerRef =
         useRef(
             null
@@ -3341,6 +3367,16 @@ export function useCertidaoMensalUploadMassa({
             async ({
                 versaoId,
             } = {}) => {
+                /*
+                 * SAFE_SCAN_CERT2_M2_A3_REVISAO_SINGLE_FLIGHT_EXECUTOR
+                 *
+                 * Segunda invocação simultânea falha aqui,
+                 * antes de alcançar a RPC de escrita.
+                 */
+                return revisaoHistoricaSingleFlightRef
+                    .current
+                    .executar(
+                        async () => {
                 if (
                     estado.processando
                 ) {
@@ -3507,6 +3543,37 @@ export function useCertidaoMensalUploadMassa({
                     );
                 }
 
+                /*
+                 * ========================================================
+                 * SAFE_SCAN_CERT2_M3_A7_REVISAO_USA_SNAPSHOT_SINGULAR
+                 *
+                 * itemAlvo:
+                 * - permanece como fonte dos metadados históricos;
+                 * - permanece como fonte da identidade protegida;
+                 * - permanece no optimistic guard.
+                 *
+                 * itemSingularAlvo:
+                 * - é usado SOMENTE para gerar o novo diagnóstico
+                 *   analítico.
+                 *
+                 * Nenhum fallback para o item pós-lote é permitido.
+                 * ========================================================
+                 */
+                const itensSingulares =
+                    Array.isArray(
+                        estado
+                            ?.resultado
+                            ?.itensSingulares
+                    )
+                        ? estado.resultado.itensSingulares
+                        : [];
+
+                const itemSingularAlvo =
+                    resolverItemSingularRevisaoHistorica({
+                        itensSingulares,
+                        itemAlvo,
+                    });
+
                 const historico =
                     itemAlvo
                         ?.duplicidade
@@ -3663,7 +3730,7 @@ export function useCertidaoMensalUploadMassa({
 
                 const diagnosticoAtual =
                     criarDiagnosticoPersistencia(
-                        itemAlvo
+                        itemSingularAlvo
                     );
 
                 /*
@@ -3807,6 +3874,27 @@ export function useCertidaoMensalUploadMassa({
                         Date.now() +
                         15000;
 
+                    /*
+                     * SAFE_SCAN_CERT2_M2_A4_RECONCILIACAO_LIMITADA
+                     *
+                     * A reconciliação continua estritamente read-only.
+                     *
+                     * Limite físico:
+                     * - no máximo 6 ciclos;
+                     * - 2 SELECTs paralelos por ciclo;
+                     * - no máximo 12 leituras por operação expirada.
+                     *
+                     * Nenhuma nova RPC de escrita é disparada.
+                     */
+                    const maxTentativasConfirmacao =
+                        6;
+
+                    const intervaloTentativasConfirmacaoMs =
+                        2500;
+
+                    let tentativasConfirmacao =
+                        0;
+
                     let conflitoAnalise =
                         false;
 
@@ -3816,8 +3904,13 @@ export function useCertidaoMensalUploadMassa({
                     while (
                         Date.now() <
                         prazoConfirmacao &&
-                        !retorno
+                        !retorno &&
+                        tentativasConfirmacao <
+                            maxTentativasConfirmacao
                     ) {
+                        tentativasConfirmacao +=
+                            1;
+
                         const controladorTentativa =
                             typeof AbortController ===
                             "function"
@@ -3954,13 +4047,15 @@ export function useCertidaoMensalUploadMassa({
                         if (leituraFalhou) {
                             if (
                                 Date.now() <
-                                prazoConfirmacao
+                                    prazoConfirmacao &&
+                                tentativasConfirmacao <
+                                    maxTentativasConfirmacao
                             ) {
                                 await new Promise(
                                     (resolver) =>
                                         setTimeout(
                                             resolver,
-                                            500
+                                            intervaloTentativasConfirmacaoMs
                                         )
                                 );
 
@@ -4097,13 +4192,15 @@ export function useCertidaoMensalUploadMassa({
 
                         if (
                             Date.now() <
-                            prazoConfirmacao
+                                prazoConfirmacao &&
+                            tentativasConfirmacao <
+                                maxTentativasConfirmacao
                         ) {
                             await new Promise(
                                 (resolver) =>
                                     setTimeout(
                                         resolver,
-                                        500
+                                        intervaloTentativasConfirmacaoMs
                                     )
                             );
                         }
@@ -4159,6 +4256,19 @@ export function useCertidaoMensalUploadMassa({
                         )
                             ? resposta.data[0]
                             : resposta?.data;
+                }
+
+                // SAFE_SCAN_CERT2_P15_NOOP_HOOK_FAIL_CLOSED
+                // O estado local só pode assumir o novo diagnóstico depois
+                // de confirmação explícita de alteração pela RPC.
+                if (
+                    retorno
+                        ?.alterado !==
+                    true
+                ) {
+                    throw new Error(
+                        "O servidor não confirmou uma nova alteração. Feche e reabra a comparação antes de considerar a revisão atualizada."
+                    );
                 }
 
                 /*
@@ -4295,6 +4405,8 @@ export function useCertidaoMensalUploadMassa({
                             ?.confirmadoAposTimeout ===
                         true,
                 });
+                        }
+                    );
             },
             [
                 estado.processando,

@@ -8,10 +8,11 @@ import {
  *
  * Responsabilidade:
  *
- * combinar as duas provas imediatamente anteriores ao write:
+ * combinar as três provas imediatamente anteriores ao write:
  *
- * 1. estado remoto exato do slot documental;
- * 2. ausência global do SHA do novo PDF.
+ * 1. vigência contratual oficial de empresa + competência;
+ * 2. estado remoto exato do slot documental;
+ * 3. ausência global do SHA do novo PDF.
  *
  * Este módulo NÃO executa persistência.
  * ============================================================
@@ -69,6 +70,8 @@ function erroEhCancelamento(
         error?.codigo ===
             "PREFLIGHT_COMPOSTO_CANCELADO" ||
         error?.codigo ===
+            "PREFLIGHT_VIGENCIA_CANCELADO" ||
+        error?.codigo ===
             "PREFLIGHT_HASH_CANCELADO"
     );
 }
@@ -108,6 +111,7 @@ function criarResultado({
     codigo = "",
     etapa = "",
     hashSha256 = "",
+    resultadoVigencia = null,
     resultadoSlot = null,
     estadoSha = null,
     causa = null,
@@ -135,6 +139,8 @@ function criarResultado({
             normalizarHashSha256(
                 hashSha256
             ),
+
+        resultadoVigencia,
 
         resultadoSlot,
 
@@ -183,10 +189,94 @@ function estadoShaCanonicoValido({
     );
 }
 
+function chavesLogicasIguais(
+    esquerda,
+    direita
+) {
+    return Boolean(
+        esquerda &&
+        direita &&
+        textoSeguro(
+            esquerda?.empresaId
+        ).toLowerCase() ===
+            textoSeguro(
+                direita?.empresaId
+            ).toLowerCase() &&
+        textoSeguro(
+            esquerda?.competencia
+        ) ===
+            textoSeguro(
+                direita?.competencia
+            ) &&
+        textoSeguro(
+            esquerda?.tipoDocumento
+        ).toLowerCase() ===
+            textoSeguro(
+                direita?.tipoDocumento
+            ).toLowerCase()
+    );
+}
+
+function estadoVigenciaCanonicoValido({
+    estadoVigencia,
+    chaveEsperada,
+}) {
+    if (
+        Number(
+            estadoVigencia?.versao
+        ) !==
+            1 ||
+        estadoVigencia
+            ?.leituraConcluida !==
+            true ||
+        typeof estadoVigencia
+            ?.liberada !==
+            "boolean" ||
+        !chavesLogicasIguais(
+            estadoVigencia
+                ?.chaveLogica,
+            chaveEsperada
+        )
+    ) {
+        return false;
+    }
+
+    const codigo =
+        textoSeguro(
+            estadoVigencia?.codigo
+        );
+
+    if (
+        estadoVigencia
+            .liberada ===
+        true
+    ) {
+        return Boolean(
+            codigo ===
+                "VIGENCIA_CONTRATUAL_OK" &&
+            textoSeguro(
+                estadoVigencia
+                    ?.classificacao
+            ).toUpperCase() ===
+                "DURANTE_DO_CONTRATO"
+        );
+    }
+
+    return (
+        codigo ===
+        "VIGENCIA_CONTRATUAL_BLOQUEADA"
+    );
+}
+
 export function criarCertidaoMensalUploadMassaPreflightComposto({
+    vigenciaReader = null,
     slotReader = null,
     hashReader = null,
 } = {}) {
+    const lerVigencia =
+        vigenciaReader
+            ?.lerEstadoVigenciaPersistenciaPrincipalUploadMassa;
+
     const lerSlot =
         slotReader
             ?.lerEstadoRemotoPersistenciaPrincipalUploadMassa;
@@ -194,6 +284,15 @@ export function criarCertidaoMensalUploadMassaPreflightComposto({
     const lerSha =
         hashReader
             ?.lerEstadoShaPersistenciaPrincipalUploadMassa;
+
+    if (
+        typeof lerVigencia !==
+        "function"
+    ) {
+        throw new Error(
+            "Vigência Reader inválido para o preflight composto."
+        );
+    }
 
     if (
         typeof lerSlot !==
@@ -321,7 +420,116 @@ export function criarCertidaoMensalUploadMassaPreflightComposto({
 
         /*
          * ========================================================
-         * 2 — SLOT READER REMOTO
+         * 2 — VIGÊNCIA CONTRATUAL REMOTA
+         *
+         * CRÍTICO:
+         *
+         * esta prova acontece ANTES do Slot Reader, SHA Reader
+         * e, consequentemente, antes de qualquer executor que
+         * possa alcançar o Storage.
+         * ========================================================
+         */
+
+        let estadoVigencia;
+
+        try {
+            estadoVigencia =
+                await lerVigencia.call(
+                    vigenciaReader,
+                    {
+                        chaveLogica:
+                            preflight
+                                ?.chaveLogica,
+
+                        signal,
+                    }
+                );
+        }
+        catch (error) {
+            if (
+                erroEhCancelamento(
+                    error,
+                    signal
+                )
+            ) {
+                throw criarErroCancelamento();
+            }
+
+            return criarResultado({
+                podeExecutar:
+                    false,
+
+                codigo:
+                    "PREFLIGHT_VIGENCIA_READER_FALHOU",
+
+                etapa:
+                    "vigencia_reader",
+
+                hashSha256:
+                    hashNovo,
+
+                causa:
+                    error,
+            });
+        }
+
+        if (signal?.aborted) {
+            throw criarErroCancelamento();
+        }
+
+        if (
+            !estadoVigenciaCanonicoValido({
+                estadoVigencia,
+
+                chaveEsperada:
+                    preflight
+                        ?.chaveLogica,
+            })
+        ) {
+            return criarResultado({
+                podeExecutar:
+                    false,
+
+                codigo:
+                    "PREFLIGHT_VIGENCIA_ESTADO_INVALIDO",
+
+                etapa:
+                    "vigencia_validacao",
+
+                hashSha256:
+                    hashNovo,
+
+                resultadoVigencia:
+                    estadoVigencia,
+            });
+        }
+
+        if (
+            estadoVigencia
+                .liberada !==
+            true
+        ) {
+            return criarResultado({
+                podeExecutar:
+                    false,
+
+                codigo:
+                    "PREFLIGHT_VIGENCIA_BLOQUEADA",
+
+                etapa:
+                    "vigencia_contratual",
+
+                hashSha256:
+                    hashNovo,
+
+                resultadoVigencia:
+                    estadoVigencia,
+            });
+        }
+
+        /*
+         * ========================================================
+         * 3 — SLOT READER REMOTO
          * ========================================================
          */
 
@@ -372,7 +580,7 @@ export function criarCertidaoMensalUploadMassaPreflightComposto({
 
         /*
          * ========================================================
-         * 3 — COMPARADOR PURO DA FINGERPRINT
+         * 4 — COMPARADOR PURO DA FINGERPRINT
          * ========================================================
          */
 
@@ -418,7 +626,7 @@ export function criarCertidaoMensalUploadMassaPreflightComposto({
 
         /*
          * ========================================================
-         * 4 — HASH READER GLOBAL PRÉ-WRITE
+         * 5 — HASH READER GLOBAL PRÉ-WRITE
          * ========================================================
          */
 
@@ -504,7 +712,7 @@ export function criarCertidaoMensalUploadMassaPreflightComposto({
 
         /*
          * ========================================================
-         * 5 — DUPLICIDADE EXATA ENCONTRADA NO ÚLTIMO INSTANTE
+         * 6 — DUPLICIDADE EXATA ENCONTRADA NO ÚLTIMO INSTANTE
          * ========================================================
          */
 
@@ -538,7 +746,7 @@ export function criarCertidaoMensalUploadMassaPreflightComposto({
 
         /*
          * ========================================================
-         * 6 — AUTORIZAÇÃO COMPOSTA
+         * 7 — AUTORIZAÇÃO COMPOSTA
          *
          * Ainda NÃO é write.
          *
@@ -561,6 +769,9 @@ export function criarCertidaoMensalUploadMassaPreflightComposto({
 
             hashSha256:
                 hashNovo,
+
+            resultadoVigencia:
+                estadoVigencia,
 
             resultadoSlot,
 

@@ -3,7 +3,7 @@ import {
 } from "./certidaoDocumentBatchResolver.js";
 
 import {
-    processarArquivosCertidaoEmLote,
+    processarArquivoCertidaoSingular,
 } from "../services/certidaoMensalUploadMassaService.js";
 
 import {
@@ -133,37 +133,26 @@ export async function analisarDocumentoCert2({
         );
     }
 
-    const lote =
-        await processarArquivosCertidaoEmLote({
-            arquivos: [
-                arquivo,
-            ],
+    /*
+     * SAFE_SCAN_CERT2_M3_A4_ENGINE_SINGULAR
+     *
+     * O motor canônico analisa diretamente UM PDF.
+     * Nenhuma regra relacional/coletiva do lote participa
+     * da verdade documental singular.
+     */
+    const item =
+        await processarArquivoCertidaoSingular({
+            arquivo,
+
+            indice:
+                0,
+
+            total:
+                1,
 
             empresas:
                 normalizarEmpresas(
                     contexto
-                ),
-
-            colaboradores:
-                Array.isArray(
-                    contexto
-                        ?.colaboradores
-                )
-                    ? contexto
-                        .colaboradores
-                    : [],
-
-            estadoConsultaColaboradores:
-                textoSeguro(
-                    contexto
-                        ?.estadoConsultaColaboradores ||
-                    "BASE_CONFIRMADA"
-                ),
-
-            detalheConsultaColaboradores:
-                textoSeguro(
-                    contexto
-                        ?.detalheConsultaColaboradores
                 ),
 
             dataReferencia:
@@ -175,12 +164,6 @@ export async function analisarDocumentoCert2({
             signal,
             dependencias,
         });
-
-    const item =
-        lote
-            ?.itens
-            ?.[0] ||
-        null;
 
     if (!item) {
         throw new Error(

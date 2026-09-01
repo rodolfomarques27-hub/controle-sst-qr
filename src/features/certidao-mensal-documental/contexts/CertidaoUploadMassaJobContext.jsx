@@ -31,6 +31,10 @@ import {
 } from "../services/certidaoMensalUploadMassaPreflightHashReaderService.js";
 
 import {
+    criarCertidaoMensalUploadMassaPreflightVigenciaReader,
+} from "../services/certidaoMensalUploadMassaPreflightVigenciaReaderService.js";
+
+import {
     criarCertidaoMensalUploadMassaPreflightComposto,
 } from "../services/certidaoMensalUploadMassaPreflightCompostoService.js";
 
@@ -219,6 +223,12 @@ export function CertidaoUploadMassaJobProvider({
                     return null;
                 }
 
+                const vigenciaReader =
+                    criarCertidaoMensalUploadMassaPreflightVigenciaReader({
+                        clienteSupabase:
+                            supabase,
+                    });
+
                 const slotReader =
                     criarCertidaoMensalUploadMassaPreflightReader({
                         clienteSupabase:
@@ -233,6 +243,7 @@ export function CertidaoUploadMassaJobProvider({
 
                 const preflightComposto =
                     criarCertidaoMensalUploadMassaPreflightComposto({
+                        vigenciaReader,
                         slotReader,
                         hashReader,
                     });

@@ -618,6 +618,21 @@ export function criarDiagnosticoPersistencia(
                 ),
         },
 
+        // SAFE_SCAN_CERT2_P15_AVALIACAO_ANALITICA_PERSISTIVEL
+        // Transporta a avaliação RAW já produzida pelo motor singular.
+        // Não recalcula, não reclassifica e não reinterpreta datas.
+        avaliacao:
+            resolucao?.avaliacao &&
+            typeof resolucao.avaliacao ===
+                "object" &&
+            !Array.isArray(
+                resolucao.avaliacao
+            )
+                ? {
+                    ...resolucao.avaliacao,
+                }
+                : null,
+
         resolucaoLote: {
             status:
                 textoSeguro(

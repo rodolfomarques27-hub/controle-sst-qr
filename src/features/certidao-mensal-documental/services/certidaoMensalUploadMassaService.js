@@ -5503,6 +5503,761 @@ export function aplicarGuardConflitoLogicoHistorico({
     };
 }
 
+// ============================================================
+// SAFE_SCAN_CERT2_M3_A7_RESOLVER_SNAPSHOT_SINGULAR
+//
+// Seleciona a verdade analítica produzida antes das políticas
+// coletivas do lote.
+//
+// Pareamento obrigatório:
+// - índice do item;
+// - SHA-256 já calculado pelo núcleo singular.
+//
+// Não:
+// - recalcula SHA;
+// - executa OCR;
+// - classifica;
+// - resolve documento;
+// - persiste;
+// - executa RPC.
+//
+// Qualquer ausência, inconsistência ou ambiguidade bloqueia
+// a revisão antes da fronteira de escrita.
+// ============================================================
+
+export function resolverItemSingularRevisaoHistorica({
+    itensSingulares = [],
+    itemAlvo = null,
+} = {}) {
+    const indiceAlvo =
+        Number.isInteger(
+            itemAlvo?.indice
+        )
+            ? itemAlvo.indice
+            : null;
+
+    const hashAlvo =
+        textoSeguro(
+            itemAlvo
+                ?.duplicidade
+                ?.hashSha256 ||
+            itemAlvo
+                ?.hash
+                ?.sha256
+        ).toLowerCase();
+
+    if (
+        !Number.isInteger(
+            indiceAlvo
+        ) ||
+        indiceAlvo < 0 ||
+        !/^[a-f0-9]{64}$/.test(
+            hashAlvo
+        )
+    ) {
+        throw new Error(
+            "A identidade índice + SHA-256 do item histórico está incompleta. A revisão foi bloqueada."
+        );
+    }
+
+    const lista =
+        Array.isArray(
+            itensSingulares
+        )
+            ? itensSingulares
+            : [];
+
+    const correspondencias =
+        lista.filter(
+            (item) => {
+                const indiceItem =
+                    Number.isInteger(
+                        item?.indice
+                    )
+                        ? item.indice
+                        : null;
+
+                const hashItem =
+                    textoSeguro(
+                        item
+                            ?.hash
+                            ?.sha256
+                    ).toLowerCase();
+
+                return (
+                    indiceItem ===
+                        indiceAlvo &&
+                    hashItem ===
+                        hashAlvo
+                );
+            }
+        );
+
+    if (
+        correspondencias.length !==
+        1
+    ) {
+        throw new Error(
+            "Não foi possível localizar de forma única o snapshot singular correspondente ao documento histórico. A revisão foi bloqueada."
+        );
+    }
+
+    return correspondencias[0];
+}
+
+// ============================================================
+// SAFE_SCAN_CERT2_M3_A4_NUCLEO_SINGULAR
+//
+// Unidade documental de UM PDF.
+//
+// Responsabilidades:
+// - validar;
+// - calcular SHA-256;
+// - extrair texto;
+// - resolver o documento;
+// - enriquecer por OCR adaptativo quando necessário;
+// - produzir um item analítico.
+//
+// Não executa:
+// - duplicidade intralote;
+// - associação entre documentos;
+// - identidade/fallback de colaboradores;
+// - guards coletivos;
+// - persistência.
+// ============================================================
+
+export async function processarArquivoCertidaoSingular({
+    arquivo: arquivoEntrada,
+    indice: indiceEntrada = 0,
+    total: totalEntrada = 1,
+    empresas = [],
+    dataReferencia = new Date(),
+    onProgress = null,
+    signal = null,
+    dependencias = {},
+} = {}) {
+    if (!arquivoEntrada) {
+        throw new Error(
+            "Nenhum arquivo foi informado para a análise documental singular."
+        );
+    }
+
+    const total =
+        (
+            Number.isInteger(
+                totalEntrada
+            ) &&
+            totalEntrada > 0
+        )
+            ? totalEntrada
+            : 1;
+
+    const indice =
+        (
+            Number.isInteger(
+                indiceEntrada
+            ) &&
+            indiceEntrada >= 0 &&
+            indiceEntrada < total
+        )
+            ? indiceEntrada
+            : 0;
+
+    /*
+     * Mantém as mesmas variáveis usadas pelo núcleo original.
+     *
+     * A lista é local e contém somente o arquivo da posição
+     * corrente. Seu length preserva a semântica de progresso
+     * quando a função é usada pelo orquestrador de lote.
+     */
+    const lista =
+        new Array(
+            total
+        );
+
+    lista[indice] =
+        arquivoEntrada;
+
+    const itens =
+        [];
+
+    const deps = {
+        ...DEPENDENCIAS_PADRAO,
+        ...(
+            dependencias ||
+            {}
+        ),
+    };
+
+    for (
+        const nome of
+        [
+            "validarArquivo",
+            "calcularHash",
+            "extrairTexto",
+            "resolverDocumento",
+        ]
+    ) {
+        if (
+            typeof deps[nome] !==
+            "function"
+        ) {
+            throw new Error(
+                `Dependência inválida da análise singular: ${nome}.`
+            );
+        }
+    }
+
+    verificarCancelamento(
+        signal
+    );
+
+    const arquivo =
+        lista[indice];
+
+    const nomeArquivo =
+        textoSeguro(
+            arquivo?.name
+        ) ||
+        `documento-${indice + 1}.pdf`;
+
+    const caminhoRelativo =
+        textoSeguro(
+            arquivo
+                ?.webkitRelativePath
+        );
+
+    const baseProgresso = {
+        indice,
+
+        total:
+            lista.length,
+
+        processados:
+            indice,
+
+        nomeArquivo,
+    };
+
+    let validacao =
+        null;
+
+    let hash =
+        null;
+
+    let leitura =
+        null;
+
+    try {
+        emitirProgresso(
+            onProgress,
+            {
+                ...baseProgresso,
+
+                status:
+                    CERTIDAO_UPLOAD_MASSA_PROGRESSO
+                        .VALIDANDO_ARQUIVO,
+
+                percentual:
+                    percentual({
+                        indice,
+                        total:
+                            lista.length,
+                        fracao:
+                            0.10,
+                    }),
+
+                mensagem:
+                    `Validando ${nomeArquivo}.`,
+            }
+        );
+
+        validacao =
+            await deps.validarArquivo(
+                arquivo
+            );
+
+        verificarCancelamento(
+            signal
+        );
+
+        emitirProgresso(
+            onProgress,
+            {
+                ...baseProgresso,
+
+                status:
+                    CERTIDAO_UPLOAD_MASSA_PROGRESSO
+                        .CALCULANDO_HASH,
+
+                percentual:
+                    percentual({
+                        indice,
+                        total:
+                            lista.length,
+                        fracao:
+                            0.25,
+                    }),
+
+                mensagem:
+                    `Calculando SHA-256 de ${nomeArquivo}.`,
+            }
+        );
+
+        hash =
+            await deps.calcularHash(
+                arquivo
+            );
+
+        verificarCancelamento(
+            signal
+        );
+
+        emitirProgresso(
+            onProgress,
+            {
+                ...baseProgresso,
+
+                status:
+                    CERTIDAO_UPLOAD_MASSA_PROGRESSO
+                        .EXTRAINDO_TEXTO,
+
+                percentual:
+                    percentual({
+                        indice,
+                        total:
+                            lista.length,
+                        fracao:
+                            0.45,
+                    }),
+
+                mensagem:
+                    `Lendo conteúdo documental de ${nomeArquivo}.`,
+            }
+        );
+
+        leitura =
+            await deps.extrairTexto(
+                arquivo,
+                {
+                    validacaoArquivo:
+                        validacao,
+                }
+            );
+
+        verificarCancelamento(
+            signal
+        );
+
+        if (
+            !textoSeguro(
+                leitura?.textoExtraido
+            )
+        ) {
+            throw new Error(
+                "O PDF não produziu texto documental suficiente para classificação."
+            );
+        }
+
+        emitirProgresso(
+            onProgress,
+            {
+                ...baseProgresso,
+
+                status:
+                    CERTIDAO_UPLOAD_MASSA_PROGRESSO
+                        .RESOLVENDO_DOCUMENTO,
+
+                percentual:
+                    percentual({
+                        indice,
+                        total:
+                            lista.length,
+                        fracao:
+                            0.75,
+                    }),
+
+                mensagem:
+                    `Identificando empresa, tipo e competência de ${nomeArquivo}.`,
+            }
+        );
+
+        /*
+         * Somente o conteúdo extraído participa da decisão.
+         *
+         * Nome e webkitRelativePath ficam exclusivamente
+         * em proveniência.
+         */
+        let resolucao =
+            await Promise.resolve(
+                deps.resolverDocumento({
+                    textoExtraido:
+                        leitura.textoExtraido,
+
+                    empresas,
+
+                    dataReferencia,
+                })
+            );
+
+        if (
+            deveTentarOcrAdaptativoCert2({
+                leitura,
+                resolucao,
+            })
+        ) {
+            const executarOcrAdaptativo =
+                typeof deps
+                    ?.enriquecerTextoOcrAdaptativo ===
+                "function"
+                    ? deps
+                        .enriquecerTextoOcrAdaptativo
+                    : enriquecerTextoOcrAdaptativoPadrao;
+
+            const enriquecimentoOcr =
+                await executarOcrAdaptativo({
+                    arquivo,
+
+                    textoExtraido:
+                        leitura.textoExtraido,
+
+                    resolucao,
+                });
+
+            verificarCancelamento(
+                signal
+            );
+
+            const textoCandidato =
+                textoSeguro(
+                    enriquecimentoOcr
+                        ?.texto
+                );
+
+            if (
+                enriquecimentoOcr
+                    ?.aplicada ===
+                    true &&
+                textoCandidato &&
+                textoCandidato !==
+                    textoSeguro(
+                        leitura
+                            ?.textoExtraido
+                    )
+            ) {
+                const resolucaoCandidata =
+                    await Promise.resolve(
+                        deps.resolverDocumento({
+                            textoExtraido:
+                                textoCandidato,
+
+                            empresas,
+
+                            dataReferencia,
+                        })
+                    );
+
+                verificarCancelamento(
+                    signal
+                );
+
+                if (
+                    aceitarResolucaoOcrAdaptativoCert2({
+                        inicial:
+                            resolucao,
+
+                        candidata:
+                            resolucaoCandidata,
+                    })
+                ) {
+                    const deficitInicial =
+                        calcularDeficitOcrAdaptativoCert2(
+                            resolucao
+                        );
+
+                    const deficitFinal =
+                        calcularDeficitOcrAdaptativoCert2(
+                            resolucaoCandidata
+                        );
+
+                    leitura = {
+                        ...leitura,
+
+                        textoExtraido:
+                            textoCandidato,
+
+                        quantidadeCaracteres:
+                            textoCandidato.length,
+
+                        qualidadeTexto: {
+                            ...(
+                                leitura
+                                    ?.qualidadeTexto ||
+                                {}
+                            ),
+
+                            ocrAdaptativoCert2: {
+                                aplicado:
+                                    true,
+
+                                // SAFE_SCAN_PDFJS_COMPETENCIA_ADAPTATIVA_AUDIT_F10D_R2
+                                fonte:
+                                    textoSeguro(
+                                        enriquecimentoOcr
+                                            ?.fonteEnriquecimento ||
+                                        "OCR_VISUAL_ADAPTATIVO"
+                                    ),
+
+                                competenciaPdfJs:
+                                    textoSeguro(
+                                        enriquecimentoOcr
+                                            ?.competenciaPdfJs
+                                    ),
+
+                                paginasPdfJs:
+                                    Array.isArray(
+                                        enriquecimentoOcr
+                                            ?.paginasPdfJs
+                                    )
+                                        ? [
+                                            ...enriquecimentoOcr
+                                                .paginasPdfJs,
+                                        ]
+                                        : [],
+
+                                paginasOcr:
+                                    Array.isArray(
+                                        enriquecimentoOcr
+                                            ?.paginasOcr
+                                    )
+                                        ? [
+                                            ...enriquecimentoOcr
+                                                .paginasOcr,
+                                        ]
+                                        : [],
+
+                                totalPaginas:
+                                    Number(
+                                        enriquecimentoOcr
+                                            ?.totalPaginas ||
+                                        0
+                                    ),
+
+                                confiancaOcr:
+                                    Number.isFinite(
+                                        Number(
+                                            enriquecimentoOcr
+                                                ?.confiancaOcr
+                                        )
+                                    )
+                                        ? Number(
+                                            enriquecimentoOcr
+                                                .confiancaOcr
+                                        )
+                                        : null,
+
+                                deficitInicial,
+
+                                deficitFinal,
+                            },
+                        },
+                    };
+
+                    resolucao =
+                        resolucaoCandidata;
+                }
+            }
+        }
+
+        const item = {
+            indice,
+
+            arquivo,
+
+            proveniencia: {
+                nomeOriginal:
+                    nomeArquivo,
+
+                caminhoRelativo,
+
+                tamanhoBytes:
+                    Number(
+                        arquivo?.size ||
+                        validacao
+                            ?.tamanhoBytes ||
+                        0
+                    ),
+
+                mimeType:
+                    textoSeguro(
+                        arquivo?.type ||
+                        validacao?.mimeType
+                    ),
+            },
+
+            hash: {
+                algoritmo:
+                    hash?.algoritmo ||
+                    "SHA-256",
+
+                sha256:
+                    hash?.hashSha256 ||
+                    hash?.valor ||
+                    "",
+            },
+
+            validacao,
+
+            leitura,
+
+            resolucao,
+
+            erro:
+                "",
+
+            persistido:
+                false,
+        };
+
+        itens.push(
+            item
+        );
+
+        emitirProgresso(
+            onProgress,
+            {
+                ...baseProgresso,
+
+                status:
+                    CERTIDAO_UPLOAD_MASSA_PROGRESSO
+                        .CONCLUIDO_ARQUIVO,
+
+                percentual:
+                    percentual({
+                        indice,
+                        total:
+                            lista.length,
+                        fracao:
+                            1,
+                    }),
+
+                processados:
+                    indice + 1,
+
+                mensagem:
+                    `${nomeArquivo} analisado: ${resolucao?.status || "SEM_STATUS"}.`,
+            }
+        );
+    }
+    catch (erro) {
+        if (
+            erro?.name ===
+                "AbortError" ||
+            erro?.codigo ===
+                "CERTIDAO_UPLOAD_MASSA_CANCELADO"
+        ) {
+            throw erro;
+        }
+
+        const mensagemErro =
+            textoSeguro(
+                erro?.message
+            ) ||
+            "Falha ao processar o documento.";
+
+        itens.push({
+            indice,
+
+            arquivo,
+
+            proveniencia: {
+                nomeOriginal:
+                    nomeArquivo,
+
+                caminhoRelativo,
+
+                tamanhoBytes:
+                    Number(
+                        arquivo?.size ||
+                        validacao
+                            ?.tamanhoBytes ||
+                        0
+                    ),
+
+                mimeType:
+                    textoSeguro(
+                        arquivo?.type ||
+                        validacao?.mimeType
+                    ),
+            },
+
+            hash: {
+                algoritmo:
+                    hash?.algoritmo ||
+                    "",
+
+                sha256:
+                    hash?.hashSha256 ||
+                    hash?.valor ||
+                    "",
+            },
+
+            validacao,
+
+            leitura,
+
+            resolucao:
+                criarResolucaoFalha(
+                    erro
+                ),
+
+            erro:
+                mensagemErro,
+
+            persistido:
+                false,
+        });
+
+        emitirProgresso(
+            onProgress,
+            {
+                ...baseProgresso,
+
+                status:
+                    CERTIDAO_UPLOAD_MASSA_PROGRESSO
+                        .FALHA_ARQUIVO,
+
+                percentual:
+                    percentual({
+                        indice,
+                        total:
+                            lista.length,
+                        fracao:
+                            1,
+                    }),
+
+                processados:
+                    indice + 1,
+
+                mensagem:
+                    `${nomeArquivo}: ${mensagemErro}`,
+            }
+        );
+    }
+
+    const resultado =
+        itens[0] ||
+        null;
+
+    if (!resultado) {
+        throw new Error(
+            "A análise documental singular não produziu um item."
+        );
+    }
+
+    return resultado;
+}
+
 export async function processarArquivosCertidaoEmLote({
     arquivos = [],
     empresas = [],
@@ -5635,543 +6390,49 @@ export async function processarArquivosCertidaoEmLote({
         indice < lista.length;
         indice += 1
     ) {
-        verificarCancelamento(
-            signal
-        );
+        const item =
+            await processarArquivoCertidaoSingular({
+                arquivo:
+                    lista[indice],
 
-        const arquivo =
-            lista[indice];
-
-        const nomeArquivo =
-            textoSeguro(
-                arquivo?.name
-            ) ||
-            `documento-${indice + 1}.pdf`;
-
-        const caminhoRelativo =
-            textoSeguro(
-                arquivo
-                    ?.webkitRelativePath
-            );
-
-        const baseProgresso = {
-            indice,
-
-            total:
-                lista.length,
-
-            processados:
                 indice,
 
-            nomeArquivo,
-        };
+                total:
+                    lista.length,
 
-        let validacao =
-            null;
-
-        let hash =
-            null;
-
-        let leitura =
-            null;
-
-        try {
-            emitirProgresso(
+                empresas,
+                dataReferencia,
                 onProgress,
-                {
-                    ...baseProgresso,
+                signal,
 
-                    status:
-                        CERTIDAO_UPLOAD_MASSA_PROGRESSO
-                            .VALIDANDO_ARQUIVO,
-
-                    percentual:
-                        percentual({
-                            indice,
-                            total:
-                                lista.length,
-                            fracao:
-                                0.10,
-                        }),
-
-                    mensagem:
-                        `Validando ${nomeArquivo}.`,
-                }
-            );
-
-            validacao =
-                await deps.validarArquivo(
-                    arquivo
-                );
-
-            verificarCancelamento(
-                signal
-            );
-
-            emitirProgresso(
-                onProgress,
-                {
-                    ...baseProgresso,
-
-                    status:
-                        CERTIDAO_UPLOAD_MASSA_PROGRESSO
-                            .CALCULANDO_HASH,
-
-                    percentual:
-                        percentual({
-                            indice,
-                            total:
-                                lista.length,
-                            fracao:
-                                0.25,
-                        }),
-
-                    mensagem:
-                        `Calculando SHA-256 de ${nomeArquivo}.`,
-                }
-            );
-
-            hash =
-                await deps.calcularHash(
-                    arquivo
-                );
-
-            verificarCancelamento(
-                signal
-            );
-
-            emitirProgresso(
-                onProgress,
-                {
-                    ...baseProgresso,
-
-                    status:
-                        CERTIDAO_UPLOAD_MASSA_PROGRESSO
-                            .EXTRAINDO_TEXTO,
-
-                    percentual:
-                        percentual({
-                            indice,
-                            total:
-                                lista.length,
-                            fracao:
-                                0.45,
-                        }),
-
-                    mensagem:
-                        `Lendo conteúdo documental de ${nomeArquivo}.`,
-                }
-            );
-
-            leitura =
-                await deps.extrairTexto(
-                    arquivo,
-                    {
-                        validacaoArquivo:
-                            validacao,
-                    }
-                );
-
-            verificarCancelamento(
-                signal
-            );
-
-            if (
-                !textoSeguro(
-                    leitura?.textoExtraido
-                )
-            ) {
-                throw new Error(
-                    "O PDF não produziu texto documental suficiente para classificação."
-                );
-            }
-
-            emitirProgresso(
-                onProgress,
-                {
-                    ...baseProgresso,
-
-                    status:
-                        CERTIDAO_UPLOAD_MASSA_PROGRESSO
-                            .RESOLVENDO_DOCUMENTO,
-
-                    percentual:
-                        percentual({
-                            indice,
-                            total:
-                                lista.length,
-                            fracao:
-                                0.75,
-                        }),
-
-                    mensagem:
-                        `Identificando empresa, tipo e competência de ${nomeArquivo}.`,
-                }
-            );
-
-            /*
-             * Somente o conteúdo extraído participa da decisão.
-             *
-             * Nome e webkitRelativePath ficam exclusivamente
-             * em proveniência.
-             */
-            let resolucao =
-                await Promise.resolve(
-                    deps.resolverDocumento({
-                        textoExtraido:
-                            leitura.textoExtraido,
-
-                        empresas,
-
-                        dataReferencia,
-                    })
-                );
-
-            if (
-                deveTentarOcrAdaptativoCert2({
-                    leitura,
-                    resolucao,
-                })
-            ) {
-                const executarOcrAdaptativo =
-                    typeof deps
-                        ?.enriquecerTextoOcrAdaptativo ===
-                    "function"
-                        ? deps
-                            .enriquecerTextoOcrAdaptativo
-                        : enriquecerTextoOcrAdaptativoPadrao;
-
-                const enriquecimentoOcr =
-                    await executarOcrAdaptativo({
-                        arquivo,
-
-                        textoExtraido:
-                            leitura.textoExtraido,
-
-                        resolucao,
-                    });
-
-                verificarCancelamento(
-                    signal
-                );
-
-                const textoCandidato =
-                    textoSeguro(
-                        enriquecimentoOcr
-                            ?.texto
-                    );
-
-                if (
-                    enriquecimentoOcr
-                        ?.aplicada ===
-                        true &&
-                    textoCandidato &&
-                    textoCandidato !==
-                        textoSeguro(
-                            leitura
-                                ?.textoExtraido
-                        )
-                ) {
-                    const resolucaoCandidata =
-                        await Promise.resolve(
-                            deps.resolverDocumento({
-                                textoExtraido:
-                                    textoCandidato,
-
-                                empresas,
-
-                                dataReferencia,
-                            })
-                        );
-
-                    verificarCancelamento(
-                        signal
-                    );
-
-                    if (
-                        aceitarResolucaoOcrAdaptativoCert2({
-                            inicial:
-                                resolucao,
-
-                            candidata:
-                                resolucaoCandidata,
-                        })
-                    ) {
-                        const deficitInicial =
-                            calcularDeficitOcrAdaptativoCert2(
-                                resolucao
-                            );
-
-                        const deficitFinal =
-                            calcularDeficitOcrAdaptativoCert2(
-                                resolucaoCandidata
-                            );
-
-                        leitura = {
-                            ...leitura,
-
-                            textoExtraido:
-                                textoCandidato,
-
-                            quantidadeCaracteres:
-                                textoCandidato.length,
-
-                            qualidadeTexto: {
-                                ...(
-                                    leitura
-                                        ?.qualidadeTexto ||
-                                    {}
-                                ),
-
-                                ocrAdaptativoCert2: {
-                                    aplicado:
-                                        true,
-
-                                    // SAFE_SCAN_PDFJS_COMPETENCIA_ADAPTATIVA_AUDIT_F10D_R2
-                                    fonte:
-                                        textoSeguro(
-                                            enriquecimentoOcr
-                                                ?.fonteEnriquecimento ||
-                                            "OCR_VISUAL_ADAPTATIVO"
-                                        ),
-
-                                    competenciaPdfJs:
-                                        textoSeguro(
-                                            enriquecimentoOcr
-                                                ?.competenciaPdfJs
-                                        ),
-
-                                    paginasPdfJs:
-                                        Array.isArray(
-                                            enriquecimentoOcr
-                                                ?.paginasPdfJs
-                                        )
-                                            ? [
-                                                ...enriquecimentoOcr
-                                                    .paginasPdfJs,
-                                            ]
-                                            : [],
-
-                                    paginasOcr:
-                                        Array.isArray(
-                                            enriquecimentoOcr
-                                                ?.paginasOcr
-                                        )
-                                            ? [
-                                                ...enriquecimentoOcr
-                                                    .paginasOcr,
-                                            ]
-                                            : [],
-
-                                    totalPaginas:
-                                        Number(
-                                            enriquecimentoOcr
-                                                ?.totalPaginas ||
-                                            0
-                                        ),
-
-                                    confiancaOcr:
-                                        Number.isFinite(
-                                            Number(
-                                                enriquecimentoOcr
-                                                    ?.confiancaOcr
-                                            )
-                                        )
-                                            ? Number(
-                                                enriquecimentoOcr
-                                                    .confiancaOcr
-                                            )
-                                            : null,
-
-                                    deficitInicial,
-
-                                    deficitFinal,
-                                },
-                            },
-                        };
-
-                        resolucao =
-                            resolucaoCandidata;
-                    }
-                }
-            }
-
-            const item = {
-                indice,
-
-                arquivo,
-
-                proveniencia: {
-                    nomeOriginal:
-                        nomeArquivo,
-
-                    caminhoRelativo,
-
-                    tamanhoBytes:
-                        Number(
-                            arquivo?.size ||
-                            validacao
-                                ?.tamanhoBytes ||
-                            0
-                        ),
-
-                    mimeType:
-                        textoSeguro(
-                            arquivo?.type ||
-                            validacao?.mimeType
-                        ),
-                },
-
-                hash: {
-                    algoritmo:
-                        hash?.algoritmo ||
-                        "SHA-256",
-
-                    sha256:
-                        hash?.hashSha256 ||
-                        hash?.valor ||
-                        "",
-                },
-
-                validacao,
-
-                leitura,
-
-                resolucao,
-
-                erro:
-                    "",
-
-                persistido:
-                    false,
-            };
-
-            itens.push(
-                item
-            );
-
-            emitirProgresso(
-                onProgress,
-                {
-                    ...baseProgresso,
-
-                    status:
-                        CERTIDAO_UPLOAD_MASSA_PROGRESSO
-                            .CONCLUIDO_ARQUIVO,
-
-                    percentual:
-                        percentual({
-                            indice,
-                            total:
-                                lista.length,
-                            fracao:
-                                1,
-                        }),
-
-                    processados:
-                        indice + 1,
-
-                    mensagem:
-                        `${nomeArquivo} analisado: ${resolucao?.status || "SEM_STATUS"}.`,
-                }
-            );
-        }
-        catch (erro) {
-            if (
-                erro?.name ===
-                    "AbortError" ||
-                erro?.codigo ===
-                    "CERTIDAO_UPLOAD_MASSA_CANCELADO"
-            ) {
-                throw erro;
-            }
-
-            const mensagemErro =
-                textoSeguro(
-                    erro?.message
-                ) ||
-                "Falha ao processar o documento.";
-
-            itens.push({
-                indice,
-
-                arquivo,
-
-                proveniencia: {
-                    nomeOriginal:
-                        nomeArquivo,
-
-                    caminhoRelativo,
-
-                    tamanhoBytes:
-                        Number(
-                            arquivo?.size ||
-                            validacao
-                                ?.tamanhoBytes ||
-                            0
-                        ),
-
-                    mimeType:
-                        textoSeguro(
-                            arquivo?.type ||
-                            validacao?.mimeType
-                        ),
-                },
-
-                hash: {
-                    algoritmo:
-                        hash?.algoritmo ||
-                        "",
-
-                    sha256:
-                        hash?.hashSha256 ||
-                        hash?.valor ||
-                        "",
-                },
-
-                validacao,
-
-                leitura,
-
-                resolucao:
-                    criarResolucaoFalha(
-                        erro
-                    ),
-
-                erro:
-                    mensagemErro,
-
-                persistido:
-                    false,
+                dependencias:
+                    deps,
             });
 
-            emitirProgresso(
-                onProgress,
-                {
-                    ...baseProgresso,
-
-                    status:
-                        CERTIDAO_UPLOAD_MASSA_PROGRESSO
-                            .FALHA_ARQUIVO,
-
-                    percentual:
-                        percentual({
-                            indice,
-                            total:
-                                lista.length,
-                            fracao:
-                                1,
-                        }),
-
-                    processados:
-                        indice + 1,
-
-                    mensagem:
-                        `${nomeArquivo}: ${mensagemErro}`,
-                }
-            );
-        }
+        itens.push(
+            item
+        );
     }
+
+    /*
+     * ============================================================
+     * SAFE_SCAN_CERT2_M3_A7_SNAPSHOT_SINGULAR
+     *
+     * Snapshot posicional da saída do motor singular ANTES de:
+     * - duplicidade intralote;
+     * - associação entre documentos;
+     * - guards de empresa;
+     * - identidade/fallback de colaborador;
+     * - demais políticas coletivas.
+     *
+     * Não existe nova análise aqui.
+     * O array é congelado para impedir alteração de sua composição.
+     * ============================================================
+     */
+    const itensSingulares =
+        Object.freeze(
+            itens.slice()
+        );
 
     const itensComGuardDuplicidade =
         aplicarGuardDuplicidadeExataIntralote(
@@ -6470,6 +6731,18 @@ export async function processarArquivosCertidaoEmLote({
     );
 
     return {
+        /*
+         * SAFE_SCAN_CERT2_M3_A7_RESULTADO_SNAPSHOT_SINGULAR
+         *
+         * Uso restrito a consumidores que precisam da verdade
+         * analítica anterior à política coletiva, especialmente
+         * a revisão histórica.
+         */
+        itensSingulares,
+
+        /*
+         * O contrato operacional do lote permanece pós-coletivo.
+         */
         itens:
             itensComFallbackColaborador,
 

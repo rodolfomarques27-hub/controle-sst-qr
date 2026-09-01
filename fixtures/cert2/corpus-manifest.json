@@ -1,0 +1,500 @@
+{
+  "schemaVersion": "CERT2_CORPUS_MANIFEST_V1",
+  "dataReferencia": "2026-08-31",
+  "politica": {
+    "pdfsNoGit": false,
+    "sha256ComoIdentidade": true,
+    "nomeArquivoComoEvidencia": false,
+    "caminhoComoEvidencia": false,
+    "provenienciaSomente": true,
+    "gapsNaoGeramRegraArtificial": true
+  },
+  "catalogo": [
+    {
+      "familia": "cnd-federal",
+      "titulo": "CND Federal"
+    },
+    {
+      "familia": "cnd-estadual",
+      "titulo": "CND Estadual"
+    },
+    {
+      "familia": "cnd-municipal",
+      "titulo": "CND Municipal"
+    },
+    {
+      "familia": "crf-fgts",
+      "titulo": "CRF FGTS"
+    },
+    {
+      "familia": "fgts",
+      "titulo": "FGTS"
+    },
+    {
+      "familia": "cndt-trabalhista",
+      "titulo": "CNDT (Trabalhista)"
+    },
+    {
+      "familia": "falencia-concordata",
+      "titulo": "Falência e Concordata"
+    },
+    {
+      "familia": "cadastro-tce-ceis",
+      "titulo": "Cadastro TCE / CEIS"
+    },
+    {
+      "familia": "folha-pagamento",
+      "titulo": "Folha de Pagamento e Comprovantes"
+    },
+    {
+      "familia": "folha-ponto",
+      "titulo": "Espelho de Ponto"
+    },
+    {
+      "familia": "va-vt",
+      "titulo": "VA / VT"
+    },
+    {
+      "familia": "seguro-vida",
+      "titulo": "Seguro de Vida"
+    },
+    {
+      "familia": "inss-dctfweb",
+      "titulo": "INSS / DCTFWeb"
+    },
+    {
+      "familia": "iss",
+      "titulo": "ISSQN"
+    },
+    {
+      "familia": "esocial",
+      "titulo": "eSocial SST"
+    },
+    {
+      "familia": "relacao-empregados",
+      "titulo": "Relação de Empregados"
+    },
+    {
+      "familia": "aso-pcmso",
+      "titulo": "ASO + PCMSO"
+    }
+  ],
+  "fixtures": [
+    {
+      "id": "agua-cnd-federal",
+      "familia": "cnd-federal",
+      "empresa": "AGUA DRILL POCOS ARTESIANOS",
+      "variante": "certidao-federal",
+      "sha256": "8ec6c4c550b707df9958c9cd06da6d258831111aca4dc6d01af0729b20ac555a",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "AGUA DRILL POCOS ARTESIANOS/2026/02_FEVEREIRO/01_CND_FEDERAL"
+      }
+    },
+    {
+      "id": "falcao-cnd-federal",
+      "familia": "cnd-federal",
+      "empresa": "FALCAO BAUER",
+      "variante": "certidao-federal",
+      "sha256": "0f81327b62fdb223ceb6c0a344bd03b14ee8bcdc72fffa71abac47382bcefc4c",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "FALCAO BAUER/2025/04_ABRIL/01_CND_FEDERAL"
+      }
+    },
+    {
+      "id": "metron-cnd-federal",
+      "familia": "cnd-federal",
+      "empresa": "METRON TOPOGRAFIA",
+      "variante": "positiva-efeito-negativa",
+      "sha256": "31b22534e29a7b437dc2d9e8cde7e8101fd59b36be9e93c02c6337c2cb75c91b",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "METRON TOPOGRAFIA/2025/05_MAIO/01_CND_FEDERAL"
+      }
+    },
+    {
+      "id": "metron-cnd-estadual",
+      "familia": "cnd-estadual",
+      "empresa": "METRON TOPOGRAFIA",
+      "variante": "certidao-estadual",
+      "sha256": "c324940b8414c9caa0719ffab571d52da49e53471cc3253ebc81aaaebb310caa",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "METRON TOPOGRAFIA/2026/07_JULHO/02_CND_ESTADUAL"
+      }
+    },
+    {
+      "id": "ribeiro-cnd-estadual-nao-inscritos",
+      "familia": "cnd-estadual",
+      "empresa": "RIBEIRO AQUINO",
+      "variante": "nao-inscritos",
+      "sha256": "7a85ba8ab0d75f8242a5b7f504d1d00211bc5f12e0c398e6724f4f3649dd88b3",
+      "proveniencia": {
+        "fonte": "RELATORIO_DUPLICATAS_REMOVIDAS.csv",
+        "caminho": "RIBEIRO AQUINO/2026/01_JANEIRO/02_CND_ESTADUAL"
+      }
+    },
+    {
+      "id": "ribeiro-cnd-estadual-divida-ativa",
+      "familia": "cnd-estadual",
+      "empresa": "RIBEIRO AQUINO",
+      "variante": "divida-ativa",
+      "sha256": "e71ea5be0daf2ac8ccd21e03cf0751af2922761814dbc22b975c416c46d3e2ad",
+      "proveniencia": {
+        "fonte": "RELATORIO_DUPLICATAS_REMOVIDAS.csv",
+        "caminho": "RIBEIRO AQUINO/2026/01_JANEIRO/02_CND_ESTADUAL"
+      }
+    },
+    {
+      "id": "agua-cnd-municipal",
+      "familia": "cnd-municipal",
+      "empresa": "AGUA DRILL POCOS ARTESIANOS",
+      "variante": "certidao-municipal",
+      "sha256": "45b17afdb8d00defada7067ce7f05424dffebeb245bb6da46a98290fdcc9295a",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "AGUA DRILL POCOS ARTESIANOS/2026/02_FEVEREIRO/03_CND_MUNICIPAL"
+      }
+    },
+    {
+      "id": "falcao-cnd-municipal",
+      "familia": "cnd-municipal",
+      "empresa": "FALCAO BAUER",
+      "variante": "certidao-municipal",
+      "sha256": "cec15cd622555335ec5423c11e2e15a3cf4b82f3a0c9d051e2d4790145944b4d",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "FALCAO BAUER/2025/03_MARCO/03_CND_MUNICIPAL"
+      }
+    },
+    {
+      "id": "metron-cnd-municipal",
+      "familia": "cnd-municipal",
+      "empresa": "METRON TOPOGRAFIA",
+      "variante": "certidao-municipal",
+      "sha256": "5ee57d471725b29352788d1c0bc6a33462e24c7979e6f6581b784268ce002559",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "METRON TOPOGRAFIA/2026/07_JULHO/03_CND_MUNICIPAL"
+      }
+    },
+    {
+      "id": "agua-crf-fgts",
+      "familia": "crf-fgts",
+      "empresa": "AGUA DRILL POCOS ARTESIANOS",
+      "variante": "certificado-regularidade",
+      "sha256": "4eac7061c29af66692ff6c19cb5d3aafe8e3bc21675e2653e374221df2cda3db",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "AGUA DRILL POCOS ARTESIANOS/2026/02_FEVEREIRO/04_CRF_FGTS"
+      }
+    },
+    {
+      "id": "falcao-crf-fgts",
+      "familia": "crf-fgts",
+      "empresa": "FALCAO BAUER",
+      "variante": "certificado-regularidade",
+      "sha256": "fa87f1558a20f1d8dd0fce4154f00353a1f6e830f3c5081d00fd034e47e6000d",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "FALCAO BAUER/2026/04_ABRIL/04_CRF_FGTS"
+      }
+    },
+    {
+      "id": "metron-crf-fgts",
+      "familia": "crf-fgts",
+      "empresa": "METRON TOPOGRAFIA",
+      "variante": "certificado-regularidade",
+      "sha256": "a0a5bc7661351dd97aff51bbc492781c936869a9774a46db1e6eb1221ff2d9ac",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "METRON TOPOGRAFIA/2025/12_DEZEMBRO/04_CRF_FGTS"
+      }
+    },
+    {
+      "id": "agua-fgts",
+      "familia": "fgts",
+      "empresa": "AGUA DRILL POCOS ARTESIANOS",
+      "variante": "guia-fgts-digital",
+      "sha256": "09fa3eb5ccf5830636850dffa9ddcb632cf33441a6d5202f0b58e7b97815ea9b",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "AGUA DRILL POCOS ARTESIANOS/2026/01_JANEIRO/05_FGTS"
+      }
+    },
+    {
+      "id": "falcao-fgts",
+      "familia": "fgts",
+      "empresa": "FALCAO BAUER",
+      "variante": "guia-fgts",
+      "sha256": "56fbe30e361e29996d3c1c2d22b2a4d9beea40bf1320ca322f657d924c7e1986",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "FALCAO BAUER/2026/03_MARCO/05_FGTS"
+      }
+    },
+    {
+      "id": "metron-fgts",
+      "familia": "fgts",
+      "empresa": "METRON TOPOGRAFIA",
+      "variante": "guia-fgts-digital",
+      "sha256": "d83904d1fb796d054370c361b80e8ec8c6e317f98d61fdbc29b6992ce1343559",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "METRON TOPOGRAFIA/2025/07_JULHO/05_FGTS"
+      }
+    },
+    {
+      "id": "ribeiro-fgts",
+      "familia": "fgts",
+      "empresa": "RIBEIRO AQUINO",
+      "variante": "fgts-digital",
+      "sha256": "d693eadef4116e5301f0da21972cff96f7aa407a053b452bc4bfec9d41a947e2",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "RIBEIRO AQUINO/2025/03_MARCO/05_FGTS"
+      }
+    },
+    {
+      "id": "agua-cndt",
+      "familia": "cndt-trabalhista",
+      "empresa": "AGUA DRILL POCOS ARTESIANOS",
+      "variante": "cndt",
+      "sha256": "afc261fe15f6fdfbf894162e1287e91b3ab77031c306a995d82ad8cb38dfaa02",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "AGUA DRILL POCOS ARTESIANOS/2026/01_JANEIRO/06_CNDT_TRABALHISTA"
+      }
+    },
+    {
+      "id": "falcao-cndt",
+      "familia": "cndt-trabalhista",
+      "empresa": "FALCAO BAUER",
+      "variante": "cndt",
+      "sha256": "fa8c24431e5ef65b0a47ec1f2715255679febef940f833ac603eb48b53d38f94",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "FALCAO BAUER/2026/03_MARCO/06_CNDT_TRABALHISTA"
+      }
+    },
+    {
+      "id": "metron-cndt",
+      "familia": "cndt-trabalhista",
+      "empresa": "METRON TOPOGRAFIA",
+      "variante": "cndt",
+      "sha256": "f096bbf9de5b782e2ae0be075b95b468021bb82a60c02f56d2f4c795b09e390c",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "METRON TOPOGRAFIA/2026/06_JUNHO/06_CNDT_TRABALHISTA"
+      }
+    },
+    {
+      "id": "ribeiro-cndt",
+      "familia": "cndt-trabalhista",
+      "empresa": "RIBEIRO AQUINO",
+      "variante": "cndt",
+      "sha256": "acaa65e0b215ae8b7dea2b9a39c38e51147034f9824235cc6644e3e23ceb9f02",
+      "proveniencia": {
+        "fonte": "RELATORIO_DUPLICATAS_REMOVIDAS.csv",
+        "caminho": "RIBEIRO AQUINO/2026/01_JANEIRO/06_CNDT_TRABALHISTA"
+      }
+    },
+    {
+      "id": "falcao-folha",
+      "familia": "folha-pagamento",
+      "empresa": "FALCAO BAUER",
+      "variante": "folha-pagamento",
+      "sha256": "8ed2fe9bdab5bbaba06cbf9d2057bf1761f4aed4d0c32ef190c5913ac501d108",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "FALCAO BAUER/2025/10_OUTUBRO/09_FOLHA_PAGAMENTO_E_COMPROVANTES"
+      }
+    },
+    {
+      "id": "granvale-folha",
+      "familia": "folha-pagamento",
+      "empresa": "GRANVALE FACILITIES",
+      "variante": "folha-pagamento",
+      "sha256": "a52655ad5ff489ee10b801b29ea51c11a255c35d6d6a5d05426ecf6e860fcd54",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "GRANVALE FACILITIES/2025/09_SETEMBRO/09_FOLHA_PAGAMENTO_E_COMPROVANTES"
+      }
+    },
+    {
+      "id": "ribeiro-folha",
+      "familia": "folha-pagamento",
+      "empresa": "RIBEIRO AQUINO",
+      "variante": "folha-pagamento",
+      "sha256": "cb1f3e27289bed187461e932840a204bacbc1ed0f55963442f46c57ed4f1d11e",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "RIBEIRO AQUINO/2025/03_MARCO/09_FOLHA_PAGAMENTO_E_COMPROVANTES"
+      }
+    },
+    {
+      "id": "falcao-dctfweb",
+      "familia": "inss-dctfweb",
+      "empresa": "FALCAO BAUER",
+      "variante": "dctfweb",
+      "sha256": "c356752c72611f7af1453fe497160d94a95f12baa97badda45177e771f49572c",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "FALCAO BAUER/2026/03_MARCO/13_INSS_DCTFWEB"
+      }
+    },
+    {
+      "id": "granvale-dctfweb",
+      "familia": "inss-dctfweb",
+      "empresa": "GRANVALE FACILITIES",
+      "variante": "declaracao-dctfweb",
+      "sha256": "abe43c6edfd1f337de5cabfa12b7fb524b1f24998205fcebb8239cbd9684c576",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "GRANVALE FACILITIES/2025/04_ABRIL/13_INSS_DCTFWEB"
+      }
+    },
+    {
+      "id": "ribeiro-dctfweb",
+      "familia": "inss-dctfweb",
+      "empresa": "RIBEIRO AQUINO",
+      "variante": "darf-previdenciario",
+      "sha256": "f339a16200961b9db1494f7cb8b5d6da5a4d057a16a343e1ee96128142334127",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "RIBEIRO AQUINO/2025/03_MARCO/13_INSS_DCTFWEB"
+      }
+    },
+    {
+      "id": "falcao-iss",
+      "familia": "iss",
+      "empresa": "FALCAO BAUER",
+      "variante": "issqn",
+      "sha256": "a7942ba7136238261e5d60ad52cd8fc277e68aaa5acc64eb2c3f9d40434a880d",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "FALCAO BAUER/2026/03_MARCO/14_ISSQN"
+      }
+    },
+    {
+      "id": "ribeiro-iss",
+      "familia": "iss",
+      "empresa": "RIBEIRO AQUINO",
+      "variante": "issqn-taxa-licenca",
+      "sha256": "eba2899190bdd27e9d4b6dcbcb97a2f694c1dda85e18af4f8c693a24c961dfa0",
+      "proveniencia": {
+        "fonte": "RELATORIO_DUPLICATAS_REMOVIDAS.csv",
+        "caminho": "RIBEIRO AQUINO/2026/01_JANEIRO/03_CND_MUNICIPAL"
+      }
+    },
+    {
+      "id": "agua-pcmso",
+      "familia": "aso-pcmso",
+      "empresa": "AGUA DRILL POCOS ARTESIANOS",
+      "variante": "pcmso",
+      "sha256": "cecc5ff0abbdb47d1fddd94705ab1237171f44807ad4ec0c1a309655c4607bd7",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "AGUA DRILL POCOS ARTESIANOS/2026/01_JANEIRO/17_ASO_PCMSO"
+      }
+    },
+    {
+      "id": "falcao-pcmso",
+      "familia": "aso-pcmso",
+      "empresa": "FALCAO BAUER",
+      "variante": "pcmso",
+      "sha256": "cdc7947bb8863c5520a1295cdcd27d32c590ce27192c86bfffb742343338343a",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "FALCAO BAUER/2026/02_FEVEREIRO/17_ASO_PCMSO"
+      }
+    },
+    {
+      "id": "falcao-relacao",
+      "familia": "relacao-empregados",
+      "empresa": "FALCAO BAUER",
+      "variante": "relacao-empregados",
+      "sha256": "8ee73486b9c2afcf9e6d5a4570e0a9d9876757fe9fbba44dfcc8e44842939f89",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "FALCAO BAUER/2026/03_MARCO/16_RELACAO_DE_EMPREGADOS"
+      }
+    },
+    {
+      "id": "falcao-seguro",
+      "familia": "seguro-vida",
+      "empresa": "FALCAO BAUER",
+      "variante": "seguro-vida",
+      "sha256": "5e3fd4e1e0e0309eeb4aa56d3dbd0470b22b7b51284387d7625081dda7bf18b0",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "FALCAO BAUER/2025/09_SETEMBRO/99_NAO_EXIGIDOS_PELO_SISTEMA"
+      }
+    },
+    {
+      "id": "falcao-va",
+      "familia": "va-vt",
+      "empresa": "FALCAO BAUER",
+      "variante": "vale-alimentacao",
+      "sha256": "affd046d1fa9abebb5ebe75469b1b26df883566323482dd62e4d1cdd88ce2e07",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "FALCAO BAUER/2025/09_SETEMBRO/99_NAO_EXIGIDOS_PELO_SISTEMA"
+      }
+    },
+    {
+      "id": "falcao-vt",
+      "familia": "va-vt",
+      "empresa": "FALCAO BAUER",
+      "variante": "vale-transporte",
+      "sha256": "330b6dd723db2f9da577506d436ea338e408084a7f22c3e9d0e42ab104fdf772",
+      "proveniencia": {
+        "fonte": "RELATORIO_ARQUIVOS_CERTIDOES.csv",
+        "caminho": "FALCAO BAUER/2025/09_SETEMBRO/99_NAO_EXIGIDOS_PELO_SISTEMA"
+      }
+    }
+  ],
+  "gaps": [
+    {
+      "familia": "cnd-estadual",
+      "status": "COBERTURA_MULTIEMPRESA_INSUFICIENTE"
+    },
+    {
+      "familia": "iss",
+      "status": "COBERTURA_MULTIEMPRESA_INSUFICIENTE"
+    },
+    {
+      "familia": "aso-pcmso",
+      "status": "COBERTURA_MULTIEMPRESA_INSUFICIENTE"
+    },
+    {
+      "familia": "relacao-empregados",
+      "status": "COBERTURA_MULTIEMPRESA_INSUFICIENTE"
+    },
+    {
+      "familia": "seguro-vida",
+      "status": "COBERTURA_MULTIEMPRESA_INSUFICIENTE"
+    },
+    {
+      "familia": "va-vt",
+      "status": "COBERTURA_MULTIEMPRESA_INSUFICIENTE"
+    },
+    {
+      "familia": "folha-ponto",
+      "status": "SEM_FIXTURE_CONFIRMADA"
+    },
+    {
+      "familia": "esocial",
+      "status": "SEM_FIXTURE_CONFIRMADA"
+    },
+    {
+      "familia": "falencia-concordata",
+      "status": "SEM_FIXTURE_CONFIRMADA"
+    },
+    {
+      "familia": "cadastro-tce-ceis",
+      "status": "SEM_FIXTURE_CONFIRMADA"
+    }
+  ]
+}
