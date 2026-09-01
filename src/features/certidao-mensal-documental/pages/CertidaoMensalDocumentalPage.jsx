@@ -505,6 +505,39 @@ export function CertidaoMensalDocumentalPage({
                                 : "conforme",
                     totalDocumentosExigiveis:
                         totalExigiveisEmpresa,
+                    // SAFE_SCAN_EMPRESA_PROGRESSO_DOCUMENTAL_A33_PAGE
+                    // ASO/PCMSO e Relação de Empregados não entram
+                    // no indicador resumido de certidões.
+                    idsDocumentosExigiveis:
+                        [
+                            ...new Set(
+                                (
+                                    Array.isArray(
+                                        perfilDocumentalEmpresa
+                                            ?.idsExigiveis
+                                    )
+                                        ? perfilDocumentalEmpresa
+                                            .idsExigiveis
+                                        : []
+                                )
+                                    .map(
+                                        (id) =>
+                                            String(
+                                                id || ""
+                                            ).trim()
+                                    )
+                                    .filter(Boolean)
+                                    .filter(
+                                        (id) =>
+                                            ![
+                                                "relacao-empregados",
+                                                "aso-pcmso",
+                                            ].includes(
+                                                id
+                                            )
+                                    )
+                            ),
+                        ],
                     totalDocumentosNaoExigiveis:
                         vigenciaContratual.exigivel
                             ? perfilDocumentalEmpresa
@@ -5952,6 +5985,229 @@ return {
                 chaveDocumentosPersistidos
         );
 
+    /*
+     * SAFE_SCAN_EMPRESA_PROGRESSO_DOCUMENTAL_A32_PAGE
+     *
+     * Quantidade presente/total por empresa.
+     */
+    const [
+        resumoDocumentalEmpresas,
+        setResumoDocumentalEmpresas,
+    ] = useState({});
+
+    useEffect(() => {
+        let efeitoAtivo =
+            true;
+
+        const empresasAlvo =
+            empresasVisiveisCompetencia
+                .filter(
+                    (empresa) =>
+                        empresa
+                            ?.vigenciaContratual
+                            ?.exigivel !==
+                        false
+                );
+
+        async function carregarResumo() {
+            const resultado =
+                {};
+
+            const tamanhoLote =
+                4;
+
+            for (
+                let indice = 0;
+                indice < empresasAlvo.length;
+                indice += tamanhoLote
+            ) {
+                const lote =
+                    empresasAlvo.slice(
+                        indice,
+                        indice + tamanhoLote
+                    );
+
+                await Promise.all(
+                    lote.map(
+                        async (
+                            empresa
+                        ) => {
+                            const tipos =
+                                [
+                                    ...new Set(
+                                        (
+                                            Array.isArray(
+                                                empresa
+                                                    ?.idsDocumentosExigiveis
+                                            )
+                                                ? empresa
+                                                    .idsDocumentosExigiveis
+                                                : []
+                                        )
+                                            .map(
+                                                (id) =>
+                                                    String(
+                                                        id || ""
+                                                    ).trim()
+                                            )
+                                            .filter(Boolean)
+                                    ),
+                                ];
+
+                            const total =
+                                tipos.length;
+
+                            if (!total) {
+                                resultado[
+                                    empresa.id
+                                ] = {
+                                    competencia,
+
+                                    total:
+                                        0,
+
+                                    ok:
+                                        0,
+
+                                    faltando:
+                                        0,
+
+                                    carregado:
+                                        true,
+
+                                    erro:
+                                        "",
+                                };
+
+                                return;
+                            }
+
+                            try {
+                                const registros =
+                                    await buscarDocumentosAtuaisCertidaoMensal({
+                                        empresaId:
+                                            empresa.id,
+
+                                        competencia,
+
+                                        tiposDocumento:
+                                            tipos,
+                                    });
+
+                                const ok =
+                                    tipos.filter(
+                                        (
+                                            tipoDocumento
+                                        ) =>
+                                            Boolean(
+                                                registros?.[
+                                                    tipoDocumento
+                                                ]
+                                            )
+                                    ).length;
+
+                                resultado[
+                                    empresa.id
+                                ] = {
+                                    competencia,
+
+                                    total,
+
+                                    ok,
+
+                                    faltando:
+                                        Math.max(
+                                            total -
+                                                ok,
+                                            0
+                                        ),
+
+                                    carregado:
+                                        true,
+
+                                    erro:
+                                        "",
+                                };
+                            }
+                            catch (erro) {
+                                resultado[
+                                    empresa.id
+                                ] = {
+                                    competencia,
+
+                                    total,
+
+                                    ok:
+                                        null,
+
+                                    faltando:
+                                        null,
+
+                                    carregado:
+                                        false,
+
+                                    erro:
+                                        erro
+                                            ?.message ||
+                                        "Resumo indisponível.",
+                                };
+                            }
+                        }
+                    )
+                );
+            }
+
+            if (!efeitoAtivo) {
+                return;
+            }
+
+            setResumoDocumentalEmpresas(
+                resultado
+            );
+        }
+
+        carregarResumo();
+
+        return () => {
+            efeitoAtivo =
+                false;
+        };
+    }, [
+        competencia,
+        empresasVisiveisCompetencia,
+    ]);
+
+    const empresasComResumoDocumental =
+        useMemo(
+            () =>
+                empresasVisiveisCompetencia
+                    .map(
+                        (empresa) => {
+                            const resumo =
+                                resumoDocumentalEmpresas?.[
+                                    empresa.id
+                                ] ||
+                                null;
+
+                            return {
+                                ...empresa,
+
+                                resumoDocumental:
+                                    resumo
+                                        ?.competencia ===
+                                    competencia
+                                        ? resumo
+                                        : null,
+                            };
+                        }
+                    ),
+            [
+                competencia,
+                empresasVisiveisCompetencia,
+                resumoDocumentalEmpresas,
+            ]
+        );
+
     const competenciaCarregando =
         Boolean(
             empresaSelecionada?.id &&
@@ -6048,7 +6304,7 @@ return {
                 ) : empresaSelecionada ? (
                     <>
                         <EmpresasFiscalizadasPanel
-                            empresas={empresasVisiveisCompetencia}
+                            empresas={empresasComResumoDocumental}
                             empresaSelecionadaId={empresaSelecionadaId}
                             onSelecionarEmpresa={setEmpresaSelecionadaId}
                             totalEmpresasSistema={empresasVisiveisCompetencia.length}

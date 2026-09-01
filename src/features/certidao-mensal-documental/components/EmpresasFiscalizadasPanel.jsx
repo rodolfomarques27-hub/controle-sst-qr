@@ -154,9 +154,98 @@ export function EmpresasFiscalizadasPanel({
                 {empresasFiltradas.map((empresa) => {
                     const ativa = empresa.id === empresaSelecionadaId;
 
+                    /*
+                     * SAFE_SCAN_EMPRESA_PROGRESSO_DOCUMENTAL_A32_PANEL
+                     */
                     const competenciaExigivel =
                         empresa.vigenciaContratual
                             ?.exigivel !== false;
+
+                    const resumoDocumental =
+                        empresa
+                            ?.resumoDocumental ||
+                        null;
+
+                    const totalDocumentos =
+                        Math.max(
+                            0,
+                            Number(
+                                resumoDocumental
+                                    ?.total ??
+                                empresa
+                                    ?.idsDocumentosExigiveis
+                                    ?.length ??
+                                empresa
+                                    ?.totalDocumentosExigiveis ??
+                                0
+                            ) || 0
+                        );
+
+                    const resumoComErro =
+                        Boolean(
+                            resumoDocumental
+                                ?.erro
+                        );
+
+                    const resumoCarregado =
+                        resumoDocumental
+                            ?.carregado ===
+                            true &&
+                        !resumoComErro;
+
+                    const documentosOk =
+                        resumoCarregado
+                            ? Math.max(
+                                0,
+                                Number(
+                                    resumoDocumental
+                                        ?.ok
+                                ) || 0
+                            )
+                            : null;
+
+                    const documentosFaltando =
+                        resumoCarregado
+                            ? Math.max(
+                                0,
+                                Number(
+                                    resumoDocumental
+                                        ?.faltando
+                                ) || 0
+                            )
+                            : null;
+
+                    const completa =
+                        resumoCarregado &&
+                        documentosFaltando ===
+                            0;
+
+                    const classeProgresso =
+                        !competenciaExigivel
+                            ? " is-nao-aplicavel"
+                            : resumoComErro
+                                ? " is-erro"
+                                : !resumoCarregado
+                                    ? " is-carregando"
+                                    : completa
+                                        ? " is-ok"
+                                        : " is-faltando";
+
+                    const rotuloProgresso =
+                        !competenciaExigivel
+                            ? (
+                                empresa
+                                    ?.vigenciaContratual
+                                    ?.rotulo ||
+                                "Competência não aplicável"
+                            )
+                            : resumoComErro
+                                ? "Não foi possível calcular o progresso documental."
+                                : !resumoCarregado
+                                    ? `Calculando progresso de ${totalDocumentos} documento(s).`
+                                    : completa
+                                        ? `${documentosOk} de ${totalDocumentos} documentos localizados. Situação OK.`
+                                        : `${documentosOk} de ${totalDocumentos} documentos localizados. ${documentosFaltando} faltando.`;
 
                     return (
                         <button
@@ -187,30 +276,61 @@ export function EmpresasFiscalizadasPanel({
 
                             <div
                                 className="certidao-mensal-empresa-row__meta"
-                                aria-label={
-                                    competenciaExigivel
-                                        ? `${empresa.pendencias} pendência(s)`
-                                        : (
-                                            empresa.vigenciaContratual
-                                                ?.rotulo ||
-                                            "Competência não aplicável"
-                                        )
-                                }
+                                aria-label={rotuloProgresso}
                                 title={
                                     competenciaExigivel
-                                        ? `${empresa.pendencias} pendência(s)`
-                                        : empresa.vigenciaContratual
+                                        ? rotuloProgresso
+                                        : empresa
+                                            .vigenciaContratual
                                             ?.mensagem
                                 }
                             >
-                                <strong>
-                                    {competenciaExigivel
-                                        ? empresa.pendencias
-                                        : "—"}
-                                </strong>
-                                {!competenciaExigivel && (
-                                    <small>Não aplicável</small>
-                                )}
+                                {/* SAFE_SCAN_EMPRESA_PROGRESSO_DOCUMENTAL_A33_PANEL */}
+                                {/* SAFE_SCAN_EMPRESA_PROGRESSO_DOCUMENTAL_A34_PANEL */}
+                                <div
+                                    className={`certidao-mensal-empresa-row__progresso${classeProgresso}`}
+                                >
+                                    <strong>
+                                        {!competenciaExigivel
+                                            ? "—"
+                                            : resumoComErro
+                                                ? `—/${String(totalDocumentos).padStart(2, "0")}`
+                                                : !resumoCarregado
+                                                    ? `…/${String(totalDocumentos).padStart(2, "0")}`
+                                                    : (
+                                                        <>
+                                                            <span
+                                                                className="certidao-mensal-empresa-row__progresso-ok"
+                                                            >
+                                                                {String(
+                                                                    documentosOk
+                                                                ).padStart(
+                                                                    2,
+                                                                    "0"
+                                                                )}
+                                                            </span>
+
+                                                            <span
+                                                                className="certidao-mensal-empresa-row__progresso-separador"
+                                                            >
+                                                                /
+                                                            </span>
+
+                                                            <span
+                                                                className="certidao-mensal-empresa-row__progresso-total"
+                                                            >
+                                                                {String(
+                                                                    totalDocumentos
+                                                                ).padStart(
+                                                                    2,
+                                                                    "0"
+                                                                )}
+                                                            </span>
+                                                        </>
+                                                    )}
+                                    </strong>
+                                </div>
+
                                 <ChevronRight aria-hidden="true" />
                             </div>
                         </button>

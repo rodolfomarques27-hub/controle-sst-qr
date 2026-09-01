@@ -5133,3 +5133,46 @@
 .certidao-loading-refinado__aviso svg {
     color: #16a34a !important;
 }
+
+/* ============================================================
+   SAFE_SCAN_VISUAL_UPLOAD_MASSA_CENTRALIZACAO_V1
+   Centralização visual do progresso do upload em massa.
+   Somente desktop. Não altera lógica documental.
+   ============================================================ */
+
+@media (min-width: 761px) {
+
+    .certidao-loading-refinado__main {
+        grid-template-columns:
+            78px
+            minmax(0, 1fr)
+            78px !important;
+    }
+
+    .certidao-loading-refinado__icon {
+        justify-self: center !important;
+    }
+
+    .certidao-loading-refinado__copy {
+        width: 100% !important;
+        justify-self: stretch !important;
+        text-align: center !important;
+    }
+
+    .certidao-loading-refinado__percentual {
+        justify-self: center !important;
+        text-align: center !important;
+    }
+
+    .certidao-loading-refinado__contador {
+        width: 100% !important;
+        justify-content: center !important;
+        text-align: center !important;
+    }
+
+    .certidao-loading-refinado__aviso {
+        width: 100% !important;
+        justify-content: center !important;
+        text-align: center !important;
+    }
+}

@@ -7322,16 +7322,16 @@ em {
     display: inline-flex;
     box-sizing: border-box;
     flex: 0 0 auto;
-    width: 92px;
-    min-width: 92px;
-    max-width: 92px;
-    height: 18px;
-    min-height: 18px;
+    width: max-content;
+    min-width: 112px;
+    max-width: none;
+    height: 20px;
+    min-height: 20px;
     align-self: center;
     align-items: center;
     justify-content: center;
-    margin-top: 14px;
-    padding: 0 5px;
+    margin-top: 4px;
+    padding: 0 9px;
     border: 1px solid rgba(18, 122, 72, 0.25);
     border-radius: 999px;
     background: rgba(18, 122, 72, 0.08);
@@ -8519,4 +8519,177 @@ em {
     .certidao-mensal-regularizacao-modal__confirmacao-acoes button {
         width: 100%;
     }
+}
+
+
+/* ============================================================
+ * SAFE_SCAN_EMPRESA_PROGRESSO_DOCUMENTAL_A32_CSS
+ * Progresso documental por empresa.
+ * ============================================================ */
+
+.certidao-mensal-workspace
+.certidao-mensal-empresa-row__meta {
+    flex: 0 0 auto;
+    min-width: 94px;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.34rem;
+}
+
+.certidao-mensal-empresa-row__progresso {
+    display: flex;
+    min-width: 70px;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 3px;
+}
+
+.certidao-mensal-workspace
+.certidao-mensal-empresa-row__meta
+.certidao-mensal-empresa-row__progresso strong {
+    min-width: 0;
+    margin: 0;
+    font-size: 0.82rem;
+    font-weight: 900;
+    line-height: 1;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.certidao-mensal-workspace
+.certidao-mensal-empresa-row__meta
+.certidao-mensal-empresa-row__progresso small {
+    margin: 0;
+    font-size: 0.56rem;
+    font-weight: 850;
+    line-height: 1;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.certidao-mensal-empresa-row__progresso.is-faltando strong,
+.certidao-mensal-empresa-row__progresso.is-faltando small {
+    color: #c62828;
+}
+
+.certidao-mensal-empresa-row__progresso.is-ok strong,
+.certidao-mensal-empresa-row__progresso.is-ok small {
+    color: #15803d;
+}
+
+.certidao-mensal-empresa-row__progresso.is-carregando strong,
+.certidao-mensal-empresa-row__progresso.is-carregando small {
+    color: #64748b;
+}
+
+.certidao-mensal-empresa-row__progresso.is-erro strong,
+.certidao-mensal-empresa-row__progresso.is-erro small {
+    color: #9a6700;
+}
+
+.certidao-mensal-empresa-row__progresso.is-nao-aplicavel strong,
+.certidao-mensal-empresa-row__progresso.is-nao-aplicavel small {
+    color: #64748b;
+}
+
+
+/* ============================================================
+ * SAFE_SCAN_EMPRESA_PROGRESSO_DOCUMENTAL_A33_CSS
+ * Indicador OK/TOTAL sem subtítulo.
+ * ============================================================ */
+
+.certidao-mensal-empresa-row__progresso {
+    gap: 0;
+}
+
+.certidao-mensal-workspace
+.certidao-mensal-empresa-row__meta
+.certidao-mensal-empresa-row__progresso strong {
+    display: inline-flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 1px;
+}
+
+.certidao-mensal-empresa-row__progresso-ok,
+.certidao-mensal-empresa-row__progresso-separador,
+.certidao-mensal-empresa-row__progresso-total {
+    display: inline;
+}
+
+/* Parte já localizada = verde */
+.certidao-mensal-empresa-row__progresso.is-faltando
+.certidao-mensal-empresa-row__progresso-ok {
+    color: #15803d;
+}
+
+/* Separador neutro */
+.certidao-mensal-empresa-row__progresso.is-faltando
+.certidao-mensal-empresa-row__progresso-separador {
+    color: #64748b;
+}
+
+/* Meta ainda não alcançada = vermelho */
+.certidao-mensal-empresa-row__progresso.is-faltando
+.certidao-mensal-empresa-row__progresso-total {
+    color: #c62828;
+}
+
+/* Completo = tudo verde */
+.certidao-mensal-empresa-row__progresso.is-ok
+.certidao-mensal-empresa-row__progresso-ok,
+.certidao-mensal-empresa-row__progresso.is-ok
+.certidao-mensal-empresa-row__progresso-separador,
+.certidao-mensal-empresa-row__progresso.is-ok
+.certidao-mensal-empresa-row__progresso-total {
+    color: #15803d;
+}
+
+
+/* ============================================================
+ * SAFE_SCAN_EMPRESA_PROGRESSO_DOCUMENTAL_A34_CSS
+ * Mais área útil para o nome + alinhamento 00/00.
+ * ============================================================ */
+
+.certidao-mensal-workspace
+.certidao-mensal-empresa-row {
+    gap: 0.30rem;
+    padding-right: 0.55rem;
+}
+
+.certidao-mensal-workspace
+.certidao-mensal-empresa-row__meta {
+    min-width: 66px;
+    gap: 0.20rem;
+}
+
+.certidao-mensal-empresa-row__progresso {
+    min-width: 46px;
+}
+
+.certidao-mensal-workspace
+.certidao-mensal-empresa-row__meta
+.certidao-mensal-empresa-row__progresso strong {
+    width: 46px;
+    min-width: 46px;
+    justify-content: flex-end;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+    letter-spacing: 0;
+}
+
+/*
+ * O nome continua em uma linha com ellipsis,
+ * porém recebe mais largura real.
+ */
+.certidao-mensal-workspace
+.certidao-mensal-empresa-row__main {
+    gap: 0.48rem;
+}
+
+.certidao-mensal-workspace
+.certidao-mensal-empresa-row__identity {
+    min-width: 0;
+    width: 100%;
 }
