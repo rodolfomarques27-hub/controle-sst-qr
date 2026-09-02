@@ -78,6 +78,7 @@ import { obterUrlPublicaStorage } from "../../services/supabaseServices";
 import { QrCodeComLogo, QrCodeLogoControls } from "../qr/QrCodeComLogo";
 import { montarUrlPublicaSistema } from "../../utils/urlPublicaUtils.js";
 import {
+    TIPOS_VINCULO_EMPRESA_OBRA,
     adicionarObra,
     atualizarObra,
     excluirObra,
@@ -104,8 +105,9 @@ const FORMULARIO_OBRA_CONFIGURACOES_INICIAL = {
     uf: "",
     endereco: "",
     numeroEndereco: "",
-    fiscalIdealiza: "",
-    tecnicoSegurancaIdealiza: "",
+    contratanteEmpresaId: "",
+    fiscalContratante: "",
+    tecnicoSegurancaContratante: "",
     liderEncarregado: "",
     status: "Ativa",
     observacoes: "",
@@ -134,8 +136,19 @@ function criarFormularioObraConfiguracoes(obra = {}) {
         uf: obra.uf || "",
         endereco: obra.endereco || "",
         numeroEndereco: obra.numeroEndereco || obra.numero_endereco || "",
-        fiscalIdealiza: obra.fiscalIdealiza || obra.fiscal_idealiza || "",
-        tecnicoSegurancaIdealiza: obra.tecnicoSegurancaIdealiza || obra.tecnico_seguranca_idealiza || "",
+        contratanteEmpresaId: obra.contratanteEmpresaId || obra.contratante_empresa_id || "",
+        fiscalContratante:
+            obra.fiscalContratante ||
+            obra.fiscal_contratante ||
+            obra.fiscalIdealiza ||
+            obra.fiscal_idealiza ||
+            "",
+        tecnicoSegurancaContratante:
+            obra.tecnicoSegurancaContratante ||
+            obra.tecnico_seguranca_contratante ||
+            obra.tecnicoSegurancaIdealiza ||
+            obra.tecnico_seguranca_idealiza ||
+            "",
         liderEncarregado: obra.liderEncarregado || obra.lider_encarregado || "",
         status: obra.status === "Inativa" ? "Inativa" : "Ativa",
         observacoes: obra.observacoes || "",
@@ -154,6 +167,78 @@ function ordenarEmpresasObrasConfiguracoes(empresas = []) {
         .filter((empresa) => obterIdEmpresaObrasConfiguracoes(empresa))
         .sort((a, b) => obterNomeEmpresaObrasConfiguracoes(a).localeCompare(obterNomeEmpresaObrasConfiguracoes(b), "pt-BR"));
 }
+
+function obterTipoVinculoObraConfiguracoes(vinculo = {}) {
+    return String(
+        vinculo.tipoVinculo ||
+        vinculo.tipo_vinculo ||
+        ""
+    ).trim();
+}
+
+function empresaEhContratanteObrasConfiguracoes(
+    empresa = {}
+) {
+    const tipoEmpresa =
+        String(
+            empresa.tipo_empresa ||
+            empresa.tipoEmpresa ||
+            ""
+        )
+            .trim()
+            .toLocaleLowerCase(
+                "pt-BR"
+            );
+
+    return (
+        tipoEmpresa ===
+            "contratante" ||
+        tipoEmpresa.startsWith(
+            "contratante -"
+        )
+    );
+}
+
+function obterVinculoContratanteDaObraConfiguracoes(
+    vinculos = [],
+    obraId = ""
+) {
+    const idObra =
+        String(
+            obraId ||
+            ""
+        ).trim();
+
+    if (!idObra) {
+        return null;
+    }
+
+    const candidatos =
+        (vinculos || []).filter(
+            (vinculo) =>
+                String(
+                    vinculo.obraId ||
+                    vinculo.obra_id ||
+                    vinculo.obra?.id ||
+                    ""
+                ).trim() === idObra &&
+                obterTipoVinculoObraConfiguracoes(
+                    vinculo
+                ) ===
+                    TIPOS_VINCULO_EMPRESA_OBRA.CONTRATANTE
+        );
+
+    return (
+        candidatos.find(
+            (vinculo) =>
+                vinculo.status !==
+                "Inativa"
+        ) ||
+        candidatos[0] ||
+        null
+    );
+}
+
 function formatarDataHoraConfiguracoes(valor) {
     if (!valor) return "Sem data";
 
@@ -573,10 +658,50 @@ export function ConfiguracoesSistema({
     const [statusVinculoObraConfiguracoes, setStatusVinculoObraConfiguracoes] = useState("Ativa");
     const [salvandoVinculoObraConfiguracoes, setSalvandoVinculoObraConfiguracoes] = useState(false);
 
+    // SAFE_SCAN_OBRAS_LAYOUT_A5
+    const [
+        cardsObrasRecolhidosConfiguracoes,
+        setCardsObrasRecolhidosConfiguracoes,
+    ] = useState({});
+
+    const [
+        painelEmpresasObraRecolhidoConfiguracoes,
+        setPainelEmpresasObraRecolhidoConfiguracoes,
+    ] = useState(false);
+
     const empresasVinculoObrasConfiguracoes = useMemo(
         () => ordenarEmpresasObrasConfiguracoes(empresasBanco),
         [empresasBanco]
     );
+
+    const empresasContratantesObrasConfiguracoes = useMemo(
+        () =>
+            empresasVinculoObrasConfiguracoes.filter(
+                empresaEhContratanteObrasConfiguracoes
+            ),
+        [empresasVinculoObrasConfiguracoes]
+    );
+
+    const empresasExecutorasObrasConfiguracoes = useMemo(
+        () =>
+            empresasVinculoObrasConfiguracoes.filter(
+                (empresa) =>
+                    !empresaEhContratanteObrasConfiguracoes(
+                        empresa
+                    )
+            ),
+        [empresasVinculoObrasConfiguracoes]
+    );
+
+    const empresaContratantePadraoConfiguracoes = useMemo(
+        () =>
+            empresasContratantesObrasConfiguracoes.length ===
+            1
+                ? empresasContratantesObrasConfiguracoes[0]
+                : null,
+        [empresasContratantesObrasConfiguracoes]
+    );
+
     const mensagemPermissaoSistema = permissaoSistemaAtual
         ? "Permissão geral carregada pelo estado central do sistema."
         : "Nenhuma permissão geral disponível para o usuário autenticado.";
@@ -1391,19 +1516,166 @@ export function ConfiguracoesSistema({
     };
 
     const iniciarNovaObraConfiguracoes = () => {
-        setEditandoObraConfiguracoesId("");
-        setFormObraConfiguracoes(criarFormularioObraConfiguracoes(FORMULARIO_OBRA_CONFIGURACOES_INICIAL));
-        setFormularioObraAbertoConfiguracoes(true);
-        setMunicipiosObraConfiguracoes([]);
-        setMensagemObrasConfiguracoes("Preencha os dados da nova obra.");
+        const formularioInicial =
+            criarFormularioObraConfiguracoes(
+                FORMULARIO_OBRA_CONFIGURACOES_INICIAL
+            );
+
+        const contratantePadraoId =
+            obterIdEmpresaObrasConfiguracoes(
+                empresaContratantePadraoConfiguracoes ||
+                {}
+            );
+
+        setEditandoObraConfiguracoesId(
+            ""
+        );
+
+        setFormObraConfiguracoes({
+            ...formularioInicial,
+
+            contratanteEmpresaId:
+                contratantePadraoId,
+        });
+
+        setFormularioObraAbertoConfiguracoes(
+            true
+        );
+
+        setMunicipiosObraConfiguracoes(
+            []
+        );
+
+        setMensagemObrasConfiguracoes(
+            contratantePadraoId
+                ? "Preencha os dados da nova obra. A única empresa cadastrada como contratante foi pré-selecionada."
+                : "Preencha os dados da nova obra e selecione uma empresa cadastrada como contratante."
+        );
     };
 
     const editarObraConfiguracoes = (obra = {}) => {
-        setEditandoObraConfiguracoesId(obra.id || "");
-        setFormObraConfiguracoes(criarFormularioObraConfiguracoes(obra));
-        setFormularioObraAbertoConfiguracoes(true);
-        if (obra.uf) carregarMunicipiosObraConfiguracoes(obra.uf);
-        setMensagemObrasConfiguracoes(`Editando obra: ${obra.nome || "obra sem nome"}.`);
+        const vinculoContratante =
+            obterVinculoContratanteDaObraConfiguracoes(
+                vinculosObrasConfiguracoes,
+                obra.id
+            );
+
+        setEditandoObraConfiguracoesId(
+            obra.id ||
+            ""
+        );
+
+        setFormObraConfiguracoes({
+            ...criarFormularioObraConfiguracoes(
+                obra
+            ),
+
+            contratanteEmpresaId:
+                vinculoContratante?.empresaId ||
+                vinculoContratante?.empresa_id ||
+                "",
+        });
+
+        setFormularioObraAbertoConfiguracoes(
+            true
+        );
+
+        if (obra.uf) {
+            carregarMunicipiosObraConfiguracoes(
+                obra.uf
+            );
+        }
+
+        setMensagemObrasConfiguracoes(
+            "Editando obra: " +
+            (obra.nome || "obra sem nome") +
+            "."
+        );
+    };
+
+    const alternarCardObraRecolhidoConfiguracoes = (
+        obraId = ""
+    ) => {
+        const id =
+            String(
+                obraId ||
+                ""
+            ).trim();
+
+        if (!id) {
+            return;
+        }
+
+        setCardsObrasRecolhidosConfiguracoes(
+            (atual) => {
+                const recolhidoAtual =
+                    atual[id] ??
+                    true;
+
+                return {
+                    ...atual,
+
+                    [id]:
+                        !recolhidoAtual,
+                };
+            }
+        );
+    };
+
+    const alternarPainelEmpresasObraRecolhidoConfiguracoes = () => {
+        setPainelEmpresasObraRecolhidoConfiguracoes(
+            (atual) =>
+                !atual
+        );
+    };
+
+    const gerenciarEmpresasObraConfiguracoes = (
+        obra = {}
+    ) => {
+        const obraId =
+            String(
+                obra.id ||
+                ""
+            ).trim();
+
+        if (!obraId) {
+            setMensagemObrasConfiguracoes(
+                "Não foi possível identificar a obra para gerenciar as empresas."
+            );
+
+            return;
+        }
+
+        setPainelEmpresasObraRecolhidoConfiguracoes(
+            false
+        );
+
+        setObraVinculoConfiguracoesId(
+            obraId
+        );
+
+        setMensagemObrasConfiguracoes(
+            "Gerenciando empresas da obra: " +
+            (obra.nome || "obra sem nome") +
+            "."
+        );
+
+        setTimeout(
+            () => {
+                document
+                    .getElementById(
+                        "config-obras-vinculos-form"
+                    )
+                    ?.scrollIntoView({
+                        behavior:
+                            "smooth",
+
+                        block:
+                            "start",
+                    });
+            },
+            0
+        );
     };
 
     const cancelarEdicaoObraConfiguracoes = () => {
@@ -1523,56 +1795,360 @@ export function ConfiguracoesSistema({
     const salvarObraConfiguracoes = async (evento) => {
         evento?.preventDefault?.();
 
+        const contratanteEmpresaId =
+            String(
+                formObraConfiguracoes.contratanteEmpresaId ||
+                ""
+            ).trim();
+
         const payload = {
             ...formObraConfiguracoes,
-            nome: String(formObraConfiguracoes.nome || "").trim(),
-            cep: String(formObraConfiguracoes.cep || "").replace(/\D/g, "").slice(0, 8),
-            numeroObra: String(formObraConfiguracoes.numeroObra || "").trim(),
-            cidade: String(formObraConfiguracoes.cidade || "").trim(),
-            uf: String(formObraConfiguracoes.uf || "").trim().toUpperCase(),
-            endereco: String(formObraConfiguracoes.endereco || "").trim(),
-            numeroEndereco: String(formObraConfiguracoes.numeroEndereco || "").trim(),
-            fiscalIdealiza: String(formObraConfiguracoes.fiscalIdealiza || "").trim(),
-            tecnicoSegurancaIdealiza: String(formObraConfiguracoes.tecnicoSegurancaIdealiza || "").trim(),
-            liderEncarregado: String(formObraConfiguracoes.liderEncarregado || "").trim(),
-            status: formObraConfiguracoes.status === "Inativa" ? "Inativa" : "Ativa",
-            observacoes: String(formObraConfiguracoes.observacoes || "").trim(),
+
+            nome:
+                String(
+                    formObraConfiguracoes.nome ||
+                    ""
+                ).trim(),
+
+            cep:
+                String(
+                    formObraConfiguracoes.cep ||
+                    ""
+                )
+                    .replace(
+                        /\D/g,
+                        ""
+                    )
+                    .slice(
+                        0,
+                        8
+                    ),
+
+            numeroObra:
+                String(
+                    formObraConfiguracoes.numeroObra ||
+                    ""
+                ).trim(),
+
+            cidade:
+                String(
+                    formObraConfiguracoes.cidade ||
+                    ""
+                ).trim(),
+
+            uf:
+                String(
+                    formObraConfiguracoes.uf ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase(),
+
+            endereco:
+                String(
+                    formObraConfiguracoes.endereco ||
+                    ""
+                ).trim(),
+
+            numeroEndereco:
+                String(
+                    formObraConfiguracoes.numeroEndereco ||
+                    ""
+                ).trim(),
+
+            fiscalContratante:
+                String(
+                    formObraConfiguracoes.fiscalContratante ||
+                    ""
+                ).trim(),
+
+            tecnicoSegurancaContratante:
+                String(
+                    formObraConfiguracoes.tecnicoSegurancaContratante ||
+                    ""
+                ).trim(),
+
+            liderEncarregado:
+                String(
+                    formObraConfiguracoes.liderEncarregado ||
+                    ""
+                ).trim(),
+
+            status:
+                formObraConfiguracoes.status ===
+                "Inativa"
+                    ? "Inativa"
+                    : "Ativa",
+
+            observacoes:
+                String(
+                    formObraConfiguracoes.observacoes ||
+                    ""
+                ).trim(),
         };
 
         if (!payload.nome) {
-            setMensagemObrasConfiguracoes("Informe o nome da obra antes de salvar.");
+            setMensagemObrasConfiguracoes(
+                "Informe o nome da obra antes de salvar."
+            );
+
             return;
         }
 
-        setSalvandoObraConfiguracoes(true);
-        setMensagemObrasConfiguracoes(editandoObraConfiguracoesId ? "Atualizando obra..." : "Cadastrando obra...");
+        if (!contratanteEmpresaId) {
+            setMensagemObrasConfiguracoes(
+                "Selecione a empresa contratante antes de salvar a obra."
+            );
+
+            return;
+        }
+
+        const editando =
+            Boolean(
+                editandoObraConfiguracoesId
+            );
+
+        let obraNovaCriadaId =
+            "";
+
+        let vinculoContratanteAnteriorInativado =
+            null;
+
+        setSalvandoObraConfiguracoes(
+            true
+        );
+
+        setMensagemObrasConfiguracoes(
+            editando
+                ? "Atualizando obra e contratante..."
+                : "Cadastrando obra e contratante..."
+        );
 
         try {
-            if (editandoObraConfiguracoesId) {
-                await atualizarObra({
-                    ...payload,
-                    id: editandoObraConfiguracoesId,
-                });
+            let obraSalva =
+                null;
+
+            if (editando) {
+                obraSalva =
+                    await atualizarObra({
+                        ...payload,
+
+                        id:
+                            editandoObraConfiguracoesId,
+                    });
             } else {
-                await adicionarObra(payload);
+                obraSalva =
+                    await adicionarObra(
+                        payload
+                    );
+
+                obraNovaCriadaId =
+                    String(
+                        obraSalva?.id ||
+                        ""
+                    ).trim();
             }
 
-            setEditandoObraConfiguracoesId("");
-            setFormObraConfiguracoes(criarFormularioObraConfiguracoes(FORMULARIO_OBRA_CONFIGURACOES_INICIAL));
-            setFormularioObraAbertoConfiguracoes(false);
+            const obraIdSalva =
+                String(
+                    obraSalva?.id ||
+                    editandoObraConfiguracoesId ||
+                    ""
+                ).trim();
+
+            if (!obraIdSalva) {
+                throw new Error(
+                    "A obra foi salva sem retornar um identificador válido."
+                );
+            }
+
+            const vinculosDaObra =
+                vinculosObrasConfiguracoes.filter(
+                    (vinculo) =>
+                        String(
+                            vinculo.obraId ||
+                            vinculo.obra_id ||
+                            vinculo.obra?.id ||
+                            ""
+                        ).trim() ===
+                        obraIdSalva
+                );
+
+            const contratanteAtual =
+                obterVinculoContratanteDaObraConfiguracoes(
+                    vinculosDaObra,
+                    obraIdSalva
+                );
+
+            const vinculoEmpresaSelecionada =
+                vinculosDaObra.find(
+                    (vinculo) =>
+                        String(
+                            vinculo.empresaId ||
+                            vinculo.empresa_id ||
+                            ""
+                        ).trim() ===
+                        contratanteEmpresaId
+                ) ||
+                null;
+
+            const empresaContratanteAtualId =
+                String(
+                    contratanteAtual?.empresaId ||
+                    contratanteAtual?.empresa_id ||
+                    ""
+                ).trim();
+
+            if (
+                contratanteAtual?.id &&
+                empresaContratanteAtualId &&
+                empresaContratanteAtualId !==
+                    contratanteEmpresaId &&
+                contratanteAtual.status !==
+                    "Inativa"
+            ) {
+                await atualizarVinculoEmpresaObra({
+                    id:
+                        contratanteAtual.id,
+
+                    status:
+                        "Inativa",
+
+                    tipoVinculo:
+                        TIPOS_VINCULO_EMPRESA_OBRA.CONTRATANTE,
+                });
+
+                vinculoContratanteAnteriorInativado =
+                    contratanteAtual;
+            }
+
+            try {
+
+                if (
+                    vinculoEmpresaSelecionada?.id
+                ) {
+                    await atualizarVinculoEmpresaObra({
+                        id:
+                            vinculoEmpresaSelecionada.id,
+
+                        status:
+                            "Ativa",
+
+                        tipoVinculo:
+                            TIPOS_VINCULO_EMPRESA_OBRA.CONTRATANTE,
+                    });
+                } else {
+                    await vincularEmpresaObra(
+                        contratanteEmpresaId,
+                        obraIdSalva,
+                        {
+                            status:
+                                "Ativa",
+
+                            tipoVinculo:
+                                TIPOS_VINCULO_EMPRESA_OBRA.CONTRATANTE,
+                        }
+                    );
+                }
+            }
+            catch (erroContratante) {
+
+                if (
+                    vinculoContratanteAnteriorInativado?.id
+                ) {
+                    try {
+                        await atualizarVinculoEmpresaObra({
+                            id:
+                                vinculoContratanteAnteriorInativado.id,
+
+                            status:
+                                "Ativa",
+
+                            tipoVinculo:
+                                TIPOS_VINCULO_EMPRESA_OBRA.CONTRATANTE,
+                        });
+                    }
+                    catch (erroRollback) {
+                        console.error(
+                            "Falha ao restaurar contratante anterior:",
+                            erroRollback
+                        );
+                    }
+                }
+
+                if (obraNovaCriadaId) {
+                    try {
+                        await excluirObra(
+                            obraNovaCriadaId
+                        );
+                    }
+                    catch (erroRollbackObra) {
+                        console.error(
+                            "Falha ao remover obra criada após erro de contratante:",
+                            erroRollbackObra
+                        );
+                    }
+                }
+
+                throw erroContratante;
+            }
+
+            setEditandoObraConfiguracoesId(
+                ""
+            );
+
+            setFormObraConfiguracoes(
+                criarFormularioObraConfiguracoes(
+                    FORMULARIO_OBRA_CONFIGURACOES_INICIAL
+                )
+            );
+
+            setFormularioObraAbertoConfiguracoes(
+                false
+            );
 
             await carregarObrasConfiguracoes();
 
-            setTimeout(() => {
-                document.getElementById("config-obras")?.scrollIntoView({ behavior: "smooth", block: "start" });
-            }, 0);
+            setTimeout(
+                () => {
+                    document
+                        .getElementById(
+                            "config-obras"
+                        )
+                        ?.scrollIntoView({
+                            behavior:
+                                "smooth",
 
-            setMensagemObrasConfiguracoes(editandoObraConfiguracoesId ? "Obra atualizada com sucesso." : "Obra cadastrada com sucesso.");
-        } catch (erro) {
-            console.error("Erro ao salvar obra nas Configuracoes:", erro);
-            setMensagemObrasConfiguracoes(`Nao foi possivel salvar a obra. Supabase: ${erro?.message || "erro nao identificado"}`);
-        } finally {
-            setSalvandoObraConfiguracoes(false);
+                            block:
+                                "start",
+                        });
+                },
+                0
+            );
+
+            setMensagemObrasConfiguracoes(
+                editando
+                    ? "Obra e contratante atualizadas com sucesso."
+                    : "Obra cadastrada com contratante vinculada automaticamente."
+            );
+        }
+        catch (erro) {
+
+            console.error(
+                "Erro ao salvar obra nas Configuracoes:",
+                erro
+            );
+
+            setMensagemObrasConfiguracoes(
+                "Nao foi possivel salvar a obra/contratante. Supabase: " +
+                (erro?.message || "erro nao identificado")
+            );
+        }
+        finally {
+
+            setSalvandoObraConfiguracoes(
+                false
+            );
         }
     };
 
@@ -2274,8 +2850,170 @@ export function ConfiguracoesSistema({
         });
     };
 
-    const totalObrasAtivasConfiguracoes = obrasConfiguracoes.filter((obra) => obra.status !== "Inativa").length;
-    const totalVinculosObrasAtivosConfiguracoes = vinculosObrasConfiguracoes.filter((vinculo) => vinculo.status !== "Inativa").length;
+    // SAFE_SCAN_OBRAS_LAYOUT_A4
+    const totalObrasAtivasConfiguracoes =
+        obrasConfiguracoes.filter(
+            (obra) =>
+                obra.status !==
+                "Inativa"
+        ).length;
+
+    const vinculosExecutorasAtivosConfiguracoes =
+        vinculosObrasConfiguracoes.filter(
+            (vinculo) =>
+                vinculo.status !==
+                    "Inativa" &&
+                obterTipoVinculoObraConfiguracoes(
+                    vinculo
+                ) !==
+                    TIPOS_VINCULO_EMPRESA_OBRA.CONTRATANTE
+        );
+
+    const empresasExecutorasAtivasConfiguracoesIds =
+        new Set(
+            vinculosExecutorasAtivosConfiguracoes
+                .map(
+                    (vinculo) =>
+                        String(
+                            vinculo.empresaId ||
+                            vinculo.empresa_id ||
+                            vinculo.empresa?.id ||
+                            ""
+                        ).trim()
+                )
+                .filter(Boolean)
+        );
+
+    const totalEmpresasExecutorasAtivasConfiguracoes =
+        empresasExecutorasAtivasConfiguracoesIds.size;
+
+    const obterResumoLayoutObraConfiguracoes = (
+        obra = {}
+    ) => {
+        const obraId =
+            String(
+                obra.id ||
+                ""
+            ).trim();
+
+        const vinculoContratante =
+            obterVinculoContratanteDaObraConfiguracoes(
+                vinculosObrasConfiguracoes,
+                obraId
+            );
+
+        const vinculosExecutorasAtivos =
+            vinculosObrasConfiguracoes.filter(
+                (vinculo) =>
+                    String(
+                        vinculo.obraId ||
+                        vinculo.obra_id ||
+                        vinculo.obra?.id ||
+                        ""
+                    ).trim() ===
+                        obraId &&
+                    vinculo.status !==
+                        "Inativa" &&
+                    obterTipoVinculoObraConfiguracoes(
+                        vinculo
+                    ) !==
+                        TIPOS_VINCULO_EMPRESA_OBRA.CONTRATANTE
+            );
+
+        const nomeContratante =
+            vinculoContratante
+                ? obterNomeEmpresaObrasConfiguracoes(
+                    vinculoContratante.empresa ||
+                    {}
+                )
+                : "Não informada";
+
+        return {
+            nomeContratante,
+
+            totalExecutorasAtivas:
+                vinculosExecutorasAtivos.length,
+        };
+    };
+
+    const obraSelecionadaVinculosConfiguracoes =
+        obrasConfiguracoes.find(
+            (obra) =>
+                String(
+                    obra.id ||
+                    ""
+                ).trim() ===
+                String(
+                    obraVinculoConfiguracoesId ||
+                    ""
+                ).trim()
+        ) ||
+        obrasConfiguracoes.find(
+            (obra) =>
+                obra.status !==
+                "Inativa"
+        ) ||
+        obrasConfiguracoes[0] ||
+        null;
+
+    const obraSelecionadaVinculosConfiguracoesId =
+        String(
+            obraSelecionadaVinculosConfiguracoes?.id ||
+            ""
+        ).trim();
+
+    const vinculoContratanteObraSelecionadaConfiguracoes =
+        obraSelecionadaVinculosConfiguracoesId
+            ? obterVinculoContratanteDaObraConfiguracoes(
+                vinculosObrasConfiguracoes,
+                obraSelecionadaVinculosConfiguracoesId
+            )
+            : null;
+
+    const nomeContratanteObraSelecionadaConfiguracoes =
+        vinculoContratanteObraSelecionadaConfiguracoes
+            ? obterNomeEmpresaObrasConfiguracoes(
+                vinculoContratanteObraSelecionadaConfiguracoes.empresa ||
+                {}
+            )
+            : "Não informada";
+
+    const vinculosExecutorasObraSelecionadaConfiguracoes =
+        vinculosObrasConfiguracoes
+            .filter(
+                (vinculo) =>
+                    String(
+                        vinculo.obraId ||
+                        vinculo.obra_id ||
+                        vinculo.obra?.id ||
+                        ""
+                    ).trim() ===
+                        obraSelecionadaVinculosConfiguracoesId &&
+                    obterTipoVinculoObraConfiguracoes(
+                        vinculo
+                    ) !==
+                        TIPOS_VINCULO_EMPRESA_OBRA.CONTRATANTE
+            )
+            .sort(
+                (a, b) =>
+                    String(
+                        a.empresa?.nome ||
+                        ""
+                    ).localeCompare(
+                        String(
+                            b.empresa?.nome ||
+                            ""
+                        ),
+                        "pt-BR"
+                    )
+            );
+
+    const totalExecutorasAtivasObraSelecionadaConfiguracoes =
+        vinculosExecutorasObraSelecionadaConfiguracoes.filter(
+            (vinculo) =>
+                vinculo.status !==
+                "Inativa"
+        ).length;
 
     const cardsResumo = [
         {
@@ -2614,7 +3352,7 @@ export function ConfiguracoesSistema({
                                     <h2 id="config-obras" className="scroll-mt-24 text-lg font-black text-slate-950">Obras</h2>
                                 </div>
                                 <p className="mt-1 text-sm text-slate-500">
-                                    Consulte o cadastro mestre de obras e os vinculos atuais com empresas participantes.
+                                    Consulte as obras, a contratante e as empresas executoras vinculadas.
                                 </p>
                             </div>
 
@@ -2640,20 +3378,46 @@ export function ConfiguracoesSistema({
                         </div>
 
                         <div className="mt-4 grid gap-3 md:grid-cols-3">
-                            <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
-                                <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Obras cadastradas</p>
-                                <p className="mt-1 text-2xl font-black text-slate-950">{obrasConfiguracoes.length}</p>
-                                <p className="mt-1 text-xs font-semibold text-slate-500">total no cadastro mestre</p>
+                            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+                                <p className="text-[10px] font-black uppercase tracking-[0.08em] text-slate-400">
+                                    Obras cadastradas
+                                </p>
+
+                                <p className="mt-2 text-3xl font-black leading-none text-slate-950">
+                                    {obrasConfiguracoes.length}
+                                </p>
+
+                                <p className="mt-3 text-xs font-semibold text-slate-500">
+                                    Total no cadastro mestre
+                                </p>
                             </div>
-                            <div className="rounded-2xl bg-emerald-50 px-3 py-3 ring-1 ring-emerald-100">
-                                <p className="text-[11px] font-black uppercase tracking-wide text-emerald-700">Obras ativas</p>
-                                <p className="mt-1 text-2xl font-black text-emerald-900">{totalObrasAtivasConfiguracoes}</p>
-                                <p className="mt-1 text-xs font-semibold text-emerald-700">disponiveis para vinculo</p>
+
+                            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 px-4 py-4 shadow-sm">
+                                <p className="text-[10px] font-black uppercase tracking-[0.08em] text-emerald-700">
+                                    Obras ativas
+                                </p>
+
+                                <p className="mt-2 text-3xl font-black leading-none text-emerald-900">
+                                    {totalObrasAtivasConfiguracoes}
+                                </p>
+
+                                <p className="mt-3 text-xs font-semibold text-emerald-700">
+                                    Disponíveis para operação
+                                </p>
                             </div>
-                            <div className="rounded-2xl bg-blue-50 px-3 py-3 ring-1 ring-blue-100">
-                                <p className="text-[11px] font-black uppercase tracking-wide text-blue-700">Vinculos ativos</p>
-                                <p className="mt-1 text-2xl font-black text-blue-900">{totalVinculosObrasAtivosConfiguracoes}</p>
-                                <p className="mt-1 text-xs font-semibold text-blue-700">empresa/obra</p>
+
+                            <div className="rounded-2xl border border-blue-200 bg-blue-50/70 px-4 py-4 shadow-sm">
+                                <p className="text-[10px] font-black uppercase tracking-[0.08em] text-blue-700">
+                                    Empresas executoras
+                                </p>
+
+                                <p className="mt-2 text-3xl font-black leading-none text-blue-950">
+                                    {totalEmpresasExecutorasAtivasConfiguracoes}
+                                </p>
+
+                                <p className="mt-3 text-xs font-semibold text-blue-700">
+                                    Empresas ativas vinculadas às obras
+                                </p>
                             </div>
                         </div>
 
@@ -2804,46 +3568,132 @@ export function ConfiguracoesSistema({
                                         />
                                     </label>
 
-<label className="block xl:col-span-4">
-                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Fiscal Idealiza</span>
+                                    {/* SAFE_SCAN_OBRAS_CONTRATANTE_FORM_V36 */}
+                                    <label className="block xl:col-span-12">
+                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">
+                                            Contratante
+                                        </span>
+
+                                        <div className="relative">
+                                            <select
+                                                value={formObraConfiguracoes.contratanteEmpresaId}
+                                                onChange={(evento) =>
+                                                    atualizarCampoObraConfiguracoes(
+                                                        "contratanteEmpresaId",
+                                                        evento.target.value
+                                                    )
+                                                }
+                                                disabled={
+                                                    empresasContratantesObrasConfiguracoes.length ===
+                                                    0
+                                                }
+                                                className="w-full appearance-none rounded-2xl border border-slate-200 bg-white px-3 py-2 pr-11 text-sm font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                                            >
+                                                <option value="">
+                                                    {empresasContratantesObrasConfiguracoes.length ===
+                                                    0
+                                                        ? "Nenhuma contratante cadastrada"
+                                                        : "Selecionar empresa contratante"}
+                                                </option>
+
+                                                {empresasContratantesObrasConfiguracoes.map(
+                                                    (empresa) => (
+                                                        <option
+                                                            key={obterIdEmpresaObrasConfiguracoes(
+                                                                empresa
+                                                            )}
+                                                            value={obterIdEmpresaObrasConfiguracoes(
+                                                                empresa
+                                                            )}
+                                                        >
+                                                            {obterNomeEmpresaObrasConfiguracoes(
+                                                                empresa
+                                                            )}
+                                                        </option>
+                                                    )
+                                                )}
+                                            </select>
+
+                                            <svg
+                                                aria-hidden="true"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+                                            >
+                                                <path
+                                                    d="m6 9 6 6 6-6"
+                                                    stroke="currentColor"
+                                                    strokeWidth="2"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                />
+                                            </svg>
+                                        </div>
+
+                                        <span className="mt-1 block text-[10px] font-semibold text-slate-400">
+                                            Somente empresas cadastradas com tipo Contratante são exibidas.
+                                        </span>
+                                    </label>
+
+                                    <label className="block xl:col-span-4">
+                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">
+                                            Fiscal da contratante
+                                        </span>
+
                                         <input
                                             type="text"
-                                            value={formObraConfiguracoes.fiscalIdealiza}
-                                            onChange={(evento) => atualizarCampoObraConfiguracoes("fiscalIdealiza", evento.target.value)}
+                                            value={formObraConfiguracoes.fiscalContratante}
+                                            onChange={(evento) =>
+                                                atualizarCampoObraConfiguracoes(
+                                                    "fiscalContratante",
+                                                    evento.target.value
+                                                )
+                                            }
                                             className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                            placeholder="Nome do fiscal"
+                                            placeholder="Nome do fiscal da contratante"
                                         />
                                     </label>
 
-<label className="block xl:col-span-4">
-                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Lider / encarregado</span>
+                                    <label className="block xl:col-span-4">
+                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">
+                                            Líder / encarregado
+                                        </span>
+
                                         <input
                                             type="text"
                                             value={formObraConfiguracoes.liderEncarregado}
-                                            onChange={(evento) => atualizarCampoObraConfiguracoes("liderEncarregado", evento.target.value)}
+                                            onChange={(evento) =>
+                                                atualizarCampoObraConfiguracoes(
+                                                    "liderEncarregado",
+                                                    evento.target.value
+                                                )
+                                            }
                                             className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                            placeholder="Nome do lider"
+                                            placeholder="Nome do líder"
                                         />
                                     </label>
 
-<label className="block xl:col-span-4">
-                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Técnico de Segurança do Trabalho Idealiza</span>
+                                    <label className="block xl:col-span-4">
+                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">
+                                            Técnico SST da contratante
+                                        </span>
+
                                         <input
                                             type="text"
-                                            value={formObraConfiguracoes.tecnicoSegurancaIdealiza}
-                                            onChange={(evento) => atualizarCampoObraConfiguracoes("tecnicoSegurancaIdealiza", evento.target.value)}
+                                            value={formObraConfiguracoes.tecnicoSegurancaContratante}
+                                            onChange={(evento) =>
+                                                atualizarCampoObraConfiguracoes(
+                                                    "tecnicoSegurancaContratante",
+                                                    evento.target.value
+                                                )
+                                            }
                                             className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                             placeholder="Nome do Técnico de Segurança do Trabalho"
                                         />
                                     </label>
 
 
-
-
-
-
-
-                                    <label className="block xl:col-span-12">
+<label className="block xl:col-span-12">
                                         <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Observacoes</span>
                                         <textarea
                                             value={formObraConfiguracoes.observacoes}
@@ -2863,8 +3713,9 @@ export function ConfiguracoesSistema({
                                         <h3 className="text-sm font-black text-slate-900">
                                             Obras cadastradas
                                         </h3>
+
                                         <p className="mt-1 text-xs font-semibold text-slate-500">
-                                            Consulte os responsáveis e gerencie cada obra individualmente.
+                                            Abra somente a obra que deseja consultar ou gerenciar.
                                         </p>
                                     </div>
 
@@ -2873,84 +3724,271 @@ export function ConfiguracoesSistema({
                                     </span>
                                 </div>
 
-                                <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                                <div className="mt-4 grid gap-3 lg:grid-cols-2">
                                     {obrasConfiguracoes.length === 0 ? (
-                                        <p className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-500 ring-1 ring-slate-100 lg:col-span-2">
+                                        <p className="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-semibold text-slate-500 lg:col-span-2">
                                             Nenhuma obra carregada.
                                         </p>
                                     ) : (
-                                        obrasConfiguracoes.slice(0, 12).map((obra) => (
-                                            <article
-                                                key={obra.id}
-                                                className="rounded-2xl bg-white p-3 ring-1 ring-slate-100"
-                                            >
-                                                <div className="flex items-start justify-between gap-3">
-                                                    <div className="min-w-0">
-                                                        <p className="truncate text-sm font-black text-slate-950">
-                                                            {obra.nome || "Obra sem nome"}
-                                                        </p>
+                                        obrasConfiguracoes
+                                            .slice(0, 12)
+                                            .map((obra) => {
+                                                const resumoObra =
+                                                    obterResumoLayoutObraConfiguracoes(
+                                                        obra
+                                                    );
 
-                                                        <p className="mt-1 truncate text-xs font-semibold text-slate-500">
-                                                            {[obra.cidade, obra.uf]
-                                                                .filter(Boolean)
-                                                                .join(" / ") || "Local não informado"}
-                                                        </p>
-                                                    </div>
-                                                </div>
+                                                const recolhido =
+                                                    cardsObrasRecolhidosConfiguracoes[
+                                                        obra.id
+                                                    ] ??
+                                                    true;
 
-                                                <div className="mt-3 grid grid-cols-2 gap-2">
-                                                    <div className="min-w-0 rounded-xl bg-slate-50 px-3 py-2">
-                                                        <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">
-                                                            Fiscal Idealiza
-                                                        </p>
-                                                        <p className="mt-1 truncate text-xs font-semibold text-slate-700">
-                                                            {obra.fiscalIdealiza || "Não informado"}
-                                                        </p>
-                                                    </div>
+                                                return (
+                                                    <article
+                                                        key={obra.id}
+                                                        className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:border-slate-300"
+                                                    >
+                                                        {/* SAFE_SCAN_OBRAS_LAYOUT_A5_2 */}
+                                                        <div
+                                                            role="button"
+                                                            tabIndex={0}
+                                                            aria-expanded={!recolhido}
+                                                            onClick={() =>
+                                                                alternarCardObraRecolhidoConfiguracoes(
+                                                                    obra.id
+                                                                )
+                                                            }
+                                                            onKeyDown={(evento) => {
+                                                                if (
+                                                                    evento.target !==
+                                                                    evento.currentTarget
+                                                                ) {
+                                                                    return;
+                                                                }
 
-                                                    <div className="min-w-0 rounded-xl bg-slate-50 px-3 py-2">
-                                                        <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">
-                                                            Líder / Encarregado
-                                                        </p>
-                                                        <p className="mt-1 truncate text-xs font-semibold text-slate-700">
-                                                            {obra.liderEncarregado || "Não informado"}
-                                                        </p>
-                                                    </div>
-                                                </div>
+                                                                if (
+                                                                    evento.key ===
+                                                                        "Enter" ||
+                                                                    evento.key ===
+                                                                        " "
+                                                                ) {
+                                                                    evento.preventDefault();
 
-                                                <div className="mt-3 flex items-center justify-end gap-2 border-t border-slate-100 pt-3">
-                                                    <span
-                                                        className={classNames(
-                                                            "shrink-0 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wide ring-1",
-                                                            obra.status === "Inativa"
-                                                                ? "bg-slate-100 text-slate-500 ring-slate-200"
-                                                                : "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                                                    alternarCardObraRecolhidoConfiguracoes(
+                                                                        obra.id
+                                                                    );
+                                                                }
+                                                            }}
+                                                            className="flex cursor-pointer items-start justify-between gap-3 px-4 py-3 outline-none transition hover:bg-slate-50/80 focus-visible:bg-slate-50 focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-slate-100"
+                                                        >
+                                                            <div className="min-w-0 flex-1">
+                                                                <p
+                                                                    className="truncate whitespace-nowrap pr-2 text-[11px] font-black leading-5 tracking-[-0.015em] text-slate-950 xl:text-[12px]"
+                                                                    title={
+                                                                        obra.nome ||
+                                                                        "Obra sem nome"
+                                                                    }
+                                                                >
+                                                                    {obra.nome ||
+                                                                        "Obra sem nome"}
+                                                                </p>
+
+                                                                <p className="mt-1 text-xs font-semibold text-slate-500">
+                                                                    {[obra.cidade, obra.uf]
+                                                                        .filter(Boolean)
+                                                                        .join(" / ") ||
+                                                                        "Local não informado"}
+                                                                </p>
+
+                                                                <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1.5">
+                                                                    <span className="text-[9px] font-black uppercase tracking-wide text-blue-600">
+                                                                        Contratante:
+                                                                    </span>
+
+                                                                    <span
+                                                                        className="max-w-full truncate text-[11px] font-black text-blue-950"
+                                                                        title={
+                                                                            resumoObra.nomeContratante
+                                                                        }
+                                                                    >
+                                                                        {resumoObra.nomeContratante}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                                                                <span
+                                                                    className={classNames(
+                                                                        "rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wide ring-1",
+                                                                        obra.status ===
+                                                                            "Inativa"
+                                                                            ? "bg-slate-100 text-slate-500 ring-slate-200"
+                                                                            : "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                                                    )}
+                                                                >
+                                                                    {obra.status}
+                                                                </span>
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(evento) => {
+                                                                        evento.stopPropagation();
+
+                                                                        alternarCardObraRecolhidoConfiguracoes(
+                                                                            obra.id
+                                                                        );
+                                                                    }}
+                                                                    className="inline-flex items-center gap-1.5 rounded-full bg-[#1A2332] px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-white shadow-sm transition hover:bg-[#2A3647]"
+                                                                >
+                                                                    {recolhido ? (
+                                                                        <ChevronDown className="h-3.5 w-3.5" />
+                                                                    ) : (
+                                                                        <ChevronUp className="h-3.5 w-3.5" />
+                                                                    )}
+
+                                                                    {recolhido
+                                                                        ? "Abrir"
+                                                                        : "Recolher"}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        {!recolhido && (
+                                                            <div className="border-t border-slate-100 px-4 pb-4 pt-3">
+                                                                <div className="grid gap-2 sm:grid-cols-3">
+                                                                    <div className="min-w-0 rounded-2xl bg-slate-50 px-3 py-3">
+                                                                        <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">
+                                                                            Fiscal da contratante
+                                                                        </p>
+
+                                                                        <p
+                                                                            className="mt-1 truncate text-xs font-semibold text-slate-700"
+                                                                            title={
+                                                                                obra.fiscalContratante ||
+                                                                                obra.fiscal_contratante ||
+                                                                                obra.fiscalIdealiza ||
+                                                                                obra.fiscal_idealiza ||
+                                                                                "Não informado"
+                                                                            }
+                                                                        >
+                                                                            {obra.fiscalContratante ||
+                                                                                obra.fiscal_contratante ||
+                                                                                obra.fiscalIdealiza ||
+                                                                                obra.fiscal_idealiza ||
+                                                                                "Não informado"}
+                                                                        </p>
+                                                                    </div>
+
+                                                                    <div className="min-w-0 rounded-2xl bg-slate-50 px-3 py-3">
+                                                                        <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">
+                                                                            Técnico SST
+                                                                        </p>
+
+                                                                        <p
+                                                                            className="mt-1 truncate text-xs font-semibold text-slate-700"
+                                                                            title={
+                                                                                obra.tecnicoSegurancaContratante ||
+                                                                                obra.tecnico_seguranca_contratante ||
+                                                                                obra.tecnicoSegurancaIdealiza ||
+                                                                                obra.tecnico_seguranca_idealiza ||
+                                                                                "Não informado"
+                                                                            }
+                                                                        >
+                                                                            {obra.tecnicoSegurancaContratante ||
+                                                                                obra.tecnico_seguranca_contratante ||
+                                                                                obra.tecnicoSegurancaIdealiza ||
+                                                                                obra.tecnico_seguranca_idealiza ||
+                                                                                "Não informado"}
+                                                                        </p>
+                                                                    </div>
+
+                                                                    <div className="min-w-0 rounded-2xl bg-slate-50 px-3 py-3">
+                                                                        <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">
+                                                                            Líder / Encarregado
+                                                                        </p>
+
+                                                                        <p
+                                                                            className="mt-1 truncate text-xs font-semibold text-slate-700"
+                                                                            title={
+                                                                                obra.liderEncarregado ||
+                                                                                obra.lider_encarregado ||
+                                                                                "Não informado"
+                                                                            }
+                                                                        >
+                                                                            {obra.liderEncarregado ||
+                                                                                obra.lider_encarregado ||
+                                                                                "Não informado"}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                                    <div>
+                                                                        <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">
+                                                                            Empresas executoras
+                                                                        </p>
+
+                                                                        <p className="mt-1 text-xs font-black text-slate-700">
+                                                                            {resumoObra.totalExecutorasAtivas} ativa(s) nesta obra
+                                                                        </p>
+                                                                    </div>
+
+                                                                    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                gerenciarEmpresasObraConfiguracoes(
+                                                                                    obra
+                                                                                )
+                                                                            }
+                                                                            disabled={Boolean(
+                                                                                excluindoObraConfiguracoesId
+                                                                            )}
+                                                                            className="rounded-full bg-blue-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                        >
+                                                                            Gerenciar empresas
+                                                                        </button>
+
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                editarObraConfiguracoes(
+                                                                                    obra
+                                                                                )
+                                                                            }
+                                                                            disabled={Boolean(
+                                                                                excluindoObraConfiguracoesId
+                                                                            )}
+                                                                            className="rounded-full bg-slate-950 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                        >
+                                                                            Editar
+                                                                        </button>
+
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                excluirObraConfiguracoes(
+                                                                                    obra
+                                                                                )
+                                                                            }
+                                                                            disabled={Boolean(
+                                                                                excluindoObraConfiguracoesId
+                                                                            )}
+                                                                            className="rounded-full bg-red-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                        >
+                                                                            {excluindoObraConfiguracoesId ===
+                                                                            obra.id
+                                                                                ? "Excluindo..."
+                                                                                : "Excluir"}
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
                                                         )}
-                                                    >
-                                                        {obra.status}
-                                                    </span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => editarObraConfiguracoes(obra)}
-                                                        disabled={Boolean(excluindoObraConfiguracoesId)}
-                                                        className="rounded-full bg-slate-950 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-                                                    >
-                                                        Editar
-                                                    </button>
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => excluirObraConfiguracoes(obra)}
-                                                        disabled={Boolean(excluindoObraConfiguracoesId)}
-                                                        className="rounded-full bg-red-50 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
-                                                    >
-                                                        {excluindoObraConfiguracoesId === obra.id
-                                                            ? "Excluindo..."
-                                                            : "Excluir"}
-                                                    </button>
-                                                </div>
-                                            </article>
-                                        ))
+                                                    </article>
+                                                );
+                                            })
                                     )}
                                 </div>
 
@@ -2961,231 +3999,337 @@ export function ConfiguracoesSistema({
                                 )}
                             </section>
 
-                            <section className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                                <div className="flex flex-wrap items-center justify-between gap-3">
+                            <section
+                                id="config-obras-vinculos-form"
+                                className="scroll-mt-24 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100"
+                            >
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                     <div>
                                         <h3 className="text-sm font-black text-slate-900">
-                                            Vínculos empresa/obra
+                                            Empresas da obra
                                         </h3>
+
                                         <p className="mt-1 text-xs font-semibold text-slate-500">
-                                            Defina quais empresas participam de cada obra.
+                                            Gerencie a contratante e as executoras somente da obra selecionada.
                                         </p>
                                     </div>
 
-                                    <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">
-                                        {vinculosObrasConfiguracoes.length} vínculo(s)
-                                    </span>
-                                </div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="rounded-full bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">
+                                            {obraSelecionadaVinculosConfiguracoes
+                                                ? totalExecutorasAtivasObraSelecionadaConfiguracoes +
+                                                  " executora(s) ativa(s)"
+                                                : "Nenhuma obra"}
+                                        </span>
 
-                                <div className="mt-3 grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,.85fr)] xl:items-start">
-                                    <form
-                                        onSubmit={salvarVinculoObraConfiguracoes}
-                                        className="rounded-2xl bg-white p-4 ring-1 ring-slate-100"
-                                    >
-                                        <div>
-                                            <p className="text-xs font-black uppercase tracking-wide text-slate-700">
-                                                Novo vínculo
-                                            </p>
-                                            <p className="mt-1 text-xs font-semibold text-slate-500">
-                                                Selecione a empresa, a obra e o status inicial.
-                                            </p>
-                                        </div>
-
-                                        <div className="mt-3 grid gap-3 lg:grid-cols-2">
-                                            <label className="block lg:col-span-2">
-                                                <span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-400">
-                                                    Empresa
-                                                </span>
-
-                                                <select
-                                                    value={empresaVinculoObraConfiguracoesId}
-                                                    onChange={(evento) =>
-                                                        setEmpresaVinculoObraConfiguracoesId(
-                                                            evento.target.value
-                                                        )
-                                                    }
-                                                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                                >
-                                                    {empresasVinculoObrasConfiguracoes.length === 0 ? (
-                                                        <option value="">
-                                                            Nenhuma empresa carregada
-                                                        </option>
-                                                    ) : (
-                                                        empresasVinculoObrasConfiguracoes.map((empresa) => (
-                                                            <option
-                                                                key={obterIdEmpresaObrasConfiguracoes(empresa)}
-                                                                value={obterIdEmpresaObrasConfiguracoes(empresa)}
-                                                            >
-                                                                {obterNomeEmpresaObrasConfiguracoes(empresa)}
-                                                            </option>
-                                                        ))
-                                                    )}</select>
-                                            </label>
-
-                                            <label className="block">
-                                                <span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-400">
-                                                    Obra
-                                                </span>
-
-                                                <select
-                                                    value={obraVinculoConfiguracoesId}
-                                                    onChange={(evento) =>
-                                                        setObraVinculoConfiguracoesId(
-                                                            evento.target.value
-                                                        )
-                                                    }
-                                                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                                >
-                                                    {obrasConfiguracoes.length === 0 ? (
-                                                        <option value="">
-                                                            Nenhuma obra cadastrada
-                                                        </option>
-                                                    ) : (
-                                                        obrasConfiguracoes.map((obra) => (
-                                                            <option
-                                                                key={obra.id}
-                                                                value={obra.id}
-                                                            >
-                                                                {obra.nome} - {obra.status}
-                                                            </option>
-                                                        ))
-                                                    )}
-                                                </select>
-                                            </label>
-
-                                            <label className="block">
-                                                <span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-400">
-                                                    Status inicial
-                                                </span>
-
-                                                <select
-                                                    value={statusVinculoObraConfiguracoes}
-                                                    onChange={(evento) =>
-                                                        setStatusVinculoObraConfiguracoes(
-                                                            evento.target.value
-                                                        )
-                                                    }
-                                                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                                >
-                                                    <option value="Ativa">Ativa</option>
-                                                    <option value="Inativa">Inativa</option>
-                                                </select>
-                                            </label>
-
-                                            <button
-                                                type="submit"
-                                                disabled={
-                                                    salvandoVinculoObraConfiguracoes ||
-                                                    !empresaVinculoObraConfiguracoesId ||
-                                                    !obraVinculoConfiguracoesId
-                                                }
-                                                className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 lg:col-span-2"
-                                            >
-                                                {salvandoVinculoObraConfiguracoes
-                                                    ? "Salvando vínculo..."
-                                                    : "Salvar vínculo"}
-                                            </button>
-                                        </div>
-                                    </form>
-
-                                    <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-100">
-                                        <div className="flex items-center justify-between gap-3">
-                                            <div>
-                                                <p className="text-xs font-black uppercase tracking-wide text-slate-700">
-                                                    Vínculos atuais
-                                                </p>
-                                                <p className="mt-1 text-xs font-semibold text-slate-500">
-                                                    Empresas já associadas às obras.
-                                                </p>
-                                            </div>
-
-                                            <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">
-                                                {vinculosObrasConfiguracoes.length}
-                                            </span>
-                                        </div>
-
-                                        <div className="mt-3 space-y-2">
-                                            {vinculosObrasConfiguracoes.length === 0 ? (
-                                                <p className="rounded-xl bg-slate-50 px-3 py-3 text-xs font-semibold text-slate-500">
-                                                    Nenhum vínculo carregado.
-                                                </p>
+                                        <button
+                                            type="button"
+                                            onClick={
+                                                alternarPainelEmpresasObraRecolhidoConfiguracoes
+                                            }
+                                            className="inline-flex items-center gap-1.5 rounded-full bg-[#1A2332] px-3 py-1.5 text-xs font-black text-white shadow-sm transition hover:bg-[#2A3647]"
+                                        >
+                                            {painelEmpresasObraRecolhidoConfiguracoes ? (
+                                                <ChevronDown className="h-3.5 w-3.5" />
                                             ) : (
-                                                vinculosObrasConfiguracoes
-                                                    .slice(0, 10)
-                                                    .map((vinculo) => (
-                                                        <article
-                                                            key={vinculo.id}
-                                                            className="grid gap-3 rounded-xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
-                                                        >
-                                                            <div className="min-w-0">
-                                                                <p className="truncate text-xs font-black text-slate-950">
-                                                                    {vinculo.empresa?.nome ||
-                                                                        "Empresa não informada"}
-                                                                </p>
-
-                                                                <p className="mt-1 truncate text-[11px] font-semibold text-slate-500">
-                                                                    →{" "}
-                                                                    {vinculo.obra?.nome ||
-                                                                        "Obra não informada"}
-                                                                </p>
-                                                            </div>
-
-                                                            <div className="flex flex-nowrap items-center justify-end gap-2">
-                                                                <span
-                                                                    className={classNames(
-                                                                        "shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ring-1",
-                                                                        vinculo.status === "Inativa"
-                                                                            ? "bg-slate-100 text-slate-500 ring-slate-200"
-                                                                            : "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                                                                    )}
-                                                                >
-                                                                    {vinculo.status}
-                                                                </span>
-
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        alternarStatusVinculoObraConfiguracoes(
-                                                                            vinculo
-                                                                        )
-                                                                    }
-                                                                    disabled={
-                                                                        salvandoVinculoObraConfiguracoes
-                                                                    }
-                                                                    className="shrink-0 rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-wide text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-                                                                >
-                                                                    {vinculo.status === "Inativa"
-                                                                        ? "Ativar"
-                                                                        : "Inativar"}
-                                                                </button>
-
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        removerVinculoObraConfiguracoes(
-                                                                            vinculo
-                                                                        )
-                                                                    }
-                                                                    disabled={
-                                                                        salvandoVinculoObraConfiguracoes
-                                                                    }
-                                                                    className="shrink-0 rounded-full bg-red-50 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                                                                >
-                                                                    Remover
-                                                                </button>
-                                                            </div>
-                                                        </article>
-                                                    ))
+                                                <ChevronUp className="h-3.5 w-3.5" />
                                             )}
-                                        </div>
 
-                                        <div className="mt-3 rounded-xl bg-blue-50 px-3 py-2 text-[10px] font-semibold leading-4 text-blue-700 ring-1 ring-blue-100">
-                                            <strong>Ativa:</strong> disponível para uso no DDS.{" "}
-                                            <strong>Inativa:</strong> vínculo preservado, mas
-                                            indisponível para novos registros.
-                                        </div>
+                                            {painelEmpresasObraRecolhidoConfiguracoes
+                                                ? "Abrir"
+                                                : "Recolher"}
+                                        </button>
                                     </div>
                                 </div>
+
+                                {!painelEmpresasObraRecolhidoConfiguracoes && (
+                                    <div className="mt-4 space-y-3">
+                                        <form
+                                            onSubmit={
+                                                salvarVinculoObraConfiguracoes
+                                            }
+                                            className="rounded-2xl bg-white p-4 ring-1 ring-slate-100"
+                                        >
+                                            <div className="grid gap-3 xl:grid-cols-[minmax(230px,1fr)_minmax(280px,1.25fr)_150px_auto] xl:items-end">
+                                                <label className="block">
+                                                    <span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-400">
+                                                        Obra em gestão
+                                                    </span>
+
+                                                    <select
+                                                        value={
+                                                            obraVinculoConfiguracoesId
+                                                        }
+                                                        onChange={(evento) =>
+                                                            setObraVinculoConfiguracoesId(
+                                                                evento.target.value
+                                                            )
+                                                        }
+                                                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                                    >
+                                                        {obrasConfiguracoes.length ===
+                                                        0 ? (
+                                                            <option value="">
+                                                                Nenhuma obra cadastrada
+                                                            </option>
+                                                        ) : (
+                                                            obrasConfiguracoes.map(
+                                                                (obra) => (
+                                                                    <option
+                                                                        key={
+                                                                            obra.id
+                                                                        }
+                                                                        value={
+                                                                            obra.id
+                                                                        }
+                                                                    >
+                                                                        {obra.nome} - {obra.status}
+                                                                    </option>
+                                                                )
+                                                            )
+                                                        )}
+                                                    </select>
+                                                </label>
+
+                                                <label className="block">
+                                                    <span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-400">
+                                                        Empresa executora
+                                                    </span>
+
+                                                    <select
+                                                        value={
+                                                            empresaVinculoObraConfiguracoesId
+                                                        }
+                                                        onChange={(evento) =>
+                                                            setEmpresaVinculoObraConfiguracoesId(
+                                                                evento.target.value
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            empresasExecutorasObrasConfiguracoes.length ===
+                                                            0
+                                                        }
+                                                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                                                    >
+                                                        {empresasExecutorasObrasConfiguracoes.length ===
+                                                        0 ? (
+                                                            <option value="">
+                                                                Nenhuma executora cadastrada
+                                                            </option>
+                                                        ) : (
+                                                            empresasExecutorasObrasConfiguracoes.map(
+                                                                (empresa) => (
+                                                                    <option
+                                                                        key={obterIdEmpresaObrasConfiguracoes(
+                                                                            empresa
+                                                                        )}
+                                                                        value={obterIdEmpresaObrasConfiguracoes(
+                                                                            empresa
+                                                                        )}
+                                                                    >
+                                                                        {obterNomeEmpresaObrasConfiguracoes(
+                                                                            empresa
+                                                                        )}
+                                                                    </option>
+                                                                )
+                                                            )
+                                                        )}
+                                                    </select>
+                                                </label>
+
+                                                <label className="block">
+                                                    <span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-400">
+                                                        Status
+                                                    </span>
+
+                                                    <select
+                                                        value={
+                                                            statusVinculoObraConfiguracoes
+                                                        }
+                                                        onChange={(evento) =>
+                                                            setStatusVinculoObraConfiguracoes(
+                                                                evento.target.value
+                                                            )
+                                                        }
+                                                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                                    >
+                                                        <option value="Ativa">
+                                                            Ativa
+                                                        </option>
+
+                                                        <option value="Inativa">
+                                                            Inativa
+                                                        </option>
+                                                    </select>
+                                                </label>
+
+                                                <button
+                                                    type="submit"
+                                                    disabled={
+                                                        salvandoVinculoObraConfiguracoes ||
+                                                        !empresaVinculoObraConfiguracoesId ||
+                                                        !obraVinculoConfiguracoesId
+                                                    }
+                                                    className="inline-flex min-h-[38px] items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                                                >
+                                                    {salvandoVinculoObraConfiguracoes
+                                                        ? "Salvando..."
+                                                        : "Salvar executora"}
+                                                </button>
+                                            </div>
+                                        </form>
+
+                                        {obraSelecionadaVinculosConfiguracoes ? (
+                                            <>
+                                                <div className="flex flex-col gap-3 rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                                                    <div className="min-w-0">
+                                                        <p className="text-[9px] font-black uppercase tracking-[0.08em] text-blue-600">
+                                                            Contratante da obra
+                                                        </p>
+
+                                                        <p
+                                                            className="mt-1 truncate text-sm font-black text-blue-950"
+                                                            title={
+                                                                nomeContratanteObraSelecionadaConfiguracoes
+                                                            }
+                                                        >
+                                                            {nomeContratanteObraSelecionadaConfiguracoes}
+                                                        </p>
+
+                                                        <p className="mt-1 truncate text-[11px] font-semibold text-blue-700">
+                                                            {obraSelecionadaVinculosConfiguracoes.nome ||
+                                                                "Obra sem nome"}
+                                                        </p>
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            editarObraConfiguracoes(
+                                                                obraSelecionadaVinculosConfiguracoes
+                                                            )
+                                                        }
+                                                        className="shrink-0 rounded-full bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100"
+                                                    >
+                                                        Alterar na obra
+                                                    </button>
+                                                </div>
+
+                                                <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-100">
+                                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                                        <div>
+                                                            <p className="text-xs font-black uppercase tracking-wide text-slate-700">
+                                                                Empresas executoras
+                                                            </p>
+
+                                                            <p className="mt-1 text-xs font-semibold text-slate-500">
+                                                                Apenas as empresas vinculadas à obra selecionada.
+                                                            </p>
+                                                        </div>
+
+                                                        <span className="rounded-full bg-slate-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">
+                                                            {vinculosExecutorasObraSelecionadaConfiguracoes.length} vínculo(s)
+                                                        </span>
+                                                    </div>
+
+                                                    {vinculosExecutorasObraSelecionadaConfiguracoes.length ===
+                                                    0 ? (
+                                                        <div className="mt-3 rounded-2xl bg-slate-50 px-4 py-4 text-xs font-semibold text-slate-500 ring-1 ring-slate-100">
+                                                            Nenhuma empresa executora vinculada a esta obra.
+                                                        </div>
+                                                    ) : (
+                                                        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                                            {vinculosExecutorasObraSelecionadaConfiguracoes.map(
+                                                                (vinculo) => (
+                                                                    <article
+                                                                        key={
+                                                                            vinculo.id
+                                                                        }
+                                                                        className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100"
+                                                                    >
+                                                                        <div className="flex items-start justify-between gap-2">
+                                                                            <div className="min-w-0">
+                                                                                <p
+                                                                                    className="truncate text-xs font-black text-slate-950"
+                                                                                    title={
+                                                                                        vinculo
+                                                                                            .empresa
+                                                                                            ?.nome ||
+                                                                                        "Empresa não informada"
+                                                                                    }
+                                                                                >
+                                                                                    {vinculo
+                                                                                        .empresa
+                                                                                        ?.nome ||
+                                                                                        "Empresa não informada"}
+                                                                                </p>
+
+                                                                                <p className="mt-1 truncate text-[10px] font-semibold text-slate-500">
+                                                                                    Executora
+                                                                                </p>
+                                                                            </div>
+
+                                                                            <span
+                                                                                className={classNames(
+                                                                                    "shrink-0 rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wide ring-1",
+                                                                                    vinculo.status ===
+                                                                                        "Inativa"
+                                                                                        ? "bg-slate-100 text-slate-500 ring-slate-200"
+                                                                                        : "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                                                                )}
+                                                                            >
+                                                                                {vinculo.status}
+                                                                            </span>
+                                                                        </div>
+
+                                                                        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-200/70 pt-3">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() =>
+                                                                                    alternarStatusVinculoObraConfiguracoes(
+                                                                                        vinculo
+                                                                                    )
+                                                                                }
+                                                                                disabled={
+                                                                                    salvandoVinculoObraConfiguracoes
+                                                                                }
+                                                                                className="rounded-full bg-white px-3 py-1 text-[9px] font-black uppercase tracking-wide text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                                                            >
+                                                                                {vinculo.status ===
+                                                                                "Inativa"
+                                                                                    ? "Ativar"
+                                                                                    : "Inativar"}
+                                                                            </button>
+
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() =>
+                                                                                    removerVinculoObraConfiguracoes(
+                                                                                        vinculo
+                                                                                    )
+                                                                                }
+                                                                                disabled={
+                                                                                    salvandoVinculoObraConfiguracoes
+                                                                                }
+                                                                                className="rounded-full bg-red-50 px-3 py-1 text-[9px] font-black uppercase tracking-wide text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                                                            >
+                                                                                Remover
+                                                                            </button>
+                                                                        </div>
+                                                                    </article>
+                                                                )
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="rounded-2xl bg-white px-4 py-4 text-xs font-semibold text-slate-500 ring-1 ring-slate-100">
+                                                Nenhuma obra disponível para gerenciamento.
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </section>
                         </div>
 
