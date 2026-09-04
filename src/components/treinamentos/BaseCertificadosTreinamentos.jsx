@@ -1204,24 +1204,54 @@ export function BaseCertificadosTreinamentos({
                         });
                     };
 
+                    const idsTreinamentosAdicionaisEnviados =
+                        new Set(
+                            Array.isArray(
+                                grupo.avaliacao?.itensAdicionaisEnviados
+                            )
+                                ? grupo.avaliacao.itensAdicionaisEnviados
+                                    .map((item) =>
+                                        Number(
+                                            item?.treinamento?.id ||
+                                            item?.realizado?.treinamentoId ||
+                                            0
+                                        )
+                                    )
+                                    .filter(
+                                        (id) =>
+                                            Number.isFinite(id) &&
+                                            id > 0
+                                    )
+                                : []
+                        );
+
+                    const totalAdicionaisEnviados =
+                        idsTreinamentosAdicionaisEnviados.size;
+
                     const resumoStatus = foraControleOperacional
                         ? { emDia: 0, aVencer: 0, vencidos: 0 }
-                        : certificados.reduce(
-                            (acc, certificado) => {
-                                const valores = valoresRevisao(certificado);
-                                const status = statusDocumento(
-                                    valores.vencimento || certificado.vencimento,
-                                    treinamentoSemValidade(certificado.treinamentoId)
-                                );
+                        : {
+                            emDia:
+                                Array.isArray(
+                                    grupo.avaliacao?.emDia
+                                )
+                                    ? grupo.avaliacao.emDia.length
+                                    : 0,
 
-                                if (status.chave === "vencido") acc.vencidos += 1;
-                                else if (status.chave === "vencendo") acc.aVencer += 1;
-                                else acc.emDia += 1;
+                            aVencer:
+                                Array.isArray(
+                                    grupo.avaliacao?.vencendo
+                                )
+                                    ? grupo.avaliacao.vencendo.length
+                                    : 0,
 
-                                return acc;
-                            },
-                            { emDia: 0, aVencer: 0, vencidos: 0 }
-                        );
+                            vencidos:
+                                Array.isArray(
+                                    grupo.avaliacao?.vencidos
+                                )
+                                    ? grupo.avaliacao.vencidos.length
+                                    : 0,
+                        };
 
                     const obterValorDataRevisaoFormulario = (itemKey, campo, valorIso) => {
         const chave = `${itemKey}:${campo}`;
@@ -1315,6 +1345,12 @@ export function BaseCertificadosTreinamentos({
                                         <span className="whitespace-nowrap rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
                                             {certificados.length} certificado(s)
                                         </span>
+
+                                        {totalAdicionaisEnviados > 0 && (
+                                            <span className="whitespace-nowrap rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700 ring-1 ring-violet-200">
+                                                {totalAdicionaisEnviados} adicional(is)
+                                            </span>
+                                        )}
 
                                         {foraControleOperacional && (
                                             <span
@@ -1557,13 +1593,21 @@ export function BaseCertificadosTreinamentos({
                                         const itemKey = String(d.id || `${d.colaborador.id}-${d.treinamentoId}-${idx}`);
                                         const aberto = Boolean(certificadosAbertos[itemKey]);
 
+                                        const treinamentoIdAtual =
+                                            Number(
+                                                d?.treinamentoId ||
+                                                d?.treinamento?.id ||
+                                                0
+                                            );
+
                                         const gradeIndividual =
                                             idsTreinamentosGradeIndividual.has(
-                                                Number(
-                                                    d?.treinamentoId ||
-                                                    d?.treinamento?.id ||
-                                                    0
-                                                )
+                                                treinamentoIdAtual
+                                            );
+
+                                        const adicionalEnviado =
+                                            idsTreinamentosAdicionaisEnviados.has(
+                                                treinamentoIdAtual
                                             );
 
                                         const certificadoEvidenciaId =
@@ -1734,6 +1778,15 @@ export function BaseCertificadosTreinamentos({
                                                     <div className="min-w-0">
                                                         <div className="flex flex-wrap items-center gap-2">
                                                             <StatusPill status={statusAtual} small />
+
+                                                            {adicionalEnviado ? (
+                                                                <span
+                                                                    className="whitespace-nowrap rounded-full bg-indigo-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.07em] text-indigo-700 ring-1 ring-indigo-200"
+                                                                    title="Treinamento enviado fora da matriz obrigatória deste colaborador. Não altera o percentual de conformidade."
+                                                                >
+                                                                    Adicional
+                                                                </span>
+                                                            ) : null}
 
                                                             {documentoEnviadoHoje ? (
                                                                 <span

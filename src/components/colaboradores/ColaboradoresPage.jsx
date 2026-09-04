@@ -597,9 +597,6 @@ export function Colaboradores({
                     const empresasColaborador =
                         [
                             empresaDireta,
-                            colaborador?.empresaNome,
-                            colaborador?.empresaExibicao,
-                            colaborador?.empresaPaiNome,
                         ]
                             .filter(Boolean)
                             .map(
@@ -1216,9 +1213,6 @@ export function Colaboradores({
                     const empresasColaborador =
                         [
                             empresaDireta,
-                            colaborador?.empresaNome,
-                            colaborador?.empresaExibicao,
-                            colaborador?.empresaPaiNome,
                         ]
                             .filter(Boolean)
                             .map(

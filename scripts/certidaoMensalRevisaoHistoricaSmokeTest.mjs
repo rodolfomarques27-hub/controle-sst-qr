@@ -14,7 +14,7 @@ import {
 
 const migration =
     readFileSync(
-        "supabase/migrations/20260831095934_certidao_mensal_revisao_analitica_versao_historica.sql",
+        "supabase/migrations/20260831133205_certidao_mensal_revisao_analitica_versao_historica.sql",
         "utf8",
     );
 
