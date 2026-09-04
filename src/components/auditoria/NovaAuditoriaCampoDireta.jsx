@@ -874,6 +874,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
             if (tokenAuditoriaCampo) {
                 const { data: dadosRpc, error } = await supabase.rpc("salvar_auditoria_campo_publica", {
                     p_token: tokenAuditoriaCampo,
+                    p_senha: senhaAcessoAuditoria.trim(),
                     p_dados: payload,
                 });
 
