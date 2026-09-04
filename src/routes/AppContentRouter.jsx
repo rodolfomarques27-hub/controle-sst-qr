@@ -29,6 +29,7 @@ const MapaObraVisualizacao = React.lazy(() => import("../components/mapa/MapaObr
 const Empresas = React.lazy(() => import("../components/empresas/EmpresasPage").then((modulo) => ({ default: modulo.Empresas })));
 const Colaboradores = React.lazy(() => import("../components/colaboradores/ColaboradoresPage").then((modulo) => ({ default: modulo.Colaboradores })));
 const Treinamentos = React.lazy(() => import("../components/treinamentos/TreinamentosPage").then((modulo) => ({ default: modulo.Treinamentos })));
+const ConsolidacaoColaboradorPage = React.lazy(() => import("../features/consolidacao-colaborador/pages/ConsolidacaoColaboradorPage").then((modulo) => ({ default: modulo.ConsolidacaoColaboradorPage })));
 const DdsPage = React.lazy(() => import("../components/dds/DdsPage").then((modulo) => ({ default: modulo.DdsPage })));
 const CertidaoMensalDocumentalPage = React.lazy(() => import("../features/certidao-mensal-documental/pages/CertidaoMensalDocumentalPage").then((modulo) => ({ default: modulo.CertidaoMensalDocumentalPage })));
 const RelatorioAuditoria = React.lazy(() => import("../components/auditoria/RelatorioAuditoria").then((modulo) => ({ default: modulo.RelatorioAuditoria })));
@@ -764,6 +765,14 @@ export function AppContentRouter({
                     onAtualizarDatasCertificado={onAtualizarDatasCertificado}
                     onSincronizarStorage={onSincronizarStorage}
                     onRegistrarEmailEnviado={onRegistrarEmailEnviado}
+                />
+            )}
+
+            {tela === "consolidacaoColaborador" && (
+                <ConsolidacaoColaboradorPage
+                    supabase={supabaseClient}
+                    colaboradores={colaboradores}
+                    onRegistrarAuditoria={onRegistrarAuditoria}
                 />
             )}
 

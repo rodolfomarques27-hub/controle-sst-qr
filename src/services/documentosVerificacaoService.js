@@ -2329,19 +2329,108 @@ function avaliarConferenciaDocumentalCertificado({ conferencia = {}, leitura = {
         }));
     }
 
-    if (conferencia?.cpf?.informadoCadastro && conferencia?.cpf?.encontrado === false) {
-        indicios.push(criarIndicioVerificacao({
-            codigo: "cpf_colaborador_nao_localizado_documento",
-            tipo: DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.OCR,
-            titulo: "CPF do colaborador nÃƒÂ£o localizado no documento",
-            detalhe: "O cadastro possui CPF, mas a leitura local nÃƒÂ£o encontrou esse CPF no arquivo. Em listas de presenÃƒÂ§a isso pode ser normal.",
-            peso: conferencia?.listaPresenca ? 10 : 30,
-            bloqueia: false,
-            recomendacao: "Quando o documento possuir campo de CPF, conferir se pertence ao colaborador correto.",
-            dados: conferencia.cpf,
-        }));
-    }
+        /*
+         * ============================================================
+         * C11C — CPF AUSENTE NÃO É INCONSISTÊNCIA DOCUMENTAL
+         * ============================================================
+         *
+         * A simples ausência do CPF no arquivo não caracteriza
+         * divergência de identidade.
+         *
+         * REGRAS:
+         *
+         * 1. Documento individual sem qualquer CPF:
+         *    -> não gera indício de CPF.
+         *
+         * 2. Documento possui algum CPF, porém o CPF cadastrado
+         *    do colaborador não foi confirmado:
+         *    -> permanece em atenção para conferência manual.
+         *
+         * 3. Lista de presença:
+         *    -> mantém a regra tolerante de peso baixo já existente.
+         *
+         * Nenhum novo bloqueio automático é criado aqui.
+         * ============================================================
+         */
 
+        if (
+            conferencia?.cpf?.informadoCadastro &&
+            conferencia?.cpf?.encontrado === false
+        ) {
+            const cpfsExtraidosCpf =
+                Array.isArray(
+                    conferencia
+                        ?.cpf
+                        ?.cpfsExtraidos
+                )
+                    ? conferencia
+                        .cpf
+                        .cpfsExtraidos
+                        .filter(Boolean)
+                    : [];
+
+            const possuiAlgumCpfNoDocumento =
+                conferencia
+                    ?.cpf
+                    ?.encontradoNoDocumento === true ||
+                cpfsExtraidosCpf.length > 0;
+
+            const listaPresencaCpf =
+                Boolean(
+                    conferencia?.listaPresenca ||
+                    conferencia?.lista_presenca
+                );
+
+            if (
+                listaPresencaCpf ||
+                possuiAlgumCpfNoDocumento
+            ) {
+                const cpfRequerConferencia =
+                    possuiAlgumCpfNoDocumento &&
+                    !listaPresencaCpf;
+
+                indicios.push(
+                    criarIndicioVerificacao({
+                        codigo:
+                            cpfRequerConferencia
+                                ? "cpf_colaborador_nao_confere_documento"
+                                : "cpf_colaborador_nao_localizado_documento",
+
+                        tipo:
+                            DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.OCR,
+
+                        titulo:
+                            cpfRequerConferencia
+                                ? "CPF localizado no documento requer conferência"
+                                : "CPF do colaborador não localizado no documento",
+
+                        detalhe:
+                            cpfRequerConferencia
+                                ? "A leitura local encontrou CPF no documento, porém não confirmou o CPF cadastrado para o colaborador. Conferir visualmente a identificação."
+                                : "A lista não apresentou correspondência automática com o CPF cadastrado. A ausência isolada do CPF em lista de presença não caracteriza divergência de identidade.",
+
+                        peso:
+                            listaPresencaCpf
+                                ? 10
+                                : 30,
+
+                        bloqueia:
+                            false,
+
+                        recomendacao:
+                            cpfRequerConferencia
+                                ? "Conferir visualmente a quem pertence o CPF localizado antes de aprovar."
+                                : "Conferir CPF somente quando o documento possuir esse dado ou houver outra divergência de identidade.",
+
+                        dados: {
+                            ...conferencia.cpf,
+
+                            possuiAlgumCpfNoDocumento,
+                        },
+                    })
+                );
+            }
+        }
     if (conferencia?.cnpj?.informadoCadastro && conferencia?.cnpj?.encontrado === false && conferencia?.cnpj?.cnpjExtraido) {
         indicios.push(criarIndicioVerificacao({
             codigo: "cnpj_empresa_nao_confere_documento",

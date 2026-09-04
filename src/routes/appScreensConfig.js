@@ -6,6 +6,7 @@ export const ORDEM_TELAS_INICIAIS_PERMITIDAS_APP = Object.freeze([
     "empresas",
     "colaboradores",
     "treinamentos",
+    "consolidacaoColaborador",
     "certidaoMensalDocumental",
     "dds",
     "aniversariantes",
@@ -27,6 +28,7 @@ export const ORDEM_REDIRECIONAMENTO_TELAS_PERMITIDAS = Object.freeze([
     "empresas",
     "colaboradores",
     "treinamentos",
+    "consolidacaoColaborador",
     "certidaoMensalDocumental",
     "dds",
     "aniversariantes",
@@ -48,6 +50,7 @@ export const ROTULOS_TELAS_ACESSO_BLOQUEADO = Object.freeze({
     colaboradores: "Colaboradores",
     aniversariantes: "Aniversariantes",
     treinamentos: "Treinamentos",
+    consolidacaoColaborador: "Consolidação Documental",
     certidaoMensalDocumental: "Certidões Mensais",
     dds: "DDS",
     qr: "QR Code",
@@ -76,6 +79,8 @@ const CARREGADORES_MODULOS_TELAS = Object.freeze({
         import("../components/aniversariantes/AniversariantesPage"),
     treinamentos: () =>
         import("../components/treinamentos/TreinamentosPage"),
+    consolidacaoColaborador: () =>
+        import("../features/consolidacao-colaborador/pages/ConsolidacaoColaboradorPage"),
     certidaoMensalDocumental: () =>
         import("../features/certidao-mensal-documental/pages/CertidaoMensalDocumentalPage"),
     dds: () => import("../components/dds/DdsPage"),

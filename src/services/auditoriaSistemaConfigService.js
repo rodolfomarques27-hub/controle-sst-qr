@@ -143,6 +143,7 @@ export const EVENTOS_AUDITORIA_SISTEMA_PADRAO = [
     criarEventoAuditoriaSistema({ chave: "EVIDENCIA_ENVIADA", label: "Evidência enviada", categoria: "Auditoria de campo", modulo: "Auditoria", nivel: "informacao", descricao: "Registra envio de evidência antes/depois ou anexo." }),
     criarEventoAuditoriaSistema({ chave: "RELATORIO_VISUALIZADO", label: "Relatório visualizado", categoria: "Relatórios", modulo: "Relatórios", nivel: "informacao", descricao: "Registra abertura ou visualização de relatório." }),
     criarEventoAuditoriaSistema({ chave: "RELATORIO_EXPORTADO", label: "Relatório exportado", categoria: "Relatórios", modulo: "Relatórios", nivel: "informacao", descricao: "Registra exportação de relatório ou CSV." }),
+    criarEventoAuditoriaSistema({ chave: "CONSOLIDACAO_COLABORADOR_GERADO", label: "Consolidação documental gerado", categoria: "Relatórios", modulo: "Consolidação documental", nivel: "informacao", descricao: "Registra a geração do pacote documental do colaborador e o início do download local." }),
 
     criarEventoAuditoriaSistema({ chave: "ARQUIVO_LISTADO", label: "Arquivo listado", categoria: "Storage", modulo: "Storage", nivel: "informacao", descricao: "Registra consulta/listagem de arquivos no Storage." }),
     criarEventoAuditoriaSistema({ chave: "ARQUIVO_EXCLUIDO", label: "Arquivo excluído", categoria: "Storage", modulo: "Storage", nivel: "critico", descricao: "Registra exclusão individual de arquivo." }),

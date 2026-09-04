@@ -6,7 +6,7 @@ export const treinamentosBase = [
     { id: 1, nome: "NR-01 Integração / Mobilização SST", validadePadrao: null, categoria: "Documento sem validade", base: "NR-01 / Integração de obra" },
     { id: 15, nome: "NR-01 Ordem de Serviço da Função", validadePadrao: null, categoria: "Documento sem validade", base: "NR-01 / Ordem de Serviço" },
     { id: 8, nome: "NR-06 Uso Correto de EPIs", validadePadrao: 365, categoria: "Obrigatório", base: "NR-06 / NR-01" },
-    { id: 14, nome: "NR-06 Ficha de EPIs atualizada", validadePadrao: null, categoria: "Documento sem validade", base: "NR-06 / registro de fornecimento de EPI" },
+    { id: 14, nome: "NR-06 Ficha de EPIs atualizada", validadePadrao: 365, categoria: "Documento com validade anual", base: "NR-06 / registro de fornecimento de EPI" },
     { id: 22, nome: "NR-07 ASO - Atestado de Saúde Ocupacional", validadePadrao: 365, categoria: "Documento Médico", base: "NR-07" },
     { id: 4, nome: "NR-10 Segurança em Eletricidade", validadePadrao: 730, categoria: "Elétrica", base: "NR-10" },
     { id: 11, nome: "NR-11 Transporte e Movimentação de Cargas", validadePadrao: 365, categoria: "Movimentação", base: "NR-11" },
