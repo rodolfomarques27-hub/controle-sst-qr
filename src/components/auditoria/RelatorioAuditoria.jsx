@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import { CardRecolhivel, Header } from "../commonComponents";
+import { AuditoriaSistemaControles } from "./AuditoriaSistemaControles";
 import { LIMITE_STORAGE_MB } from "../../constants/sstConstants";
 import {
     normalizarTextoBusca,
@@ -1566,75 +1567,61 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
             )}
 
             {mostrarPersonalizacaoAuditoria && (
-                <div className="mb-5 rounded-[2rem] bg-blue-50 p-5 ring-1 ring-blue-100">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                        <div>
-                            <p className="text-lg font-black text-blue-950">Personalizar painel da Auditoria do sistema</p>
-                            <p className="mt-1 text-sm text-blue-700">Escolha visibilidade, ordem e tamanho dos cards e quadros.</p>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                            <button
-                                type="button"
-                                onClick={() => setAbaPersonalizacaoAuditoria("cartas")}
-                                className={classNames(
-                                    "rounded-2xl px-4 py-2 text-sm font-black ring-1",
-                                    abaPersonalizacaoAuditoria === "cartas"
-                                        ? "bg-slate-950 text-white ring-slate-950"
-                                        : "bg-white text-slate-700 ring-blue-100"
-                                )}
-                            >
-                                Cartas principais
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setAbaPersonalizacaoAuditoria("blocos")}
-                                className={classNames(
-                                    "rounded-2xl px-4 py-2 text-sm font-black ring-1",
-                                    abaPersonalizacaoAuditoria === "blocos"
-                                        ? "bg-slate-950 text-white ring-slate-950"
-                                        : "bg-white text-slate-700 ring-blue-100"
-                                )}
-                            >
-                                Organização dos quadros
-                            </button>
-                            <button
-                                type="button"
-                                onClick={restaurarPersonalizacaoAuditoriaSistema}
-                                className="rounded-2xl bg-white px-4 py-2 text-sm font-black text-slate-700 ring-1 ring-blue-100 hover:bg-blue-50"
-                            >
-                                Restaurar
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                        {abaPersonalizacaoAuditoria === "cartas"
-                            ? ordemCartasAuditoria
-                                .map((chave) => cartasResumoAuditoriaSistema.find((carta) => carta.chave === chave))
-                                .filter(Boolean)
-                                .map((carta) => renderControlePersonalizacaoAuditoria({
-                                    chave: carta.chave,
-                                    titulo: carta.titulo,
-                                    visivel: cartasVisiveisAuditoria[carta.chave] !== false,
-                                    tamanho: tamanhosCartasAuditoria[carta.chave] || "padrao",
-                                    tipo: "cartas",
-                                }))
-                            : ordemBlocosAuditoria
-                                .map((chave) => opcoesBlocosAuditoriaSistema.find((bloco) => bloco.chave === chave))
-                                .filter(Boolean)
-                                .map((bloco) => renderControlePersonalizacaoAuditoria({
-                                    chave: bloco.chave,
-                                    titulo: bloco.titulo,
-                                    visivel: blocosVisiveisAuditoria[bloco.chave] !== false,
-                                    tamanho: tamanhosBlocosAuditoria[bloco.chave] || "destaque",
-                                    tipo: "blocos",
-                                }))}
-                    </div>
-                </div>
+                <AuditoriaSistemaControles
+                    aba={
+                        abaPersonalizacaoAuditoria
+                    }
+                    onAlterarAba={
+                        setAbaPersonalizacaoAuditoria
+                    }
+                    cartas={
+                        cartasResumoAuditoriaSistema
+                    }
+                    ordemCartas={
+                        ordemCartasAuditoria
+                    }
+                    visibilidadeCartas={
+                        cartasVisiveisAuditoria
+                    }
+                    tamanhosCartas={
+                        tamanhosCartasAuditoria
+                    }
+                    blocos={
+                        opcoesBlocosAuditoriaSistema
+                    }
+                    ordemBlocos={
+                        ordemBlocosAuditoria
+                    }
+                    visibilidadeBlocos={
+                        blocosVisiveisAuditoria
+                    }
+                    tamanhosBlocos={
+                        tamanhosBlocosAuditoria
+                    }
+                    onAlternarCarta={
+                        alternarCartaAuditoriaSistema
+                    }
+                    onAlterarTamanhoCarta={
+                        alterarTamanhoCartaAuditoriaSistema
+                    }
+                    onMoverCarta={
+                        moverCartaAuditoriaSistema
+                    }
+                    onAlternarBloco={
+                        alternarBlocoAuditoriaSistema
+                    }
+                    onAlterarTamanhoBloco={
+                        alterarTamanhoBlocoAuditoriaSistema
+                    }
+                    onMoverBloco={
+                        moverBlocoAuditoriaSistema
+                    }
+                    onRestaurar={
+                        restaurarPersonalizacaoAuditoriaSistema
+                    }
+                />
             )}
-
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+<div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                 {cartasResumoAuditoriaOrdenadas
                     .filter((carta) => cartasVisiveisAuditoria[carta.chave] !== false)
                     .map((carta) => {
