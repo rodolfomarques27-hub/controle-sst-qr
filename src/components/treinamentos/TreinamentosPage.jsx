@@ -1,7 +1,7 @@
 import "../../styles/pages/treinamentos-hero.css";
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarClock, CheckCircle2, Clock3, Eye, EyeOff, GripVertical, RotateCcw, Search, SlidersHorizontal, TriangleAlert, Upload } from "lucide-react";
+import { CalendarClock, CheckCircle2, Clock3, Search, SlidersHorizontal, TriangleAlert, Upload } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import {
     criarUrlHistoricoCertificadoService,
@@ -20,6 +20,7 @@ import { BaseCertificadosTreinamentos } from "./BaseCertificadosTreinamentos";
 import { HistoricoCertificadoDrawer } from "./HistoricoCertificadoDrawer";
 import { FormularioLancamentoCertificado } from "./FormularioLancamentoCertificado";
 import { ModalDivergenciaFuncaoAso } from "./ModalDivergenciaFuncaoAso";
+import { TreinamentosControles } from "./TreinamentosControles";
 import VerificadorListaPresenca from "../VerificadorListaPresenca";
 import {
     avaliarTreinamentosColaborador,
@@ -2367,121 +2368,26 @@ export function Treinamentos({
             )}
 
             {mostrarPersonalizarTreinamentos && (
-                <Card className="mb-5 border-blue-100 bg-blue-50/40">
-                    <div className="treinamentos-personalizacao-dashboard">
-                        <div className="min-w-0">
-                            <div className="min-w-0">
-                                <p className="text-xs font-black uppercase tracking-wide text-blue-700">Personalização</p>
-                                <h2 className="mt-1 text-lg font-black text-slate-950">Painel de Treinamentos e certificados</h2>
-                                <p className="mt-1 text-sm leading-6 text-slate-600">
-                                    Arraste pelo ícone, altere a ordem, visibilidade e tamanho dos blocos principais.
-                                </p>
-                            </div>
-                            <div className="mt-3 flex shrink-0 flex-wrap gap-2 lg:mt-0 lg:justify-end">
-                                <button type="button" onClick={abrirTodosCardsTreinamentos} className="rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-blue-100 hover:bg-blue-50">Abrir todos</button>
-                                <button type="button" onClick={recolherTodosCardsTreinamentos} className="rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-blue-100 hover:bg-blue-50">Recolher todos</button>
-                                <button type="button" onClick={restaurarPainelTreinamentos} className="inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-blue-100 hover:bg-blue-50">
-                                    <RotateCcw className="h-3.5 w-3.5" />
-                                    Restaurar padrão
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="treinamentos-personalizacao-lista">
-                            {layoutCardsTreinamentos.ordem.map((chave, indice) => {
-                                const opcao = opcoesPainelTreinamentos.find((item) => item.chave === chave);
-                                if (!opcao) return null;
-
-                                const recolhido = cardsTreinamentosRecolhidos[chave];
-                                const tamanhoAtual = layoutCardsTreinamentos.tamanhos[chave] || tamanhosCardsTreinamentosPadrao[chave] || "medio";
-
-                                return (
-                                    <div
-                                        key={opcao.chave}
-                                        draggable
-                                        onDragStart={(evento) => iniciarArrastoCardTreinamento(evento, opcao.chave)}
-                                        onDragOver={(evento) => {
-                                            evento.preventDefault();
-                                            setCardDestinoTreinamento(opcao.chave);
-                                        }}
-                                        onDragLeave={() => setCardDestinoTreinamento("")}
-                                        onDrop={(evento) => soltarCardTreinamento(evento, opcao.chave)}
-                                        onDragEnd={() => {
-                                            setCardArrastandoTreinamento("");
-                                            setCardDestinoTreinamento("");
-                                        }}
-                                        className={`treinamentos-personalizacao-item ${cardArrastandoTreinamento === opcao.chave ? "is-dragging" : ""} ${cardDestinoTreinamento === opcao.chave && cardArrastandoTreinamento !== opcao.chave ? "is-drop-target" : ""}`}
-                                    >
-                                        <div className="treinamentos-personalizacao-item-topo">
-                                            <div className="flex min-w-0 flex-1 items-start gap-3">
-                                                <span className="treinamentos-drag-handle rounded-xl bg-white p-2 text-slate-500 ring-1 ring-blue-100" title="Arraste para mudar a posição">
-                                                    <GripVertical className="h-4 w-4" />
-                                                </span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => alternarCardTreinamento(opcao.chave)}
-                                                    className="flex min-w-0 flex-1 items-start gap-3 text-left"
-                                                >
-                                                    <span className={recolhido ? "rounded-xl bg-slate-50 p-2 text-slate-500 ring-1 ring-slate-100" : "rounded-xl bg-blue-50 p-2 text-blue-700 ring-1 ring-blue-100"}>
-                                                        {recolhido ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                                    </span>
-                                                    <span className="min-w-0 flex-1">
-                                                        <span className="block text-sm font-black text-blue-950">#{indice + 1}. {opcao.titulo}</span>
-                                                        <span className="mt-0.5 block text-xs leading-snug text-slate-500">{opcao.descricao}</span>
-                                                    </span>
-                                                </button>
-                                            </div>
-
-                                            <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => moverCardTreinamento(opcao.chave, -1)}
-                                                    disabled={indice === 0}
-                                                    className="rounded-xl bg-white px-2 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                                                    title="Subir card"
-                                                >
-                                                    ↑
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => moverCardTreinamento(opcao.chave, 1)}
-                                                    disabled={indice === layoutCardsTreinamentos.ordem.length - 1}
-                                                    className="rounded-xl bg-white px-2 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                                                    title="Descer card"
-                                                >
-                                                    ↓
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => alternarCardTreinamento(opcao.chave)}
-                                                    className={recolhido ? "rounded-xl bg-slate-100 px-3 py-1 text-[11px] font-black text-slate-600 ring-1 ring-slate-200" : "rounded-xl bg-blue-100 px-3 py-1 text-[11px] font-black text-blue-700 ring-1 ring-blue-200"}
-                                                >
-                                                    {recolhido ? "RECOLHIDO" : "VISÍVEL"}
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div className="treinamentos-size-grid">
-                                            {opcoesTamanhoCardTreinamento.map((tamanho) => (
-                                                <button
-                                                    key={tamanho.valor}
-                                                    type="button"
-                                                    onClick={() => alterarTamanhoCardTreinamento(opcao.chave, tamanho.valor)}
-                                                    className={tamanhoAtual === tamanho.valor ? "treinamentos-size-option is-active" : "treinamentos-size-option"}
-                                                >
-                                                    {tamanho.label}
-                                                    <span>{tamanho.descricao}</span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </Card>
+                <TreinamentosControles
+                    opcoesPainelTreinamentos={opcoesPainelTreinamentos}
+                    cardsRecolhidos={cardsTreinamentosRecolhidos}
+                    layoutCards={layoutCardsTreinamentos}
+                    tamanhosPadrao={tamanhosCardsTreinamentosPadrao}
+                    opcoesTamanho={opcoesTamanhoCardTreinamento}
+                    onAlternarCard={alternarCardTreinamento}
+                    onMoverCard={moverCardTreinamento}
+                    onAlterarTamanho={alterarTamanhoCardTreinamento}
+                    onAbrirTodos={abrirTodosCardsTreinamentos}
+                    onRecolherTodos={recolherTodosCardsTreinamentos}
+                    onRestaurarPadrao={restaurarPainelTreinamentos}
+                    onIniciarArrasto={iniciarArrastoCardTreinamento}
+                    onSoltarCard={soltarCardTreinamento}
+                    cardArrastando={cardArrastandoTreinamento}
+                    cardDestino={cardDestinoTreinamento}
+                    setCardArrastando={setCardArrastandoTreinamento}
+                    setCardDestino={setCardDestinoTreinamento}
+                />
             )}
-
             <div className="treinamentos-layout-grid">
                 {layoutCardsTreinamentos.ordem.map((chave, indice) => {
                     const tamanho = layoutCardsTreinamentos.tamanhos[chave] || tamanhosCardsTreinamentosPadrao[chave] || "medio";
