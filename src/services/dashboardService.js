@@ -25,6 +25,13 @@ export const cartasPadraoDashboard = {
     desviosAbertos: true,
     aniversariantesMes: true,
     armazenamentoUtilizado: true,
+    obrasAtivas: true,
+    ddsRealizadosMes: true,
+    participacoesDdsMes: true,
+    competenciasDocumentaisAbertas: true,
+    pendenciasDocumentaisMensais: true,
+    extintoresForaOperacao: true,
+    inspecoesExtintoresPendentes: true,
 };
 
 export const tamanhosPadraoCartasDashboard = {
@@ -42,6 +49,13 @@ export const tamanhosPadraoCartasDashboard = {
     desviosAbertos: "padrao",
     aniversariantesMes: "padrao",
     armazenamentoUtilizado: "padrao",
+    obrasAtivas: "padrao",
+    ddsRealizadosMes: "padrao",
+    participacoesDdsMes: "padrao",
+    competenciasDocumentaisAbertas: "padrao",
+    pendenciasDocumentaisMensais: "padrao",
+    extintoresForaOperacao: "padrao",
+    inspecoesExtintoresPendentes: "padrao",
 };
 
 export const tamanhosPadraoBlocosDashboard = {
@@ -82,6 +96,13 @@ export const ordemPadraoCartasDashboard = [
     "colaboradoresBloqueados",
     "desviosAbertos",
     "aniversariantesMes",
+    "obrasAtivas",
+    "ddsRealizadosMes",
+    "participacoesDdsMes",
+    "competenciasDocumentaisAbertas",
+    "pendenciasDocumentaisMensais",
+    "extintoresForaOperacao",
+    "inspecoesExtintoresPendentes",
     "armazenamentoUtilizado",
 ];
 
@@ -244,6 +265,34 @@ export function estiloCartaDashboard(chave, storageStatusDashboard = {}) {
         },
         aniversariantesMes: {
             icone: "bg-sky-50 text-sky-600 ring-sky-100",
+            valor: "text-slate-950",
+        },
+        obrasAtivas: {
+            icone: "bg-cyan-50 text-cyan-700 ring-cyan-100",
+            valor: "text-slate-950",
+        },
+        ddsRealizadosMes: {
+            icone: "bg-indigo-50 text-indigo-600 ring-indigo-100",
+            valor: "text-slate-950",
+        },
+        participacoesDdsMes: {
+            icone: "bg-sky-50 text-sky-600 ring-sky-100",
+            valor: "text-slate-950",
+        },
+        competenciasDocumentaisAbertas: {
+            icone: "bg-amber-50 text-amber-700 ring-amber-100",
+            valor: "text-slate-950",
+        },
+        pendenciasDocumentaisMensais: {
+            icone: "bg-orange-50 text-orange-700 ring-orange-100",
+            valor: "text-slate-950",
+        },
+        extintoresForaOperacao: {
+            icone: "bg-red-50 text-red-600 ring-red-100",
+            valor: "text-slate-950",
+        },
+        inspecoesExtintoresPendentes: {
+            icone: "bg-violet-50 text-violet-600 ring-violet-100",
             valor: "text-slate-950",
         },
         armazenamentoUtilizado: {

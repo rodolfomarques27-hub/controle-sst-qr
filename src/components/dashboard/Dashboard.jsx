@@ -74,6 +74,7 @@ import {
 } from "../../services/dashboardService";
 import { calcularResumoDashboardSst } from "../../services/dashboardResumoService";
 import { carregarHorasTrabalhadasDdsMes } from "../../services/dashboardHorasDdsService";
+import { carregarIndicadoresOperacionaisDashboard } from "../../services/dashboardIndicadoresOperacionaisService";
 import { carregarHistoricoStorageDashboard } from "../../services/storageHistoricoDashboardService";
 import {
     normalizarTextoBusca,
@@ -100,6 +101,13 @@ const CHAVES_CARTAS_COM_RESUMO = new Set([
     "colaboradoresBloqueados",
     "desviosAbertos",
     "aniversariantesMes",
+    "obrasAtivas",
+    "ddsRealizadosMes",
+    "participacoesDdsMes",
+    "competenciasDocumentaisAbertas",
+    "pendenciasDocumentaisMensais",
+    "extintoresForaOperacao",
+    "inspecoesExtintoresPendentes",
     "armazenamentoUtilizado",
 ]);
 
@@ -221,6 +229,24 @@ export function Dashboard({
         totalPresencas: 0,
         totalDias: 0,
         itens: [],
+        carregando: true,
+        erro: "",
+    });
+    const [indicadoresOperacionais, setIndicadoresOperacionais] = useState({
+        obrasAtivas: 0,
+        competenciasDocumentaisAbertas: 0,
+        pendenciasDocumentaisMensais: 0,
+        extintoresForaOperacao: 0,
+        inspecoesExtintoresPendentes: 0,
+        totalExtintoresAtivos: 0,
+        competenciaDocumental: "",
+        competenciaInspecao: "",
+        obrasCadastro: [],
+        obrasAtivasItens: [],
+        competenciasDocumentaisAbertasItens: [],
+        pendenciasDocumentaisMensaisItens: [],
+        extintoresForaOperacaoItens: [],
+        inspecoesExtintoresPendentesItens: [],
         carregando: true,
         erro: "",
     });
@@ -470,11 +496,51 @@ export function Dashboard({
         carregarHorasDdsDashboard();
     }, [carregarHorasDdsDashboard]);
 
+    const carregarIndicadoresOperacionais = useCallback(async () => {
+        setIndicadoresOperacionais((atual) => ({
+            ...atual,
+            carregando: true,
+            erro: "",
+        }));
+
+        try {
+            const resumo =
+                await carregarIndicadoresOperacionaisDashboard({
+                    supabase,
+                    dataReferencia: new Date(),
+                });
+
+            setIndicadoresOperacionais({
+                ...resumo,
+                carregando: false,
+                erro: "",
+            });
+        } catch (error) {
+            console.warn(
+                "Erro ao carregar indicadores operacionais:",
+                error?.message || error,
+            );
+
+            setIndicadoresOperacionais((atual) => ({
+                ...atual,
+                carregando: false,
+                erro:
+                    error?.message ||
+                    "Não foi possível carregar os indicadores operacionais.",
+            }));
+        }
+    }, []);
+
+    useEffect(() => {
+        carregarIndicadoresOperacionais();
+    }, [carregarIndicadoresOperacionais]);
+
     const atualizandoDashboardSstCompleto = Boolean(
         atualizandoInformacoes
         || atualizandoInformacoesLocais
         || carregandoStorageDashboard
         || horasDdsMes.carregando
+        || indicadoresOperacionais.carregando
     );
 
     const atualizarInformacoesDashboard = useCallback(async () => {
@@ -487,6 +553,7 @@ export function Dashboard({
             await Promise.all([
                 carregarUsoStorageDashboard(),
                 carregarHorasDdsDashboard(),
+                carregarIndicadoresOperacionais(),
             ]);
         } finally {
             setAtualizandoInformacoesLocais(false);
@@ -494,6 +561,7 @@ export function Dashboard({
     }, [
         atualizandoDashboardSstCompleto,
         carregarHorasDdsDashboard,
+        carregarIndicadoresOperacionais,
         carregarUsoStorageDashboard,
         onAtualizarInformacoes,
     ]);
@@ -563,6 +631,29 @@ export function Dashboard({
     );
     const storageDisponivelLabelDashboard = formatarBytes(storageDisponivelBytesDashboard).replace(".00", "");
 
+    const indicadorOperacionalIndisponivel =
+        indicadoresOperacionais.carregando ||
+        Boolean(indicadoresOperacionais.erro);
+
+    const valorIndicadorOperacional = (valor) =>
+        indicadorOperacionalIndisponivel
+            ? "—"
+            : valor;
+
+    const detalheCompetenciaDocumental =
+        indicadoresOperacionais.erro
+            ? "Falha ao consultar a Certidão Mensal"
+            : indicadoresOperacionais.competenciaDocumental
+                ? `Competência ${indicadoresOperacionais.competenciaDocumental}`
+                : "Sem competência documental disponível";
+
+    const detalheCompetenciaInspecao =
+        indicadoresOperacionais.erro
+            ? "Falha ao consultar as inspeções"
+            : indicadoresOperacionais.competenciaInspecao
+                ? `Competência ${indicadoresOperacionais.competenciaInspecao}`
+                : "Competência atual";
+
     const cards = [
         { chave: "colaboradoresMobilizados", label: "Colaboradores mobilizados", valor: colaboradoresMobilizados.length, icon: HardHat, detalhe: "Liberados ou com pendência não bloqueante" },
         { chave: "colaboradoresLiberados", label: "Colaboradores liberados", valor: colaboradoresLiberados, icon: BadgeCheck, detalhe: "Documentos em dia" },
@@ -585,6 +676,77 @@ export function Dashboard({
         { chave: "colaboradoresBloqueados", label: "Colaboradores bloqueados", valor: colaboradoresBloqueados, icon: Lock, detalhe: "Pendência bloqueante" },
         { chave: "desviosAbertos", label: "Desvios abertos", valor: desviosAbertos, icon: AlertTriangle, detalhe: "Registros não concluídos" },
         { chave: "aniversariantesMes", label: "Aniversariantes do mês", valor: aniversariantesMes.length, icon: UserRound, detalhe: aniversariantesMes.length > 0 ? `${aniversariantesMes.length} no mês atual` : "Nenhum no mês atual" },
+        {
+            chave: "obrasAtivas",
+            label: "Obras ativas",
+            valor: valorIndicadorOperacional(
+                indicadoresOperacionais.obrasAtivas,
+            ),
+            icon: Building2,
+            detalhe: indicadoresOperacionais.erro
+                ? "Falha ao consultar dados operacionais"
+                : "Obras com status ativo",
+        },
+        {
+            chave: "ddsRealizadosMes",
+            label: "DDS realizados no mês",
+            valor: horasDdsMes.carregando || horasDdsMes.erro
+                ? "—"
+                : horasDdsMes.totalDias,
+            icon: BadgeCheck,
+            detalhe: horasDdsMes.erro
+                ? "Falha ao consultar o DDS"
+                : "Dias com jornada DDS validada",
+        },
+        {
+            chave: "participacoesDdsMes",
+            label: "Participações em DDS",
+            valor: horasDdsMes.carregando || horasDdsMes.erro
+                ? "—"
+                : horasDdsMes.totalPresencas,
+            icon: UserRound,
+            detalhe: horasDdsMes.erro
+                ? "Falha ao consultar o DDS"
+                : "Presenças contabilizadas no mês",
+        },
+        {
+            chave: "competenciasDocumentaisAbertas",
+            label: "Competências documentais em aberto",
+            valor: valorIndicadorOperacional(
+                indicadoresOperacionais.competenciasDocumentaisAbertas,
+            ),
+            icon: CalendarClock,
+            detalhe: detalheCompetenciaDocumental,
+        },
+        {
+            chave: "pendenciasDocumentaisMensais",
+            label: "Pendências documentais mensais",
+            valor: valorIndicadorOperacional(
+                indicadoresOperacionais.pendenciasDocumentaisMensais,
+            ),
+            icon: AlertTriangle,
+            detalhe: detalheCompetenciaDocumental,
+        },
+        {
+            chave: "extintoresForaOperacao",
+            label: "Extintores fora de operação",
+            valor: valorIndicadorOperacional(
+                indicadoresOperacionais.extintoresForaOperacao,
+            ),
+            icon: XCircle,
+            detalhe: indicadoresOperacionais.erro
+                ? "Falha ao consultar extintores"
+                : `${indicadoresOperacionais.totalExtintoresAtivos} ativo(s) cadastrado(s)`,
+        },
+        {
+            chave: "inspecoesExtintoresPendentes",
+            label: "Inspeções de extintores pendentes",
+            valor: valorIndicadorOperacional(
+                indicadoresOperacionais.inspecoesExtintoresPendentes,
+            ),
+            icon: Eye,
+            detalhe: detalheCompetenciaInspecao,
+        },
         { chave: "armazenamentoUtilizado", label: "Armazenamento", valor: `${storagePercentual}%`, icon: Upload, detalhe: `${totalStorageLabel} / ${storageLimiteLabelDashboard}` },
     ];
 
@@ -801,6 +963,38 @@ export function Dashboard({
                 !texto.includes("concluido") &&
                 !texto.includes("concluído");
         });
+        const formatarStatusResumoOperacional = (valor = "") => {
+            const texto = String(valor || "")
+                .trim()
+                .toLowerCase()
+                .replaceAll("_", " ");
+
+            if (!texto) return "Não informado";
+
+            return texto.charAt(0).toUpperCase() + texto.slice(1);
+        };
+
+        const obterEmpresaResumoOperacional = (empresaId) => {
+            const empresa =
+                empresasBanco.find(
+                    (item) =>
+                        String(item?.id || "") ===
+                        String(empresaId || "")
+                );
+
+            return empresa?.nome || "Empresa não informada";
+        };
+
+        const obterObraResumoOperacional = (obraId) => {
+            const obra =
+                (indicadoresOperacionais.obrasCadastro || []).find(
+                    (item) =>
+                        String(item?.id || "") ===
+                        String(obraId || "")
+                );
+
+            return obra?.nome || "Obra não informada";
+        };
         const resumos = {
             colaboradoresMobilizados: montarResumoColaboradores(
                 "colaboradoresMobilizados",
@@ -923,6 +1117,138 @@ export function Dashboard({
                     detalhe: "",
                 })),
             },
+            obrasAtivas: {
+                chave: "obrasAtivas",
+                titulo: "Obras ativas",
+                subtitulo: "Obras atualmente classificadas como ativas no cadastro do sistema.",
+                itens: (indicadoresOperacionais.obrasAtivasItens || []).map((obra) => ({
+                    id: obra.id,
+                    principal: obra.nome || "Obra não informada",
+                    titulo: [obra.cidade, obra.uf].filter(Boolean).join(" / ") || "Localização não informada",
+                    apoio: obra.numero_obra
+                        ? `Nº da obra: ${obra.numero_obra}`
+                        : "",
+                    status: "Ativa",
+                    detalhe: "Obra ativa no sistema",
+                })),
+            },
+
+            ddsRealizadosMes: {
+                chave: "ddsRealizadosMes",
+                titulo: "DDS realizados no mês",
+                subtitulo: "Registros DDS concluídos que possuem jornada válida contabilizada no mês.",
+                itens: horasDdsMes.erro
+                    ? [{
+                        id: "erro-dds-realizados",
+                        principal: "Não foi possível consultar o DDS",
+                        titulo: horasDdsMes.erro,
+                        status: "Atenção",
+                        detalhe: "Atualize o Dashboard para tentar novamente.",
+                    }]
+                    : horasDdsMes.itens,
+            },
+
+            participacoesDdsMes: {
+                chave: "participacoesDdsMes",
+                titulo: "Participações em DDS",
+                subtitulo: "Presenças contabilizadas nos registros DDS válidos do mês.",
+                itens: horasDdsMes.erro
+                    ? [{
+                        id: "erro-participacoes-dds",
+                        principal: "Não foi possível consultar o DDS",
+                        titulo: horasDdsMes.erro,
+                        status: "Atenção",
+                        detalhe: "Atualize o Dashboard para tentar novamente.",
+                    }]
+                    : horasDdsMes.itens.map((item) => ({
+                        ...item,
+                        titulo: item.detalhe || item.titulo,
+                        detalhe: item.titulo,
+                    })),
+            },
+
+            competenciasDocumentaisAbertas: {
+                chave: "competenciasDocumentaisAbertas",
+                titulo: "Competências documentais em aberto",
+                subtitulo: indicadoresOperacionais.competenciaDocumental
+                    ? `Empresas ainda não fechadas na competência ${indicadoresOperacionais.competenciaDocumental}.`
+                    : "Competências mensais ainda sem fechamento.",
+                itens: (indicadoresOperacionais.competenciasDocumentaisAbertasItens || []).map((competencia) => ({
+                    id: competencia.id,
+                    principal: obterEmpresaResumoOperacional(
+                        competencia.empresa_id
+                    ),
+                    titulo: indicadoresOperacionais.competenciaDocumental
+                        ? `Competência ${indicadoresOperacionais.competenciaDocumental}`
+                        : "Competência documental",
+                    status: formatarStatusResumoOperacional(
+                        competencia.status
+                    ),
+                    detalhe: "Aguardando conclusão da conferência documental",
+                })),
+            },
+
+            pendenciasDocumentaisMensais: {
+                chave: "pendenciasDocumentaisMensais",
+                titulo: "Pendências documentais mensais",
+                subtitulo: indicadoresOperacionais.competenciaDocumental
+                    ? `Documentos pendentes na competência ${indicadoresOperacionais.competenciaDocumental}.`
+                    : "Documentos pendentes da Certidão Mensal Documental.",
+                itens: (indicadoresOperacionais.pendenciasDocumentaisMensaisItens || []).map((item) => ({
+                    id: item.id,
+                    principal: obterEmpresaResumoOperacional(
+                        item.empresa_id
+                    ),
+                    titulo: item.titulo || item.tipo_documento || "Documento não informado",
+                    apoio: item.tipo_documento || "",
+                    status: "Pendência",
+                    detalhe: indicadoresOperacionais.competenciaDocumental
+                        ? `Competência ${indicadoresOperacionais.competenciaDocumental}`
+                        : "",
+                })),
+            },
+
+            extintoresForaOperacao: {
+                chave: "extintoresForaOperacao",
+                titulo: "Extintores fora de operação",
+                subtitulo: "Extintores ativos que não estão classificados como disponíveis para operação.",
+                itens: (indicadoresOperacionais.extintoresForaOperacaoItens || []).map((extintor) => ({
+                    id: extintor.id,
+                    principal: extintor.codigo || "Extintor sem código",
+                    titulo: [extintor.tipo, extintor.capacidade].filter(Boolean).join(" · ") || "Tipo não informado",
+                    apoio: [
+                        extintor.ponto_nome,
+                        extintor.localizacao,
+                    ].filter(Boolean).join(" · "),
+                    status: formatarStatusResumoOperacional(
+                        extintor.situacao_operacional
+                    ),
+                    detalhe: obterObraResumoOperacional(
+                        extintor.obra_id
+                    ),
+                })),
+            },
+
+            inspecoesExtintoresPendentes: {
+                chave: "inspecoesExtintoresPendentes",
+                titulo: "Inspeções de extintores pendentes",
+                subtitulo: indicadoresOperacionais.competenciaInspecao
+                    ? `Extintores ativos sem inspeção registrada na competência ${indicadoresOperacionais.competenciaInspecao}.`
+                    : "Extintores ativos ainda sem inspeção registrada no mês.",
+                itens: (indicadoresOperacionais.inspecoesExtintoresPendentesItens || []).map((extintor) => ({
+                    id: extintor.id,
+                    principal: extintor.codigo || "Extintor sem código",
+                    titulo: [extintor.tipo, extintor.capacidade].filter(Boolean).join(" · ") || "Tipo não informado",
+                    apoio: [
+                        extintor.ponto_nome,
+                        extintor.localizacao,
+                    ].filter(Boolean).join(" · "),
+                    status: "Atenção",
+                    detalhe: obterObraResumoOperacional(
+                        extintor.obra_id
+                    ),
+                })),
+            },
             armazenamentoUtilizado: {
                 chave: "armazenamentoUtilizado",
                 titulo: "Armazenamento do sistema",
@@ -1043,6 +1369,41 @@ export function Dashboard({
                 faixa: "from-sky-500 to-blue-400",
                 fundoIcone: "bg-sky-50 text-sky-700 ring-sky-100",
             },
+            obrasAtivas: {
+                borda: "border-cyan-200/80",
+                faixa: "from-cyan-500 to-sky-400",
+                fundoIcone: "bg-cyan-50 text-cyan-700 ring-cyan-100",
+            },
+            ddsRealizadosMes: {
+                borda: "border-indigo-200/80",
+                faixa: "from-indigo-500 to-blue-400",
+                fundoIcone: "bg-indigo-50 text-indigo-700 ring-indigo-100",
+            },
+            participacoesDdsMes: {
+                borda: "border-sky-200/80",
+                faixa: "from-sky-500 to-cyan-400",
+                fundoIcone: "bg-sky-50 text-sky-700 ring-sky-100",
+            },
+            competenciasDocumentaisAbertas: {
+                borda: "border-amber-200/80",
+                faixa: "from-amber-500 to-yellow-400",
+                fundoIcone: "bg-amber-50 text-amber-700 ring-amber-100",
+            },
+            pendenciasDocumentaisMensais: {
+                borda: "border-orange-200/80",
+                faixa: "from-orange-500 to-red-400",
+                fundoIcone: "bg-orange-50 text-orange-700 ring-orange-100",
+            },
+            extintoresForaOperacao: {
+                borda: "border-red-200/80",
+                faixa: "from-red-500 to-rose-400",
+                fundoIcone: "bg-red-50 text-red-700 ring-red-100",
+            },
+            inspecoesExtintoresPendentes: {
+                borda: "border-violet-200/80",
+                faixa: "from-violet-500 to-purple-400",
+                fundoIcone: "bg-violet-50 text-violet-700 ring-violet-100",
+            },
             armazenamentoUtilizado: {
                 borda: "border-slate-200",
                 faixa: "from-slate-500 to-slate-300",
@@ -1072,6 +1433,13 @@ export function Dashboard({
             colaboradoresBloqueados: "Bloqueados",
             desviosAbertos: "Desvios abertos",
             aniversariantesMes: "Aniversariantes",
+            obrasAtivas: "Obras ativas",
+            ddsRealizadosMes: "DDS realizados",
+            participacoesDdsMes: "Participações DDS",
+            competenciasDocumentaisAbertas: "Competências abertas",
+            pendenciasDocumentaisMensais: "Pendências mensais",
+            extintoresForaOperacao: "Extintores indisponíveis",
+            inspecoesExtintoresPendentes: "Inspeções pendentes",
             armazenamentoUtilizado: "Armazenamento",
         };
 

@@ -38,6 +38,19 @@ export function DashboardCartaResumoModal({
     useEffect(() => {
         if (!resumo || typeof window === "undefined") return undefined;
 
+        const bodyOverflowAnterior =
+            document.body.style.overflow;
+
+        const bodyOverscrollAnterior =
+            document.body.style.overscrollBehavior;
+
+        const htmlOverscrollAnterior =
+            document.documentElement.style.overscrollBehavior;
+
+        document.body.style.overflow = "hidden";
+        document.body.style.overscrollBehavior = "none";
+        document.documentElement.style.overscrollBehavior = "none";
+
         const fecharComEscape = (evento) => {
             if (evento.key === "Escape") {
                 onClose?.();
@@ -48,6 +61,15 @@ export function DashboardCartaResumoModal({
 
         return () => {
             window.removeEventListener("keydown", fecharComEscape);
+
+            document.body.style.overflow =
+                bodyOverflowAnterior;
+
+            document.body.style.overscrollBehavior =
+                bodyOverscrollAnterior;
+
+            document.documentElement.style.overscrollBehavior =
+                htmlOverscrollAnterior;
         };
     }, [resumo, onClose]);
 
@@ -79,7 +101,7 @@ export function DashboardCartaResumoModal({
 
     return (
         <div
-            className="fixed inset-0 z-[140] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-[140] flex items-center justify-center overscroll-none bg-slate-950/55 p-4 backdrop-blur-sm"
             role="presentation"
             onMouseDown={(evento) => {
                 if (evento.target === evento.currentTarget) {
@@ -147,7 +169,7 @@ export function DashboardCartaResumoModal({
                     </div>
                 </header>
 
-                <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
                     {resumo.chave === "armazenamentoUtilizado" ? (
                         <DashboardStorageResumoConteudo resumo={resumo} />
                     ) : itens.length === 0 ? (
