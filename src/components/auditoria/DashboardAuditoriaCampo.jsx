@@ -16,6 +16,8 @@ import {
 import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import { supabase } from "../../lib/supabaseClient";
 import { Card, FotoAuditoriaPreview, Header } from "../commonComponents";
+import { DashboardAuditoriaCampoControles } from "./DashboardAuditoriaCampoControles";
+import { DashboardCartaResumoModal } from "../dashboard/DashboardCartaResumoModal";
 import {
     obterTipoAuditoriaCampoDireta,
     montarMensagemFluidaAuditoriaCampo,
@@ -405,6 +407,7 @@ export function DashboardAuditoriaCampo({
     onAuditoriaAtualizada,
 }) {
     const [mostrarPersonalizacao, setMostrarPersonalizacao] = useState(false);
+    const [resumoCartaAuditoriaCampo, setResumoCartaAuditoriaCampo] = useState(null);
     const [atualizandoDados, setAtualizandoDados] = useState(false);
     const [tokenAuditoriaCampoConfigurado, setTokenAuditoriaCampoConfigurado] = useState("");
     const [carregandoTokenAuditoriaCampo, setCarregandoTokenAuditoriaCampo] = useState(false);
@@ -460,6 +463,11 @@ export function DashboardAuditoriaCampo({
         desviosCriticos: true,
         desviosAbertos: true,
         mediaConformidade: true,
+        auditoriasResolvidas: true,
+        auditoriasAVencer: true,
+        auditoriasSemResponsavel: true,
+        auditoriasSemPrazo: true,
+        auditoriasComEvidencia: true,
     };
     const tamanhosCartasPadrao = {
         totalAuditorias: "padrao",
@@ -469,6 +477,11 @@ export function DashboardAuditoriaCampo({
         desviosCriticos: "padrao",
         desviosAbertos: "padrao",
         mediaConformidade: "padrao",
+        auditoriasResolvidas: "padrao",
+        auditoriasAVencer: "padrao",
+        auditoriasSemResponsavel: "padrao",
+        auditoriasSemPrazo: "padrao",
+        auditoriasComEvidencia: "padrao",
     };
     const ordemCartasPadrao = [
         "totalAuditorias",
@@ -478,6 +491,11 @@ export function DashboardAuditoriaCampo({
         "desviosCriticos",
         "desviosAbertos",
         "mediaConformidade",
+        "auditoriasResolvidas",
+        "auditoriasAVencer",
+        "auditoriasSemResponsavel",
+        "auditoriasSemPrazo",
+        "auditoriasComEvidencia",
     ];
 
     const blocosPadrao = {
@@ -973,6 +991,476 @@ export function DashboardAuditoriaCampo({
 
     const auditoriasCriticas = desviosCriticos;
 
+    const auditoriasResolvidasLista =
+        auditoriasBaseDashboard.filter((item) => {
+            const status =
+                normalizarTextoBusca(
+                    [
+                        item.statusAuditoria,
+                        item.statusDesvio,
+                    ]
+                        .filter(Boolean)
+                        .join(" ")
+                );
+
+            return [
+                "resolvida",
+                "resolvido",
+                "corrigido",
+                "corrigida",
+                "concluido",
+                "concluído",
+                "fechado",
+                "fechada",
+            ].some(
+                (termo) =>
+                    status.includes(
+                        normalizarTextoBusca(termo)
+                    )
+            );
+        });
+
+    const obterDataPrazoResumoAuditoriaCampo = (item = {}) => {
+        const valor =
+            String(
+                item.prazoAdequacao ||
+                item.prazo_adequacao ||
+                ""
+            ).trim();
+
+        if (!valor) return null;
+
+        const data =
+            /^\d{4}-\d{2}-\d{2}$/.test(valor)
+                ? new Date(`${valor}T12:00:00`)
+                : new Date(valor);
+
+        return Number.isNaN(data.getTime())
+            ? null
+            : data;
+    };
+
+    const inicioHojeResumoAuditoriaCampo =
+        new Date();
+
+    inicioHojeResumoAuditoriaCampo.setHours(
+        0,
+        0,
+        0,
+        0
+    );
+
+    const limiteAVencerResumoAuditoriaCampo =
+        new Date(
+            inicioHojeResumoAuditoriaCampo
+        );
+
+    limiteAVencerResumoAuditoriaCampo.setDate(
+        limiteAVencerResumoAuditoriaCampo.getDate() + 7
+    );
+
+    limiteAVencerResumoAuditoriaCampo.setHours(
+        23,
+        59,
+        59,
+        999
+    );
+
+    const auditoriasAVencerLista =
+        auditoriasBaseDashboard.filter((item) => {
+            if (!auditoriaCampoAberta(item)) {
+                return false;
+            }
+
+            const prazo =
+                obterDataPrazoResumoAuditoriaCampo(
+                    item
+                );
+
+            if (!prazo) {
+                return false;
+            }
+
+            return (
+                prazo >= inicioHojeResumoAuditoriaCampo &&
+                prazo <= limiteAVencerResumoAuditoriaCampo
+            );
+        });
+
+    const auditoriasSemResponsavelLista =
+        auditoriasBaseDashboard.filter(
+            (item) =>
+                auditoriaCampoAberta(item) &&
+                !String(
+                    item.responsavelTratativa ||
+                    item.responsavel_tratativa ||
+                    ""
+                ).trim()
+        );
+
+    const auditoriasSemPrazoLista =
+        auditoriasBaseDashboard.filter(
+            (item) =>
+                auditoriaCampoAberta(item) &&
+                !String(
+                    item.prazoAdequacao ||
+                    item.prazo_adequacao ||
+                    ""
+                ).trim()
+        );
+
+    const auditoriasComEvidenciaLista =
+        auditoriasBaseDashboard.filter((item) => {
+            const notificacao =
+                item.notificacao &&
+                typeof item.notificacao === "object"
+                    ? item.notificacao
+                    : {};
+
+            const evidencias =
+                Array.isArray(
+                    notificacao.evidenciasCorrecao
+                )
+                    ? notificacao.evidenciasCorrecao
+                    : [];
+
+            return Boolean(
+                item.fotoDepoisUrl ||
+                item.foto_depois_url ||
+                notificacao.ultimaCorrecaoQrCampo ||
+                evidencias.length > 0
+            );
+        });
+
+    const auditoriasResolvidas =
+        auditoriasResolvidasLista.length;
+
+    const auditoriasAVencer =
+        auditoriasAVencerLista.length;
+
+    const auditoriasSemResponsavel =
+        auditoriasSemResponsavelLista.length;
+
+    const auditoriasSemPrazo =
+        auditoriasSemPrazoLista.length;
+
+    const auditoriasComEvidencia =
+        auditoriasComEvidenciaLista.length;
+
+    const obterItensResumoCartaAuditoriaCampo = (chave) => {
+        if (chave === "totalAuditorias") {
+            return auditoriasBaseDashboard;
+        }
+
+        if (
+            chave === "auditoriasMes" ||
+            chave === "mediaConformidade"
+        ) {
+            return auditoriasMes;
+        }
+
+        if (chave === "auditoriasAbertas") {
+            return auditoriasBaseDashboard.filter((item) => {
+                const status =
+                    normalizarTextoBusca(
+                        item.statusAuditoria ||
+                        item.statusDesvio ||
+                        ""
+                    );
+
+                return (
+                    (
+                        status.includes("aberta") ||
+                        status.includes("aberto") ||
+                        status.includes("andamento") ||
+                        status.includes("tratativa")
+                    ) &&
+                    !(
+                        status.includes("corrigido") ||
+                        status.includes("corrigida") ||
+                        status.includes("resolvida") ||
+                        status.includes("cancelada") ||
+                        status.includes("concluido") ||
+                        status.includes("concluído")
+                    )
+                );
+            });
+        }
+
+        if (chave === "auditoriasVencidas") {
+            return auditoriasBaseDashboard.filter(
+                auditoriaCampoVencida
+            );
+        }
+
+        if (chave === "desviosAbertos") {
+            return auditoriasBaseDashboard.filter(
+                auditoriaCampoAberta
+            );
+        }
+
+        if (chave === "desviosCriticos") {
+            return auditoriasBaseDashboard.filter((item) => {
+                const classificacao =
+                    normalizarTextoBusca(
+                        item.classificacao || ""
+                    );
+
+                const risco =
+                    normalizarTextoBusca(
+                        item.grauRisco || ""
+                    );
+
+                const categoria =
+                    normalizarTextoBusca(
+                        item.categoriaDesvioPrincipal || ""
+                    );
+
+                const status =
+                    normalizarTextoBusca(
+                        item.statusDesvio ||
+                        item.statusAuditoria ||
+                        ""
+                    );
+
+                const ehCritico =
+                    item.temDesvioGrave ||
+                    risco.includes("alto") ||
+                    risco.includes("critico") ||
+                    risco.includes("crítico") ||
+                    classificacao.includes("critico") ||
+                    classificacao.includes("crítico") ||
+                    classificacao.includes("acao") ||
+                    classificacao.includes("ação") ||
+                    categoria.includes("grave") ||
+                    categoria.includes("critico") ||
+                    categoria.includes("crítico") ||
+                    Number(item.pontuacao || 0) < 50;
+
+                const estaEncerrado =
+                    status.includes("corrigido") ||
+                    status.includes("corrigida") ||
+                    status.includes("resolvida") ||
+                    status.includes("cancelada") ||
+                    status.includes("concluido") ||
+                    status.includes("concluído");
+
+                return ehCritico && !estaEncerrado;
+            });
+        }
+
+        if (chave === "auditoriasResolvidas") {
+            return auditoriasResolvidasLista;
+        }
+
+        if (chave === "auditoriasAVencer") {
+            return auditoriasAVencerLista;
+        }
+
+        if (chave === "auditoriasSemResponsavel") {
+            return auditoriasSemResponsavelLista;
+        }
+
+        if (chave === "auditoriasSemPrazo") {
+            return auditoriasSemPrazoLista;
+        }
+
+        if (chave === "auditoriasComEvidencia") {
+            return auditoriasComEvidenciaLista;
+        }
+
+        return [];
+    };
+
+    const montarResumoCartaAuditoriaCampo = (chave) => {
+        const configuracoes = {
+            totalAuditorias: {
+                titulo: "Total de auditorias",
+                subtitulo: "Todos os registros considerados nos indicadores da Auditoria de Campo.",
+            },
+            auditoriasMes: {
+                titulo: "Auditorias realizadas no mês",
+                subtitulo: "Registros realizados no mês atual.",
+            },
+            auditoriasAbertas: {
+                titulo: "Auditorias abertas",
+                subtitulo: "Auditorias que permanecem abertas, em andamento ou em tratativa.",
+            },
+            auditoriasVencidas: {
+                titulo: "Auditorias vencidas",
+                subtitulo: "Registros com prazo de adequação vencido.",
+            },
+            desviosCriticos: {
+                titulo: "Desvios críticos",
+                subtitulo: "Registros classificados como críticos, de alto risco ou que exigem ação imediata.",
+            },
+            desviosAbertos: {
+                titulo: "Desvios abertos",
+                subtitulo: "Registros com desvio que ainda permanecem pendentes.",
+            },
+            mediaConformidade: {
+                titulo: "Conformidade do mês",
+                subtitulo: `Média atual de ${mediaConformidade}% calculada com as auditorias do mês.`,
+            },
+
+            auditoriasResolvidas: {
+                titulo: "Auditorias resolvidas",
+                subtitulo: "Tratativas registradas como resolvidas, corrigidas ou concluídas.",
+            },
+
+            auditoriasAVencer: {
+                titulo: "Auditorias a vencer",
+                subtitulo: "Tratativas abertas com vencimento nos próximos 7 dias.",
+            },
+
+            auditoriasSemResponsavel: {
+                titulo: "Pendências sem responsável",
+                subtitulo: "Tratativas abertas sem responsável definido.",
+            },
+
+            auditoriasSemPrazo: {
+                titulo: "Pendências sem prazo",
+                subtitulo: "Tratativas abertas sem prazo de adequação informado.",
+            },
+
+            auditoriasComEvidencia: {
+                titulo: "Auditorias com evidência",
+                subtitulo: "Tratativas que possuem evidência de correção registrada.",
+            },
+        };
+
+        const configuracao =
+            configuracoes[chave];
+
+        if (!configuracao) {
+            return null;
+        }
+
+        const itensFonte =
+            obterItensResumoCartaAuditoriaCampo(
+                chave
+            );
+
+        const itens =
+            itensFonte.map(
+                (item, indice) => {
+                    const alvo =
+                        identificarAlvoAuditoriaCampo(
+                            item
+                        );
+
+                    const empresa =
+                        item.empresaNome ||
+                        item.empresaResponsavel ||
+                        "Empresa não informada";
+
+                    const auditor =
+                        item.auditorNome ||
+                        "Auditor não informado";
+
+                    const local =
+                        item.area ||
+                        item.local ||
+                        item.maquinaEquipamento ||
+                        "";
+
+                    const pontuacao =
+                        Number(
+                            item.pontuacao || 0
+                        );
+
+                    let status =
+                        item.statusAuditoria ||
+                        item.statusDesvio ||
+                        item.classificacao ||
+                        "Não informado";
+
+                    if (
+                        chave === "auditoriasVencidas"
+                    ) {
+                        status = "Vencido";
+                    }
+
+                    if (
+                        chave === "desviosCriticos"
+                    ) {
+                        status = "Crítico";
+                    }
+
+                    if (
+                        chave === "desviosAbertos"
+                    ) {
+                        status = "Aberto";
+                    }
+
+                    if (
+                        chave === "auditoriasAbertas"
+                    ) {
+                        status = "Em tratativa";
+                    }
+
+                    return {
+                        id:
+                            item.id ||
+                            item.numeroAuditoria ||
+                            `${chave}-${indice}`,
+
+                        principal:
+                            item.numeroAuditoria ||
+                            "Auditoria de campo",
+
+                        titulo:
+                            alvo.titulo ||
+                            item.titulo ||
+                            "Registro de Auditoria de Campo",
+
+                        apoio:
+                            [
+                                empresa,
+                                auditor,
+                                local,
+                            ]
+                                .filter(Boolean)
+                                .join(" · "),
+
+                        status,
+
+                        dataRotulo:
+                            "Auditoria",
+
+                        dataValor:
+                            item.createdAt
+                                ? formatarDataHora(
+                                    item.createdAt
+                                )
+                                : "",
+
+                        detalhe:
+                            chave === "mediaConformidade"
+                                ? `Pontuação: ${pontuacao}%`
+                                : (
+                                    item.responsavelTratativa
+                                        ? `Responsável: ${item.responsavelTratativa} · Pontuação: ${pontuacao}%`
+                                        : `Pontuação: ${pontuacao}%`
+                                ),
+                    };
+                }
+            );
+
+        return {
+            chave:
+                `auditoriaCampo-${chave}`,
+
+            titulo:
+                configuracao.titulo,
+
+            subtitulo:
+                configuracao.subtitulo,
+
+            itens,
+        };
+    };
+
     const topDesvios = Object.values(
         auditoriasBaseDashboard.reduce((acc, item) => {
             const chave =
@@ -1136,6 +1624,51 @@ export function DashboardAuditoriaCampo({
             valor: "text-slate-950",
             detalhe: "text-slate-500",
         },
+        auditoriasResolvidas: {
+            borda: "border-green-200/80",
+            fundo: "bg-gradient-to-br from-green-50 via-white to-emerald-50",
+            acento: "from-green-400 via-emerald-500 to-teal-500",
+            icone: "bg-green-100 text-green-700 ring-green-200/70",
+            etiqueta: "text-green-700",
+            valor: "text-slate-950",
+            detalhe: "text-slate-500",
+        },
+        auditoriasAVencer: {
+            borda: "border-yellow-200/80",
+            fundo: "bg-gradient-to-br from-yellow-50 via-white to-amber-50",
+            acento: "from-yellow-400 via-amber-500 to-orange-400",
+            icone: "bg-yellow-100 text-yellow-700 ring-yellow-200/70",
+            etiqueta: "text-yellow-700",
+            valor: "text-slate-950",
+            detalhe: "text-slate-500",
+        },
+        auditoriasSemResponsavel: {
+            borda: "border-fuchsia-200/80",
+            fundo: "bg-gradient-to-br from-fuchsia-50 via-white to-rose-50",
+            acento: "from-fuchsia-400 via-pink-500 to-rose-500",
+            icone: "bg-fuchsia-100 text-fuchsia-700 ring-fuchsia-200/70",
+            etiqueta: "text-fuchsia-700",
+            valor: "text-slate-950",
+            detalhe: "text-slate-500",
+        },
+        auditoriasSemPrazo: {
+            borda: "border-slate-300/80",
+            fundo: "bg-gradient-to-br from-slate-50 via-white to-gray-50",
+            acento: "from-slate-400 via-gray-500 to-slate-600",
+            icone: "bg-slate-100 text-slate-700 ring-slate-200/70",
+            etiqueta: "text-slate-700",
+            valor: "text-slate-950",
+            detalhe: "text-slate-500",
+        },
+        auditoriasComEvidencia: {
+            borda: "border-teal-200/80",
+            fundo: "bg-gradient-to-br from-teal-50 via-white to-cyan-50",
+            acento: "from-teal-400 via-cyan-500 to-blue-500",
+            icone: "bg-teal-100 text-teal-700 ring-teal-200/70",
+            etiqueta: "text-teal-700",
+            valor: "text-slate-950",
+            detalhe: "text-slate-500",
+        },
     };
     const obterTemaCartaAuditoriaCampo = (chave) => temasCartasAuditoriaCampo[chave] || temasCartasAuditoriaCampo.totalAuditorias;
 
@@ -1188,6 +1721,41 @@ export function DashboardAuditoriaCampo({
             valor: `${mediaConformidade}%`,
             icon: BadgeCheck,
             detalhe: "Média do mês",
+        },
+        {
+            chave: "auditoriasResolvidas",
+            label: "Resolvidas",
+            valor: auditoriasResolvidas,
+            icon: BadgeCheck,
+            detalhe: "Encerradas",
+        },
+        {
+            chave: "auditoriasAVencer",
+            label: "A vencer",
+            valor: auditoriasAVencer,
+            icon: CalendarClock,
+            detalhe: "Próx. 7 dias",
+        },
+        {
+            chave: "auditoriasSemResponsavel",
+            label: "Sem responsável",
+            valor: auditoriasSemResponsavel,
+            icon: AlertTriangle,
+            detalhe: "Sem responsável",
+        },
+        {
+            chave: "auditoriasSemPrazo",
+            label: "Sem prazo",
+            valor: auditoriasSemPrazo,
+            icon: CalendarClock,
+            detalhe: "Prazo ausente",
+        },
+        {
+            chave: "auditoriasComEvidencia",
+            label: "Com evidência",
+            valor: auditoriasComEvidencia,
+            icon: BadgeCheck,
+            detalhe: "Correção registrada",
         },
     ];
     const blocos = [
@@ -3605,152 +4173,63 @@ const logoHtml = logoQr
             )}
 
             {mostrarPersonalizacao && (
-                <div className="mb-6 grid gap-4 xl:grid-cols-2">
-                    <Card>
-                        <div className="mb-4 flex items-start justify-between gap-3">
-                            <div>
-                                <h2 className="text-base font-bold text-slate-950">1. Cartas principais</h2>
-                                <p className="mt-1 text-sm text-slate-500">Escolha quais cards aparecem e o tamanho de cada indicador.</p>
-                            </div>
-                            <button type="button" onClick={() => { setCartasVisiveis(cartasPadrao); setTamanhosCartas(tamanhosCartasPadrao); setOrdemCartas(ordemCartasPadrao); }} className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 ring-1 ring-slate-200">Restaurar</button>
-                        </div>
-                        <div className="space-y-3">
-                            {cartasOrdenadas.map((opcao, index) => {
-                                const ativo = cartasVisiveis[opcao.chave] !== false;
-                                return (
-                                    <div
-                                        key={opcao.chave}
-                                        onDragOver={(evento) => evento.preventDefault()}
-                                        onDrop={() => soltarCartaAuditoria(opcao.chave)}
-                                        className={classNames(
-                                            "rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200 transition",
-                                            cartaArrastandoAuditoria === opcao.chave ? "opacity-60 ring-2 ring-emerald-300" : ""
-                                        )}
-                                    >
-                                        <div className="flex items-center justify-between gap-2">
-                                            <div className="flex min-w-0 items-start gap-2">
-                                                <span
-                                                    draggable
-                                                    onDragStart={(evento) => {
-                                                        prepararArrasteAuditoria(evento);
-                                                        setCartaArrastandoAuditoria(opcao.chave);
-                                                    }}
-                                                    onDragEnd={() => setCartaArrastandoAuditoria(null)}
-                                                    className="mt-0.5 inline-flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded-xl bg-white text-sm font-bold text-slate-500 ring-1 ring-slate-200 active:cursor-grabbing"
-                                                    title="Segure e arraste para mudar a ordem"
-                                                >
-                                                    ☰
-                                                </span>
-                                                <button type="button" onClick={() => setCartasVisiveis((atual) => ({ ...atual, [opcao.chave]: !ativo }))} className="min-w-0 text-left text-sm font-bold text-slate-800">
-                                                    <span className="block truncate">#{index + 1}. {opcao.label}</span>
-                                                    <span className="mt-0.5 block text-xs font-medium text-slate-500">{ativo ? "Aparece no painel" : "Oculto no painel"} · arraste pelo ícone ☰</span>
-                                                </button>
-                                            </div>
-                                            <div className="flex shrink-0 items-center gap-1">
-                                                <button type="button" onClick={() => mover(setOrdemCartas, opcao.chave, -1)} disabled={index === 0} className="rounded-lg bg-white px-2 py-1 text-xs font-bold ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-40">↑</button>
-                                                <button type="button" onClick={() => mover(setOrdemCartas, opcao.chave, 1)} disabled={index === cartasOrdenadas.length - 1} className="rounded-lg bg-white px-2 py-1 text-xs font-bold ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-40">↓</button>
-                                                <button
-                                                    type="button"
-                                                    onClick={(evento) => {
-                                                        evento.stopPropagation();
-                                                        setCartasVisiveis((atual) => ({ ...atual, [opcao.chave]: !ativo }));
-                                                    }}
-                                                    className={classNames("rounded-full px-2 py-1 text-[10px] font-bold uppercase ring-1 transition", ativo ? "bg-emerald-50 text-emerald-700 ring-emerald-200 hover:bg-emerald-100" : "bg-white text-slate-500 ring-slate-200 hover:bg-slate-50")}
-                                                    title={ativo ? "Clique para ocultar este card" : "Clique para mostrar este card"}
-                                                >
-                                                    {ativo ? "Visível" : "Oculto"}
-                                                </button>
-                                            </div>
-                                        </div>
-                                        {ativo && (
-                                            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                                                {opcoesTamanho.map((tamanho) => (
-                                                    <button key={tamanho.chave} type="button" onClick={() => setTamanhosCartas((atual) => ({ ...atual, [opcao.chave]: tamanho.chave }))} className={classNames("rounded-xl px-2 py-2 text-center text-xs font-bold ring-1", tamanhosCartas[opcao.chave] === tamanho.chave ? "bg-slate-950 text-white ring-slate-950" : "bg-white text-slate-600 ring-slate-200")}>{tamanho.label}</button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </Card>
-                    <Card>
-                        <div className="mb-4 flex items-start justify-between gap-3">
-                            <div>
-                                <h2 className="text-base font-bold text-slate-950">2. Organização dos quadros</h2>
-                                <p className="mt-1 text-sm text-slate-500">Controle a ordem, o tamanho e a visibilidade dos blocos de informação.</p>
-                            </div>
-                            <button type="button" onClick={() => { setBlocosVisiveis(blocosPadrao); setTamanhosBlocos(tamanhosBlocosPadrao); setOrdemBlocos(ordemBlocosPadrao); }} className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 ring-1 ring-slate-200">Restaurar</button>
-                        </div>
-                        <div className="space-y-3">
-                            {blocosOrdenados.map((opcao, index) => {
-                                const ativo = blocosVisiveis[opcao.chave] !== false;
-                                return (
-                                    <div
-                                        key={opcao.chave}
-                                        onDragOver={(evento) => evento.preventDefault()}
-                                        onDrop={() => soltarBlocoAuditoria(opcao.chave)}
-                                        className={classNames(
-                                            "rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200 transition",
-                                            blocoArrastandoAuditoria === opcao.chave ? "opacity-60 ring-2 ring-blue-300" : ""
-                                        )}
-                                    >
-                                        <div className="flex items-center justify-between gap-2">
-                                            <div className="flex min-w-0 items-start gap-2">
-                                                <span
-                                                    draggable
-                                                    onDragStart={(evento) => {
-                                                        prepararArrasteAuditoria(evento);
-                                                        setBlocoArrastandoAuditoria(opcao.chave);
-                                                    }}
-                                                    onDragEnd={() => setBlocoArrastandoAuditoria(null)}
-                                                    className="mt-0.5 inline-flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded-xl bg-white text-sm font-bold text-slate-500 ring-1 ring-slate-200 active:cursor-grabbing"
-                                                    title="Segure e arraste para mudar a posição do quadro"
-                                                >
-                                                    ☰
-                                                </span>
-                                                <button type="button" onClick={() => setBlocosVisiveis((atual) => ({ ...atual, [opcao.chave]: !ativo }))} className="min-w-0 text-left text-sm font-bold text-slate-800">
-                                                    <span className="block truncate">#{index + 1}. {opcao.label}</span>
-                                                    <span className="mt-0.5 block text-xs font-medium text-slate-500">{ativo ? "Aparece no painel" : "Oculto no painel"} · arraste pelo ícone ☰</span>
-                                                </button>
-                                            </div>
-                                            <div className="flex shrink-0 items-center gap-1">
-                                                <button type="button" onClick={() => mover(setOrdemBlocos, opcao.chave, -1)} disabled={index === 0} className="rounded-lg bg-white px-2 py-1 text-xs font-bold ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-40">↑</button>
-                                                <button type="button" onClick={() => mover(setOrdemBlocos, opcao.chave, 1)} disabled={index === blocosOrdenados.length - 1} className="rounded-lg bg-white px-2 py-1 text-xs font-bold ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-40">↓</button>
-                                                <button
-                                                    type="button"
-                                                    onClick={(evento) => {
-                                                        evento.stopPropagation();
-                                                        setBlocosVisiveis((atual) => ({ ...atual, [opcao.chave]: !ativo }));
-                                                    }}
-                                                    className={classNames("rounded-full px-2 py-1 text-[10px] font-bold uppercase ring-1 transition", ativo ? "bg-blue-50 text-blue-700 ring-blue-200 hover:bg-blue-100" : "bg-white text-slate-500 ring-slate-200 hover:bg-slate-50")}
-                                                    title={ativo ? "Clique para ocultar este quadro" : "Clique para mostrar este quadro"}
-                                                >
-                                                    {ativo ? "Visível" : "Oculto"}
-                                                </button>
-                                            </div>
-                                        </div>
-                                        {ativo && (
-                                            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                                                {opcoesTamanho.map((tamanho) => (
-                                                    <button key={tamanho.chave} type="button" onClick={() => setTamanhosBlocos((atual) => ({ ...atual, [opcao.chave]: tamanho.chave }))} className={classNames("rounded-xl px-2 py-2 text-center text-xs font-bold ring-1", tamanhosBlocos[opcao.chave] === tamanho.chave ? "bg-slate-950 text-white ring-slate-950" : "bg-white text-slate-600 ring-slate-200")}>{tamanho.label}</button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </Card>
-                </div>
+                <DashboardAuditoriaCampoControles
+                    cartasOrdenadas={cartasOrdenadas}
+                    blocosOrdenados={blocosOrdenados}
+                    cartasVisiveis={cartasVisiveis}
+                    setCartasVisiveis={setCartasVisiveis}
+                    tamanhosCartas={tamanhosCartas}
+                    setTamanhosCartas={setTamanhosCartas}
+                    setOrdemCartas={setOrdemCartas}
+                    blocosVisiveis={blocosVisiveis}
+                    setBlocosVisiveis={setBlocosVisiveis}
+                    tamanhosBlocos={tamanhosBlocos}
+                    setTamanhosBlocos={setTamanhosBlocos}
+                    setOrdemBlocos={setOrdemBlocos}
+                    cartasPadrao={cartasPadrao}
+                    tamanhosCartasPadrao={tamanhosCartasPadrao}
+                    ordemCartasPadrao={ordemCartasPadrao}
+                    blocosPadrao={blocosPadrao}
+                    tamanhosBlocosPadrao={tamanhosBlocosPadrao}
+                    ordemBlocosPadrao={ordemBlocosPadrao}
+                    opcoesTamanho={opcoesTamanho}
+                    mover={mover}
+                    prepararArrasteAuditoria={prepararArrasteAuditoria}
+                    soltarCartaAuditoria={soltarCartaAuditoria}
+                    soltarBlocoAuditoria={soltarBlocoAuditoria}
+                    cartaArrastandoAuditoria={cartaArrastandoAuditoria}
+                    setCartaArrastandoAuditoria={setCartaArrastandoAuditoria}
+                    blocoArrastandoAuditoria={blocoArrastandoAuditoria}
+                    setBlocoArrastandoAuditoria={setBlocoArrastandoAuditoria}
+                />
             )}
-
             <div className="grid auto-rows-fr items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                 {cartasOrdenadas.filter((item) => cartasVisiveis[item.chave] !== false).map((item) => {
                     const Icon = item.icon;
                     const tema = obterTemaCartaAuditoriaCampo(item.chave);
                     return (
-                        <Card key={item.chave} className={classNames("dashboard-summary-card group relative flex h-auto min-h-[6.25rem] overflow-hidden rounded-[22px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(246,249,252,0.96)_100%)] px-3 pt-3 pb-2 shadow-[0_10px_26px_rgba(26,35,50,0.08)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(26,35,50,0.13)]", tema.borda, tema.fundo, classeTamanho(tamanhosCartas[item.chave]))}>
+                        <button
+                            type="button"
+                            key={item.chave}
+                            onClick={() =>
+                                setResumoCartaAuditoriaCampo(
+                                    montarResumoCartaAuditoriaCampo(
+                                        item.chave
+                                    )
+                                )
+                            }
+                            className={classNames(
+                                "h-full min-w-0 rounded-[22px] text-left outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2",
+                                classeTamanho(
+                                    tamanhosCartas[
+                                        item.chave
+                                    ]
+                                )
+                            )}
+                            title={`Clique para visualizar os registros de ${item.label}`}
+                            aria-label={`Abrir detalhes do indicador ${item.label}`}
+                        >
+                            <Card className={classNames("dashboard-summary-card group relative flex h-full cursor-pointer min-h-[6.25rem] overflow-hidden rounded-[22px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(246,249,252,0.96)_100%)] px-3 pt-3 pb-2 shadow-[0_10px_26px_rgba(26,35,50,0.08)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(26,35,50,0.13)]", tema.borda, tema.fundo)}>
                             <span className={classNames("absolute inset-x-0 top-0 h-1 bg-gradient-to-r", tema.acento)} />
                             <div className="flex min-h-0 flex-1 items-center justify-center gap-2">
                                 <div className={classNames("flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl shadow-sm ring-1", tema.icone)}>
@@ -3764,7 +4243,8 @@ const logoHtml = logoQr
                                     <p className={classNames("mt-1 text-[10px] font-semibold leading-tight", tema.detalhe)}>{item.detalhe}</p>
                                 </div>
                             </div>
-                        </Card>
+                            </Card>
+                        </button>
                     );
                 })}
             </div>
@@ -3774,6 +4254,16 @@ const logoHtml = logoQr
                     <React.Fragment key={item.chave}>{renderBloco(item.chave)}</React.Fragment>
                 ))}
             </div>
+            {resumoCartaAuditoriaCampo && (
+                <DashboardCartaResumoModal
+                    resumo={resumoCartaAuditoriaCampo}
+                    onClose={() =>
+                        setResumoCartaAuditoriaCampo(
+                            null
+                        )
+                    }
+                />
+            )}
         </div>
     );
 }
