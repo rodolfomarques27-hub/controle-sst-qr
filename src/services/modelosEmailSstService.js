@@ -6,6 +6,8 @@ import {
     normalizarTipoModeloEmailSst,
     obterMetadadosModeloEmailSst,
     obterVariaveisDesconhecidasModeloEmailSst,
+    obterVariaveisDesconhecidasModeloEmailSstPorTipo,
+    obterVariaveisObrigatoriasAusentesModeloEmailSst,
     tipoModeloEmailSstValido,
 } from "../constants/modelosEmailSstConstants";
 
@@ -335,9 +337,30 @@ export function validarModeloEmailSst(
         );
     }
 
-    if (!corpoModeloEmailSstContemItens(corpo)) {
+    if (
+        !corpoModeloEmailSstContemItens(
+            corpo,
+            tipo
+        )
+    ) {
         throw new Error(
             "O corpo do modelo deve conter a variável {{itens}}."
+        );
+    }
+
+    const variaveisObrigatoriasAusentes =
+        obterVariaveisObrigatoriasAusentesModeloEmailSst(
+            tipo,
+            assunto,
+            corpo
+        );
+
+    if (
+        variaveisObrigatoriasAusentes.length >
+        0
+    ) {
+        throw new Error(
+            `Variável obrigatória ausente no modelo: {{${variaveisObrigatoriasAusentes[0]}}}.`
         );
     }
 
@@ -380,7 +403,8 @@ export function validarModeloEmailSst(
     }
 
     const variaveisDesconhecidas =
-        obterVariaveisDesconhecidasModeloEmailSst(
+        obterVariaveisDesconhecidasModeloEmailSstPorTipo(
+            tipo,
             assunto,
             corpo
         );
@@ -448,27 +472,98 @@ export function aplicarVariaveisModeloEmailSst(
     );
 }
 
-export function criarValoresPrevisualizacaoModeloEmailSst() {
+export function criarValoresPrevisualizacaoModeloEmailSst(
+    tipo = ""
+) {
+    const tipoNormalizado =
+        normalizarTipoModeloEmailSst(
+            tipo
+        );
+
+    const valoresComuns = {
+        empresa_nome:
+            "Empresa Exemplo Ltda.",
+
+        sistema_nome:
+            "SafeScan Brasil",
+
+        url_sistema:
+            "https://www.safescanbrasil.com.br",
+
+        data_envio:
+            new Intl.DateTimeFormat(
+                "pt-BR"
+            ).format(
+                new Date()
+            ),
+    };
+
+    if (
+        tipoNormalizado ===
+        "acesso_usuario_criado"
+    ) {
+        return {
+            ...valoresComuns,
+
+            usuario_nome:
+                "João da Silva",
+
+            usuario_email:
+                "joao.silva@empresa.com.br",
+
+            perfil_nome:
+                "Técnico SST",
+
+            modulos_liberados:
+                [
+                    "• Colaboradores",
+                    "• Treinamentos",
+                    "• Consulta QR",
+                ].join("\n"),
+
+            acoes_liberadas:
+                [
+                    "• Visualizar",
+                    "• Cadastrar",
+                    "• Editar",
+                ].join("\n"),
+
+            restricoes:
+                "Sem acesso às configurações críticas do sistema.",
+
+            senha_temporaria:
+                "SafeScan#4821",
+        };
+    }
+
     return {
-        saudacao: "Olá, João.",
-        tst_responsavel: "João da Silva",
-        empresa_nome: "Empresa Exemplo Ltda.",
-        total_vencidos: "2",
-        total_a_vencer: "3",
-        quantidade_itens: "5",
-        resumo: "2 vencidos e 3 a vencer",
-        itens: [
-            "1. NR-35 - VENCIDO HÁ 5 DIAS",
-            "2. ASO periódico - A VENCER EM 10 DIAS",
-        ].join("\n"),
-        sistema_nome: "SafeScan Brasil",
-        url_sistema: "https://www.safescanbrasil.com.br",
-        data_envio: new Intl.DateTimeFormat(
-            "pt-BR"
-        ).format(new Date()),
+        ...valoresComuns,
+
+        saudacao:
+            "Olá, João.",
+
+        tst_responsavel:
+            "João da Silva",
+
+        total_vencidos:
+            "2",
+
+        total_a_vencer:
+            "3",
+
+        quantidade_itens:
+            "5",
+
+        resumo:
+            "2 vencidos e 3 a vencer",
+
+        itens:
+            [
+                "1. NR-35 - VENCIDO HÁ 5 DIAS",
+                "2. ASO periódico - A VENCER EM 10 DIAS",
+            ].join("\n"),
     };
 }
-
 export async function listarModelosEmailSstService({
     supabase,
 }) {

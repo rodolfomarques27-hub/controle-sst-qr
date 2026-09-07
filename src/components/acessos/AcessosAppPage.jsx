@@ -27,6 +27,13 @@ import {
 } from "../../constants/usuariosPermissoesConstants";
 import { supabase } from "../../lib/supabaseClient";
 import { criarLoginAppComSenhaTemporariaService } from "../../services/acessosAppService";
+import {
+    enviarAcessoUsuarioEmailService,
+    listarHistoricoAcessoUsuarioEmailService,
+} from "../../services/acessoUsuarioEmailEnvioService";
+import {
+    prepararDadosPermissoesAcessoUsuarioEmail,
+} from "../../services/acessoUsuarioEmailPermissoesService";
 import { registrarAuditoriaSistemaService } from "../../services/auditoriaSistemaCrudService";
 import {
     concluirSolicitacaoAcessoSistemaService,
@@ -44,6 +51,8 @@ import {
 const BUCKET_FOTOS_USUARIOS_ACESSO_APP = "fotos-colaboradores";
 const FOTO_ACESSO_URL_CACHE = new Map();
 const FOTO_ACESSO_PROMISE_CACHE = new Map();
+
+const ENVIO_EMAIL_ACESSO_REAL_HABILITADO_G6 = false;
 
 const MODULO_VISTORIA_VISUALIZAR_ACESSO = "Vistoria - Visualizar";
 const MODULO_VISTORIA_EDITAR_ACESSO = "Vistoria - Editar";
@@ -1057,6 +1066,359 @@ function SolicitacoesAcessoApp({ onPrepararPermissao = null, usuario = null }) {
     );
 }
 
+function normalizarStatusEmailAcessoUsuario(status = "") {
+    return normalizarTextoAcesso(status).toUpperCase();
+}
+
+function formatarStatusEmailAcessoUsuario(status = "") {
+    const statusTratado =
+        normalizarStatusEmailAcessoUsuario(status);
+
+    if (statusTratado === "PREPARANDO") return "Preparando";
+    if (statusTratado === "ENVIANDO") return "Enviando";
+    if (statusTratado === "ENVIADO") return "Enviado";
+    if (statusTratado === "ERRO") return "Erro";
+
+    return "Sem registro";
+}
+
+function obterClasseStatusEmailAcessoUsuario(status = "") {
+    const statusTratado =
+        normalizarStatusEmailAcessoUsuario(status);
+
+    if (statusTratado === "ENVIADO") {
+        return "bg-emerald-50 text-emerald-700 ring-emerald-100";
+    }
+
+    if (statusTratado === "ERRO") {
+        return "bg-rose-50 text-rose-700 ring-rose-100";
+    }
+
+    if (
+        statusTratado === "PREPARANDO" ||
+        statusTratado === "ENVIANDO"
+    ) {
+        return "bg-amber-50 text-amber-800 ring-amber-100";
+    }
+
+    return "bg-slate-100 text-slate-500 ring-slate-200";
+}
+
+function obterDataReferenciaEmailAcessoUsuario(registro = null) {
+    return (
+        registro?.enviadoEm ||
+        registro?.atualizadoEm ||
+        registro?.criadoEm ||
+        registro?.iniciadoEm ||
+        ""
+    );
+}
+
+function ComunicacaoAcessoUsuarioCard({
+    item = null,
+    onPrepararReenvio = null,
+}) {
+    const [aberto, setAberto] = useState(false);
+    const [carregando, setCarregando] = useState(false);
+    const [consultado, setConsultado] = useState(false);
+    const [erroHistorico, setErroHistorico] = useState("");
+    const [historico, setHistorico] = useState([]);
+
+    const historicoOrdenado =
+        useMemo(
+            () => (
+                [...historico]
+                    .sort((registroA, registroB) => {
+                        const dataA =
+                            Date.parse(
+                                obterDataReferenciaEmailAcessoUsuario(
+                                    registroA
+                                )
+                            ) || 0;
+
+                        const dataB =
+                            Date.parse(
+                                obterDataReferenciaEmailAcessoUsuario(
+                                    registroB
+                                )
+                            ) || 0;
+
+                        return dataB - dataA;
+                    })
+            ),
+            [historico]
+        );
+
+    const ultimoEnvio =
+        historicoOrdenado[0] ||
+        null;
+
+    const statusUltimoEnvio =
+        normalizarStatusEmailAcessoUsuario(
+            ultimoEnvio?.status
+        );
+
+    const podePrepararReenvio =
+        Boolean(
+            ultimoEnvio?.id &&
+            (
+                statusUltimoEnvio === "ENVIADO" ||
+                statusUltimoEnvio === "ERRO"
+            ) &&
+            typeof onPrepararReenvio === "function"
+        );
+
+    async function carregarHistoricoEmailAcesso() {
+        if (carregando) return;
+
+        setCarregando(true);
+        setErroHistorico("");
+
+        try {
+            const lista =
+                await listarHistoricoAcessoUsuarioEmailService({
+                    supabase,
+                    usuarioId:
+                        item?.user_id ||
+                        item?.usuario_id ||
+                        null,
+                    usuarioEmail:
+                        item?.email ||
+                        "",
+                    limite: 20,
+                });
+
+            setHistorico(lista);
+            setConsultado(true);
+        } catch (error) {
+            setHistorico([]);
+            setConsultado(true);
+
+            setErroHistorico(
+                error?.message ||
+                "Não foi possível consultar o histórico de comunicação deste usuário."
+            );
+        } finally {
+            setCarregando(false);
+        }
+    }
+
+    async function alternarHistoricoEmailAcesso() {
+        if (aberto) {
+            setAberto(false);
+            return;
+        }
+
+        setAberto(true);
+
+        await carregarHistoricoEmailAcesso();
+    }
+
+    const textoStatus =
+        !consultado
+            ? "Não consultado"
+            : ultimoEnvio
+                ? formatarStatusEmailAcessoUsuario(
+                    ultimoEnvio.status
+                )
+                : "Sem envio registrado";
+
+    const classeStatus =
+        ultimoEnvio
+            ? obterClasseStatusEmailAcessoUsuario(
+                ultimoEnvio.status
+            )
+            : "bg-slate-100 text-slate-500 ring-slate-200";
+
+    return (
+        <div className="mt-3 border-t border-slate-200 pt-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+                        Comunicação de acesso
+                    </p>
+
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                        <span
+                            className={`rounded-full px-3 py-1.5 text-[11px] font-black ring-1 ${classeStatus}`}
+                        >
+                            E-mail: {textoStatus}
+                        </span>
+
+                        {ultimoEnvio ? (
+                            <span className="rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-slate-500 ring-1 ring-slate-200">
+                                Último registro: {formatarDataHoraAcessoApp(
+                                    obterDataReferenciaEmailAcessoUsuario(
+                                        ultimoEnvio
+                                    )
+                                )}
+                            </span>
+                        ) : null}
+                    </div>
+                </div>
+
+                <button
+                    type="button"
+                    onClick={alternarHistoricoEmailAcesso}
+                    disabled={carregando}
+                    className="rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-blue-700 ring-1 ring-blue-100 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    {carregando
+                        ? "Consultando..."
+                        : aberto
+                            ? "Fechar comunicação"
+                            : "Consultar comunicação"}
+                </button>
+            </div>
+
+            {aberto ? (
+                <div className="mt-3 rounded-2xl bg-white p-4 ring-1 ring-slate-200">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <p className="text-xs font-black text-slate-900">
+                                Histórico de envio
+                            </p>
+
+                            <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500">
+                                O histórico contém somente metadados seguros da comunicação. Nenhuma senha temporária é armazenada.
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={carregarHistoricoEmailAcesso}
+                            disabled={carregando}
+                            className="rounded-full bg-slate-50 px-3 py-1.5 text-[11px] font-black text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {carregando
+                                ? "Atualizando..."
+                                : "Atualizar histórico"}
+                        </button>
+                    </div>
+
+                    {erroHistorico ? (
+                        <div className="mt-3 rounded-2xl bg-rose-50 px-3 py-2 text-[11px] font-bold leading-5 text-rose-700 ring-1 ring-rose-100">
+                            {erroHistorico}
+                        </div>
+                    ) : null}
+
+                    {!erroHistorico && carregando && !consultado ? (
+                        <div className="mt-3 rounded-2xl bg-slate-50 px-3 py-3 text-[11px] font-semibold text-slate-500 ring-1 ring-slate-100">
+                            Consultando histórico seguro...
+                        </div>
+                    ) : null}
+
+                    {!erroHistorico &&
+                    consultado &&
+                    historicoOrdenado.length === 0 ? (
+                        <div className="mt-3 rounded-2xl bg-slate-50 px-3 py-3 text-[11px] font-semibold text-slate-500 ring-1 ring-slate-100">
+                            Nenhuma comunicação de acesso foi registrada para este usuário.
+                        </div>
+                    ) : null}
+
+                    {historicoOrdenado.length > 0 ? (
+                        <div className="mt-3 space-y-2">
+                            {historicoOrdenado
+                                .slice(0, 8)
+                                .map((registro, indice) => {
+                                    const statusRegistro =
+                                        normalizarStatusEmailAcessoUsuario(
+                                            registro.status
+                                        );
+
+                                    const classeRegistro =
+                                        obterClasseStatusEmailAcessoUsuario(
+                                            statusRegistro
+                                        );
+
+                                    return (
+                                        <div
+                                            key={
+                                                registro.id ||
+                                                `${registro.chaveIdempotencia || "envio"}-${indice}`
+                                            }
+                                            className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100"
+                                        >
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span
+                                                    className={`rounded-full px-2.5 py-1 text-[10px] font-black ring-1 ${classeRegistro}`}
+                                                >
+                                                    {formatarStatusEmailAcessoUsuario(
+                                                        statusRegistro
+                                                    )}
+                                                </span>
+
+                                                <span className="text-[11px] font-bold text-slate-500">
+                                                    {formatarDataHoraAcessoApp(
+                                                        obterDataReferenciaEmailAcessoUsuario(
+                                                            registro
+                                                        )
+                                                    )}
+                                                </span>
+
+                                                {indice === 0 ? (
+                                                    <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-black text-blue-700 ring-1 ring-blue-100">
+                                                        Último envio
+                                                    </span>
+                                                ) : null}
+                                            </div>
+
+                                            <div className="mt-2 grid gap-1 text-[11px] font-semibold text-slate-500 md:grid-cols-2">
+                                                <p className="truncate">
+                                                    Destinatário: {registro.destinatarioEmail || registro.usuarioEmail || "não informado"}
+                                                </p>
+
+                                                <p>
+                                                    Modelo: {registro.modeloTipo || "acesso_usuario_criado"} v{registro.modeloVersao || "-"}
+                                                </p>
+
+                                                <p>
+                                                    Tentativa: {registro.tentativaNumero || 1}
+                                                </p>
+
+                                                <p>
+                                                    Resultado: {registro.erroCodigo || "sem erro registrado"}
+                                                </p>
+                                            </div>
+
+                                            {indice === 0 &&
+                                            podePrepararReenvio ? (
+                                                <div className="mt-3 flex flex-wrap items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            onPrepararReenvio(
+                                                                item,
+                                                                registro
+                                                            );
+                                                        }}
+                                                        className="rounded-full bg-blue-600 px-3 py-1.5 text-[11px] font-black text-white shadow-sm hover:bg-blue-700"
+                                                    >
+                                                        Preparar reenvio
+                                                    </button>
+
+                                                    <span className="text-[10px] font-semibold leading-4 text-slate-400">
+                                                        O reenvio exige uma nova senha temporária; a credencial anterior nunca é recuperada.
+                                                    </span>
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    );
+                                })}
+
+                            {historicoOrdenado.length > 8 ? (
+                                <p className="px-1 text-[10px] font-semibold text-slate-400">
+                                    Exibindo os 8 registros mais recentes de {historicoOrdenado.length} retornados.
+                                </p>
+                            ) : null}
+                        </div>
+                    ) : null}
+                </div>
+            ) : null}
+        </div>
+    );
+}
+
 function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEdicaoConsumida = null }) {
     const [usuarios, setUsuarios] = useState([]);
     const [carregando, setCarregando] = useState(false);
@@ -1073,6 +1435,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
     const [listaUsuariosAberta, setListaUsuariosAberta] = useState(false);
     const [filtrosUsuariosAbertos, setFiltrosUsuariosAbertos] = useState(false);
     const [excluindoId, setExcluindoId] = useState("");
+    const [reenvioEmailPendenteId, setReenvioEmailPendenteId] = useState("");
 
     const resumo = useMemo(() => ({
         total: usuarios.length,
@@ -1176,6 +1539,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
     }
 
     function abrirCadastroVazio() {
+        setReenvioEmailPendenteId("");
         setFormulario(montarFormularioUsuarioAcesso());
         setFormAberto(true);
         setErro("");
@@ -1183,10 +1547,51 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
     }
 
     function iniciarEdicao(item) {
+        setReenvioEmailPendenteId("");
         setFormulario(montarFormularioUsuarioAcesso(item));
         setFormAberto(true);
         setErro("");
         setMensagem(`Editando permissão de ${item?.email || "usuário selecionado"}.`);
+    }
+
+    function prepararReenvioEmailAcesso(item, envio) {
+        const envioId =
+            normalizarTextoAcesso(
+                envio?.id
+            );
+
+        if (!envioId) {
+            setErro(
+                "Não foi possível identificar o envio anterior para preparar o reenvio."
+            );
+            return;
+        }
+
+        setFormulario({
+            ...montarFormularioUsuarioAcesso(item),
+            senhaTemporaria: "",
+            confirmarSenhaTemporaria: "",
+            resetarSenhaTemporaria: true,
+            fotoArquivo: null,
+            fotoPreview: "",
+        });
+
+        setReenvioEmailPendenteId(
+            envioId
+        );
+
+        setFormAberto(true);
+        setErro("");
+
+        if (ENVIO_EMAIL_ACESSO_REAL_HABILITADO_G6) {
+            setMensagem(
+                `Reenvio preparado para ${item?.email || "usuário selecionado"}. Informe uma NOVA senha temporária e confirme a redefinição para gerar uma nova comunicação de acesso.`
+            );
+        } else {
+            setMensagem(
+                `Reenvio preparado para ${item?.email || "usuário selecionado"}, porém o envio real permanece desabilitado nesta etapa. Nenhuma senha será redefinida enquanto o gate G6 estiver bloqueado.`
+            );
+        }
     }
 
     function atualizarCampoFormulario(campo, valor) {
@@ -1303,6 +1708,21 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
     async function criarLoginDoApp() {
         if (criandoLogin || salvando) return;
 
+        if (
+            reenvioEmailPendenteId &&
+            !ENVIO_EMAIL_ACESSO_REAL_HABILITADO_G6
+        ) {
+            setErro(
+                "O reenvio de comunicação ainda está bloqueado durante a validação local do G6."
+            );
+
+            setMensagem(
+                "Nenhuma senha foi redefinida, nenhum usuário foi alterado e nenhuma Edge Function foi chamada. O reenvio será liberado somente na etapa controlada de ativação."
+            );
+
+            return;
+        }
+
         const emailTratado = normalizarTextoAcesso(formulario.email).toLowerCase();
         const senhaTemporaria = String(formulario.senhaTemporaria || "");
         const confirmarSenhaTemporaria = String(formulario.confirmarSenhaTemporaria || "");
@@ -1382,6 +1802,55 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 null;
 
             salvamentoConfirmado = true;
+
+            let mensagemComunicacaoAcesso =
+                " Comunicação por e-mail preparada. O envio real permanece desabilitado durante a validação local do G6.";
+
+            if (permissaoSalva) {
+                try {
+                    const dadosComunicacaoAcesso =
+                        prepararDadosPermissoesAcessoUsuarioEmail({
+                            permissaoUsuario: permissaoSalva,
+                        });
+
+                    if (ENVIO_EMAIL_ACESSO_REAL_HABILITADO_G6) {
+                        const resultadoComunicacaoAcesso =
+                            await enviarAcessoUsuarioEmailService({
+                                supabase,
+                                usuarioEmail:
+                                    permissaoSalva?.email ||
+                                    emailTratado,
+                                senhaTemporaria,
+                                permissoesSnapshot:
+                                    dadosComunicacaoAcesso.permissoesSnapshot,
+                                reenvioDeId:
+                                    reenvioEmailPendenteId || null,
+                            });
+
+                        if (
+                            resultadoComunicacaoAcesso?.status === "ENVIADO"
+                        ) {
+                            setReenvioEmailPendenteId("");
+                        }
+
+                        mensagemComunicacaoAcesso =
+                            resultadoComunicacaoAcesso?.status === "ENVIADO"
+                                ? " Comunicação de acesso enviada por e-mail."
+                                : ` Comunicação de acesso processada com status ${resultadoComunicacaoAcesso?.status || "DESCONHECIDO"}.`;
+                    }
+                } catch (comunicacaoError) {
+                    setErro(
+                        comunicacaoError?.message ||
+                        "Login criado, mas não foi possível preparar ou enviar a comunicação de acesso por e-mail."
+                    );
+
+                    mensagemComunicacaoAcesso =
+                        " Login criado/atualizado e preservado, mas a comunicação por e-mail não foi enviada.";
+                }
+            } else {
+                mensagemComunicacaoAcesso =
+                    " Login criado, mas a comunicação por e-mail não foi preparada porque a permissão salva não foi retornada.";
+            }
 
             const caminhoFotoSalvo =
                 normalizarCaminhoFotoAcessoApp(
@@ -1479,7 +1948,13 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 });
             }
 
-            setMensagem(resultado?.mensagem || "Login criado/atualizado com sucesso. O perfil editável foi aplicado e o usuário deve trocar a senha temporária no primeiro acesso.");
+            const mensagemLogin =
+                resultado?.mensagem ||
+                "Login criado/atualizado com sucesso. O perfil editável foi aplicado e o usuário deve trocar a senha temporária no primeiro acesso.";
+
+            setMensagem(
+                `${mensagemLogin}${mensagemComunicacaoAcesso}`
+            );
         } catch (error) {
             if (!salvamentoConfirmado && caminhoFotoNovo) {
                 try {
@@ -1495,8 +1970,20 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 }
             }
 
-            setErro(error?.message || "Não foi possível criar o login do app.");
-            setMensagem("O login não foi criado.");
+            setErro(
+                error?.message ||
+                (
+                    salvamentoConfirmado
+                        ? "Login criado, mas ocorreu uma falha em uma etapa posterior."
+                        : "Não foi possível criar o login do app."
+                )
+            );
+
+            setMensagem(
+                salvamentoConfirmado
+                    ? "O login foi criado/atualizado e não foi revertido, mas uma etapa posterior apresentou falha."
+                    : "O login não foi criado."
+            );
         } finally {
             setCriandoLogin(false);
         }
@@ -2268,6 +2755,24 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                         </section>
                     </div>
 
+                    {reenvioEmailPendenteId ? (
+                        <div className="mt-4 rounded-2xl bg-blue-50 px-4 py-3 ring-1 ring-blue-100">
+                            <p className="text-xs font-black text-blue-800">
+                                Reenvio de comunicação preparado
+                            </p>
+
+                            <p className="mt-1 text-[11px] font-semibold leading-5 text-blue-700">
+                                Por segurança, a senha temporária anterior não existe no histórico e não pode ser recuperada. O reenvio exige uma nova senha temporária e uma nova redefinição do acesso.
+                            </p>
+
+                            {!ENVIO_EMAIL_ACESSO_REAL_HABILITADO_G6 ? (
+                                <p className="mt-2 text-[11px] font-black leading-5 text-amber-800">
+                                    Validação local: o envio real está bloqueado. O sistema não permitirá redefinir a senha enquanto este gate permanecer desabilitado.
+                                </p>
+                            ) : null}
+                        </div>
+                    ) : null}
+
                     <div className="mt-4 flex flex-wrap gap-2">
                         <button
                             type="button"
@@ -2275,7 +2780,11 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                             disabled={criandoLogin || salvando}
                             className="rounded-2xl bg-blue-600 px-5 py-2.5 text-xs font-black text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                            {criandoLogin ? "Criando login..." : "Criar login do app"}
+                            {criandoLogin
+                                ? "Criando login..."
+                                : reenvioEmailPendenteId
+                                    ? "Redefinir senha e reenviar acesso"
+                                    : "Criar login do app"}
                         </button>
                         <button
                             type="submit"
@@ -2291,6 +2800,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                                     URL.revokeObjectURL(formulario.fotoPreview);
                                 }
                                 setFormulario(montarFormularioUsuarioAcesso());
+                                setReenvioEmailPendenteId("");
                             }}
                             disabled={salvando}
                             className="rounded-2xl bg-white px-5 py-2.5 text-xs font-black text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
@@ -2369,6 +2879,11 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                                 </div>
                             </div>
                         </div>
+
+                        <ComunicacaoAcessoUsuarioCard
+                            item={item}
+                            onPrepararReenvio={prepararReenvioEmailAcesso}
+                        />
                     </article>
                 )) : (
                     <div className="rounded-2xl bg-slate-50 px-4 py-4 text-xs font-semibold text-slate-500 ring-1 ring-slate-100">

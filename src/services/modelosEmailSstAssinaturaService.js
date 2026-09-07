@@ -27,6 +27,9 @@ const CAMINHOS_ASSINATURA_EMAIL_SST =
         alerta_auditoria:
             "modelos/alerta_auditoria/assinatura",
 
+        acesso_usuario_criado:
+            "modelos/acesso_usuario_criado/assinatura",
+
         certidao_mensal_documental:
             "modelos/certidao_mensal_documental/assinatura",
     });
@@ -109,7 +112,7 @@ export function obterCaminhoAssinaturaModeloEmailSst(
 
     if (!caminho) {
         throw new Error(
-            "Tipo de modelo de e-mail SST inválido para a assinatura."
+            "Tipo de modelo de e-mail inválido para a assinatura."
         );
     }
 

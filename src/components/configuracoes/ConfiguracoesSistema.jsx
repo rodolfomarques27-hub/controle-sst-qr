@@ -291,6 +291,12 @@ const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
     "config-supabase-geral",
 ];
 
+const CHAVES_BLOCOS_EMAIL_CONFIGURACOES =
+    new Set([
+        "config-modelos-email-sst",
+        "config-email-certidao-mensal",
+    ]);
+
 const VERSAO_LAYOUT_CONFIGURACOES_SISTEMA = "roteiro17-envio-certidao-mensal";
 const CHAVE_LAYOUT_CONFIGURACOES_SISTEMA = "configuracoesSistemaVersaoLayout";
 const CHAVE_BLOCOS_VISIVEIS_CONFIGURACOES = "configuracoesSistemaBlocosVisiveis";
@@ -625,6 +631,12 @@ export function ConfiguracoesSistema({
     const [salvandoLogoContratanteLogin, setSalvandoLogoContratanteLogin] = useState(false);
 
     const [mostrarOrganizacaoCards, setMostrarOrganizacaoCards] = useState(false);
+
+    const [
+        abaConfiguracoesAtiva,
+        setAbaConfiguracoesAtiva,
+    ] = useState("geral");
+
     const [filtroPainelConfiguracoes, setFiltroPainelConfiguracoes] = useState("todos");
     const [blocosVisiveisConfiguracoes, setBlocosVisiveisConfiguracoes] = useState(() =>
         carregarLayoutVisualLocalConfiguracoes().visiveis
@@ -3056,7 +3068,7 @@ export function ConfiguracoesSistema({
         { chave: "config-limites-carregamento", titulo: "Limites e armazenamento", descricao: "Registros por carga e limite administrativo do Storage.", icon: SlidersHorizontal },
         { chave: "config-auditoria-publica", titulo: "Auditoria pública, tokens e QR", descricao: "Token ativo, QR colaborador e QR de campo.", icon: KeyRound },
         { chave: "config-emergencia-qr", titulo: "Senha/PIN de emergência QR", descricao: "Proteção do contato de emergência por empresa.", icon: KeyRound },
-        { chave: "config-modelos-email-sst", titulo: "Modelos de e-mail SST", descricao: "Assunto, conteúdo, remetente, variáveis e ativação dos alertas.", icon: Settings },
+        { chave: "config-modelos-email-sst", titulo: "Modelos de e-mail do SafeScan", descricao: "Modelos, variáveis, acessos de usuários e demais comunicações automáticas.", icon: Settings },
         { chave: "config-email-certidao-mensal", titulo: "Notificação de pendências documentais", descricao: "Destinatários, assunto e conteúdo da cobrança consolidada por competência.", icon: Settings },
         { chave: "config-arquivos-storage", titulo: "Arquivos salvos no Storage", descricao: "Capacidade, vínculos, filtros e limpeza protegida.", icon: Database },
         { chave: "config-obras", titulo: "Obras", descricao: "Cadastro mestre de obras e vinculos com empresas.", icon: Database },
@@ -3077,7 +3089,32 @@ export function ConfiguracoesSistema({
         ...secoesConfiguracoes.filter((secao) => !ordemBlocosConfiguracoes.includes(secao.chave)),
     ];
 
-    const secoesConfiguracoesVisiveisOrdenadas = secoesConfiguracoesOrdenadas.filter((secao) => blocoConfiguracaoVisivel(secao.chave));
+    const secoesConfiguracoesDaAbaAtiva =
+        secoesConfiguracoesOrdenadas.filter(
+            (secao) => {
+                const ehEmail =
+                    CHAVES_BLOCOS_EMAIL_CONFIGURACOES.has(
+                        secao.chave
+                    );
+
+                if (
+                    abaConfiguracoesAtiva ===
+                    "emails"
+                ) {
+                    return ehEmail;
+                }
+
+                return !ehEmail;
+            }
+        );
+
+    const secoesConfiguracoesVisiveisOrdenadas =
+        secoesConfiguracoesDaAbaAtiva.filter(
+            (secao) =>
+                blocoConfiguracaoVisivel(
+                    secao.chave
+                )
+        );
 
     const resumoPainelConfiguracoes = {
         total: secoesConfiguracoesOrdenadas.length,
@@ -5008,8 +5045,8 @@ export function ConfiguracoesSistema({
             if (blocoConfiguracaoRecolhido("config-modelos-email-sst")) {
                 return renderBlocoConfiguracaoComControle(
                     "config-modelos-email-sst",
-                    "Modelos de e-mail SST",
-                    "Assunto, conteúdo, remetente, variáveis e ativação dos alertas.",
+                    "Modelos de e-mail do SafeScan",
+                    "Modelos, variáveis, acessos de usuários e demais comunicações automáticas.",
                     null
                 );
             }
@@ -5372,6 +5409,67 @@ export function ConfiguracoesSistema({
                     );
                 })}
             </div>
+            <div className="mt-5 flex w-full flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
+                <button
+                    type="button"
+                    aria-pressed={
+                        abaConfiguracoesAtiva ===
+                        "geral"
+                    }
+                    onClick={() => {
+                        setAbaConfiguracoesAtiva(
+                            "geral"
+                        );
+
+                        setMostrarOrganizacaoCards(
+                            false
+                        );
+                    }}
+                    className={classNames(
+                        "rounded-xl px-5 py-2.5 text-sm font-black transition",
+                        abaConfiguracoesAtiva ===
+                            "geral"
+                            ? "bg-slate-950 text-white shadow-sm"
+                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                    )}
+                >
+                    Geral
+                </button>
+
+                <button
+                    type="button"
+                    aria-pressed={
+                        abaConfiguracoesAtiva ===
+                        "emails"
+                    }
+                    onClick={() => {
+                        setAbaConfiguracoesAtiva(
+                            "emails"
+                        );
+
+                        setMostrarOrganizacaoCards(
+                            false
+                        );
+                    }}
+                    className={classNames(
+                        "rounded-xl px-5 py-2.5 text-sm font-black transition",
+                        abaConfiguracoesAtiva ===
+                            "emails"
+                            ? "bg-slate-950 text-white shadow-sm"
+                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                    )}
+                >
+                    E-mails
+                </button>
+
+                <div className="ml-auto hidden px-3 text-xs font-semibold text-slate-500 lg:block">
+                    {abaConfiguracoesAtiva ===
+                    "emails"
+                        ? "Modelos, notificações e comunicações automáticas"
+                        : "Configurações técnicas e operacionais do sistema"}
+                </div>
+            </div>
+
             {mostrarOrganizacaoCards && (
                 <ConfiguracoesSistemaControles
                     secoes={
@@ -5410,7 +5508,7 @@ export function ConfiguracoesSistema({
                 />
             )}
 <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                {secoesConfiguracoesOrdenadas.map((secao) => {
+                {secoesConfiguracoesDaAbaAtiva.map((secao) => {
                     if (!blocoConfiguracaoVisivel(secao.chave)) return null;
 
                     return (

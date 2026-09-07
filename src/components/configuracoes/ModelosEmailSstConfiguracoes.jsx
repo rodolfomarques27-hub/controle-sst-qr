@@ -22,8 +22,9 @@ import {
     DETALHES_VARIAVEIS_MODELO_EMAIL_SST,
     LIMITES_MODELO_EMAIL_SST,
     ORDEM_TIPOS_MODELO_EMAIL_SST,
-    VARIAVEIS_MODELO_EMAIL_SST,
     obterMetadadosModeloEmailSst,
+    obterVariaveisModeloEmailSst,
+    obterVariaveisObrigatoriasModeloEmailSst,
 } from "../../constants/modelosEmailSstConstants";
 import {
     aplicarVariaveisModeloEmailSst,
@@ -163,8 +164,48 @@ export function ModelosEmailSstConfiguracoes({
     const valoresPrevisualizacao =
         useMemo(
             () =>
-                criarValoresPrevisualizacaoModeloEmailSst(),
-            []
+                criarValoresPrevisualizacaoModeloEmailSst(
+                    tipoSelecionado
+                ),
+            [
+                tipoSelecionado,
+            ]
+        );
+
+    const variaveisDisponiveis =
+        useMemo(
+            () =>
+                obterVariaveisModeloEmailSst(
+                    tipoSelecionado
+                ),
+            [
+                tipoSelecionado,
+            ]
+        );
+
+    const variaveisObrigatorias =
+        useMemo(
+            () =>
+                obterVariaveisObrigatoriasModeloEmailSst(
+                    tipoSelecionado
+                ),
+            [
+                tipoSelecionado,
+            ]
+        );
+
+    const possuiVariavelSensivel =
+        useMemo(
+            () =>
+                variaveisDisponiveis.some(
+                    (chave) =>
+                        DETALHES_VARIAVEIS_MODELO_EMAIL_SST[
+                            chave
+                        ]?.sensivel === true
+                ),
+            [
+                variaveisDisponiveis,
+            ]
         );
 
     const modeloSelecionado =
@@ -769,7 +810,7 @@ export function ModelosEmailSstConfiguracoes({
             <div
                 role="button"
                 tabIndex={0}
-                aria-label="Recolher Modelos de e-mail SST"
+                aria-label="Recolher Modelos de e-mail do SafeScan"
                 onClick={alternarCardPeloCabecalho}
                 onKeyDown={alternarCardPeloTeclado}
                 className="flex flex-col gap-4 rounded-xl border-b border-slate-100 pb-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 lg:flex-row lg:items-start lg:justify-between"
@@ -779,13 +820,13 @@ export function ModelosEmailSstConfiguracoes({
                         <Mail className="h-5 w-5 text-slate-500" />
 
                         <span className="text-lg font-black text-slate-950">
-                            Modelos de e-mail SST
+                            Modelos de e-mail do SafeScan
                         </span>
                     </div>
 
                     <p className="mt-1 max-w-3xl text-sm leading-relaxed text-slate-500">
-                        Edite assunto, conteúdo, remetente e estado dos alertas enviados pelo SafeScan.
-                        Os modelos são privados e devem ser recuperados pelas RPCs administrativas.
+                        Edite assunto, conteúdo, remetente e estado das comunicações enviadas pelo SafeScan.
+                        Alertas SST e comunicações de acesso utilizam modelos privados recuperados pelas RPCs administrativas.
                     </p>
                 </div>
 
@@ -1247,7 +1288,7 @@ export function ModelosEmailSstConfiguracoes({
                                         </p>
 
                                         <div className="mt-4 flex flex-wrap gap-2">
-                                            {VARIAVEIS_MODELO_EMAIL_SST.map(
+                                            {variaveisDisponiveis.map(
                                                 (chave) => {
                                                     const detalhe =
                                                         DETALHES_VARIAVEIS_MODELO_EMAIL_SST[
@@ -1282,14 +1323,42 @@ export function ModelosEmailSstConfiguracoes({
 
                                         <div className="mt-4 rounded-2xl bg-white px-3 py-3 text-xs leading-relaxed text-slate-500 ring-1 ring-slate-200">
                                             <strong className="text-slate-700">
-                                                Obrigatória:
+                                                Obrigatórias:
                                             </strong>{" "}
-                                            o corpo deve manter a variável{" "}
-                                            <code className="font-black text-blue-700">
-                                                {"{{itens}}"}
-                                            </code>
+
+                                            {variaveisObrigatorias.map(
+                                                (
+                                                    chave,
+                                                    indice
+                                                ) => (
+                                                    <span
+                                                        key={
+                                                            chave
+                                                        }
+                                                    >
+                                                        {indice >
+                                                        0
+                                                            ? ", "
+                                                            : ""}
+
+                                                        <code className="font-black text-blue-700">
+                                                            {`{{${chave}}}`}
+                                                        </code>
+                                                    </span>
+                                                )
+                                            )}
                                             .
                                         </div>
+
+                                        {possuiVariavelSensivel && (
+                                            <div className="mt-3 rounded-2xl bg-orange-50 px-3 py-3 text-xs font-semibold leading-relaxed text-orange-800 ring-1 ring-orange-200">
+                                                A variável{" "}
+                                                <code className="font-black">
+                                                    {"{{senha_temporaria}}"}
+                                                </code>{" "}
+                                                é sensível. A pré-visualização utiliza somente uma credencial fictícia. O valor real não deverá ser salvo em histórico, Auditoria ou logs.
+                                            </div>
+                                        )}
                                     </section>
 
                                     <section className="overflow-hidden rounded-[22px] bg-white ring-1 ring-slate-200">

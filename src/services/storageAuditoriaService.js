@@ -80,6 +80,14 @@ const ATIVOS_SISTEMA_STORAGE = Object.freeze({
         tabelaOrigem: "Configuração dos modelos de e-mail SST",
     }),
 
+    "assinaturas-email-sst:modelos/acesso_usuario_criado/assinatura": Object.freeze({
+        id: "assinatura-email-acesso-usuario-criado",
+        tipo: "Assinatura de e-mail do SafeScan",
+        origemRegistro: "Modelo de e-mail do SafeScan",
+        origemTipo: "Sistema / Assinatura de e-mail",
+        tabelaOrigem: "Configuração dos modelos de e-mail do SafeScan",
+    }),
+
     "assinaturas-email-sst:modelos/certidao_mensal_documental/assinatura": Object.freeze({
         id: "assinatura-email-certidao-mensal",
         tipo: "Assinatura de e-mail SST",
