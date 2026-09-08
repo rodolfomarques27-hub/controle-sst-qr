@@ -29,6 +29,7 @@ import { ArquivosStorageConfiguracoes } from "./ArquivosStorageConfiguracoes";
 import { EmergenciaQrPinCard } from "./EmergenciaQrPinCard";
 import { ModelosEmailSstConfiguracoes } from "./ModelosEmailSstConfiguracoes";
 import { CertidaoMensalEmailConfiguracoes } from "./CertidaoMensalEmailConfiguracoes";
+import { ProvedorEmailConfiguracoes } from "./ProvedorEmailConfiguracoes";
 import {
     carregarConfiguracaoEventosAuditoriaSistemaSupabase,
     configuracaoPadraoEventosAuditoriaSistema,
@@ -281,6 +282,7 @@ const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
     "config-emergencia-qr",
     "config-modelos-email-sst",
     "config-email-certidao-mensal",
+    "config-provedor-email",
     "config-arquivos-storage",
     "config-obras",
     "config-relatorios-evidencias",
@@ -295,6 +297,7 @@ const CHAVES_BLOCOS_EMAIL_CONFIGURACOES =
     new Set([
         "config-modelos-email-sst",
         "config-email-certidao-mensal",
+        "config-provedor-email",
     ]);
 
 const VERSAO_LAYOUT_CONFIGURACOES_SISTEMA = "roteiro17-envio-certidao-mensal";
@@ -437,6 +440,7 @@ const BLOCOS_CONFIGURACOES_ABERTOS_PADRAO = new Set([
     "config-limites-carregamento",
     "config-auditoria-publica",
     "config-emergencia-qr",
+    "config-provedor-email",
     "config-arquivos-storage",
     "config-obras",
     "config-relatorios-evidencias",
@@ -447,6 +451,7 @@ const CHAVES_BLOCOS_CONFIGURACOES_CRITICOS = new Set([
     "config-emergencia-qr",
     "config-modelos-email-sst",
     "config-email-certidao-mensal",
+    "config-provedor-email",
     "config-arquivos-storage",
     "config-login-visual",
     "config-eventos-auditoria",
@@ -477,6 +482,7 @@ const BLOCOS_CONFIGURACOES_TAMANHOS_PADRAO = CHAVES_BLOCOS_CONFIGURACOES_PADRAO.
 
 BLOCOS_CONFIGURACOES_TAMANHOS_PADRAO["config-modelos-email-sst"] = "destaque";
 BLOCOS_CONFIGURACOES_TAMANHOS_PADRAO["config-email-certidao-mensal"] = "destaque";
+BLOCOS_CONFIGURACOES_TAMANHOS_PADRAO["config-provedor-email"] = "destaque";
 
 const BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO = CHAVES_BLOCOS_CONFIGURACOES_PADRAO.reduce((acc, chave) => {
     acc[chave] = !BLOCOS_CONFIGURACOES_ABERTOS_PADRAO.has(chave);
@@ -3070,6 +3076,7 @@ export function ConfiguracoesSistema({
         { chave: "config-emergencia-qr", titulo: "Senha/PIN de emergência QR", descricao: "Proteção do contato de emergência por empresa.", icon: KeyRound },
         { chave: "config-modelos-email-sst", titulo: "Modelos de e-mail do SafeScan", descricao: "Modelos, variáveis, acessos de usuários e demais comunicações automáticas.", icon: Settings },
         { chave: "config-email-certidao-mensal", titulo: "Notificação de pendências documentais", descricao: "Destinatários, assunto e conteúdo da cobrança consolidada por competência.", icon: Settings },
+        { chave: "config-provedor-email", titulo: "Provedor de envio", descricao: "Conta SMTP central, segurança, remetente e estado operacional dos e-mails.", icon: Settings },
         { chave: "config-arquivos-storage", titulo: "Arquivos salvos no Storage", descricao: "Capacidade, vínculos, filtros e limpeza protegida.", icon: Database },
         { chave: "config-obras", titulo: "Obras", descricao: "Cadastro mestre de obras e vinculos com empresas.", icon: Database },
         { chave: "config-relatorios-evidencias", titulo: "Relatórios e evidências", descricao: "Resumo copiável e TXT das configurações atuais.", icon: FileText },
@@ -5122,6 +5129,38 @@ export function ConfiguracoesSistema({
                 </div>
             );
 
+        case "config-provedor-email":
+            if (!blocoConfiguracaoVisivel("config-provedor-email")) return null;
+
+            if (blocoConfiguracaoRecolhido("config-provedor-email")) {
+                return renderBlocoConfiguracaoComControle(
+                    "config-provedor-email",
+                    "Provedor de envio",
+                    "Conta SMTP central, segurança, remetente e estado operacional dos e-mails.",
+                    null
+                );
+            }
+
+            return (
+                <div
+                    id="config-provedor-email"
+                    className="h-full scroll-mt-24"
+                >
+                    <ProvedorEmailConfiguracoes
+                        supabase={supabase}
+                        podeAlterar={
+                            podeAlterarConfiguracoesCriticasSistema
+                        }
+                        mensagemBloqueio={
+                            mensagemBloqueioConfiguracoesCriticasSistema
+                        }
+                        controleCard={botaoRecolherBlocoConfiguracao(
+                            "config-provedor-email",
+                            "shrink-0 whitespace-nowrap"
+                        )}
+                    />
+                </div>
+            );
         case "config-arquivos-storage":
             if (!blocoConfiguracaoVisivel("config-arquivos-storage")) return null;
 

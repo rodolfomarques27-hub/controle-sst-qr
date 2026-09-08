@@ -1,6 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { Buffer } from "node:buffer";
 
+import {
+  ErroResolvedorEmail,
+  resolverTransportadorEmailParaEnvio,
+  type TransportadorEmailResolvido,
+} from "../_shared/emailProvedorResolver.ts";
+
 type Registro = Record<string, unknown>;
 type AcoesModulo = Record<string, boolean>;
 
@@ -1236,30 +1242,6 @@ async function carregarAssinatura(
   }
 }
 
-async function criarTransportador(
-  gmailUser: string,
-  gmailAppPassword: string,
-) {
-  const moduloNodemailer =
-    await import(
-      "npm:nodemailer@6.9.16"
-    );
-
-  const nodemailer =
-    moduloNodemailer.default;
-
-  return nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
-    auth: {
-      user:
-        gmailUser,
-      pass:
-        gmailAppPassword,
-    },
-  });
-}
 
 function classificarErroEnvio(
   erro: unknown,
@@ -1315,6 +1297,33 @@ function classificarErroEnvio(
     descricao.includes("connect")
   ) {
     return "PROVEDOR_INDISPONIVEL";
+  }
+
+  return "ERRO_INTERNO";
+}
+
+function classificarErroResolvedor(
+  erro: unknown,
+) {
+  if (
+    erro instanceof
+      ErroResolvedorEmail
+  ) {
+    if (
+      erro.codigo ===
+        "PROVEDOR_NAO_CONFIGURADO" ||
+      erro.codigo ===
+        "PROVEDOR_CENTRAL_INVALIDO"
+    ) {
+      return "SMTP_NAO_CONFIGURADO";
+    }
+
+    if (
+      erro.codigo ===
+        "PROVEDOR_CENTRAL_INDISPONIVEL"
+    ) {
+      return "PROVEDOR_INDISPONIVEL";
+    }
   }
 
   return "ERRO_INTERNO";
@@ -2321,43 +2330,48 @@ Deno.serve(
           historico.id,
         );
 
-      const gmailUser =
-        email(
-          Deno.env.get(
-            "GMAIL_USER",
-          ),
-        );
+      let provedorEmail:
+        TransportadorEmailResolvido;
 
-      const gmailAppPassword =
-        String(
-          Deno.env.get(
-            "GMAIL_APP_PASSWORD",
-          ) || "",
-        );
-
-      if (
-        !emailValido(
-          gmailUser,
-        ) ||
-        !gmailAppPassword
+      try {
+        provedorEmail =
+          await resolverTransportadorEmailParaEnvio(
+            adminClient,
+            {
+              nomeRemetenteFallback:
+                remetenteNome,
+            },
+          );
+      } catch (
+        erro
       ) {
+        const codigo =
+          classificarErroResolvedor(
+            erro,
+          );
+
         await marcarErro(
           adminClient,
           envioId,
-          "SMTP_NAO_CONFIGURADO",
+          codigo,
         );
 
         return resposta(
-          500,
+          codigo ===
+            "PROVEDOR_INDISPONIVEL"
+            ? 502
+            : 500,
           {
             ok:
               false,
 
-            codigo:
-              "SMTP_NAO_CONFIGURADO",
+            codigo,
 
             erro:
-              "Serviço de comunicação não configurado.",
+              codigo ===
+                "SMTP_NAO_CONFIGURADO"
+                ? "Serviço de comunicação não configurado."
+                : "Serviço de comunicação indisponível.",
 
             envioId,
           },
@@ -2384,6 +2398,14 @@ Deno.serve(
       if (
         enviandoError
       ) {
+        try {
+          provedorEmail
+            .transportador
+            ?.close?.();
+        } catch {
+          // fechamento best-effort sem log de erro bruto
+        }
+
         await marcarErro(
           adminClient,
           envioId,
@@ -2433,17 +2455,12 @@ Deno.serve(
         };
 
       try {
-        const transporter =
-          await criarTransportador(
-            gmailUser,
-            gmailAppPassword,
-          );
-
         resultadoEnvio =
-          await transporter
+          await provedorEmail
+            .transportador
             .sendMail({
               from:
-                `"${escaparNomeRemetente(remetenteNome)}" <${gmailUser}>`,
+                `"${escaparNomeRemetente(remetenteNome)}" <${provedorEmail.remetenteEmail}>`,
 
               to:
                 usuarioEmail,
@@ -2456,6 +2473,15 @@ Deno.serve(
 
               html:
                 htmlFinal,
+
+              ...(provedorEmail
+                .responderParaPadrao
+                ? {
+                    replyTo:
+                      provedorEmail
+                        .responderParaPadrao,
+                  }
+                : {}),
 
               ...(assinatura
                 ? {
@@ -2493,6 +2519,14 @@ Deno.serve(
             envioId,
           },
         );
+      } finally {
+        try {
+          provedorEmail
+            .transportador
+            ?.close?.();
+        } catch {
+          // fechamento best-effort sem log de erro bruto
+        }
       }
 
       const messageId =

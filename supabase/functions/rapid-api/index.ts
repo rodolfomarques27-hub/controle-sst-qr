@@ -4,7 +4,11 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 import { Buffer } from "node:buffer";
-import nodemailer from "npm:nodemailer";
+import {
+  ErroResolvedorEmail,
+  resolverTransportadorEmailParaEnvio,
+  type TransportadorEmailResolvido,
+} from "../_shared/emailProvedorResolver.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -477,6 +481,50 @@ function montarHtmlEmail(texto: string) {
     );
 }
 
+function normalizarErroProvedorEmail(
+  error: unknown,
+  etapa: "RESOLVER" | "ENVIAR",
+) {
+  if (error instanceof ErroHttp) {
+    return error;
+  }
+
+  if (error instanceof ErroResolvedorEmail) {
+    return new ErroHttp(
+      500,
+      error.codigo ===
+          "PROVEDOR_NAO_CONFIGURADO"
+        ? "O provedor de e-mail SST não está configurado."
+        : "Não foi possível preparar o provedor de e-mail SST.",
+      false,
+    );
+  }
+
+  return new ErroHttp(
+    500,
+    etapa === "RESOLVER"
+      ? "Não foi possível preparar o provedor de e-mail SST."
+      : "Falha interna ao enviar o e-mail SST.",
+    false,
+  );
+}
+
+function fecharTransportadorEmail(
+  provedorEmail: TransportadorEmailResolvido,
+) {
+  try {
+    const fechar =
+      provedorEmail.transportador?.close;
+
+    if (typeof fechar === "function") {
+      fechar.call(
+        provedorEmail.transportador,
+      );
+    }
+  } catch {
+    // Fechamento best-effort.
+  }
+}
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", {
@@ -554,11 +602,6 @@ serve(async (req) => {
       );
     }
 
-    const gmailUser =
-      Deno.env.get("GMAIL_USER");
-
-    const gmailAppPassword =
-      Deno.env.get("GMAIL_APP_PASSWORD");
 
     const supabaseUrl =
       Deno.env.get("SUPABASE_URL");
@@ -566,14 +609,6 @@ serve(async (req) => {
     const supabaseServiceRoleKey =
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (
-      !gmailUser ||
-      !gmailAppPassword
-    ) {
-      throw new ErroHttp(500,
-        "Credenciais GMAIL_USER e GMAIL_APP_PASSWORD não configuradas no Supabase.",
-      );
-    }
 
     if (
       !supabaseUrl ||
@@ -596,16 +631,6 @@ serve(async (req) => {
         },
       );
 
-    const transporter =
-      nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 465,
-        secure: true,
-        auth: {
-          user: gmailUser,
-          pass: gmailAppPassword,
-        },
-      });
 
     const itensNormalizados =
       itens.map((item) => {
@@ -932,21 +957,59 @@ serve(async (req) => {
           ].join("")
         : htmlBase;
 
-    await transporter.sendMail({
-      from: `"${nomeRemetente}" <${gmailUser}>`,
-      to: destinatario,
-      subject: assuntoFinal,
-      text: texto,
-      html,
+    let provedorEmail:
+      TransportadorEmailResolvido;
 
-      ...(assinaturaEmail
-        ? {
-            attachments: [
-              assinaturaEmail,
-            ],
-          }
-        : {}),
-    });
+    try {
+      provedorEmail =
+        await resolverTransportadorEmailParaEnvio(
+          supabaseAdmin,
+          {
+            nomeRemetenteFallback:
+              nomeRemetente,
+          },
+        );
+    } catch (error) {
+      throw normalizarErroProvedorEmail(
+        error,
+        "RESOLVER",
+      );
+    }
+
+    try {
+      await provedorEmail.transportador.sendMail({
+        from:
+          `"${nomeRemetente}" <${provedorEmail.remetenteEmail}>`,
+        to: destinatario,
+        subject: assuntoFinal,
+        text: texto,
+        html,
+
+        ...(provedorEmail.responderParaPadrao
+          ? {
+              replyTo:
+                provedorEmail.responderParaPadrao,
+            }
+          : {}),
+
+        ...(assinaturaEmail
+          ? {
+              attachments: [
+                assinaturaEmail,
+              ],
+            }
+          : {}),
+      });
+    } catch (error) {
+      throw normalizarErroProvedorEmail(
+        error,
+        "ENVIAR",
+      );
+    } finally {
+      fecharTransportadorEmail(
+        provedorEmail,
+      );
+    }
 
     return new Response(
       JSON.stringify({

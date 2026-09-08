@@ -11,6 +11,7 @@ import {
 import {
     criarTransportadorEmail,
     enviarParteEmail,
+    fecharTransportadorEmail,
 } from "./email.ts";
 
 import {
@@ -349,11 +350,12 @@ export async function processarRequisicao(
             envioId,
         );
 
-        const {
-            gmailUser,
-            transporter,
-        } =
-            await criarTransportadorEmail();
+        const provedorEmail =
+            await criarTransportadorEmail(
+                adminClient,
+                contexto.configuracao
+                    .nomeRemetente,
+            );
 
         let erroOperacional =
             "";
@@ -377,8 +379,7 @@ export async function processarRequisicao(
 
                 const mensagemId =
                     await enviarParteEmail({
-                        transporter,
-                        gmailUser,
+                        provedorEmail,
 
                         configuracao:
                             contexto.configuracao,
@@ -453,6 +454,10 @@ export async function processarRequisicao(
                 break;
             }
         }
+
+        fecharTransportadorEmail(
+            provedorEmail,
+        );
 
         const statusFinal =
             resolverStatusFinalEnvio(

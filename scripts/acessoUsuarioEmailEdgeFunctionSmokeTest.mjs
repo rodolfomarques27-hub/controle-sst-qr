@@ -30,7 +30,10 @@ const codigo =
     );
 
 const obrigatorios = [
-    '"npm:nodemailer@6.9.16"',
+    '"../_shared/emailProvedorResolver.ts"',
+    "ErroResolvedorEmail",
+    "resolverTransportadorEmailParaEnvio",
+    "TransportadorEmailResolvido",
     '"acesso_usuario_criado"',
     '"ACESSO_CRIADO"',
     '"acesso_usuario_email_envios"',
@@ -91,6 +94,11 @@ const proibidos = [
     "JSON.stringify(req",
     "erro: erro.message",
     "erro: erro?.message",
+    '"npm:nodemailer@6.9.16"',
+    "GMAIL_USER",
+    "GMAIL_APP_PASSWORD",
+    "smtp.gmail.com",
+    "async function criarTransportador(",
 ];
 
 for (const marcador of proibidos) {
@@ -173,6 +181,88 @@ assert.match(
     codigo,
     /configuracoes[\s\S]*gerenciar_permissoes/,
     "Autorização via Configurações ausente."
+);
+
+assert.match(
+    codigo,
+    /resolverTransportadorEmailParaEnvio\(\s*adminClient,/,
+    "Fluxo não consulta o resolvedor central."
+);
+
+assert.match(
+    codigo,
+    /nomeRemetenteFallback:\s*remetenteNome/,
+    "Fallback não preserva o nome do remetente do modelo."
+);
+
+assert.match(
+    codigo,
+    /provedorEmail\.remetenteEmail/,
+    "From não utiliza o remetente resolvido centralmente."
+);
+
+assert.match(
+    codigo,
+    /provedorEmail[\s\S]*responderParaPadrao/,
+    "Reply-To central não foi integrado."
+);
+
+assert.match(
+    codigo,
+    /classificarErroResolvedor/,
+    "Erros do resolvedor não possuem classificação controlada."
+);
+
+const referenciasGmailDireto =
+    (
+        codigo.match(
+            /GMAIL_USER|GMAIL_APP_PASSWORD|smtp\.gmail\.com/g
+        ) || []
+    ).length;
+
+assert.equal(
+    referenciasGmailDireto,
+    0,
+    "Edge de acesso ainda referencia Gmail diretamente."
+);
+
+const createTransportDireto =
+    (
+        codigo.match(
+            /\bcreateTransport\s*\(/g
+        ) || []
+    ).length;
+
+assert.equal(
+    createTransportDireto,
+    0,
+    "Edge de acesso ainda cria transporte SMTP diretamente."
+);
+
+const sendMailDireto =
+    (
+        codigo.match(
+            /\.sendMail\s*\(/g
+        ) || []
+    ).length;
+
+assert.equal(
+    sendMailDireto,
+    1,
+    "Edge deve manter exatamente um sendMail."
+);
+
+const resolverCalls =
+    (
+        codigo.match(
+            /resolverTransportadorEmailParaEnvio/g
+        ) || []
+    ).length;
+
+assert.equal(
+    resolverCalls,
+    2,
+    "Esperado import + chamada do resolvedor central."
 );
 
 const inicioHistorico =
@@ -272,13 +362,20 @@ assert.equal(
 process.stdout.write(
     [
         "ACESSO_EMAIL_G5M1R3_SMOKE_OK",
+        "ACESSO_EMAIL_E4M1_CENTRAL_PROVIDER_SMOKE_OK",
         `REFERENCIAS_SENHA_TRANSITORIA=${referenciasSenha}`,
         `PERSISTENCIAS_SENHA_HISTORICO=${persistenciasSenha}`,
         `CONSOLE_REFERENCIAS=${consoles}`,
+        `GMAIL_DIRETO_REFERENCIAS=${referenciasGmailDireto}`,
+        `CREATE_TRANSPORT_DIRETO=${createTransportDireto}`,
+        `SENDMAIL_REFERENCIAS=${sendMailDireto}`,
+        `RESOLVER_REFERENCIAS=${resolverCalls}`,
         "SNAPSHOT_AUTORITATIVO=SIM",
         "PRIMEIRO_ACESSO_OBRIGATORIO=SIM",
         "IDEMPOTENCIA_CONFERE_USUARIO=SIM",
         "AUTORIZACAO_ALINHADA_ADMIN_LOGIN=SIM",
+        "PROVEDOR_CENTRAL=SIM",
+        "FALLBACK_LEGADO_VIA_SHARED=SIM",
         "DENO_WORKSPACE_TEMP=SIM",
     ].join("\n") + "\n"
 );

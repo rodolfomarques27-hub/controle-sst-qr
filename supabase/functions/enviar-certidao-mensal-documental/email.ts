@@ -2,11 +2,18 @@ import {
     Buffer,
 } from "node:buffer";
 
+import {
+    ErroResolvedorEmail,
+    resolverTransportadorEmailParaEnvio,
+    type TransportadorEmailResolvido,
+} from "../_shared/emailProvedorResolver.ts";
+
 import type {
     AnexoPdf,
     AssinaturaInline,
     ConfiguracaoEnvio,
     PartePersistida,
+    SupabaseClientAny,
 } from "./types.ts";
 
 import {
@@ -14,16 +21,222 @@ import {
     emailValido,
     escaparHtml,
     normalizarEmail,
+    objetoSeguro,
     textoSeguro,
 } from "./utils.ts";
 
-export type TransportadorEmail = {
-    sendMail(
-        opcoes: Record<string, unknown>,
-    ): Promise<{
-        messageId?: unknown;
-    }>;
-};
+export type CodigoErroEmailSeguro =
+    | "SMTP_NAO_CONFIGURADO"
+    | "ENVIO_RECUSADO"
+    | "ENVIO_TIMEOUT"
+    | "PROVEDOR_INDISPONIVEL"
+    | "ERRO_INTERNO";
+
+export class ErroEmailSeguro extends ErroHttp {
+    codigo: CodigoErroEmailSeguro;
+
+    constructor(
+        status: number,
+        codigo: CodigoErroEmailSeguro,
+        mensagem: string,
+    ) {
+        super(
+            status,
+            `${codigo}: ${mensagem}`,
+        );
+
+        this.name =
+            "ErroEmailSeguro";
+
+        this.codigo =
+            codigo;
+    }
+}
+
+function criarErroEmailSeguro(
+    codigo: CodigoErroEmailSeguro,
+) {
+    if (
+        codigo ===
+        "SMTP_NAO_CONFIGURADO"
+    ) {
+        return new ErroEmailSeguro(
+            500,
+            codigo,
+            "Serviço de comunicação não configurado.",
+        );
+    }
+
+    if (
+        codigo ===
+        "ENVIO_TIMEOUT"
+    ) {
+        return new ErroEmailSeguro(
+            504,
+            codigo,
+            "O provedor de e-mail excedeu o tempo limite da operação.",
+        );
+    }
+
+    if (
+        codigo ===
+        "ENVIO_RECUSADO"
+    ) {
+        return new ErroEmailSeguro(
+            502,
+            codigo,
+            "O provedor de e-mail recusou a entrega da comunicação.",
+        );
+    }
+
+    if (
+        codigo ===
+        "PROVEDOR_INDISPONIVEL"
+    ) {
+        return new ErroEmailSeguro(
+            502,
+            codigo,
+            "Serviço de comunicação indisponível.",
+        );
+    }
+
+    return new ErroEmailSeguro(
+        500,
+        "ERRO_INTERNO",
+        "Não foi possível concluir a comunicação por e-mail.",
+    );
+}
+
+function classificarErroResolvedor(
+    erro: unknown,
+): CodigoErroEmailSeguro {
+    if (
+        erro instanceof
+        ErroResolvedorEmail
+    ) {
+        if (
+            erro.codigo ===
+                "PROVEDOR_NAO_CONFIGURADO" ||
+            erro.codigo ===
+                "PROVEDOR_CENTRAL_INVALIDO"
+        ) {
+            return "SMTP_NAO_CONFIGURADO";
+        }
+
+        if (
+            erro.codigo ===
+            "PROVEDOR_CENTRAL_INDISPONIVEL"
+        ) {
+            return "PROVEDOR_INDISPONIVEL";
+        }
+    }
+
+    return "ERRO_INTERNO";
+}
+
+function classificarErroEnvio(
+    erro: unknown,
+): CodigoErroEmailSeguro {
+    const registro =
+        objetoSeguro(
+            erro,
+        );
+
+    const descricao =
+        [
+            textoSeguro(
+                registro.code,
+                100,
+            ),
+
+            textoSeguro(
+                registro.message,
+                500,
+            ),
+
+            textoSeguro(
+                registro.responseCode,
+                100,
+            ),
+
+            textoSeguro(
+                registro.command,
+                100,
+            ),
+        ]
+            .join(" ")
+            .toLowerCase();
+
+    if (
+        descricao.includes(
+            "timeout",
+        ) ||
+        descricao.includes(
+            "etimedout",
+        )
+    ) {
+        return "ENVIO_TIMEOUT";
+    }
+
+    if (
+        descricao.includes(
+            "535",
+        ) ||
+        descricao.includes(
+            "eauth",
+        ) ||
+        descricao.includes(
+            "invalid login",
+        ) ||
+        descricao.includes(
+            "authentication",
+        ) ||
+        descricao.includes(
+            "credential",
+        )
+    ) {
+        return "SMTP_NAO_CONFIGURADO";
+    }
+
+    if (
+        descricao.includes(
+            "550",
+        ) ||
+        descricao.includes(
+            "553",
+        ) ||
+        descricao.includes(
+            "rejected",
+        ) ||
+        descricao.includes(
+            "refused",
+        )
+    ) {
+        return "ENVIO_RECUSADO";
+    }
+
+    if (
+        descricao.includes(
+            "econn",
+        ) ||
+        descricao.includes(
+            "enotfound",
+        ) ||
+        descricao.includes(
+            "eai_again",
+        ) ||
+        descricao.includes(
+            "network",
+        ) ||
+        descricao.includes(
+            "connect",
+        )
+    ) {
+        return "PROVEDOR_INDISPONIVEL";
+    }
+
+    return "ERRO_INTERNO";
+}
 
 export type MensagemEmailMontada = {
     from: string;
@@ -523,77 +736,43 @@ function montarHtmlCorpoEmail({
     );
 }
 
-export async function criarTransportadorEmail(): Promise<{
-    gmailUser: string;
-    transporter: TransportadorEmail;
-}> {
-    const gmailUser =
-        normalizarEmail(
-            Deno.env.get(
-                "GMAIL_USER",
+export async function criarTransportadorEmail(
+    adminClient: SupabaseClientAny,
+    nomeRemetenteFallback: string,
+): Promise<TransportadorEmailResolvido> {
+    try {
+        return await resolverTransportadorEmailParaEnvio(
+            adminClient,
+            {
+                nomeRemetenteFallback,
+            },
+        );
+    } catch (
+        erro
+    ) {
+        throw criarErroEmailSeguro(
+            classificarErroResolvedor(
+                erro,
             ),
         );
-
-    const gmailAppPassword =
-        String(
-            Deno.env.get(
-                "GMAIL_APP_PASSWORD",
-            ) ?? "",
-        );
-
-    if (!emailValido(gmailUser)) {
-        throw new ErroHttp(
-            500,
-            "O usuário Gmail não está configurado corretamente.",
-        );
     }
+}
 
-    if (!gmailAppPassword) {
-        throw new ErroHttp(
-            500,
-            "A senha de aplicativo Gmail não está configurada.",
-        );
+export function fecharTransportadorEmail(
+    provedorEmail: TransportadorEmailResolvido,
+) {
+    try {
+        provedorEmail
+            .transportador
+            ?.close?.();
+    } catch {
+        // Fechamento best-effort. Nunca expor erro bruto do provedor.
     }
-
-    const moduloNodemailer =
-        await import(
-            "npm:nodemailer@6.9.16"
-        );
-
-    const nodemailer =
-        moduloNodemailer.default;
-
-    const transporter =
-        nodemailer.createTransport({
-            host:
-                "smtp.gmail.com",
-
-            port:
-                465,
-
-            secure:
-                true,
-
-            auth: {
-                user:
-                    gmailUser,
-
-                pass:
-                    gmailAppPassword,
-            },
-        });
-
-    return {
-        gmailUser,
-
-        transporter:
-            transporter as unknown as
-                TransportadorEmail,
-    };
 }
 
 export function montarMensagemEmail({
-    gmailUser,
+    remetenteEmail,
+    responderParaPadrao = null,
     configuracao,
     destinatarios,
     copias,
@@ -602,7 +781,8 @@ export function montarMensagemEmail({
     anexos,
     assinatura,
 }: {
-    gmailUser: string;
+    remetenteEmail: string;
+    responderParaPadrao?: string | null;
     configuracao: ConfiguracaoEnvio;
     destinatarios: string[];
     copias: string[];
@@ -613,13 +793,32 @@ export function montarMensagemEmail({
 }): MensagemEmailMontada {
     const usuarioRemetente =
         normalizarEmail(
-            gmailUser,
+            remetenteEmail,
         );
 
     if (!emailValido(usuarioRemetente)) {
         throw new ErroHttp(
             500,
             "O usuário remetente é inválido.",
+        );
+    }
+
+    const responderPara =
+        normalizarEmail(
+            configuracao.responderPara ||
+            responderParaPadrao ||
+            "",
+        );
+
+    if (
+        responderPara &&
+        !emailValido(
+            responderPara,
+        )
+    ) {
+        throw new ErroHttp(
+            500,
+            "O endereço de resposta é inválido.",
         );
     }
 
@@ -749,10 +948,10 @@ export function montarMensagemEmail({
             }
             : {}),
 
-        ...(configuracao.responderPara
+        ...(responderPara
             ? {
                 replyTo:
-                    configuracao.responderPara,
+                    responderPara,
             }
             : {}),
 
@@ -773,8 +972,7 @@ export function montarMensagemEmail({
 }
 
 export async function enviarParteEmail({
-    transporter,
-    gmailUser,
+    provedorEmail,
     configuracao,
     destinatarios,
     copias,
@@ -783,8 +981,7 @@ export async function enviarParteEmail({
     anexos,
     assinatura,
 }: {
-    transporter: TransportadorEmail;
-    gmailUser: string;
+    provedorEmail: TransportadorEmailResolvido;
     configuracao: ConfiguracaoEnvio;
     destinatarios: string[];
     copias: string[];
@@ -795,7 +992,12 @@ export async function enviarParteEmail({
 }) {
     const mensagem =
         montarMensagemEmail({
-            gmailUser,
+            remetenteEmail:
+                provedorEmail.remetenteEmail,
+
+            responderParaPadrao:
+                provedorEmail.responderParaPadrao,
+
             configuracao,
             destinatarios,
             copias,
@@ -805,14 +1007,26 @@ export async function enviarParteEmail({
             assinatura,
         });
 
-    const resultado =
-        await transporter.sendMail(
-            mensagem as unknown as
-                Record<string, unknown>,
-        );
+    try {
+        const resultado =
+            await provedorEmail
+                .transportador
+                .sendMail(
+                    mensagem as unknown as
+                        Record<string, unknown>,
+                );
 
-    return textoSeguro(
-        resultado?.messageId,
-        1000,
-    );
+        return textoSeguro(
+            resultado?.messageId,
+            1000,
+        );
+    } catch (
+        erro
+    ) {
+        throw criarErroEmailSeguro(
+            classificarErroEnvio(
+                erro,
+            ),
+        );
+    }
 }

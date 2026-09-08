@@ -92,7 +92,7 @@ const parte = {
 
 const mensagem =
     montarMensagemEmail({
-        gmailUser:
+        remetenteEmail:
             "safescan@example.com",
 
         configuracao,
@@ -112,6 +112,84 @@ const mensagem =
         assinatura:
             null,
     });
+
+assert.equal(
+    mensagem.from,
+    "\"SafeScan Brasil\" <safescan@example.com>",
+    "O nome visual da Certidão deve ser preservado e o endereço real deve vir do provedor.",
+);
+
+const mensagemComReplyPadrao =
+    montarMensagemEmail({
+        remetenteEmail:
+            "safescan@example.com",
+
+        responderParaPadrao:
+            "reply-central@example.com",
+
+        configuracao,
+
+        destinatarios:
+            configuracao.destinatarios,
+
+        copias: [],
+
+        parte,
+
+        corpo:
+            corpoOriginal,
+
+        anexos: [],
+
+        assinatura:
+            null,
+    });
+
+assert.equal(
+    mensagemComReplyPadrao.replyTo,
+    "reply-central@example.com",
+    "O reply-to central deve ser usado quando a Certidão não possui override.",
+);
+
+const configuracaoComReplyEspecifico = {
+    ...configuracao,
+
+    responderPara:
+        "reply-certidao@example.com",
+};
+
+const mensagemComReplyEspecifico =
+    montarMensagemEmail({
+        remetenteEmail:
+            "safescan@example.com",
+
+        responderParaPadrao:
+            "reply-central@example.com",
+
+        configuracao:
+            configuracaoComReplyEspecifico,
+
+        destinatarios:
+            configuracao.destinatarios,
+
+        copias: [],
+
+        parte,
+
+        corpo:
+            corpoOriginal,
+
+        anexos: [],
+
+        assinatura:
+            null,
+    });
+
+assert.equal(
+    mensagemComReplyEspecifico.replyTo,
+    "reply-certidao@example.com",
+    "O reply-to específico da Certidão deve prevalecer sobre o padrão central.",
+);
 
 assert.equal(
     mensagem.attachments,
@@ -283,7 +361,7 @@ const assinatura = {
 
 const mensagemComAssinatura =
     montarMensagemEmail({
-        gmailUser:
+        remetenteEmail:
             "safescan@example.com",
 
         configuracao,
@@ -323,7 +401,7 @@ assert.match(
 
 const mensagemEscapada =
     montarMensagemEmail({
-        gmailUser:
+        remetenteEmail:
             "safescan@example.com",
 
         configuracao,
