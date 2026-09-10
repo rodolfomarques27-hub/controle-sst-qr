@@ -17,6 +17,7 @@ import { Card, Header } from "../commonComponents";
 import { validarArquivoAntesUpload, validarListaArquivosAntesUpload } from "../FileUploadAviso";
 import { AlertasTstTreinamentos } from "./AlertasTstTreinamentos";
 import { BaseCertificadosTreinamentos } from "./BaseCertificadosTreinamentos";
+import { RevisaoTreinamentosPainel } from "./RevisaoTreinamentosPainel";
 import { HistoricoCertificadoDrawer } from "./HistoricoCertificadoDrawer";
 import { FormularioLancamentoCertificado } from "./FormularioLancamentoCertificado";
 import { ModalDivergenciaFuncaoAso } from "./ModalDivergenciaFuncaoAso";
@@ -444,6 +445,7 @@ export function Treinamentos({
         carregando: false,
         erro: "",
     });
+    const [colaboradorRevisao, setColaboradorRevisao] = useState(null);
 
     useEffect(() => {
         const atualizarRelogioHeroTreinamentos = () => {
@@ -649,6 +651,11 @@ export function Treinamentos({
 
     const podeCadastrarTreinamentosSistema = useMemo(
         () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.TREINAMENTOS, ACOES_PERMISSAO_SISTEMA.CADASTRAR),
+        [permissaoSistemaAtual]
+    );
+
+    const podeVisualizarTreinamentosSistema = useMemo(
+        () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.TREINAMENTOS, ACOES_PERMISSAO_SISTEMA.VISUALIZAR),
         [permissaoSistemaAtual]
     );
 
@@ -2604,6 +2611,7 @@ export function Treinamentos({
                                       onVisualizarCertificado={onVisualizarCertificado}
                                     onAbrirHistoricoCertificado={abrirHistoricoCertificado}
                                     onExcluirCertificado={excluirCertificadoSeguro}
+                                    onRevisarTreinamentos={setColaboradorRevisao}
                                     recolhido={cardsTreinamentosRecolhidos.base}
                                     onAlternarRecolhido={() => alternarCardTreinamento("base")}
                                 />
@@ -2614,6 +2622,14 @@ export function Treinamentos({
                     return null;
                 })}
             </div>
+
+            <RevisaoTreinamentosPainel
+                aberto={Boolean(colaboradorRevisao)}
+                colaborador={colaboradorRevisao}
+                podeExecutarPrevia={podeVisualizarTreinamentosSistema}
+                podeConcluirRevisao={podeEditarTreinamentosSistema}
+                onFechar={() => setColaboradorRevisao(null)}
+            />
 
             <ModalDivergenciaFuncaoAso
                 aberto={Boolean(divergenciaFuncaoAso)}
