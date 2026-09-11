@@ -60,7 +60,7 @@ export default function criarSuporteDds() {
     ];
     const LIMITE_PARTICIPANTES_PRIMEIRA_FOLHA_DDS = 10;
     const LIMITE_PARTICIPANTES_FOLHA_CONTINUACAO_DDS = 20;
-    const QUANTIDADE_LINHAS_COMPLEMENTARES_DDS = 6;
+    const QUANTIDADE_LINHAS_COMPLEMENTARES_DDS = 10;
     const aniversariantesDds = [
         { data: "16/06", nome: "Anderson Augusto Pereira" },
         { data: "18/06", nome: "Alcir Pimenta dos Santos" },
@@ -750,7 +750,7 @@ export default function criarSuporteDds() {
 
         return folhas;
     }
-    function criarLinhasComplementaresDds(quantidadeLinhas = 6, numeroInicial = 1) {
+    function criarLinhasComplementaresDds(quantidadeLinhas = 10, numeroInicial = 1) {
         const quantidade = Math.max(0, Number(quantidadeLinhas) || 0);
 
         return Array.from({ length: quantidade }, (_, indice) => ({
@@ -766,7 +766,7 @@ export default function criarSuporteDds() {
         participantes = [],
         limitePrimeiraFolha = 10,
         limiteFolhaContinuacao = 20,
-        quantidadeLinhasComplementares = 6
+        quantidadeLinhasComplementares = 10
     ) {
         const participantesValidos = Array.isArray(participantes)
             ? participantes

@@ -1,6 +1,24 @@
 import { useMemo } from "react";
 import { normalizarFuncaoMaoDeObraDds } from "./DdsPageMaoDeObraSupport";
 
+function obterDataIsoResumoHistoricoDds(valor = "") {
+    const texto = String(valor || "").trim();
+
+    const formatoBr = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(texto);
+
+    if (formatoBr) {
+        return `${formatoBr[3]}-${formatoBr[2]}-${formatoBr[1]}`;
+    }
+
+    const formatoIso = /^(\d{4})-(\d{2})-(\d{2})/.exec(texto);
+
+    if (formatoIso) {
+        return `${formatoIso[1]}-${formatoIso[2]}-${formatoIso[3]}`;
+    }
+
+    return "";
+}
+
 export default function useDdsReciboHistoricoDerivados({
     codigoConferenciaDds,
     conferenciaOficialConcluidaDds,
@@ -8,14 +26,31 @@ export default function useDdsReciboHistoricoDerivados({
     estatisticasConferenciaAssistidaDds,
     fechamentoConferenciaAssistidaDds,
     historicoMensalMaoDeObraDds,
+    mesHistoricoMaoDeObraDds,
+    obterChaveFrequenciaAssistidaDds,
     registroHistoricoMensalConcluidoDds,
     registroScannerDds,
     resultadoFinalApresentacaoDds,
 }) {
     const resumoHistoricoMensalMaoDeObraDds = useMemo(() => {
-        const registros = Array.isArray(historicoMensalMaoDeObraDds) ? historicoMensalMaoDeObraDds : [];
-        const registrosConcluidos = registros.filter((registro) => registroHistoricoMensalConcluidoDds(registro));
+        const registros = Array.isArray(historicoMensalMaoDeObraDds)
+            ? historicoMensalMaoDeObraDds
+            : [];
+
+        const registrosConcluidos = registros.filter(
+            (registro) => registroHistoricoMensalConcluidoDds(registro)
+        );
+
+        const mesSelecionado = String(
+            mesHistoricoMaoDeObraDds || ""
+        ).trim();
+
+        const possuiMesSelecionado = /^\d{4}-\d{2}$/.test(
+            mesSelecionado
+        );
+
         const diasApurados = new Set();
+        const diasChuva = new Set();
         const empresas = new Set();
         const funcoes = new Set();
 
@@ -24,53 +59,138 @@ export default function useDdsReciboHistoricoDerivados({
         registrosConcluidos.forEach((registro) => {
             const dados = registro?.dados || {};
             const conferencia = dados?.conferenciaAssistida || {};
-            const fechamento = conferencia?.fechamento || {};
-            const estatisticas = fechamento?.estatisticas || conferencia?.estatisticas || {};
-            const participantes = Array.isArray(conferencia?.participantes) ? conferencia.participantes : [];
-            const diasAtivos = Array.isArray(conferencia?.diasAtivos) ? conferencia.diasAtivos : [];
+            const frequencia = conferencia?.frequencia || {};
+            const participantes = Array.isArray(conferencia?.participantes)
+                ? conferencia.participantes
+                : [];
+            const diasAtivos = Array.isArray(conferencia?.diasAtivos)
+                ? conferencia.diasAtivos
+                : [];
+            const temasDias = Array.isArray(conferencia?.temasDias)
+                ? conferencia.temasDias
+                : [];
+            const diasSemanaRegistro = Array.isArray(dados?.diasSemana)
+                ? dados.diasSemana
+                : [];
 
-            const presencasRegistro = Number(
-                estatisticas?.presencas ??
-                estatisticas?.homemDia ??
-                fechamento?.resumo?.presencas ??
-                0
-            );
+            const diasAtivosMes = diasAtivos.filter((dia) => {
+                const dataIso = obterDataIsoResumoHistoricoDds(
+                    dia?.data || dia?.dataDds || dia?.dia || ""
+                );
 
-            if (Number.isFinite(presencasRegistro)) {
-                acumuladoPeriodo += presencasRegistro;
+                if (!dataIso) return false;
+
+                return !possuiMesSelecionado ||
+                    dataIso.slice(0, 7) === mesSelecionado;
+            });
+
+            temasDias.forEach((temaDia, indiceDia) => {
+                if (temaDia?.chuvaConfirmada !== true) return;
+
+                const diaSemana = diasSemanaRegistro[indiceDia] || {};
+                const dataIso = obterDataIsoResumoHistoricoDds(
+                    diaSemana?.data || diaSemana?.dataDds || diaSemana?.dia || ""
+                );
+
+                if (!dataIso) return;
+
+                if (
+                    possuiMesSelecionado &&
+                    dataIso.slice(0, 7) !== mesSelecionado
+                ) {
+                    return;
+                }
+
+                diasChuva.add(dataIso);
+            });
+            const empresaNome = String(
+                registro?.empresaNome ||
+                dados?.empresaNome ||
+                dados?.empresa ||
+                ""
+            ).trim();
+
+            if (empresaNome) {
+                empresas.add(empresaNome);
             }
 
-            const empresaNome = String(registro?.empresaNome || dados?.empresaNome || dados?.empresa || "").trim();
-            if (empresaNome) empresas.add(empresaNome);
+            diasAtivosMes.forEach((dia) => {
+                const dataIso = obterDataIsoResumoHistoricoDds(
+                    dia?.data || dia?.dataDds || dia?.dia || ""
+                );
 
-            diasAtivos.forEach((dia) => {
-                const dataDia = String(dia?.data || dia?.dataDds || dia?.dia || "").trim();
-                if (dataDia) diasApurados.add(dataDia);
+                if (dataIso) {
+                    diasApurados.add(dataIso);
+                }
             });
 
             participantes.forEach((participante) => {
-                const funcao = String(participante?.funcao || participante?.cargo || "").trim();
-                if (funcao) funcoes.add(normalizarFuncaoMaoDeObraDds(funcao));
+                const numero =
+                    participante?.numero ||
+                    participante?.ordem ||
+                    participante?.indice ||
+                    "";
+
+                const funcao = String(
+                    participante?.funcao ||
+                    participante?.cargo ||
+                    ""
+                ).trim();
+
+                if (funcao) {
+                    funcoes.add(
+                        normalizarFuncaoMaoDeObraDds(funcao)
+                    );
+                }
+
+                diasAtivosMes.forEach((dia) => {
+                    const chave =
+                        typeof obterChaveFrequenciaAssistidaDds === "function"
+                            ? obterChaveFrequenciaAssistidaDds(numero, dia)
+                            : "";
+
+                    const status = String(
+                        frequencia?.[chave] || ""
+                    )
+                        .trim()
+                        .toLowerCase();
+
+                    if (status === "presente" || status === "p") {
+                        acumuladoPeriodo += 1;
+                    }
+                });
             });
         });
 
         const quantidadeDias = diasApurados.size;
-        const efetivoMedio = quantidadeDias > 0 ? acumuladoPeriodo / quantidadeDias : 0;
+        const efetivoMedio = quantidadeDias > 0
+            ? acumuladoPeriodo / quantidadeDias
+            : 0;
+
         const ddsConcluidos = registrosConcluidos.length;
-        const ddsPendentes = Math.max(registros.length - ddsConcluidos, 0);
+        const ddsPendentes = Math.max(
+            registros.length - ddsConcluidos,
+            0
+        );
 
         return {
             ddsEncontrados: registros.length,
             ddsConcluidos,
             ddsPendentes,
             diasApurados: quantidadeDias,
+            diasChuva: diasChuva.size,
             acumuladoPeriodo,
             efetivoMedio,
             empresas: empresas.size,
             funcoes: funcoes.size,
             possuiPendencias: ddsPendentes > 0,
         };
-    }, [historicoMensalMaoDeObraDds]);
+    }, [
+        historicoMensalMaoDeObraDds,
+        mesHistoricoMaoDeObraDds,
+        obterChaveFrequenciaAssistidaDds,
+        registroHistoricoMensalConcluidoDds,
+    ]);
 
     const reciboConferenciaFinalDds = useMemo(() => {
         if (!conferenciaOficialConcluidaDds || !fechamentoConferenciaAssistidaDds || !resultadoFinalApresentacaoDds?.modoAssistido) {

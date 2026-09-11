@@ -190,11 +190,11 @@ export default function criarComponentesApresentacaoDds({
         );
     }
 
-    function DdsCampoObra({ rotulo = "", valor = "" }) {
+    function DdsCampoObra({ rotulo = "", valor = "", className = "" }) {
         const valorSeguro = String(valor || "-").trim() || "-";
 
         return (
-            <div className="border-b border-r border-slate-300 px-3 py-2 last:border-r-0">
+            <div className={`border-b border-r border-slate-300 px-3 py-2 last:border-r-0 ${className}`.trim()}>
                 <p className="text-[8px] font-black uppercase tracking-wide text-slate-500">
                     {rotulo}
                 </p>
@@ -245,9 +245,17 @@ export default function criarComponentesApresentacaoDds({
                             </div>
                         </header>
 
-                        <section className="mt-2 grid grid-cols-3 overflow-hidden rounded-xl border border-slate-300">
+                        <section className="mt-2 grid grid-cols-4 overflow-hidden rounded-xl border border-slate-300">
                             <DdsCampoObra rotulo="Empresa" valor={dadosDds.empresa} />
-                            <DdsCampoObra rotulo="Obra / Setor" valor={dadosDds.obraSetor} />
+                            <DdsCampoObra
+                                rotulo="Obra / Setor"
+                                valor={dadosDds.identificacaoObra || dadosDds.obraSetor}
+                            />
+                            <DdsCampoObra
+                                rotulo="Obra"
+                                valor={dadosDds.obraNome || dadosDds.obraSetor}
+                                className="col-span-2"
+                            />
                             <DdsCampoObra rotulo="Turno" valor={dadosDds.turno} />
                             <DdsCampoObra
                                 rotulo="Responsável pelo DDS"

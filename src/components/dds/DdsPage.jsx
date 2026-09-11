@@ -122,6 +122,33 @@ const {
     temaDdsSemAtividade,
 });
 
+const PLACEHOLDERS_OBRA_SETOR_DDS = new Set([
+    "",
+    "OBRA / SETOR NAO DEFINIDO",
+    "OBRA/SETOR NAO DEFINIDO",
+    "OBRA NAO INFORMADA",
+    "NAO DEFINIDO",
+]);
+
+function obterObraSetorValidaDds(valor = "") {
+    const texto = String(valor || "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    if (!texto) return "";
+
+    const normalizado = texto
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toUpperCase();
+
+    return PLACEHOLDERS_OBRA_SETOR_DDS.has(normalizado)
+        ? ""
+        : texto;
+}
+
 function escaparHtmlRelatorioAnaliticoDds(valor) {
     return String(valor ?? "").replace(
         /[&<>"']/g,
@@ -2399,6 +2426,49 @@ export function DdsPage({
         });
     }, [empresaSelecionadaDds, obrasEmpresasDds]);
 
+    const obraSelecionadaEfetivaDds = useMemo(() => {
+        const idSelecionado = String(obraSelecionadaIdDds || "").trim();
+
+        if (idSelecionado) {
+            return obrasEmpresaSelecionadaDds.find((obra, indice) =>
+                String(obterIdObraEmpresaDds(obra, indice) || "").trim() === idSelecionado
+            ) || null;
+        }
+
+        return obrasEmpresaSelecionadaDds.length === 1
+            ? obrasEmpresaSelecionadaDds[0]
+            : null;
+    }, [obraSelecionadaIdDds, obrasEmpresaSelecionadaDds]);
+
+    const indiceObraSelecionadaEfetivaDds = obraSelecionadaEfetivaDds
+        ? obrasEmpresaSelecionadaDds.indexOf(obraSelecionadaEfetivaDds)
+        : -1;
+
+    const obraSelecionadaIdEfetivoDds = obraSelecionadaEfetivaDds
+        ? String(
+            obterIdObraEmpresaDds(
+                obraSelecionadaEfetivaDds,
+                indiceObraSelecionadaEfetivaDds >= 0
+                    ? indiceObraSelecionadaEfetivaDds
+                    : 0
+            ) || ""
+        ).trim()
+        : "";
+
+    const obraSelecionadaNomeEfetivoDds = obraSelecionadaEfetivaDds
+        ? obterObraSetorValidaDds(
+            obterNomeObraEmpresaDds(obraSelecionadaEfetivaDds)
+        )
+        : "";
+
+    const obraSelecionadaIdentificacaoEfetivaDds = obraSelecionadaEfetivaDds
+        ? String(
+            obterObraBaseDds(obraSelecionadaEfetivaDds)?.identificacaoObra ||
+            obterObraBaseDds(obraSelecionadaEfetivaDds)?.identificacao_obra ||
+            ""
+        ).replace(/\s+/g, " ").trim()
+        : "";
+
     const inicioSemanaDds = useMemo(
         () => adicionarDiasDds(obterInicioSemanaDds(), deslocamentoSemanasDds * 7),
         [deslocamentoSemanasDds]
@@ -2416,7 +2486,7 @@ export function DdsPage({
             fimSemana: fimSemanaDds,
         });
 
-        const obraSetorSalva = String(obrasSetorPorEmpresaDds?.[empresaSelecionadaChaveDds] || "").trim();
+        const obraSetorSalva = obterObraSetorValidaDds(obrasSetorPorEmpresaDds?.[empresaSelecionadaChaveDds]);
         const fiscalIdealizaFoiSalvoAutomatico = empresaSelecionadaChaveDds
             ? Object.prototype.hasOwnProperty.call(fiscalIdealizaPorEmpresaDds || {}, empresaSelecionadaChaveDds)
             : false;
@@ -2426,7 +2496,9 @@ export function DdsPage({
 
         return {
             ...dadosAutomaticos,
-            obraSetor: obraSetorSalva || dadosAutomaticos.obraSetor,
+            obraNome: obraSelecionadaNomeEfetivoDds || String(dadosAutomaticos.obraNome || "").trim(),
+            identificacaoObra: obraSelecionadaIdentificacaoEfetivaDds || String(dadosAutomaticos.identificacaoObra || dadosAutomaticos.identificacao_obra || "").replace(/\s+/g, " ").trim(),
+            obraSetor: obraSetorSalva || obraSelecionadaNomeEfetivoDds || obterObraSetorValidaDds(dadosAutomaticos.obraSetor) || "Obra / Setor não definido",
             fiscalIdealiza: fiscalIdealizaFoiSalvoAutomatico ? fiscalIdealizaSalvo : dadosAutomaticos.fiscalIdealiza,
         };
     }, [
@@ -2439,6 +2511,8 @@ export function DdsPage({
         obrasSetorPorEmpresaDds,
         fiscalIdealizaPorEmpresaDds,
         empresaSelecionadaChaveDds,
+        obraSelecionadaNomeEfetivoDds,
+        obraSelecionadaIdentificacaoEfetivaDds,
     ]);
 
     const [dadosDds, setDadosDds] = useState(dadosDdsAutomaticos);
@@ -5072,12 +5146,14 @@ export function DdsPage({
         : false;
 
     const obraSetorSalvaEmpresaDds = obraSetorFoiSalvaParaEmpresaDds
-        ? String(obrasSetorPorEmpresaDds?.[empresaSelecionadaChaveDds] || "")
+        ? obterObraSetorValidaDds(obrasSetorPorEmpresaDds?.[empresaSelecionadaChaveDds])
         : "";
 
-    const valorObraSetorDds = obraSetorFoiSalvaParaEmpresaDds
-        ? obraSetorSalvaEmpresaDds
-        : String(dadosDds.obraSetor || "");
+    const valorObraSetorDds =
+        obraSetorSalvaEmpresaDds ||
+        obterObraSetorValidaDds(dadosDds.obraSetor) ||
+        obraSelecionadaNomeEfetivoDds ||
+        "";
 
     const fiscalIdealizaFoiSalvoParaEmpresaDds = empresaSelecionadaChaveDds
         ? Object.prototype.hasOwnProperty.call(fiscalIdealizaPorEmpresaDds || {}, empresaSelecionadaChaveDds)
@@ -5107,9 +5183,12 @@ export function DdsPage({
         setDadosDds({
             ...dadosDdsAutomaticos,
             ...(rascunhoLocal && typeof rascunhoLocal === "object" ? rascunhoLocal : {}),
-            obraSetor: obraSetorFoiSalvaParaEmpresaDds
-                ? obraSetorSalvaEmpresaDds
-                : String(rascunhoLocal?.obraSetor ?? dadosDdsAutomaticos.obraSetor),
+            obraSetor:
+                obraSetorSalvaEmpresaDds ||
+                obterObraSetorValidaDds(rascunhoLocal?.obraSetor) ||
+                obraSelecionadaNomeEfetivoDds ||
+                obterObraSetorValidaDds(dadosDdsAutomaticos.obraSetor) ||
+                "Obra / Setor não definido",
             fiscalIdealiza: fiscalIdealizaFoiSalvoParaEmpresaDds
                 ? fiscalIdealizaSalvoEmpresaDds
                 : String(rascunhoLocal?.fiscalIdealiza ?? dadosDdsAutomaticos.fiscalIdealiza),
@@ -5120,6 +5199,7 @@ export function DdsPage({
         chaveRascunhoDadosDds,
         obraSetorFoiSalvaParaEmpresaDds,
         obraSetorSalvaEmpresaDds,
+        obraSelecionadaNomeEfetivoDds,
         fiscalIdealizaFoiSalvoParaEmpresaDds,
         fiscalIdealizaSalvoEmpresaDds,
     ]);
@@ -5359,6 +5439,8 @@ export function DdsPage({
         estatisticasConferenciaAssistidaDds,
         fechamentoConferenciaAssistidaDds,
         historicoMensalMaoDeObraDds,
+        mesHistoricoMaoDeObraDds,
+        obterChaveFrequenciaAssistidaDds,
         registroHistoricoMensalConcluidoDds,
         registroScannerDds,
         resultadoFinalApresentacaoDds,
@@ -5523,8 +5605,21 @@ export function DdsPage({
         normalizarFuncaoMaoDeObraDds,
         normalizarNomeEmpresaMaoDeObraDds,
         obraSelecionadaIdDds: obraHistoricoIdDds,
+        obraSelecionadaIdentificacaoDds: obraHistoricoSelecionadaDds
+            ? String(
+                obterObraBaseDds(obraHistoricoSelecionadaDds)?.identificacaoObra ||
+                obterObraBaseDds(obraHistoricoSelecionadaDds)?.identificacao_obra ||
+                ""
+            ).trim()
+            : "",
         obraSelecionadaNomeDds: obraHistoricoSelecionadaDds
             ? obterNomeObraEmpresaDds(obraHistoricoSelecionadaDds)
+            : "",
+        obraSelecionadaCidadeDds: obraHistoricoSelecionadaDds
+            ? String(obterObraBaseDds(obraHistoricoSelecionadaDds)?.cidade || "").trim()
+            : "",
+        obraSelecionadaUfDds: obraHistoricoSelecionadaDds
+            ? String(obterObraBaseDds(obraHistoricoSelecionadaDds)?.uf || "").trim().toUpperCase().slice(0, 2)
             : "",
         obterChaveFrequenciaAssistidaDds,
         obterIdEmpresaObjetoDds,
@@ -5553,11 +5648,15 @@ export function DdsPage({
         try {
             const [ano, mes] = String(mesHistoricoMaoDeObraDds || "").split("-").map(Number);
             const empresaId = obterUuidSeguroDds(obterIdEmpresaObjetoDds(empresaHistoricoSelecionadaDds));
+            const obraNome = obraHistoricoSelecionadaDds
+                ? obterNomeObraEmpresaDds(obraHistoricoSelecionadaDds)
+                : "";
             const resultado = consolidarAvaliacaoMensalDds(historicoMensalMaoDeObraDds, {
                 ano,
                 mes,
                 empresaId,
                 obraId: obterUuidSeguroDds(obraHistoricoIdDds),
+                obraNome,
             });
             setAvaliacaoMensalDds(resultado);
         } catch (error) {
@@ -5686,7 +5785,7 @@ export function DdsPage({
         fimSemanaDds,
         folhasContinuacaoDds,
         inicioSemanaDds,
-        obraSelecionadaIdDds,
+        obraSelecionadaIdDds: obraSelecionadaIdEfetivoDds,
         obterIdEmpresaObjetoDds,
         obterUuidSeguroDds,
         orientacoesDdsEditaveis,
@@ -5867,7 +5966,7 @@ export function DdsPage({
                         <label className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
                             <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Obra cadastrada</span>
                             <select
-                                value={obraSelecionadaIdDds}
+                                value={obraSelecionadaIdEfetivoDds}
                                 onChange={(evento) => aplicarObraCadastradaDds(evento.target.value)}
                                 className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-800 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
                             >
@@ -7388,7 +7487,7 @@ export function DdsPage({
 
     {cardDdsAberto("historicoMaoObra") && (
         <>
-        <div className="flex w-full flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-3 xl:grid xl:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_130px_auto_auto_auto_auto] xl:gap-2" onClick={(evento) => evento.stopPropagation()}>
+        <div className="flex w-full flex-wrap items-end gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 p-3 xl:grid xl:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_160px_auto_auto_auto_auto] xl:gap-2" onClick={(evento) => evento.stopPropagation()}>
             <div className="flex min-w-0 flex-[1_1_900px] flex-wrap items-end gap-2 xl:contents">
             <label className="block w-full sm:w-[290px] xl:w-auto xl:min-w-0">
                 <span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500">
@@ -7438,7 +7537,7 @@ export function DdsPage({
                 </select>
             </label>
 
-            <label className="block w-full sm:w-[130px] xl:w-auto xl:min-w-0">
+            <label className="block w-full sm:w-[160px] xl:w-auto xl:min-w-0">
                 <span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500">
                     Mês/Ano
                 </span>
@@ -7494,7 +7593,7 @@ export function DdsPage({
         </div>
     )}
 
-    <div className="mt-3 grid gap-2.5 md:grid-cols-3 xl:grid-cols-7">
+    <div className="mt-3 grid gap-2.5 md:grid-cols-3 xl:grid-cols-8">
         <div className="flex min-h-[58px] flex-col items-center justify-center rounded-xl border border-slate-100 bg-white p-3 text-center">
             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">DDS encontrados</p>
             <p className="mt-1 text-base font-black text-slate-950">{resumoHistoricoMensalMaoDeObraDds.ddsEncontrados}</p>
@@ -7506,6 +7605,10 @@ export function DdsPage({
         <div className="flex min-h-[58px] flex-col items-center justify-center rounded-xl border border-sky-100 bg-sky-50 p-3 text-center">
             <p className="text-[10px] font-black uppercase tracking-wide text-sky-700">Dias apurados</p>
             <p className="mt-1 text-base font-black text-sky-900">{resumoHistoricoMensalMaoDeObraDds.diasApurados}</p>
+        </div>
+        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-xl border border-cyan-100 bg-cyan-50 p-3 text-center">
+            <p className="text-[10px] font-black uppercase tracking-wide text-cyan-700">Dias de chuva</p>
+            <p className="mt-1 text-base font-black text-cyan-900">{resumoHistoricoMensalMaoDeObraDds.diasChuva}</p>
         </div>
         <div className="flex min-h-[58px] flex-col items-center justify-center rounded-xl border border-orange-100 bg-orange-50 p-3 text-center">
             <p className="text-[10px] font-black uppercase tracking-wide text-orange-700">Acumulado</p>

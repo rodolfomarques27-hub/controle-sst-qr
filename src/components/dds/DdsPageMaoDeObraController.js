@@ -15,8 +15,11 @@ export default function criarControladorMaoDeObraDds({
     mesHistoricoMaoDeObraDds,
     normalizarFuncaoMaoDeObraDds,
     normalizarNomeEmpresaMaoDeObraDds,
+    obraSelecionadaCidadeDds,
     obraSelecionadaIdDds,
+    obraSelecionadaIdentificacaoDds,
     obraSelecionadaNomeDds,
+    obraSelecionadaUfDds,
     obterChaveFrequenciaAssistidaDds,
     obterIdEmpresaObjetoDds,
     obterStatusFrequenciaAssistidaDds,
@@ -304,6 +307,24 @@ export default function criarControladorMaoDeObraDds({
             dadosDds.obra
         );
 
+        const identificacaoObra = String(obraSelecionadaIdentificacaoDds || "")
+            .replace(/\s+/g, " ")
+            .trim();
+
+        const cidadeObra = String(obraSelecionadaCidadeDds || "")
+            .replace(/\s+/g, " ")
+            .trim();
+
+        const ufObra = String(obraSelecionadaUfDds || "")
+            .replace(/\s+/g, " ")
+            .trim()
+            .toUpperCase()
+            .slice(0, 2);
+
+        const localizacaoObra = [cidadeObra, ufObra]
+            .filter(Boolean)
+            .join(" / ");
+
         const obterLinha = (empresa, funcao) => {
             const empresaNome = normalizarNomeEmpresaMaoDeObraDds(empresa || empresaPrincipal || "Empresa não informada");
             const funcaoNome = normalizarFuncaoMaoDeObraDds(funcao || "Sem função");
@@ -321,12 +342,16 @@ export default function criarControladorMaoDeObraDds({
             return porEmpresaFuncao.get(chave);
         };
 
+        const datasChuva = new Set();
+
         registros.forEach((registro) => {
             const dadosRegistro = registro?.dados || {};
             const conferencia = dadosRegistro?.conferenciaAssistida || {};
             const frequencia = conferencia?.frequencia || {};
             const participantes = Array.isArray(conferencia?.participantes) ? conferencia.participantes : [];
             const diasAtivos = Array.isArray(conferencia?.diasAtivos) ? conferencia.diasAtivos : [];
+            const temasDias = Array.isArray(conferencia?.temasDias) ? conferencia.temasDias : [];
+            const diasSemanaRegistro = Array.isArray(dadosRegistro?.diasSemana) ? dadosRegistro.diasSemana : [];
             const empresaRegistro =
                 registro?.empresaNome ||
                 dadosRegistro?.empresaNome ||
@@ -334,6 +359,42 @@ export default function criarControladorMaoDeObraDds({
                 empresaPrincipal ||
                 "Empresa não informada";
 
+            diasAtivos.forEach((dia) => {
+                const data = parseDataControleMaoDeObraDds(
+                    dia?.data || dia?.dataDds || dia?.dia || ""
+                );
+
+                if (!data || data.getMonth() !== mesBaseNumero || data.getFullYear() !== anoBase) {
+                    return;
+                }
+
+                diasComLancamento.add(data.getDate());
+            });
+
+            temasDias.forEach((temaDia, indiceDia) => {
+                if (temaDia?.chuvaConfirmada !== true) return;
+
+                const diaSemana = diasSemanaRegistro[indiceDia] || {};
+                const dataChuva = parseDataControleMaoDeObraDds(
+                    diaSemana?.data || diaSemana?.dataDds || diaSemana?.dia || ""
+                );
+
+                if (
+                    !dataChuva ||
+                    dataChuva.getMonth() !== mesBaseNumero ||
+                    dataChuva.getFullYear() !== anoBase
+                ) {
+                    return;
+                }
+
+                const chaveDataChuva = [
+                    dataChuva.getFullYear(),
+                    String(dataChuva.getMonth() + 1).padStart(2, "0"),
+                    String(dataChuva.getDate()).padStart(2, "0"),
+                ].join("-");
+
+                datasChuva.add(chaveDataChuva);
+            });
             participantes.forEach((participante) => {
                 const numero = participante?.numero || participante?.ordem || participante?.indice || "";
                 const empresaParticipante = participante?.empresa || participante?.empresaNome || empresaRegistro;
@@ -354,7 +415,6 @@ export default function criarControladorMaoDeObraDds({
                         linha.dias[diaMes] += 1;
                         linha.total += 1;
                         totaisDia[diaMes] += 1;
-                        diasComLancamento.add(diaMes);
 
                         const totalEmpresaAtual = totaisPorEmpresa.get(linha.empresa) || 0;
                         totaisPorEmpresa.set(linha.empresa, totalEmpresaAtual + 1);
@@ -378,12 +438,17 @@ export default function criarControladorMaoDeObraDds({
         const totalHomemDia = linhas.reduce((total, linha) => total + Number(linha.total || 0), 0);
         const quantidadeDiasLancados = Math.max(diasComLancamento.size, 1);
         const mediaMes = totalHomemDia / quantidadeDiasLancados;
+        const diasChuva = datasChuva.size;
         const empresas = Array.from(totaisPorEmpresa.keys()).sort((a, b) => a.localeCompare(b, "pt-BR"));
 
         return {
             codigo: "HISTORICO-" + mesHistoricoMaoDeObraDds,
             empresaPrincipal,
             obra,
+            identificacaoObra,
+            cidadeObra,
+            ufObra,
+            localizacaoObra,
             periodoInicio: periodo.inicio,
             periodoFim: periodo.fim,
             periodoInicioFormatado: formatarDataControleMaoDeObraDds(periodo.inicio),
@@ -399,6 +464,8 @@ export default function criarControladorMaoDeObraDds({
             totalHomemDia,
             quantidadeDiasLancados,
             mediaMes,
+            diasChuva,
+            datasChuva: Array.from(datasChuva).sort(),
             empresas,
             totaisPorEmpresa,
             registrosOrigem: registrosEncontrados.length,
@@ -446,30 +513,67 @@ export default function criarControladorMaoDeObraDds({
         const colspanConteudoExcel = diasMes.length + 3;
         const colspanTotalExcel = diasMes.length + 5;
         const colunasDiasExcel = diasMes.map(() => '<col style="width:22px" />').join("");
+        const datasChuvaSet = new Set(
+            Array.isArray(dadosControle.datasChuva)
+                ? dadosControle.datasChuva
+                : []
+        );
 
         const thDias = diasMes.map((dia) => {
             const dataDia = new Date(dataBase.getFullYear(), dataBase.getMonth(), dia);
+            const chaveDataDia = [
+                dataDia.getFullYear(),
+                String(dataDia.getMonth() + 1).padStart(2, "0"),
+                String(dataDia.getDate()).padStart(2, "0"),
+            ].join("-");
+            const ehDiaChuva = datasChuvaSet.has(chaveDataDia);
             const classeDia = obterClasseCalendarioMaoDeObraDds(dataDia);
+            const classeChuva = ehDiaChuva ? " dia-chuva" : "";
             const corDia =
-                classeDia.includes("dia-feriado")
+                ehDiaChuva
                     ? "#60a5fa"
-                    : classeDia.includes("dia-domingo")
-                        ? "#ef4444"
-                        : classeDia.includes("dia-sabado")
-                            ? "#facc15"
-                            : "#ffffff";
+                    : classeDia.includes("dia-feriado")
+                        ? "#c084fc"
+                        : classeDia.includes("dia-domingo")
+                            ? "#ef4444"
+                            : classeDia.includes("dia-sabado")
+                                ? "#facc15"
+                                : "#ffffff";
 
-            return '<th class="dia' + classeDia + '" style="color:' + corDia + ';">' + String(dia).padStart(2, "0") + '</th>';
+            return '<th class="dia' + classeDia + classeChuva + '" style="color:' + corDia + ';">' + String(dia).padStart(2, "0") + '</th>';
         }).join("");
 
         const linhasTabela = grupos.map((grupo) => {
             const linhasGrupo = grupo.linhas.map((linha) => {
                 const tdsDias = diasMes.map((dia) => {
                     const valor = linha.dias[dia] || 0;
-                    return '<td class="' + (valor > 0 ? "valor" : "zero") + '">' + valor + '</td>';
+                    const dataDia = new Date(dataBase.getFullYear(), dataBase.getMonth(), dia);
+                    const chaveDataDia = [
+                        dataDia.getFullYear(),
+                        String(dataDia.getMonth() + 1).padStart(2, "0"),
+                        String(dataDia.getDate()).padStart(2, "0"),
+                    ].join("-");
+                    const ehDiaChuva = datasChuvaSet.has(chaveDataDia);
+                    const classeDia = obterClasseCalendarioMaoDeObraDds(dataDia);
+                    const corEspecialDia =
+                        ehDiaChuva
+                            ? "#60a5fa"
+                            : classeDia.includes("dia-feriado")
+                                ? "#c084fc"
+                                : classeDia.includes("dia-domingo")
+                                    ? "#ef4444"
+                                    : "";
+                    const classeValor = valor > 0 ? "valor" : "zero";
+                    const estiloCor = corEspecialDia
+                        ? ' style="color:' + corEspecialDia + ' !important;"'
+                        : "";
+
+                    return '<td class="' + classeValor + '"' + estiloCor + '>' + valor + '</td>';
                 }).join("");
 
-                const mediaItem = linha.total / quantidadeDiasLancados;
+                const mediaItem = quantidadeDiasLancados > 0
+                    ? linha.total / quantidadeDiasLancados
+                    : 0;
 
                 return [
                     '<tr>',
@@ -522,7 +626,8 @@ export default function criarControladorMaoDeObraDds({
             '.dia { background: #334155; color: #ffffff; width: 22px; }',
             '.dia-domingo { color: #ef4444 !important; }',
             '.dia-sabado { color: #facc15 !important; }',
-            '.dia-feriado { color: #60a5fa !important; }',
+            '.dia-feriado { color: #c084fc !important; }',
+            '.dia-chuva { color: #60a5fa !important; }',
             '.funcao { background: #ffffff; color: #0f172a; font-weight: 900; text-align: center; width: 120px; }',
             '.valor { background: #ffffff; color: #047857; font-weight: 900; }',
             '.zero { background: #ffffff; color: #94a3b8; }',
@@ -544,11 +649,11 @@ export default function criarControladorMaoDeObraDds({
             '<tr class="linha-vazia"><td colspan="' + colspanTotalExcel + '"></td></tr>',
             '<tr>',
             margem,
-            '<td class="titulo" colspan="' + colspanConteudoExcel + '">CONTROLE MENSAL DE MÃO DE OBRA CONSOLIDADO (SAFESCAN BRASIL) - OBRA / SETOR: ', escaparHtmlControleMaoDeObraDds(obraTitulo), '</td>',
+            '<td class="titulo" colspan="' + colspanConteudoExcel + '">CONTROLE MENSAL DE MÃO DE OBRA CONSOLIDADO (SAFESCAN BRASIL) - OBRA / SETOR: ', escaparHtmlControleMaoDeObraDds(dadosControle.identificacaoObra || "NÃO INFORMADO"), '</td>',
             '</tr>',
             '<tr>',
             margem,
-            '<td class="subtitulo" colspan="' + colspanConteudoExcel + '">Empresa principal: ', escaparHtmlControleMaoDeObraDds(empresaPrincipal), ' | Obra/Setor: ', escaparHtmlControleMaoDeObraDds(obra), ' | DDS encontrados: ', registrosOrigem, ' | Concluídos: ', registrosConcluidos, '</td>',
+            '<td class="subtitulo" colspan="' + colspanConteudoExcel + '">Empresa principal: ', escaparHtmlControleMaoDeObraDds(empresaPrincipal), ' | Obra/Setor: ', escaparHtmlControleMaoDeObraDds(dadosControle.identificacaoObra || "NÃO INFORMADO"), ' | Obra: ', escaparHtmlControleMaoDeObraDds(obra || "-"), ' | Cidade/UF: ', escaparHtmlControleMaoDeObraDds(dadosControle.localizacaoObra || "-"), ' | DDS encontrados: ', registrosOrigem, ' | Concluídos: ', registrosConcluidos, '</td>',
             '</tr>',
             '<tr>',
             margem,
@@ -560,11 +665,11 @@ export default function criarControladorMaoDeObraDds({
             '</tr>',
             '<tr>',
             margem,
-            '<td class="resumo-linha" colspan="' + colspanConteudoExcel + '">Resumo do período: Efetivo médio ', formatarNumeroMaoDeObraDds(mediaMes), ' | Acumulado do período ', totalHomemDia, ' | Dias apurados ', quantidadeDiasLancados, ' | Empresas ', empresas.length, ' | Calendário aplicado: ', escaparHtmlControleMaoDeObraDds(calendarioRotulo), '</td>',
+            '<td class="resumo-linha" colspan="' + colspanConteudoExcel + '">Resumo do período: Efetivo médio ', formatarNumeroMaoDeObraDds(mediaMes), ' | Acumulado do período ', totalHomemDia, ' | Dias apurados ', quantidadeDiasLancados, ' | Dias de chuva ', dadosControle.diasChuva || 0, ' | Empresas ', empresas.length, ' | Calendário aplicado: ', escaparHtmlControleMaoDeObraDds(calendarioRotulo), '</td>',
             '</tr>',
             '<tr>',
             margem,
-            '<td class="legenda" colspan="' + colspanConteudoExcel + '"><strong>Legenda:</strong> <span style="color:#16a34a;font-size:13px;font-weight:900;">&#9632;</span> Presença registrada &nbsp; <span style="color:#facc15;font-size:13px;font-weight:900;">&#9632;</span> Sábado &nbsp; <span style="color:#ef4444;font-size:13px;font-weight:900;">&#9632;</span> Domingo &nbsp; <span style="color:#60a5fa;font-size:13px;font-weight:900;">&#9632;</span> Feriado</td>',
+            '<td class="legenda" colspan="' + colspanConteudoExcel + '"><strong>Legenda:</strong> <span style="color:#16a34a;font-size:13px;font-weight:900;">&#9632;</span> Presença registrada &nbsp; <span style="color:#facc15;font-size:13px;font-weight:900;">&#9632;</span> Sábado &nbsp; <span style="color:#ef4444;font-size:13px;font-weight:900;">&#9632;</span> Domingo &nbsp; <span style="color:#c084fc;font-size:13px;font-weight:900;">&#9632;</span> Feriado &nbsp; <span style="color:#60a5fa;font-size:13px;font-weight:900;">&#9632;</span> Dia de chuva</td>',
             '</tr>',
             '<tr class="linha-vazia"><td colspan="' + colspanTotalExcel + '"></td></tr>',
             linhasTabela,
@@ -612,31 +717,65 @@ export default function criarControladorMaoDeObraDds({
         } = dadosControle;
 
         const grupos = agruparLinhasControleMaoDeObraDds(linhas);
-        const obraTitulo = String(obra || "NÃO INFORMADO").trim().toUpperCase() || "NÃO INFORMADO";
         const heroUrl = String(dashboardHeroSstDds || "");
         const heroImgHtml = heroUrl ? '<img class="hero-img" src="' + escaparHtmlControleMaoDeObraDds(heroUrl) + '" alt="" />' : "";
         const colunasDiasPdf = diasMes.map(() => '<col class="dia-col" />').join("");
+        const datasChuvaSet = new Set(
+            Array.isArray(dadosControle.datasChuva)
+                ? dadosControle.datasChuva
+                : []
+        );
 
         const thDias = diasMes.map((dia) => {
             const dataDia = new Date(dataBase.getFullYear(), dataBase.getMonth(), dia);
+            const chaveDataDia = [
+                dataDia.getFullYear(),
+                String(dataDia.getMonth() + 1).padStart(2, "0"),
+                String(dataDia.getDate()).padStart(2, "0"),
+            ].join("-");
+            const ehDiaChuva = datasChuvaSet.has(chaveDataDia);
             const classeDia = obterClasseCalendarioMaoDeObraDds(dataDia);
+            const classeChuva = ehDiaChuva ? " dia-chuva" : "";
             const corDia =
-                classeDia.includes("dia-feriado")
+                ehDiaChuva
                     ? "#60a5fa"
-                    : classeDia.includes("dia-domingo")
-                        ? "#ef4444"
-                        : classeDia.includes("dia-sabado")
-                            ? "#facc15"
-                            : "#ffffff";
+                    : classeDia.includes("dia-feriado")
+                        ? "#c084fc"
+                        : classeDia.includes("dia-domingo")
+                            ? "#ef4444"
+                            : classeDia.includes("dia-sabado")
+                                ? "#facc15"
+                                : "#ffffff";
 
-            return '<th class="dia' + classeDia + '" style="color:' + corDia + ';">' + String(dia).padStart(2, "0") + '</th>';
+            return '<th class="dia' + classeDia + classeChuva + '" style="color:' + corDia + ';">' + String(dia).padStart(2, "0") + '</th>';
         }).join("");
 
         const linhasTabela = grupos.map((grupo) => {
             const linhasGrupo = grupo.linhas.map((linha) => {
                 const tdsDias = diasMes.map((dia) => {
                     const valor = linha.dias[dia] || 0;
-                    return '<td class="' + (valor > 0 ? "dia-valor" : "dia-zero") + '">' + valor + '</td>';
+                    const dataDia = new Date(dataBase.getFullYear(), dataBase.getMonth(), dia);
+                    const chaveDataDia = [
+                        dataDia.getFullYear(),
+                        String(dataDia.getMonth() + 1).padStart(2, "0"),
+                        String(dataDia.getDate()).padStart(2, "0"),
+                    ].join("-");
+                    const ehDiaChuva = datasChuvaSet.has(chaveDataDia);
+                    const classeDia = obterClasseCalendarioMaoDeObraDds(dataDia);
+                    const corEspecialDia =
+                        ehDiaChuva
+                            ? "#60a5fa"
+                            : classeDia.includes("dia-feriado")
+                                ? "#c084fc"
+                                : classeDia.includes("dia-domingo")
+                                    ? "#ef4444"
+                                    : "";
+                    const classeValor = valor > 0 ? "dia-valor" : "dia-zero";
+                    const estiloCor = corEspecialDia
+                        ? ' style="color:' + corEspecialDia + ' !important;"'
+                        : "";
+
+                    return '<td class="' + classeValor + '"' + estiloCor + '>' + valor + '</td>';
                 }).join("");
 
                 const mediaItem = quantidadeDiasLancados > 0
@@ -710,10 +849,11 @@ export default function criarControladorMaoDeObraDds({
             '.brand { margin: 0 0 3px; font-size: 9px; font-weight: 900; letter-spacing: .18em; text-transform: uppercase; color: #bbf7d0; }',
             'h1 { margin: 0; font-size: 18px; line-height: 1.1; }',
             '.subtitle { margin: 4px 0 0; font-size: 10px; font-weight: 700; color: #e2e8f0; }',
-            '.cards { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; padding: 7px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }',
+            '.cards { display: grid; grid-template-columns: 1.05fr 1.05fr 1.70fr 1.65fr 1.05fr 1.05fr .65fr .75fr; gap: 5px; padding: 7px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }',
             '.card { border: 1px solid #dbe3ef; border-radius: 8px; background: #fff; padding: 5px 7px; min-height: 38px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }',
             '.card span { display: block; width: 100%; font-size: 7px; line-height: 1.15; text-align: center; text-transform: uppercase; font-weight: 900; color: #64748b; letter-spacing: .08em; }',
             '.card strong { display: block; width: 100%; margin-top: 2px; font-size: 10px; line-height: 1.15; font-weight: 900; text-align: center; color: #0f172a; overflow-wrap: anywhere; }',
+            '.card-location strong { font-size: 9px; white-space: nowrap; overflow-wrap: normal; }',
             '.jornada, .resumo-pdf { margin: 6px 7px 0; border: 1px solid #dbe3ef; border-radius: 8px; background: #f8fafc; padding: 5px 8px; font-size: 9px; font-weight: 900; text-align: center; }',
             '.legenda-pdf { margin: 6px 7px 0; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; border: 1px solid #dbe3ef; border-radius: 8px; background: #fff; padding: 5px 8px; font-size: 8px; font-weight: 800; color: #334155; text-align: center; }',
             '.legenda-item { display: inline-flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; }',
@@ -721,7 +861,8 @@ export default function criarControladorMaoDeObraDds({
             '.cor-presenca { background: #16a34a; }',
             '.cor-sabado { background: #facc15; }',
             '.cor-domingo { background: #ef4444; }',
-            '.cor-feriado { background: #60a5fa; }',
+            '.cor-feriado { background: #c084fc; }',
+            '.cor-chuva { background: #60a5fa; }',
             '.empresa-bloco { margin: 7px; page-break-inside: avoid; }',
             '.empresa-faixa { background: #e2e8f0; color: #0f172a; border: 1px solid #cbd5e1; border-bottom: 0; border-radius: 8px 8px 0 0; padding: 5px 8px; text-align: center; font-size: 10px; font-weight: 900; }',
             'table { width: 100%; border-collapse: collapse; table-layout: fixed; }',
@@ -734,12 +875,24 @@ export default function criarControladorMaoDeObraDds({
             '.funcao { text-align: center; font-weight: 900; color: #0f172a; background: #fff; }',
             '.dia-domingo { color: #ef4444 !important; }',
             '.dia-sabado { color: #facc15 !important; }',
-            '.dia-feriado { color: #60a5fa !important; }',
+            '.dia-feriado { color: #c084fc !important; }',
+            '.dia-chuva { color: #60a5fa !important; }',
             '.dia-valor { color: #047857; font-weight: 900; background: #fff; }',
             '.dia-zero { color: #94a3b8; background: #fff; }',
             '.total { color: #047857; font-weight: 900; background: #fff; }',
             '.media { color: #0f172a; font-weight: 900; background: #fff; }',
             '.linha-total td { background: #f1f5f9; font-weight: 900; border-top: 2px solid #94a3b8; }',
+            '@media print {',
+            '.page { border: 0 !important; overflow: visible !important; min-height: 0 !important; height: auto !important; }',
+            '.hero, .cards, .jornada, .resumo-pdf, .legenda-pdf { page-break-inside: avoid !important; break-inside: avoid !important; }',
+            '.empresa-bloco { page-break-inside: auto !important; break-inside: auto !important; }',
+            '.hero { background: #f8fafc !important; color: #0f172a !important; border-bottom: 1px solid #cbd5e1 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }',
+            '.hero-img { display: block !important; opacity: .36 !important; filter: saturate(1.08) contrast(1); }',
+            '.hero:after { background: rgba(255,255,255,.38) !important; }',
+            '.hero .brand { color: #166534 !important; }',
+            '.hero h1 { color: #0f172a !important; }',
+            '.hero .subtitle { color: #334155 !important; }',
+            '}',
             '</style>',
             '</head>',
             '<body>',
@@ -749,29 +902,32 @@ export default function criarControladorMaoDeObraDds({
             '<div class="hero-content">',
             '<p class="brand">SafeScan Brasil | DDS</p>',
             '<h1>Controle mensal consolidado de mão de obra</h1>',
-            '<p class="subtitle">Obra / setor: ', escaparHtmlControleMaoDeObraDds(obraTitulo), ' — consolidado por empresa/contratada e função a partir do histórico mensal DDS.</p>',
+            '<p class="subtitle">Obra / setor: ', escaparHtmlControleMaoDeObraDds(dadosControle.identificacaoObra || "NÃO INFORMADO"), ' — consolidado por empresa/contratada e função a partir do histórico mensal DDS.</p>',
             '</div>',
             '</section>',
             '<section class="cards">',
             '<div class="card"><span>Empresa principal</span><strong>', escaparHtmlControleMaoDeObraDds(empresaPrincipal || "-"), '</strong></div>',
-            '<div class="card"><span>Obra / setor</span><strong>', escaparHtmlControleMaoDeObraDds(obra || "-"), '</strong></div>',
+            '<div class="card"><span>Obra / setor</span><strong>', escaparHtmlControleMaoDeObraDds(dadosControle.identificacaoObra || "NÃO INFORMADO"), '</strong></div>',
+            '<div class="card"><span>Obra</span><strong>', escaparHtmlControleMaoDeObraDds(obra || "-"), '</strong></div>',
+            '<div class="card card-location"><span>Cidade / UF</span><strong>', escaparHtmlControleMaoDeObraDds(dadosControle.localizacaoObra || "-"), '</strong></div>',
             '<div class="card"><span>Período</span><strong>', periodoInicioFormatado, ' a ', periodoFimFormatado, '</strong></div>',
             '<div class="card"><span>Mês base</span><strong>', escaparHtmlControleMaoDeObraDds(mesBase), '</strong></div>',
             '<div class="card"><span>DDS</span><strong>', registrosConcluidos, '/', registrosOrigem, '</strong></div>',
             '<div class="card"><span>Efetivo médio</span><strong>', formatarNumeroMaoDeObraDds(mediaMes), '</strong></div>',
             '</section>',
             '<section class="jornada">Expediente normal: ', expediente.jornada, ' | Almoço: ', expediente.almoco, ' | DDS: ', expediente.dds, '</section>',
-            '<section class="resumo-pdf">Resumo do período: Efetivo médio ', formatarNumeroMaoDeObraDds(mediaMes), ' | Acumulado do período ', totalHomemDia, ' | Dias apurados ', quantidadeDiasLancados, ' | Empresas ', empresas.length, ' | Calendário aplicado: ', escaparHtmlControleMaoDeObraDds(calendarioRotulo), '</section>',
+            '<section class="resumo-pdf">Resumo do período: Efetivo médio ', formatarNumeroMaoDeObraDds(mediaMes), ' | Acumulado do período ', totalHomemDia, ' | Dias apurados ', quantidadeDiasLancados, ' | Dias de chuva ', dadosControle.diasChuva || 0, ' | Empresas ', empresas.length, ' | Calendário aplicado: ', escaparHtmlControleMaoDeObraDds(calendarioRotulo), '</section>',
             '<section class="legenda-pdf">',
             '<strong>Legenda:</strong>',
             '<span class="legenda-item"><i class="cor-legenda cor-presenca"></i>Presença registrada</span>',
             '<span class="legenda-item"><i class="cor-legenda cor-sabado"></i>Sábado</span>',
             '<span class="legenda-item"><i class="cor-legenda cor-domingo"></i>Domingo</span>',
             '<span class="legenda-item"><i class="cor-legenda cor-feriado"></i>Feriado</span>',
+            '<span class="legenda-item"><i class="cor-legenda cor-chuva"></i>Dia de chuva</span>',
             '</section>',
             linhasTabela,
             '</main>',
-            '<script>window.onload = function(){ window.focus(); window.print(); };</script>',
+            '<script>window.onload = function(){ setTimeout(function(){ window.focus(); window.print(); }, 700); };</script>',
             '</body>',
             '</html>',
         ].join("");

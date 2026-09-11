@@ -113,6 +113,7 @@ function erroCamposComplementaresObraNaoExistem(
         [
             "cep",
             "numero_obra",
+            "identificacao_obra",
             "numero_endereco",
             "tecnico_seguranca_idealiza",
         ]
@@ -155,6 +156,7 @@ function removerCamposComplementaresPayloadObra(
 
     delete restante.cep;
     delete restante.numero_obra;
+    delete restante.identificacao_obra;
     delete restante.numero_endereco;
     delete restante.tecnico_seguranca_idealiza;
 
@@ -328,6 +330,12 @@ function montarPayloadObra(
                 obra.numero_obra
             ),
 
+        identificacao_obra:
+            normalizarTextoObra(
+                obra.identificacaoObra ||
+                obra.identificacao_obra
+            ),
+
         cidade:
             normalizarTextoObra(
                 obra.cidade
@@ -469,6 +477,16 @@ export function normalizarObraBanco(
         numero_obra:
             obra.numero_obra ||
             obra.numeroObra ||
+            "",
+
+        identificacaoObra:
+            obra.identificacao_obra ||
+            obra.identificacaoObra ||
+            "",
+
+        identificacao_obra:
+            obra.identificacao_obra ||
+            obra.identificacaoObra ||
             "",
 
         cidade:

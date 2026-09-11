@@ -103,6 +103,7 @@ const FORMULARIO_OBRA_CONFIGURACOES_INICIAL = {
     nome: "",
     cep: "",
     numeroObra: "",
+    identificacaoObra: "",
     cidade: "",
     uf: "",
     endereco: "",
@@ -134,6 +135,7 @@ function criarFormularioObraConfiguracoes(obra = {}) {
         nome: obra.nome || "",
         cep: obra.cep || "",
         numeroObra: obra.numeroObra || obra.numero_obra || "",
+        identificacaoObra: obra.identificacaoObra || obra.identificacao_obra || "",
         cidade: obra.cidade || "",
         uf: obra.uf || "",
         endereco: obra.endereco || "",
@@ -1849,6 +1851,14 @@ export function ConfiguracoesSistema({
                     ""
                 ).trim(),
 
+            identificacaoObra:
+                String(
+                    formObraConfiguracoes.identificacaoObra ||
+                    ""
+                )
+                    .replace(/\s+/g, " ")
+                    .trim(),
+
             cidade:
                 String(
                     formObraConfiguracoes.cidade ||
@@ -3504,7 +3514,7 @@ export function ConfiguracoesSistema({
                                 </div>
 
                                 <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-12">
-                                    <label className="block xl:col-span-5">
+                                    <label className="block xl:col-span-4">
                                         <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Nome da obra</span>
                                         <input
                                             type="text"
@@ -3525,7 +3535,19 @@ export function ConfiguracoesSistema({
                                             placeholder="Ex.: 001/2026"
                                         />
                                     </label>
-<label className="block xl:col-span-2">
+                                    <label className="block xl:col-span-2">
+                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Identificação da obra</span>
+                                        <input
+                                            type="text"
+                                            value={formObraConfiguracoes.identificacaoObra}
+                                            onChange={(evento) => atualizarCampoObraConfiguracoes("identificacaoObra", evento.target.value)}
+                                            maxLength={80}
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                            placeholder="Ex.: Parte 1 ou Pelotas"
+                                        />
+                                    </label>
+
+                                    <label className="block xl:col-span-2">
                                         <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Status</span>
                                         <select
                                             value={formObraConfiguracoes.status}
@@ -3536,7 +3558,7 @@ export function ConfiguracoesSistema({
                                             <option value="Inativa">Inativa</option>
                                         </select>
                                     </label>
-                                    <label className="block xl:col-span-3">
+                                    <label className="block xl:col-span-2">
                                         <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">CEP</span>
                                         <div className="flex gap-2">
                                             <input

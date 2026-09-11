@@ -96,11 +96,95 @@ function motivoInelegibilidade(registro, periodo) {
     return "";
 }
 
-export function selecionarDdsMensais(registros = [], { ano, mes, empresaId = "", obraId = "" } = {}) {
+function obterObraIdRegistroMensalDds(registro = {}) {
+    return texto(
+        registro?.obraId ||
+        registro?.obra_id ||
+        registro?.dados?.obraId ||
+        registro?.dados?.obra_id ||
+        ""
+    );
+}
+
+function obterObraNomeRegistroMensalDds(registro = {}) {
+    return normalizar(
+        registro?.obraNome ||
+        registro?.obra_nome ||
+        registro?.obra ||
+        registro?.obraSetor ||
+        registro?.dados?.obraNome ||
+        registro?.dados?.obra_nome ||
+        registro?.dados?.obra ||
+        registro?.dados?.obraSetor ||
+        ""
+    );
+}
+
+function construirIdsObraPorNomeMensalDds(registros = []) {
+    const idsPorNome = new Map();
+
+    for (const registro of Array.isArray(registros) ? registros : []) {
+        const obraIdRegistro = obterObraIdRegistroMensalDds(registro);
+        const obraNomeRegistro = obterObraNomeRegistroMensalDds(registro);
+
+        if (!obraIdRegistro || !obraNomeRegistro) continue;
+
+        if (!idsPorNome.has(obraNomeRegistro)) {
+            idsPorNome.set(obraNomeRegistro, new Set());
+        }
+
+        idsPorNome.get(obraNomeRegistro).add(obraIdRegistro);
+    }
+
+    return idsPorNome;
+}
+
+function registroPertenceObraMensalDds(
+    registro = {},
+    { obraId = "", obraNome = "", idsObraPorNome = new Map() } = {}
+) {
+    const obraIdFiltro = texto(obraId);
+
+    if (!obraIdFiltro) return true;
+
+    const obraIdRegistro = obterObraIdRegistroMensalDds(registro);
+
+    if (obraIdRegistro) {
+        return obraIdRegistro === obraIdFiltro;
+    }
+
+    const obraNomeFiltro = normalizar(obraNome);
+    const obraNomeRegistro = obterObraNomeRegistroMensalDds(registro);
+
+    if (
+        !obraNomeFiltro ||
+        !obraNomeRegistro ||
+        obraNomeRegistro !== obraNomeFiltro
+    ) {
+        return false;
+    }
+
+    const idsConhecidosMesmoNome =
+        idsObraPorNome.get(obraNomeRegistro);
+
+    if (
+        !idsConhecidosMesmoNome ||
+        idsConhecidosMesmoNome.size === 0
+    ) {
+        return true;
+    }
+
+    return (
+        idsConhecidosMesmoNome.size === 1 &&
+        idsConhecidosMesmoNome.has(obraIdFiltro)
+    );
+}
+export function selecionarDdsMensais(registros = [], { ano, mes, empresaId = "", obraId = "", obraNome = "" } = {}) {
     const periodo = obterPeriodoMensalDds(ano, mes);
     const vistos = new Map();
     const incluidos = [];
     const excluidos = [];
+    const idsObraPorNome = construirIdsObraPorNomeMensalDds(registros);
 
     for (const registro of Array.isArray(registros) ? registros : []) {
         const codigo = texto(registro?.codigo) || "DDS sem código";
@@ -108,7 +192,16 @@ export function selecionarDdsMensais(registros = [], { ano, mes, empresaId = "",
             excluidos.push({ codigo, motivo: "empresa_divergente" });
             continue;
         }
-        if (obraId && texto(registro?.obraId || registro?.obra_id) !== texto(obraId)) {
+        if (
+            !registroPertenceObraMensalDds(
+                registro,
+                {
+                    obraId,
+                    obraNome,
+                    idsObraPorNome,
+                }
+            )
+        ) {
             excluidos.push({ codigo, motivo: "obra_divergente" });
             continue;
         }
