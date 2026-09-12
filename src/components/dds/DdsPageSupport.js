@@ -1,5 +1,8 @@
 import { obterUrlLogoEmpresa } from "../../services/supabaseServices";
 import { gerarCodigoFuncionario } from "../../services/colaboradorDocumentosService";
+import {
+    colaboradorTemCondicaoTemporariaVigente,
+} from "../../services/colaboradoresCondicoesTemporariasService.js";
 
 export default function criarSuporteDds() {
     const diasDds = [
@@ -276,6 +279,10 @@ export default function criarSuporteDds() {
 
     function colaboradorPodeParticiparDds(colaborador = null) {
         if (!colaborador || typeof colaborador !== "object") return false;
+
+        if (colaboradorTemCondicaoTemporariaVigente(colaborador)) {
+            return false;
+        }
 
         const statusCadastro = normalizarComparacaoDds(
             colaborador.status ||

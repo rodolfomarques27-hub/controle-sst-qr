@@ -15,6 +15,9 @@ import {
 } from "../utils/sstUtils";
 import { resolverFuncaoBasePorMatrizes } from "./funcaoBaseService.js";
 import { mesclarMatrizesFuncaoRemotas } from "./funcoesTreinamentosService.js";
+import {
+    colaboradorTemCondicaoTemporariaVigente,
+} from "./colaboradoresCondicoesTemporariasService.js";
 
 const hoje = new Date();
 
@@ -495,6 +498,10 @@ export function obterFuncaoBaseColaborador(colaborador) {
 }
 
 export function colaboradorContaComoMobilizado(colaborador) {
+    if (colaboradorTemCondicaoTemporariaVigente(colaborador)) {
+        return false;
+    }
+
     const classificacao = statusGeral(colaborador).texto;
 
     return classificacao === "Liberado" || classificacao === "Com pendência";

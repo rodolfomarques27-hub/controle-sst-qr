@@ -19,6 +19,16 @@ import {
     readmitirColaborador,
     obterMensagemErroMovimentacaoColaborador,
 } from "../../services/colaboradoresMovimentacoesService";
+import {
+    TIPOS_CONDICAO_TEMPORARIA,
+    iniciarCondicaoTemporariaColaborador,
+    registrarRetornoCondicaoTemporariaColaborador,
+    obterMensagemErroCondicaoTemporaria,
+    obterRotuloTipoCondicaoTemporaria,
+} from "../../services/colaboradoresCondicoesTemporariasService.js";
+import {
+    carregarHistoricoProfissionalColaborador,
+} from "../../services/colaboradoresHistoricoProfissionalService.js";
 
 function apenasDigitosColaborador(valor = "") {
     return String(valor || "").replace(/\D/g, "");
@@ -99,9 +109,32 @@ export function ModalRevisaoColaborador({
     const [motivoCiclo, setMotivoCiclo] = useState("");
     const [observacaoCiclo, setObservacaoCiclo] = useState("");
     const [statusMobilizacaoNovoCiclo, setStatusMobilizacaoNovoCiclo] = useState("Em análise");
+    const [tipoCondicaoCiclo, setTipoCondicaoCiclo] = useState("FERIAS");
+    const [dataFimPrevistaCondicaoCiclo, setDataFimPrevistaCondicaoCiclo] = useState("");
     const [salvandoCiclo, setSalvandoCiclo] = useState(false);
     const [erroCiclo, setErroCiclo] = useState("");
     const [sucessoCiclo, setSucessoCiclo] = useState("");
+
+    const [historicoProfissional, setHistoricoProfissional] = useState({
+        eventos: [],
+        total: 0,
+        readOnly: true,
+    });
+
+    const [
+        carregandoHistoricoProfissional,
+        setCarregandoHistoricoProfissional,
+    ] = useState(false);
+
+    const [
+        erroHistoricoProfissional,
+        setErroHistoricoProfissional,
+    ] = useState("");
+
+    const [
+        versaoHistoricoProfissional,
+        setVersaoHistoricoProfissional,
+    ] = useState(0);
 
     const idsBaseEdicao = useMemo(() => {
         if (!colaboradorEdicao?.funcao) return [];
@@ -243,6 +276,83 @@ export function ModalRevisaoColaborador({
         colaboradorEdicao?.dataDemissao,
         setColaboradorEdicao,
     ]);
+
+    useEffect(() => {
+        let cancelado = false;
+        let temporizador = null;
+
+        const colaboradorId = String(
+            colaboradorEdicao?.id || ""
+        ).trim();
+
+        if (!colaboradorId) {
+            return undefined;
+        }
+
+        const carregar = async () => {
+            setCarregandoHistoricoProfissional(true);
+            setErroHistoricoProfissional("");
+
+            try {
+                const resultado =
+                    await carregarHistoricoProfissionalColaborador({
+                        supabase,
+                        colaboradorId,
+                    });
+
+                if (cancelado) {
+                    return;
+                }
+
+                setHistoricoProfissional(
+                    resultado || {
+                        eventos: [],
+                        total: 0,
+                        readOnly: true,
+                    }
+                );
+            }
+            catch (erro) {
+                if (cancelado) {
+                    return;
+                }
+
+                setHistoricoProfissional({
+                    eventos: [],
+                    total: 0,
+                    readOnly: true,
+                });
+
+                setErroHistoricoProfissional(
+                    erro?.message ||
+                    "Não foi possível carregar o histórico profissional."
+                );
+            }
+            finally {
+                if (!cancelado) {
+                    setCarregandoHistoricoProfissional(false);
+                }
+            }
+        };
+
+        temporizador = window.setTimeout(
+            () => {
+                void carregar();
+            },
+            0
+        );
+
+        return () => {
+            cancelado = true;
+
+            if (temporizador !== null) {
+                window.clearTimeout(temporizador);
+            }
+        };
+    }, [
+        colaboradorEdicao?.id,
+        versaoHistoricoProfissional,
+    ]);
     if (!colaboradorEdicao) return null;
 
     const statusVinculo = colaboradorEdicao.status || "Ativo";
@@ -269,6 +379,26 @@ export function ModalRevisaoColaborador({
     const estaDesmobilizado =
         statusMobilizacaoChave === "desmobilizado";
 
+    const condicaoTemporariaAberta =
+        colaboradorEdicao.condicaoTemporaria ||
+        null;
+
+    const possuiCondicaoTemporariaAberta =
+        Boolean(
+            condicaoTemporariaAberta?.id &&
+            !String(condicaoTemporariaAberta?.dataRetorno || "").trim()
+        );
+
+    const podeRegistrarAfastamento =
+        vinculoAtivo &&
+        !possuiDemissaoFormal &&
+        !possuiCondicaoTemporariaAberta;
+
+    const podeRegistrarRetorno =
+        vinculoAtivo &&
+        !possuiDemissaoFormal &&
+        possuiCondicaoTemporariaAberta;
+
     const podeDesmobilizar =
         vinculoAtivo &&
         !estaDesmobilizado &&
@@ -294,21 +424,41 @@ export function ModalRevisaoColaborador({
                 titulo: "Desmobilizar da obra",
                 rotuloData: "Data da desmobilização",
                 exigeStatusNovo: false,
+                exigeMotivo: true,
             },
             REMOBILIZAR: {
                 titulo: "Remobilizar",
                 rotuloData: "Data da remobilização",
                 exigeStatusNovo: true,
+                exigeMotivo: true,
             },
             DEMITIR: {
                 titulo: "Registrar demissão",
                 rotuloData: "Data da demissão",
                 exigeStatusNovo: false,
+                exigeMotivo: true,
             },
             READMITIR: {
                 titulo: "Readmitir",
                 rotuloData: "Nova data de admissão",
                 exigeStatusNovo: true,
+                exigeMotivo: true,
+            },
+            AFASTAR: {
+                titulo: "Registrar férias / afastamento",
+                rotuloData: "Data de início",
+                exigeStatusNovo: false,
+                exigeMotivo: true,
+                exigeTipoCondicao: true,
+                exibeFimPrevisto: true,
+            },
+            RETORNAR: {
+                titulo: "Registrar retorno",
+                rotuloData: "Data de retorno",
+                exigeStatusNovo: false,
+                exigeMotivo: false,
+                exigeTipoCondicao: false,
+                exibeFimPrevisto: false,
             },
         }[acaoCiclo] || null;
 
@@ -361,6 +511,8 @@ export function ModalRevisaoColaborador({
         setMotivoCiclo("");
         setObservacaoCiclo("");
         setStatusMobilizacaoNovoCiclo("Em análise");
+        setTipoCondicaoCiclo("FERIAS");
+        setDataFimPrevistaCondicaoCiclo("");
         setErroCiclo("");
         setSucessoCiclo("");
     };
@@ -373,6 +525,8 @@ export function ModalRevisaoColaborador({
         setMotivoCiclo("");
         setObservacaoCiclo("");
         setStatusMobilizacaoNovoCiclo("Em análise");
+        setTipoCondicaoCiclo("FERIAS");
+        setDataFimPrevistaCondicaoCiclo("");
         setErroCiclo("");
     };
 
@@ -391,6 +545,8 @@ export function ModalRevisaoColaborador({
                 REMOBILIZAR: podeRemobilizar,
                 DEMITIR: podeDemitir,
                 READMITIR: podeReadmitir,
+                AFASTAR: podeRegistrarAfastamento,
+                RETORNAR: podeRegistrarRetorno,
             }[acaoCiclo] === true;
 
         if (!acaoPermitida) {
@@ -403,7 +559,10 @@ export function ModalRevisaoColaborador({
             return;
         }
 
-        if (motivoCiclo.trim().length < 3) {
+        if (
+            configuracaoAcaoCiclo?.exigeMotivo &&
+            motivoCiclo.trim().length < 3
+        ) {
             setErroCiclo("Informe um motivo com pelo menos 3 caracteres.");
             return;
         }
@@ -413,6 +572,23 @@ export function ModalRevisaoColaborador({
             !statusMobilizacaoNovoCiclo
         ) {
             setErroCiclo("Informe a nova situação na obra.");
+            return;
+        }
+
+        if (
+            configuracaoAcaoCiclo?.exigeTipoCondicao &&
+            !tipoCondicaoCiclo
+        ) {
+            setErroCiclo("Informe o tipo de férias ou afastamento.");
+            return;
+        }
+
+        if (
+            configuracaoAcaoCiclo?.exibeFimPrevisto &&
+            dataFimPrevistaCondicaoCiclo &&
+            dataFimPrevistaCondicaoCiclo < dataEventoCiclo
+        ) {
+            setErroCiclo("A previsão de término não pode ser anterior ao início.");
             return;
         }
 
@@ -456,12 +632,36 @@ export function ModalRevisaoColaborador({
                         dataDemissao: colaboradorEdicao.dataDemissao || "",
                     });
             }
+            else if (acaoCiclo === "AFASTAR") {
+                resultado =
+                    await iniciarCondicaoTemporariaColaborador({
+                        supabase,
+                        colaboradorId: colaboradorEdicao.id,
+                        tipo: tipoCondicaoCiclo,
+                        dataInicio: dataEventoCiclo,
+                        dataFimPrevista: dataFimPrevistaCondicaoCiclo,
+                        motivo: motivoCiclo,
+                        observacao: observacaoCiclo,
+                    });
+            }
+            else if (acaoCiclo === "RETORNAR") {
+                resultado =
+                    await registrarRetornoCondicaoTemporariaColaborador({
+                        supabase,
+                        colaboradorId: colaboradorEdicao.id,
+                        dataRetorno: dataEventoCiclo,
+                    });
+            }
             else {
                 throw new Error("Ação de ciclo profissional inválida.");
             }
 
             const colaboradorBanco =
                 resultado?.colaborador || {};
+
+            const condicaoBanco =
+                resultado?.condicao ||
+                null;
 
             setColaboradorEdicao((atual) => {
                 if (!atual) return atual;
@@ -484,6 +684,12 @@ export function ModalRevisaoColaborador({
                     dataDemissao:
                         colaboradorBanco.data_demissao ??
                         "",
+                    condicaoTemporaria:
+                        acaoCiclo === "AFASTAR"
+                            ? condicaoBanco
+                            : acaoCiclo === "RETORNAR"
+                                ? null
+                                : atual.condicaoTemporaria || null,
                 };
             });
 
@@ -493,6 +699,8 @@ export function ModalRevisaoColaborador({
                     REMOBILIZAR: "Colaborador remobilizado com sucesso.",
                     DEMITIR: "Demissão registrada com sucesso.",
                     READMITIR: "Readmissão registrada com sucesso.",
+                    AFASTAR: "Férias / afastamento registrado com sucesso.",
+                    RETORNAR: "Retorno registrado com sucesso.",
                 }[acaoCiclo] ||
                 "Movimentação registrada com sucesso.";
 
@@ -501,6 +709,8 @@ export function ModalRevisaoColaborador({
             setMotivoCiclo("");
             setObservacaoCiclo("");
             setStatusMobilizacaoNovoCiclo("Em análise");
+        setTipoCondicaoCiclo("FERIAS");
+        setDataFimPrevistaCondicaoCiclo("");
             setSucessoCiclo(mensagemSucesso);
 
             if (typeof onAtualizarBanco === "function") {
@@ -513,13 +723,18 @@ export function ModalRevisaoColaborador({
                     );
                 }
             }
+
+            setVersaoHistoricoProfissional(
+                (valorAtual) => valorAtual + 1
+            );
         }
         catch (erro) {
-            setErroCiclo(
-                obterMensagemErroMovimentacaoColaborador(
-                    erro
-                )
-            );
+            const mensagemErro =
+                ["AFASTAR", "RETORNAR"].includes(acaoCiclo)
+                    ? obterMensagemErroCondicaoTemporaria(erro)
+                    : obterMensagemErroMovimentacaoColaborador(erro);
+
+            setErroCiclo(mensagemErro);
         }
         finally {
             setSalvandoCiclo(false);
@@ -664,6 +879,30 @@ export function ModalRevisaoColaborador({
                                         {statusMobilizacao}
                                     </p>
                                 </div>
+
+                                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:col-span-2">
+                                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                                        Condição temporária
+                                    </p>
+                                    <p className="mt-1 text-sm font-bold text-slate-900">
+                                        {possuiCondicaoTemporariaAberta
+                                            ? obterRotuloTipoCondicaoTemporaria(condicaoTemporariaAberta.tipo)
+                                            : "Em atividade"}
+                                    </p>
+
+                                    {possuiCondicaoTemporariaAberta ? (
+                                        <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                                            Início: {formatarDataColaboradorCampo(condicaoTemporariaAberta.dataInicio)}
+                                            {condicaoTemporariaAberta.dataFimPrevista
+                                                ? ` · previsão: ${formatarDataColaboradorCampo(condicaoTemporariaAberta.dataFimPrevista)}`
+                                                : ""}
+                                        </p>
+                                    ) : (
+                                        <p className="mt-1 text-xs font-semibold text-emerald-700">
+                                            Sem férias ou afastamento ativo.
+                                        </p>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
@@ -703,6 +942,28 @@ export function ModalRevisaoColaborador({
                                         </button>
                                     ) : null}
 
+                                    {podeRegistrarAfastamento ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => abrirAcaoCiclo("AFASTAR")}
+                                            disabled={!podeEditar || salvandoCiclo}
+                                            className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            Registrar afastamento
+                                        </button>
+                                    ) : null}
+
+                                    {podeRegistrarRetorno ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => abrirAcaoCiclo("RETORNAR")}
+                                            disabled={!podeEditar || salvandoCiclo}
+                                            className="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-bold text-cyan-800 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            Registrar retorno
+                                        </button>
+                                    ) : null}
+
                                     {podeDemitir ? (
                                         <button
                                             type="button"
@@ -728,6 +989,8 @@ export function ModalRevisaoColaborador({
 
                                 {!podeDesmobilizar &&
                                 !podeRemobilizar &&
+                                !podeRegistrarAfastamento &&
+                                !podeRegistrarRetorno &&
                                 !podeDemitir &&
                                 !podeReadmitir ? (
                                     <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-500">
@@ -771,6 +1034,41 @@ export function ModalRevisaoColaborador({
                                                 />
                                             </div>
 
+                                            {configuracaoAcaoCiclo.exigeTipoCondicao ? (
+                                                <div>
+                                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                        Tipo
+                                                    </label>
+                                                    <select
+                                                        value={tipoCondicaoCiclo}
+                                                        onChange={(e) => setTipoCondicaoCiclo(e.target.value)}
+                                                        disabled={salvandoCiclo}
+                                                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                                    >
+                                                        {TIPOS_CONDICAO_TEMPORARIA.map((item) => (
+                                                            <option key={item.codigo} value={item.codigo}>
+                                                                {item.rotulo}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            ) : null}
+
+                                            {configuracaoAcaoCiclo.exibeFimPrevisto ? (
+                                                <div>
+                                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                        Término previsto
+                                                    </label>
+                                                    <input
+                                                        type="date"
+                                                        value={dataFimPrevistaCondicaoCiclo}
+                                                        onChange={(e) => setDataFimPrevistaCondicaoCiclo(e.target.value)}
+                                                        disabled={salvandoCiclo}
+                                                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                                    />
+                                                </div>
+                                            ) : null}
+
                                             {configuracaoAcaoCiclo.exigeStatusNovo ? (
                                                 <div>
                                                     <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
@@ -791,34 +1089,52 @@ export function ModalRevisaoColaborador({
                                             ) : null}
                                         </div>
 
-                                        <div className="mt-3">
-                                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
-                                                Motivo
-                                            </label>
-                                            <input
-                                                value={motivoCiclo}
-                                                onChange={(e) => setMotivoCiclo(e.target.value)}
-                                                disabled={salvandoCiclo}
-                                                maxLength={500}
-                                                placeholder="Informe o motivo da movimentação"
-                                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                            />
-                                        </div>
+                                        {acaoCiclo !== "RETORNAR" ? (
+                                            <>
+                                                <div className="mt-3">
+                                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                        Motivo
+                                                    </label>
+                                                    <input
+                                                        value={motivoCiclo}
+                                                        onChange={(e) => setMotivoCiclo(e.target.value)}
+                                                        disabled={salvandoCiclo}
+                                                        maxLength={500}
+                                                        placeholder="Informe o motivo da movimentação"
+                                                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                                    />
+                                                </div>
 
-                                        <div className="mt-3">
-                                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
-                                                Observação
-                                            </label>
-                                            <textarea
-                                                value={observacaoCiclo}
-                                                onChange={(e) => setObservacaoCiclo(e.target.value)}
-                                                disabled={salvandoCiclo}
-                                                maxLength={2000}
-                                                rows={3}
-                                                placeholder="Opcional"
-                                                className="w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                            />
-                                        </div>
+                                                <div className="mt-3">
+                                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                        Observação
+                                                    </label>
+                                                    <textarea
+                                                        value={observacaoCiclo}
+                                                        onChange={(e) => setObservacaoCiclo(e.target.value)}
+                                                        disabled={salvandoCiclo}
+                                                        maxLength={2000}
+                                                        rows={3}
+                                                        placeholder="Opcional"
+                                                        className="w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                                    />
+                                                </div>
+                                            </>
+                                        ) : null}
+
+                                        {acaoCiclo === "RETORNAR" && condicaoTemporariaAberta ? (
+                                            <div className="mt-3 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-3 text-xs font-semibold leading-5 text-cyan-900">
+                                                <p>
+                                                    {obterRotuloTipoCondicaoTemporaria(condicaoTemporariaAberta.tipo)}
+                                                </p>
+                                                <p className="mt-1 text-cyan-700">
+                                                    Início: {formatarDataColaboradorCampo(condicaoTemporariaAberta.dataInicio)}
+                                                    {condicaoTemporariaAberta.dataFimPrevista
+                                                        ? ` · previsão: ${formatarDataColaboradorCampo(condicaoTemporariaAberta.dataFimPrevista)}`
+                                                        : ""}
+                                                </p>
+                                            </div>
+                                        ) : null}
 
                                         {acaoCiclo === "READMITIR" && colaboradorEdicao.dataDemissao ? (
                                             <p className="mt-3 text-xs font-semibold text-slate-500">
@@ -842,7 +1158,14 @@ export function ModalRevisaoColaborador({
                                                 disabled={
                                                     salvandoCiclo ||
                                                     !dataEventoCiclo ||
-                                                    motivoCiclo.trim().length < 3
+                                                    (
+                                                        configuracaoAcaoCiclo.exigeMotivo &&
+                                                        motivoCiclo.trim().length < 3
+                                                    ) ||
+                                                    (
+                                                        configuracaoAcaoCiclo.exigeTipoCondicao &&
+                                                        !tipoCondicaoCiclo
+                                                    )
                                                 }
                                                 className="rounded-xl bg-slate-950 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                                             >
@@ -851,6 +1174,232 @@ export function ModalRevisaoColaborador({
                                                     : `Confirmar ${configuracaoAcaoCiclo.titulo.toLowerCase()}`}
                                             </button>
                                         </div>
+                                    </div>
+                                ) : null}
+                            </div>
+
+                            {/* C5-HISTORICO-PROFISSIONAL-READONLY */}
+                            <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
+                                    <div>
+                                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                                            Histórico profissional
+                                        </p>
+
+                                        <p className="mt-1 text-xs leading-5 text-slate-500">
+                                            Movimentações de vínculo, obra, férias, afastamentos e retornos.
+                                        </p>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-600">
+                                            Somente leitura
+                                        </span>
+
+                                        <span className="rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-bold text-white">
+                                            {historicoProfissional?.total || 0} evento(s)
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {carregandoHistoricoProfissional ? (
+                                    <div className="px-4 py-5 text-sm font-semibold text-slate-500">
+                                        Carregando histórico profissional...
+                                    </div>
+                                ) : null}
+
+                                {!carregandoHistoricoProfissional &&
+                                erroHistoricoProfissional ? (
+                                    <div
+                                        className="m-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold leading-5 text-red-700"
+                                        role="alert"
+                                    >
+                                        {erroHistoricoProfissional}
+                                    </div>
+                                ) : null}
+
+                                {!carregandoHistoricoProfissional &&
+                                !erroHistoricoProfissional &&
+                                (!Array.isArray(historicoProfissional?.eventos) ||
+                                    historicoProfissional.eventos.length === 0) ? (
+                                    <div className="px-4 py-5 text-sm font-semibold text-slate-500">
+                                        Nenhum evento profissional registrado para este colaborador.
+                                    </div>
+                                ) : null}
+
+                                {!carregandoHistoricoProfissional &&
+                                !erroHistoricoProfissional &&
+                                Array.isArray(historicoProfissional?.eventos) &&
+                                historicoProfissional.eventos.length > 0 ? (
+                                    <div className="max-h-80 overflow-y-auto px-4 py-2">
+                                        {historicoProfissional.eventos.map((evento) => {
+                                            const dataEvento =
+                                                String(
+                                                    evento?.dataReferencia || ""
+                                                )
+                                                    .split("-")
+                                                    .reverse()
+                                                    .join("/") || "-";
+
+                                            const dados =
+                                                evento?.dados &&
+                                                typeof evento.dados === "object"
+                                                    ? evento.dados
+                                                    : {};
+
+                                            const formatarDataHistorico = (valor) => {
+                                                const data = String(
+                                                    valor || ""
+                                                ).trim();
+
+                                                if (!data) return "";
+
+                                                return data
+                                                    .split("-")
+                                                    .reverse()
+                                                    .join("/");
+                                            };
+
+                                            const ehCondicaoTemporaria =
+                                                evento?.origem ===
+                                                "CONDICAO_TEMPORARIA";
+
+                                            return (
+                                                <article
+                                                    key={evento.chave}
+                                                    className="relative border-b border-slate-100 py-4 last:border-b-0"
+                                                >
+                                                    <div className="flex gap-3">
+                                                        <div
+                                                            className={`mt-1.5 h-2.5 w-2.5 flex-none rounded-full ${
+                                                                ehCondicaoTemporaria
+                                                                    ? "bg-amber-500"
+                                                                    : "bg-slate-500"
+                                                            }`}
+                                                        />
+
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="flex flex-wrap items-start justify-between gap-2">
+                                                                <div>
+                                                                    <strong className="block text-sm text-slate-900">
+                                                                        {evento.titulo ||
+                                                                            "Evento profissional"}
+                                                                    </strong>
+
+                                                                    <span className="mt-0.5 block text-xs font-semibold text-slate-500">
+                                                                        {dataEvento}
+                                                                    </span>
+                                                                </div>
+
+                                                                <span
+                                                                    className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${
+                                                                        ehCondicaoTemporaria
+                                                                            ? "bg-amber-50 text-amber-700"
+                                                                            : "bg-slate-100 text-slate-600"
+                                                                    }`}
+                                                                >
+                                                                    {ehCondicaoTemporaria
+                                                                        ? "Condição temporária"
+                                                                        : "Vínculo / obra"}
+                                                                </span>
+                                                            </div>
+
+                                                            {evento.responsavelEmail ? (
+                                                                <p className="mt-2 text-xs leading-5 text-slate-500">
+                                                                    <span className="font-bold text-slate-600">
+                                                                        Responsável:
+                                                                    </span>{" "}
+                                                                    {
+                                                                        evento.responsavelEmail
+                                                                    }
+                                                                </p>
+                                                            ) : null}
+
+                                                            {evento.motivo ? (
+                                                                <p className="mt-1 text-xs leading-5 text-slate-600">
+                                                                    <span className="font-bold">
+                                                                        Motivo:
+                                                                    </span>{" "}
+                                                                    {evento.motivo}
+                                                                </p>
+                                                            ) : null}
+
+                                                            {evento.observacao ? (
+                                                                <p className="mt-1 text-xs leading-5 text-slate-600">
+                                                                    <span className="font-bold">
+                                                                        Observação:
+                                                                    </span>{" "}
+                                                                    {evento.observacao}
+                                                                </p>
+                                                            ) : null}
+
+                                                            {ehCondicaoTemporaria ? (
+                                                                <div className="mt-2 flex flex-wrap gap-2">
+                                                                    {dados.dataInicio ? (
+                                                                        <span className="rounded-lg bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-600">
+                                                                            Início:{" "}
+                                                                            {formatarDataHistorico(
+                                                                                dados.dataInicio
+                                                                            )}
+                                                                        </span>
+                                                                    ) : null}
+
+                                                                    {dados.dataFimPrevista ? (
+                                                                        <span className="rounded-lg bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-600">
+                                                                            Término previsto:{" "}
+                                                                            {formatarDataHistorico(
+                                                                                dados.dataFimPrevista
+                                                                            )}
+                                                                        </span>
+                                                                    ) : null}
+
+                                                                    {dados.dataRetorno ? (
+                                                                        <span className="rounded-lg bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">
+                                                                            Retorno:{" "}
+                                                                            {formatarDataHistorico(
+                                                                                dados.dataRetorno
+                                                                            )}
+                                                                        </span>
+                                                                    ) : null}
+                                                                </div>
+                                                            ) : null}
+
+                                                            {!ehCondicaoTemporaria &&
+                                                            (dados.statusAnterior ||
+                                                                dados.statusNovo ||
+                                                                dados.statusMobilizacaoAnterior ||
+                                                                dados.statusMobilizacaoNovo) ? (
+                                                                <div className="mt-2 grid gap-1 text-[11px] font-semibold text-slate-500">
+                                                                    {dados.statusAnterior ||
+                                                                    dados.statusNovo ? (
+                                                                        <span>
+                                                                            Vínculo:{" "}
+                                                                            {dados.statusAnterior ||
+                                                                                "-"}{" "}
+                                                                            →{" "}
+                                                                            {dados.statusNovo ||
+                                                                                "-"}
+                                                                        </span>
+                                                                    ) : null}
+
+                                                                    {dados.statusMobilizacaoAnterior ||
+                                                                    dados.statusMobilizacaoNovo ? (
+                                                                        <span>
+                                                                            Obra:{" "}
+                                                                            {dados.statusMobilizacaoAnterior ||
+                                                                                "-"}{" "}
+                                                                            →{" "}
+                                                                            {dados.statusMobilizacaoNovo ||
+                                                                                "-"}
+                                                                        </span>
+                                                                    ) : null}
+                                                                </div>
+                                                            ) : null}
+                                                        </div>
+                                                    </div>
+                                                </article>
+                                            );
+                                        })}
                                     </div>
                                 ) : null}
                             </div>

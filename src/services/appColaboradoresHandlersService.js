@@ -16,6 +16,10 @@ import {
 import {
     carregarFuncoesTreinamentosRemotas,
 } from "./funcoesTreinamentosService.js";
+import {
+    agruparCondicoesTemporariasAbertasPorColaborador,
+    listarCondicoesTemporariasAbertasPorColaboradores,
+} from "./colaboradoresCondicoesTemporariasService.js";
 
 const TAMANHO_LOTE_IDS_CERTIFICADOS = 50;
 
@@ -228,7 +232,21 @@ export async function carregarColaboradoresAppService({
         const idsColaboradores = normalizados
             .map((colaborador) => colaborador.id)
             .filter(Boolean);
+        let condicoesTemporariasPorColaborador = {};
         let certificadosPorColaborador = {};
+
+        if (idsColaboradores.length > 0) {
+            const condicoesTemporariasAbertas =
+                await listarCondicoesTemporariasAbertasPorColaboradores({
+                    supabase,
+                    colaboradorIds: idsColaboradores,
+                });
+
+            condicoesTemporariasPorColaborador =
+                agruparCondicoesTemporariasAbertasPorColaborador(
+                    condicoesTemporariasAbertas
+                );
+        }
 
         if (idsColaboradores.length > 0) {
             const certificadosData = [];
@@ -281,6 +299,9 @@ export async function carregarColaboradoresAppService({
 
         const colaboradoresComCertificados = normalizados.map((colaborador) => ({
             ...colaborador,
+            condicaoTemporaria:
+                condicoesTemporariasPorColaborador[colaborador.id] ||
+                null,
             treinamentos: certificadosPorColaborador[colaborador.id] || [],
         }));
 
