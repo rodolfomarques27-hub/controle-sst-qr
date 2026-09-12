@@ -502,12 +502,20 @@ export function montarHistoricoProfissionalColaborador({
 
     const eventosMovimentacoes =
         listaMovimentacoes.map(
-            criarEventoMovimentacao
+            (movimentacao, indice) =>
+                criarEventoMovimentacao(
+                    movimentacao,
+                    indice
+                )
         );
 
     const eventosCondicoes =
         listaCondicoes.flatMap(
-            criarEventosCondicaoTemporaria
+            (condicao, indice) =>
+                criarEventosCondicaoTemporaria(
+                    condicao,
+                    indice
+                )
         );
 
     const eventos =
