@@ -6,7 +6,7 @@ export async function carregarPdfJsDocumental() {
     try {
         if (pdfjsLib?.GlobalWorkerOptions && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
             pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-                "pdfjs-dist/build/pdf.worker.mjs",
+                "pdfjs-dist/build/pdf.worker.min.mjs",
                 import.meta.url
             ).toString();
         }
