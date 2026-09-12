@@ -21,11 +21,13 @@ const INFORMACOES_STATUS_OBRA = {
 };
 
 
-function CampoTexto({ label, value, onChange, placeholder, type = "text", list, children, className = "", inputClassName = "" }) {
+function CampoTexto({ id, name, label, value, onChange, placeholder, type = "text", list, children, className = "", inputClassName = "" }) {
     return (
-        <label className={classNames("novo-colaborador-campo-anterior min-w-0", className)}>
+        <label htmlFor={id} className={classNames("novo-colaborador-campo-anterior min-w-0", className)}>
             <span className="novo-colaborador-label-anterior">{label}</span>
             <input
+                id={id}
+                name={name || id}
                 type={type}
                 value={value || ""}
                 onChange={(evento) => onChange(evento.target.value)}
@@ -38,14 +40,16 @@ function CampoTexto({ label, value, onChange, placeholder, type = "text", list, 
     );
 }
 
-function CampoSelect({ label, value, onChange, children, ajuda, ajudaInline = "", className = "", inputClassName = "" }) {
+function CampoSelect({ id, name, label, value, onChange, children, ajuda, ajudaInline = "", className = "", inputClassName = "" }) {
     return (
-        <label className={classNames("novo-colaborador-campo-anterior min-w-0", className)}>
+        <label htmlFor={id} className={classNames("novo-colaborador-campo-anterior min-w-0", className)}>
             <span className={classNames("novo-colaborador-label-anterior", ajudaInline && "flex flex-wrap items-center gap-2")}> 
                 <span>{label}</span>
                 {ajudaInline && <small className="text-[11px] font-semibold normal-case tracking-normal text-slate-500">{ajudaInline}</small>}
             </span>
             <select
+                id={id}
+                name={name || id}
                 value={value || ""}
                 onChange={(evento) => onChange(evento.target.value)}
                 className={classNames("novo-colaborador-input-anterior", inputClassName)}
@@ -57,14 +61,16 @@ function CampoSelect({ label, value, onChange, children, ajuda, ajudaInline = ""
     );
 }
 
-function CampoFuncaoLivre({ label, value, onChange, funcoesDisponiveis = [], ajuda, className = "" }) {
+function CampoFuncaoLivre({ id, name, label, value, onChange, funcoesDisponiveis = [], ajuda, className = "" }) {
     const valorAtual = String(value || "");
 
     return (
-        <label className={classNames("novo-colaborador-campo-anterior min-w-0", className)}>
+        <label htmlFor={id} className={classNames("novo-colaborador-campo-anterior min-w-0", className)}>
             <span className="novo-colaborador-label-anterior">{label}</span>
             <div className="flex w-full items-stretch gap-2">
                 <input
+                    id={id}
+                    name={name || id}
                     type="text"
                     value={valorAtual}
                     onChange={(evento) => onChange(evento.target.value)}
@@ -73,6 +79,8 @@ function CampoFuncaoLivre({ label, value, onChange, funcoesDisponiveis = [], aju
                 />
                 <div className="relative w-[190px] shrink-0">
                     <select
+                        id={id ? `${id}-selecionar` : undefined}
+                        name={name ? `${name}-selecionar` : id ? `${id}-selecionar` : undefined}
                         aria-label="Selecionar função cadastrada"
                         value=""
                         onChange={(evento) => {
@@ -211,6 +219,8 @@ export function FormularioNovoColaborador({
         <div className="novo-colaborador-layout-anterior">
             <div className="grid gap-3 lg:grid-cols-[1fr_0.72fr_1.55fr]">
                 <CampoTexto
+                    id="novo-colaborador-nome"
+                    name="novo-colaborador-nome"
                     label="Nome completo"
                     value={novo.nome}
                     onChange={(valor) => alterarCampo("nome", valor)}
@@ -219,6 +229,8 @@ export function FormularioNovoColaborador({
                 />
 
                 <CampoTexto
+                    id="novo-colaborador-data-nascimento"
+                    name="novo-colaborador-data-nascimento"
                     label="Data de nascimento"
                     type="text"
                     value={formatarDataColaboradorCampo(novo.dataNascimento)}
@@ -228,6 +240,8 @@ export function FormularioNovoColaborador({
                 />
 
                 <CampoSelect
+                    id="novo-colaborador-empresa"
+                    name="novo-colaborador-empresa"
                     label="Empresa terceirizada:"
                     value={novo.empresaNome}
                     onChange={(valor) => alterarCampo("empresaNome", valor)}
@@ -244,6 +258,8 @@ export function FormularioNovoColaborador({
             </div>
             <div className="grid gap-3 lg:grid-cols-3">
                 <CampoTexto
+                    id="novo-colaborador-cpf"
+                    name="novo-colaborador-cpf"
                     label="CPF"
                     value={novo.cpf}
                     onChange={(valor) => alterarCampo("cpf", formatarCpfColaboradorCampo(valor))}
@@ -251,6 +267,8 @@ export function FormularioNovoColaborador({
                     inputClassName="text-center"
                 />
                 <CampoTexto
+                    id="novo-colaborador-telefone"
+                    name="novo-colaborador-telefone"
                     label="Telefone principal (opcional)"
                     value={novo.telefone}
                     onChange={(valor) => alterarCampo("telefone", formatarTelefoneColaboradorCampo(valor))}
@@ -258,6 +276,8 @@ export function FormularioNovoColaborador({
                     inputClassName="text-center"
                 />
                 <CampoTexto
+                    id="novo-colaborador-data-admissao"
+                    name="novo-colaborador-data-admissao"
                     label="Data de admissão (opcional)"
                     type="text"
                     value={formatarDataColaboradorCampo(novo.dataAdmissao)}
@@ -269,6 +289,8 @@ export function FormularioNovoColaborador({
 
             <div className="grid gap-3 lg:grid-cols-[0.76fr_1.48fr_0.96fr]">
                 <CampoSelect
+                    id="novo-colaborador-situacao-obra"
+                    name="novo-colaborador-situacao-obra"
                     label="Situação na obra"
                     value={novo.statusMobilizacao}
                     onChange={(valor) => alterarCampo("statusMobilizacao", valor)}
@@ -281,6 +303,8 @@ export function FormularioNovoColaborador({
                 </CampoSelect>
 
                 <CampoFuncaoLivre
+                    id="novo-colaborador-funcao"
+                    name="novo-colaborador-funcao"
                     label="Função"
                     value={novo.funcao}
                     onChange={(valor) => alterarCampo("funcao", valor)}
@@ -289,6 +313,8 @@ export function FormularioNovoColaborador({
                 />
 
                 <CampoTexto
+                    id="novo-colaborador-matricula-esocial"
+                    name="novo-colaborador-matricula-esocial"
                     label="Matrícula eSocial (opcional)"
                     value={novo.matricula}
                     onChange={(valor) => alterarCampo("matricula", valor)}
@@ -319,6 +345,8 @@ export function FormularioNovoColaborador({
 
                 <div className="mt-4 grid gap-3 lg:grid-cols-3">
                     <CampoTexto
+                        id="novo-colaborador-contato-emergencia-nome"
+                        name="novo-colaborador-contato-emergencia-nome"
                         label="Nome do contato"
                         value={novo.contatoEmergenciaNome}
                         onChange={(valor) => alterarCampo("contatoEmergenciaNome", valor)}
@@ -326,6 +354,8 @@ export function FormularioNovoColaborador({
                         inputClassName="text-center"
                     />
                     <CampoTexto
+                        id="novo-colaborador-contato-emergencia-parentesco"
+                        name="novo-colaborador-contato-emergencia-parentesco"
                         label="Parentesco"
                         value={novo.contatoEmergenciaParentesco}
                         onChange={(valor) => alterarCampo("contatoEmergenciaParentesco", valor)}
@@ -333,6 +363,8 @@ export function FormularioNovoColaborador({
                         inputClassName="text-center"
                     />
                     <CampoTexto
+                        id="novo-colaborador-contato-emergencia-telefone"
+                        name="novo-colaborador-contato-emergencia-telefone"
                         label="Telefone de emergência"
                         value={novo.contatoEmergenciaTelefone}
                         onChange={(valor) => alterarCampo("contatoEmergenciaTelefone", formatarTelefoneColaboradorCampo(valor))}
@@ -344,6 +376,7 @@ export function FormularioNovoColaborador({
             <div className="novo-colaborador-upload-card-anterior">
                     <input
                         id="novo-colaborador-foto"
+                        name="novo-colaborador-foto"
                         type="file"
                         accept="image/*"
                         onChange={alterarFoto}

@@ -798,8 +798,10 @@ export function ModalRevisaoColaborador({
                 <div className="scrollbar-discreta flex-1 overflow-y-auto px-6 py-5">
                     <div className="grid gap-3 md:grid-cols-2">
                         <div className="md:col-span-2">
-                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Nome completo</label>
+                            <label htmlFor="revisao-colaborador-nome" className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Nome completo</label>
                             <input
+                                id="revisao-colaborador-nome"
+                                name="revisao-colaborador-nome"
                                 value={colaboradorEdicao.nome}
                                 onChange={(e) => atualizarEdicao({ nome: e.target.value })}
                                 className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
@@ -807,8 +809,10 @@ export function ModalRevisaoColaborador({
                         </div>
 
                         <div>
-                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Empresa</label>
+                            <label htmlFor="revisao-colaborador-empresa" className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Empresa</label>
                             <input
+                                id="revisao-colaborador-empresa"
+                                name="revisao-colaborador-empresa"
                                 value={colaboradorEdicao.empresaNome}
                                 onChange={(e) => atualizarEdicao({ empresaNome: e.target.value })}
                                 list="empresas-cadastradas-edicao"
@@ -822,8 +826,10 @@ export function ModalRevisaoColaborador({
                         </div>
 
                         <div>
-                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Função</label>
+                            <label htmlFor="revisao-colaborador-funcao" className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Função</label>
                             <input
+                                id="revisao-colaborador-funcao"
+                                name="revisao-colaborador-funcao"
                                 value={colaboradorEdicao.funcao}
                                 onChange={(e) => atualizarEdicao({ funcao: e.target.value })}
                                 list="funcoes-sugeridas-edicao"
@@ -837,8 +843,10 @@ export function ModalRevisaoColaborador({
                         </div>
 
                         <div>
-                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Matrícula eSocial (opcional)</label>
+                            <label htmlFor="revisao-colaborador-matricula-esocial" className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Matrícula eSocial (opcional)</label>
                             <input
+                                id="revisao-colaborador-matricula-esocial"
+                                name="revisao-colaborador-matricula-esocial"
                                 value={colaboradorEdicao.matricula}
                                 onChange={(e) => atualizarEdicao({ matricula: e.target.value })}
                                 className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
@@ -1022,11 +1030,13 @@ export function ModalRevisaoColaborador({
 
                                         <div className="mt-4 grid gap-3 sm:grid-cols-2">
                                             <div>
-                                                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                <label htmlFor="revisao-colaborador-ciclo-data" className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
                                                     {configuracaoAcaoCiclo.rotuloData}
                                                 </label>
                                                 <input
                                                     type="date"
+                                                    id="revisao-colaborador-ciclo-data"
+                                                    name="revisao-colaborador-ciclo-data"
                                                     value={dataEventoCiclo}
                                                     onChange={(e) => setDataEventoCiclo(e.target.value)}
                                                     disabled={salvandoCiclo}
@@ -1036,10 +1046,12 @@ export function ModalRevisaoColaborador({
 
                                             {configuracaoAcaoCiclo.exigeTipoCondicao ? (
                                                 <div>
-                                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                    <label htmlFor="revisao-colaborador-ciclo-tipo" className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
                                                         Tipo
                                                     </label>
                                                     <select
+                                                        id="revisao-colaborador-ciclo-tipo"
+                                                        name="revisao-colaborador-ciclo-tipo"
                                                         value={tipoCondicaoCiclo}
                                                         onChange={(e) => setTipoCondicaoCiclo(e.target.value)}
                                                         disabled={salvandoCiclo}
@@ -1056,11 +1068,13 @@ export function ModalRevisaoColaborador({
 
                                             {configuracaoAcaoCiclo.exibeFimPrevisto ? (
                                                 <div>
-                                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                    <label htmlFor="revisao-colaborador-ciclo-fim-previsto" className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
                                                         Término previsto
                                                     </label>
                                                     <input
                                                         type="date"
+                                                        id="revisao-colaborador-ciclo-fim-previsto"
+                                                        name="revisao-colaborador-ciclo-fim-previsto"
                                                         value={dataFimPrevistaCondicaoCiclo}
                                                         onChange={(e) => setDataFimPrevistaCondicaoCiclo(e.target.value)}
                                                         disabled={salvandoCiclo}
@@ -1071,10 +1085,12 @@ export function ModalRevisaoColaborador({
 
                                             {configuracaoAcaoCiclo.exigeStatusNovo ? (
                                                 <div>
-                                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                    <label htmlFor="revisao-colaborador-ciclo-status-novo" className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
                                                         Nova situação na obra
                                                     </label>
                                                     <select
+                                                        id="revisao-colaborador-ciclo-status-novo"
+                                                        name="revisao-colaborador-ciclo-status-novo"
                                                         value={statusMobilizacaoNovoCiclo}
                                                         onChange={(e) => setStatusMobilizacaoNovoCiclo(e.target.value)}
                                                         disabled={salvandoCiclo}
@@ -1092,10 +1108,12 @@ export function ModalRevisaoColaborador({
                                         {acaoCiclo !== "RETORNAR" ? (
                                             <>
                                                 <div className="mt-3">
-                                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                    <label htmlFor="revisao-colaborador-ciclo-motivo" className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
                                                         Motivo
                                                     </label>
                                                     <input
+                                                        id="revisao-colaborador-ciclo-motivo"
+                                                        name="revisao-colaborador-ciclo-motivo"
                                                         value={motivoCiclo}
                                                         onChange={(e) => setMotivoCiclo(e.target.value)}
                                                         disabled={salvandoCiclo}
@@ -1106,10 +1124,12 @@ export function ModalRevisaoColaborador({
                                                 </div>
 
                                                 <div className="mt-3">
-                                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                    <label htmlFor="revisao-colaborador-ciclo-observacao" className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
                                                         Observação
                                                     </label>
                                                     <textarea
+                                                        id="revisao-colaborador-ciclo-observacao"
+                                                        name="revisao-colaborador-ciclo-observacao"
                                                         value={observacaoCiclo}
                                                         onChange={(e) => setObservacaoCiclo(e.target.value)}
                                                         disabled={salvandoCiclo}
@@ -1410,19 +1430,23 @@ export function ModalRevisaoColaborador({
                         </section>
 
                         <div>
-                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Data de nascimento</label>
+                            <label htmlFor="revisao-colaborador-data-nascimento" className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Data de nascimento</label>
                             <input
                                 type="text"
                                 inputMode="numeric"
                                 placeholder="dd/mm/aaaa"
+                                id="revisao-colaborador-data-nascimento"
+                                name="revisao-colaborador-data-nascimento"
                                 value={formatarDataColaboradorCampo(colaboradorEdicao.dataNascimento || "")}
                                 onChange={(e) => atualizarEdicao({ dataNascimento: formatarDataColaboradorCampo(e.target.value) })}
                                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                             />
                         </div>
                         <div>
-                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">CPF</label>
+                            <label htmlFor="revisao-colaborador-cpf" className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">CPF</label>
                             <input
+                                id="revisao-colaborador-cpf"
+                                name="revisao-colaborador-cpf"
                                 value={colaboradorEdicao.cpf || ""}
                                 onChange={(e) => atualizarEdicao({ cpf: formatarCpfColaboradorCampo(e.target.value) })}
                                 placeholder="Ex.: 000.000.000-00"
@@ -1431,8 +1455,10 @@ export function ModalRevisaoColaborador({
                         </div>
 
                         <div>
-                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Telefone principal</label>
+                            <label htmlFor="revisao-colaborador-telefone" className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Telefone principal</label>
                             <input
+                                id="revisao-colaborador-telefone"
+                                name="revisao-colaborador-telefone"
                                 value={colaboradorEdicao.telefone || ""}
                                 onChange={(e) => atualizarEdicao({ telefone: formatarTelefoneColaboradorCampo(e.target.value) })}
                                 placeholder="Ex.: (12) 99999-9999"
@@ -1441,11 +1467,13 @@ export function ModalRevisaoColaborador({
                         </div>
 
                         <div>
-                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Data de admissão</label>
+                            <label htmlFor="revisao-colaborador-data-admissao" className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Data de admissão</label>
                             <input
                                 type="text"
                                 inputMode="numeric"
                                 placeholder="dd/mm/aaaa"
+                                id="revisao-colaborador-data-admissao"
+                                name="revisao-colaborador-data-admissao"
                                 value={formatarDataColaboradorCampo(colaboradorEdicao.dataAdmissao || "")}
                                 onChange={(e) => atualizarEdicao({ dataAdmissao: formatarDataColaboradorCampo(e.target.value) })}
                                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
@@ -1455,19 +1483,34 @@ export function ModalRevisaoColaborador({
                         <div className="md:col-span-2 rounded-3xl border border-slate-200 bg-slate-50 p-4">
                             <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Contato de emergência</p>
                             <div className="mt-3 grid gap-3 md:grid-cols-3">
+                                <label htmlFor="revisao-colaborador-contato-emergencia-nome" className="sr-only">
+                                    Nome do contato de emergência
+                                </label>
                                 <input
+                                    id="revisao-colaborador-contato-emergencia-nome"
+                                    name="revisao-colaborador-contato-emergencia-nome"
                                     value={colaboradorEdicao.contatoEmergenciaNome || ""}
                                     onChange={(e) => atualizarEdicao({ contatoEmergenciaNome: e.target.value })}
                                     placeholder="Nome do contato"
                                     className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                 />
+                                <label htmlFor="revisao-colaborador-contato-emergencia-parentesco" className="sr-only">
+                                    Parentesco do contato de emergência
+                                </label>
                                 <input
+                                    id="revisao-colaborador-contato-emergencia-parentesco"
+                                    name="revisao-colaborador-contato-emergencia-parentesco"
                                     value={colaboradorEdicao.contatoEmergenciaParentesco || ""}
                                     onChange={(e) => atualizarEdicao({ contatoEmergenciaParentesco: e.target.value })}
                                     placeholder="Parentesco"
                                     className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                 />
+                                <label htmlFor="revisao-colaborador-contato-emergencia-telefone" className="sr-only">
+                                    Telefone do contato de emergência
+                                </label>
                                 <input
+                                    id="revisao-colaborador-contato-emergencia-telefone"
+                                    name="revisao-colaborador-contato-emergencia-telefone"
                                     value={colaboradorEdicao.contatoEmergenciaTelefone || ""}
                                     onChange={(e) => atualizarEdicao({ contatoEmergenciaTelefone: formatarTelefoneColaboradorCampo(e.target.value) })}
                                     placeholder="Telefone de emergência"
@@ -1476,9 +1519,11 @@ export function ModalRevisaoColaborador({
                             </div>
                         </div>
 
-                        <label className="flex min-h-[46px] cursor-pointer items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+                        <label htmlFor="revisao-colaborador-mostrar-aniversario" className="flex min-h-[46px] cursor-pointer items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
                             <input
                                 type="checkbox"
+                                id="revisao-colaborador-mostrar-aniversario"
+                                name="revisao-colaborador-mostrar-aniversario"
                                 checked={colaboradorEdicao.mostrarAniversarioDashboard !== false}
                                 onChange={(e) => atualizarEdicao({ mostrarAniversarioDashboard: e.target.checked })}
                                 className="h-4 w-4 rounded border-slate-300"
@@ -1536,7 +1581,12 @@ export function ModalRevisaoColaborador({
                                 <p className="mb-2 rounded-xl bg-blue-50 px-3 py-2 text-[11px] font-semibold leading-relaxed text-blue-700 ring-1 ring-blue-100">
                                     CIPA, NR-20 e Brigadista são exigências individuais e devem ser adicionadas manualmente ao colaborador.
                                 </p>
+                                <label htmlFor="revisao-colaborador-adicionar-treinamento" className="sr-only">
+                                    Adicionar treinamento ou documento
+                                </label>
                                 <select
+                                    id="revisao-colaborador-adicionar-treinamento"
+                                    name="revisao-colaborador-adicionar-treinamento"
                                     value=""
                                     onChange={(e) => {
                                         adicionarTreinamentoEdicao(e.target.value);
@@ -1559,11 +1609,13 @@ export function ModalRevisaoColaborador({
                         </div>
 
                         <div className="md:col-span-2">
-                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Foto do colaborador</label>
-                            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm font-medium text-slate-600 hover:bg-slate-100">
+                            <label htmlFor="revisao-colaborador-foto" className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Foto do colaborador</label>
+                            <label htmlFor="revisao-colaborador-foto" className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm font-medium text-slate-600 hover:bg-slate-100">
                                 <Upload className="h-4 w-4" />
                                 {colaboradorEdicao.foto ? colaboradorEdicao.foto.name : colaboradorEdicao.fotoNomeAtual || "Alterar foto do colaborador"}
                                 <input
+                                    id="revisao-colaborador-foto"
+                                    name="revisao-colaborador-foto"
                                     type="file"
                                     accept="image/png,image/jpeg,image/webp"
                                     className="hidden"
