@@ -310,7 +310,7 @@ export function formatarNumeroAuditoriaCampoDireta(valor = "") {
     const encontrado = texto.match(/^AUD-(\d{4})-(\d+)$/i);
     if (!encontrado) return texto;
 
-    return `AUD-${String(encontrado[2]).padStart(4, "0")}-${encontrado[1]}`;
+    return `AUD-${encontrado[1]}-${String(encontrado[2]).padStart(4, "0")}`;
 }
 
 function adicionarLinhaResumoAuditoria(linhas, label, valor, { data = false } = {}) {
@@ -481,8 +481,130 @@ export async function uploadFotoAuditoriaCampoDireta({
     validarArquivoAntesUpload,
     tokenPublico = "",
     publico = false,
+    senhaPublica = "",
 }) {
     if (!arquivo) return "";
+
+    if (publico) {
+        const tokenAuditoria = String(
+            tokenPublico || obterTokenAuditoriaPublicaUrl() || ""
+        ).trim();
+
+        if (!tokenAuditoria) {
+            throw new Error(
+                "Token público da auditoria não localizado para enviar foto."
+            );
+        }
+
+        const otimizadaPublica = await reduzirFotoParaAuditoria(
+            arquivo,
+            {
+                maxLado: 1400,
+                alvoBytes: 800 * 1024,
+            }
+        );
+
+        if (
+            !validarArquivoAntesUpload(
+                otimizadaPublica,
+                "fotoAuditoria"
+            )
+        ) {
+            throw new Error(
+                "A foto ficou acima do limite mesmo após a redução automática."
+            );
+        }
+
+        const mimePublico = String(
+            otimizadaPublica.type ||
+            arquivo.type ||
+            ""
+        ).toLowerCase();
+
+        const tiposPermitidos = new Set([
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+        ]);
+
+        if (!tiposPermitidos.has(mimePublico)) {
+            throw new Error(
+                "Somente imagens JPG, JPEG, PNG ou WEBP podem ser enviadas."
+            );
+        }
+
+        if (
+            Number(otimizadaPublica.size || 0) >
+            4 * 1024 * 1024
+        ) {
+            throw new Error(
+                "Foto fora do tamanho permitido mesmo após a redução automática."
+            );
+        }
+
+        const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+
+            reader.onload = () =>
+                resolve(String(reader.result || ""));
+
+            reader.onerror = () =>
+                reject(
+                    new Error(
+                        "Não foi possível ler a foto selecionada."
+                    )
+                );
+
+            reader.readAsDataURL(otimizadaPublica);
+        });
+
+        const { data, error } =
+            await supabaseClient.functions.invoke(
+                "storage-auditoria-campo-publica",
+                {
+                    body: {
+                        acao: "upload",
+                        tokenAuditoria,
+                        senha: String(
+                            senhaPublica || ""
+                        ).trim(),
+                        referencia: String(
+                            numeroAuditoria || ""
+                        ).trim(),
+                        tipo: String(tipo || "").trim(),
+                        arquivo: {
+                            nome: sanitizarNomeArquivo(
+                                otimizadaPublica.name ||
+                                arquivo.name ||
+                                `${tipo || "foto"}.jpg`
+                            ),
+                            tipo: mimePublico,
+                            base64,
+                        },
+                    },
+                }
+            );
+
+        if (error || data?.ok === false) {
+            throw new Error(
+                data?.erro ||
+                data?.mensagem ||
+                error?.message ||
+                "Falha ao enviar a foto pública da auditoria."
+            );
+        }
+
+        const caminho =
+            String(data?.caminho || "").trim();
+
+        if (!caminho) {
+            throw new Error(
+                "A Edge Function não retornou o caminho da foto enviada."
+            );
+        }
+
+        return caminho;
+    }
 
     const otimizada = await reduzirFotoParaAuditoria(arquivo, { maxLado: 1400, alvoBytes: 800 * 1024 });
 
@@ -498,6 +620,7 @@ export async function uploadFotoAuditoriaCampoDireta({
     if (publico && !tokenSeguro) {
         throw new Error("Token público da auditoria não localizado para enviar foto. Abra o formulário pelo QR Code ou link público atualizado.");
     }
+
 
     const diretorio = publico
         ? `auditorias-publicas/${tokenSeguro}/${numeroSeguro}`
@@ -521,6 +644,66 @@ export async function uploadFotoAuditoriaCampoDireta({
     }
 
     return caminho;
+}
+export async function removerFotosAuditoriaCampoPublica({
+    supabaseClient,
+    caminhos = [],
+    tokenPublico = "",
+    senhaPublica = "",
+} = {}) {
+    const caminhosSeguros = Array.from(
+        new Set(
+            (Array.isArray(caminhos) ? caminhos : [])
+                .map((item) => String(item || "").trim())
+                .filter(Boolean)
+        )
+    );
+
+    if (caminhosSeguros.length === 0) {
+        return {
+            ok: true,
+            removidos: 0,
+        };
+    }
+
+    const tokenAuditoria = String(
+        tokenPublico || obterTokenAuditoriaPublicaUrl() || ""
+    ).trim();
+
+    if (!tokenAuditoria) {
+        throw new Error(
+            "Token público da auditoria não localizado para remover fotos pendentes."
+        );
+    }
+
+    const { data, error } =
+        await supabaseClient.functions.invoke(
+            "storage-auditoria-campo-publica",
+            {
+                body: {
+                    acao: "remove",
+                    tokenAuditoria,
+                    senha: String(
+                        senhaPublica || ""
+                    ).trim(),
+                    caminhos: caminhosSeguros,
+                },
+            }
+        );
+
+    if (error || data?.ok === false) {
+        throw new Error(
+            data?.erro ||
+            data?.mensagem ||
+            error?.message ||
+            "Falha ao remover fotos públicas pendentes da auditoria."
+        );
+    }
+
+    return data || {
+        ok: true,
+        removidos: caminhosSeguros.length,
+    };
 }
 export function montarPayloadAuditoriaCampoDireta({
     formulario,

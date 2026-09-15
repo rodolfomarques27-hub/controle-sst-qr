@@ -44,6 +44,7 @@ import {
     obterContatosEmpresaAuditoriaCampoDireta,
     obterParametrosAuditoriaCampoDiretaUrl,
     uploadFotoAuditoriaCampoDireta,
+    removerFotosAuditoriaCampoPublica,
     validarFormularioAuditoriaCampoDireta,
     formatarTelefoneAuditoriaCampoDireta,
     formatarNumeroAuditoriaCampoDireta,
@@ -816,10 +817,12 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
 
         const caminhosFotosNovasPendentes = [];
         let auditoriaPersistida = false;
+        let uploadPublicoAuditoria = false;
+        let tokenAuditoriaCampo = "";
 
         try {
-            const tokenAuditoriaCampo = tokenAuditoriaPublicaValidado || tokenAcessoAuditoriaCampo || obterParametroUrl("token") || obterParametroUrl("chave");
-            const uploadPublicoAuditoria = Boolean(!usuario && tokenAuditoriaCampo);
+            tokenAuditoriaCampo = tokenAuditoriaPublicaValidado || tokenAcessoAuditoriaCampo || obterParametroUrl("token") || obterParametroUrl("chave");
+            uploadPublicoAuditoria = Boolean(!usuario && tokenAuditoriaCampo);
             const referenciaUploadFotos = `auditoria-pendente-${Date.now()}`;
             const fotoAntesUrl = await uploadFotoAuditoriaCampoDireta({
                 supabaseClient: supabase,
@@ -829,6 +832,9 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 validarArquivoAntesUpload,
                 tokenPublico: tokenAuditoriaCampo,
                 publico: uploadPublicoAuditoria,
+                senhaPublica: uploadPublicoAuditoria
+                    ? senhaAcessoAuditoria.trim()
+                    : "",
             });
 
             if (fotoAntesUrl) {
@@ -843,6 +849,9 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 validarArquivoAntesUpload,
                 tokenPublico: tokenAuditoriaCampo,
                 publico: uploadPublicoAuditoria,
+                senhaPublica: uploadPublicoAuditoria
+                    ? senhaAcessoAuditoria.trim()
+                    : "",
             });
 
             if (fotoDepoisUrl) {
@@ -871,7 +880,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
             let data = null;
             let avisoPersistenciaSecundaria = "";
 
-            if (tokenAuditoriaCampo) {
+            if (uploadPublicoAuditoria) {
                 const { data: dadosRpc, error } = await supabase.rpc("salvar_auditoria_campo_publica", {
                     p_token: tokenAuditoriaCampo,
                     p_senha: senhaAcessoAuditoria.trim(),
@@ -988,13 +997,22 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 && caminhosFotosNovasPendentes.length > 0
             ) {
                 try {
-                    const { error: erroRollbackStorage } =
-                        await supabase.storage
-                            .from("auditorias-campo")
-                            .remove(caminhosFotosNovasPendentes);
+                    if (uploadPublicoAuditoria) {
+                        await removerFotosAuditoriaCampoPublica({
+                            supabaseClient: supabase,
+                            caminhos: caminhosFotosNovasPendentes,
+                            tokenPublico: tokenAuditoriaCampo,
+                            senhaPublica: senhaAcessoAuditoria.trim(),
+                        });
+                    } else {
+                        const { error: erroRollbackStorage } =
+                            await supabase.storage
+                                .from("auditorias-campo")
+                                .remove(caminhosFotosNovasPendentes);
 
-                    if (erroRollbackStorage) {
-                        throw erroRollbackStorage;
+                        if (erroRollbackStorage) {
+                            throw erroRollbackStorage;
+                        }
                     }
                 } catch (rollbackError) {
                     console.warn(
