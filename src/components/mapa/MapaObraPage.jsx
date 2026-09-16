@@ -2783,6 +2783,7 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
             <AmbientesControleTabela
               ponto={pontoAtualApresentacao}
               extintores={extintores}
+              empresas={empresasBanco}
               onPositionChange={salvarPosicaoExtintor}
               onPositionRemove={removerPosicaoExtintor}
               onPontosInternosChange={salvarPontosInternos}

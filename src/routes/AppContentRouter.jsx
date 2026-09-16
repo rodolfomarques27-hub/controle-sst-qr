@@ -356,6 +356,7 @@ function TrocaSenhaTemporariaObrigatoria({ usuario, permissao, onSenhaAtualizada
 export function AppContentRouter({
     supabaseClient,
     tela,
+    tenantAdminPodeGerenciarAcessos = false,
     colaboradores,
     empresasBanco,
     obrasEmpresasBanco = [],
@@ -517,17 +518,73 @@ export function AppContentRouter({
         [permissaoSistemaTela, tela]
     );
 
-    const telaControladaPorPermissao = Boolean(obterModuloPermissaoSistemaPorTela(tela));
-    const permissaoProntaParaDecisao = !carregandoPermissaoSistemaTela && Boolean(permissaoSistemaTela) && !erroPermissaoSistemaTela;
-    const trocaSenhaTemporariaObrigatoria = permissaoProntaParaDecisao && permissaoSistemaTela?.precisa_trocar_senha === true;
-    const telaBloqueadaPorPermissao = telaControladaPorPermissao
+    /*
+     * SAFE_SCAN_I4C_B4_1_ROUTER
+     *
+     * Exceção estrita: membership administrativa do tenant
+     * ignora o bloqueio legado somente em Acessos do App.
+     */
+    const bypassAcessosAppTenant =
+        Boolean(
+            tenantAdminPodeGerenciarAcessos
+            && tela === "acessosApp"
+        );
+
+    const telaControladaPorPermissao =
+        Boolean(
+            obterModuloPermissaoSistemaPorTela(
+                tela
+            )
+        );
+
+    const permissaoProntaParaDecisao =
+        !carregandoPermissaoSistemaTela
+        && Boolean(permissaoSistemaTela)
+        && !erroPermissaoSistemaTela;
+
+    const trocaSenhaTemporariaObrigatoria =
+        permissaoProntaParaDecisao
+        && permissaoSistemaTela?.precisa_trocar_senha === true;
+
+    const telaBloqueadaPorPermissao =
+        telaControladaPorPermissao
+        && !bypassAcessosAppTenant
         && !carregandoPermissaoSistemaTela
-        && (Boolean(erroPermissaoSistemaTela) || bloqueioTelaSistema.bloqueado);
+        && (
+            Boolean(
+                erroPermissaoSistemaTela
+            )
+            || bloqueioTelaSistema.bloqueado
+        );
 
     const primeiraTelaPermitidaSistema = useMemo(() => {
-        if (!permissaoProntaParaDecisao || trocaSenhaTemporariaObrigatoria) return "";
-        return obterPrimeiraTelaPermitidaParaUsuario(permissaoSistemaTela);
-    }, [permissaoProntaParaDecisao, permissaoSistemaTela, trocaSenhaTemporariaObrigatoria]);
+        if (
+            trocaSenhaTemporariaObrigatoria
+        ) {
+            return "";
+        }
+
+        const primeiraTelaLegada =
+            permissaoProntaParaDecisao
+                ? obterPrimeiraTelaPermitidaParaUsuario(
+                    permissaoSistemaTela
+                )
+                : "";
+
+        return (
+            primeiraTelaLegada
+            || (
+                tenantAdminPodeGerenciarAcessos
+                    ? "acessosApp"
+                    : ""
+            )
+        );
+    }, [
+        permissaoProntaParaDecisao,
+        permissaoSistemaTela,
+        tenantAdminPodeGerenciarAcessos,
+        trocaSenhaTemporariaObrigatoria,
+    ]);
 
     const deveRedirecionarParaTelaPermitida = Boolean(
         onRedirecionarTelaPermitida
@@ -686,7 +743,7 @@ export function AppContentRouter({
             {tela === "vistoriaExtintores" && <VistoriaExtintores />}
             {tela === "mapaObra" && <MapaObra empresasBanco={empresasBanco} obrasEmpresasBanco={obrasEmpresasBanco} auditoriasCampo={auditoriasCampo} />}
             {tela === "mapaObraVisualizacao" && <MapaObraVisualizacao auditoriasCampo={auditoriasCampo} />}
-            {tela === "extintores" && <Extintores />}
+            {tela === "extintores" && <Extintores empresasBanco={empresasBanco} />}
 
             {tela === "novaAuditoriaCampo" && (
                 <NovaAuditoriaCampoDireta
@@ -801,6 +858,7 @@ export function AppContentRouter({
                 <ConsultaQR
                     colaborador={colaboradorSelecionado}
                     colaboradores={colaboradores}
+                    empresasBanco={empresasBanco}
                     onSelecionarColaborador={onSelecionarColaboradorQr}
                     supabaseClient={supabaseClient}
                     onAtualizarBanco={onAtualizarBanco}
@@ -828,6 +886,7 @@ export function AppContentRouter({
             {tela === "acessosApp" && (
                 <AcessosAppPage
                     usuario={usuario}
+                    empresasBanco={empresasBanco}
                 />
             )}
 

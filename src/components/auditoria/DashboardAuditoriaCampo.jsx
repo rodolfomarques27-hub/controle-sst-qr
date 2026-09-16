@@ -34,6 +34,7 @@ import { normalizarTextoBusca, formatDate, formatarDataHora, classNames } from "
 import { LIMITE_QRCODES_CAMPO_POR_CARGA } from "../../constants/sistemaLimitesConstants";
 import { QrCodeComLogo, obterLogoQrCodeAtual } from "../qr/QrCodeComLogo";
 import { carregarTokenAuditoriaPublicaAtivoPadrao } from "../../services/auditoriaPublicaTokenService";
+import { obterOrigemPublicaSistema } from "../../utils/urlPublicaUtils.js";
 
 
 const QRCodeSVGLazy = React.lazy(() =>
@@ -450,6 +451,7 @@ export function DashboardAuditoriaCampo({
         identificacao: "",
         area: "",
         local: "",
+        empresaId: "",
         empresaResponsavel: "",
         token: tokenAuditoriaCampoConfigurado,
         observacao: "",
@@ -738,18 +740,26 @@ export function DashboardAuditoriaCampo({
         try {
             const { data, error } = await supabase
                 .from("empresas")
-                .select("id,nome")
+                .select("id,nome,tenant_id")
                 .order("nome", { ascending: true });
 
             if (error) throw error;
 
             const mapaEmpresas = new Map();
             (Array.isArray(data) ? data : []).forEach((empresa) => {
+                const id = String(empresa?.id || "").trim();
                 const nome = String(empresa?.nome || "").trim();
-                if (!nome) return;
+
+                if (!id || !nome) return;
+
                 const chave = normalizarTextoBusca(nome);
+
                 if (!mapaEmpresas.has(chave)) {
-                    mapaEmpresas.set(chave, { id: empresa.id || nome, nome });
+                    mapaEmpresas.set(chave, {
+                        id,
+                        nome,
+                        tenant_id: empresa?.tenant_id || null,
+                    });
                 }
             });
 
@@ -847,18 +857,21 @@ export function DashboardAuditoriaCampo({
         const mapaEmpresas = new Map();
 
         empresasCadastradasQrCampo.forEach((empresa) => {
+            const id = String(empresa?.id || "").trim();
             const nome = String(empresa?.nome || "").trim();
-            if (!nome) return;
-            mapaEmpresas.set(normalizarTextoBusca(nome), { id: empresa.id || nome, nome });
+
+            if (!id || !nome) return;
+
+            mapaEmpresas.set(id, {
+                id,
+                nome,
+                tenant_id: empresa?.tenant_id || null,
+            });
         });
 
-        const empresaAtual = String(qrFormCampo.empresaResponsavel || "").trim();
-        if (empresaAtual && !mapaEmpresas.has(normalizarTextoBusca(empresaAtual))) {
-            mapaEmpresas.set(normalizarTextoBusca(empresaAtual), { id: empresaAtual, nome: empresaAtual });
-        }
-
-        return Array.from(mapaEmpresas.values()).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-    }, [empresasCadastradasQrCampo, qrFormCampo.empresaResponsavel]);
+        return Array.from(mapaEmpresas.values())
+            .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+    }, [empresasCadastradasQrCampo]);
 
     const auditoriasNormalizadas = useMemo(() => auditoriasCampoEfetivas.map((item) => {
         const normalizada = normalizarAuditoriaCampo(item);
@@ -1824,7 +1837,7 @@ export function DashboardAuditoriaCampo({
     };
 
     const montarLinkQrCampo = useCallback((dados = qrFormCampo) => {
-        const origem = typeof window !== "undefined" ? window.location.origin : "";
+        const origem = obterOrigemPublicaSistema();
         const params = new URLSearchParams();
         const tokenPublico = String(dados.token || tokenAuditoriaCampoConfigurado).trim();
         const tipoSelecionadoLink = obterTipoAuditoriaCampoDireta(dados.tipo || qrFormCampo.tipo);
@@ -2071,7 +2084,14 @@ export function DashboardAuditoriaCampo({
             if (formulario.foto) {
                 const nomeSeguro = sanitizarNomeArquivoEvidenciaCorrecaoQrCampo(formulario.foto.name || "evidencia-correcao.jpg");
                 const numeroSeguro = sanitizarNomeArquivoEvidenciaCorrecaoQrCampo(String(numeroAuditoria || idAuditoria));
-                const caminho = `evidencias-correcao/${idAuditoria}/${Date.now()}-${numeroSeguro}-${nomeSeguro}`;
+                const empresaIdAuditoria = String(auditoria?.empresaId || auditoria?.empresa_id || "").trim();
+                const empresaIdAuditoriaValido = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(empresaIdAuditoria);
+
+                if (!empresaIdAuditoriaValido) {
+                    throw new Error("A auditoria não possui empresa válida para organizar a evidência no Storage.");
+                }
+
+                const caminho = `${empresaIdAuditoria}/evidencias-correcao/${idAuditoria}/${Date.now()}-${numeroSeguro}-${nomeSeguro}`;
                 const { error: erroUpload } = await supabase.storage.from("auditorias-campo").upload(caminho, formulario.foto, {
                     cacheControl: "3600",
                     upsert: true,
@@ -2179,6 +2199,12 @@ export function DashboardAuditoriaCampo({
     const salvarQrCampo = async () => {
         const identificacao = String(qrFormCampo.identificacao || "").trim();
         const tokenPublicoQrCampo = String(qrFormCampo.token || tokenAuditoriaCampoConfigurado || "").trim();
+        const empresaIdQrCampo = String(qrFormCampo.empresaId || "").trim();
+        const empresaSelecionadaQrCampo =
+            empresasCadastradasQrCampo.find(
+                (empresa) =>
+                    String(empresa?.id || "").trim() === empresaIdQrCampo
+            ) || null;
 
         if (!identificacao) {
             setMensagemQrCampo("Informe a identificação do item. Ex.: GERADOR-01, CONTAINER-02, BANHEIRO-01.");
@@ -2190,9 +2216,23 @@ export function DashboardAuditoriaCampo({
             return;
         }
 
+        if (!empresaIdQrCampo || !empresaSelecionadaQrCampo) {
+            setMensagemQrCampo("Selecione uma empresa cadastrada antes de salvar o QR Code.");
+            return;
+        }
+
+        const empresaResponsavelQrCampo =
+            String(empresaSelecionadaQrCampo.nome || "").trim();
+
         const tipo = obterTipoAuditoriaCampoDireta(qrFormCampo.tipo);
         const codigoQrCampo = gerarCodigoQrCampoAuditoria(tipo.valor, identificacao);
-        const dadosQrCampo = { ...qrFormCampo, token: tokenPublicoQrCampo, codigo: codigoQrCampo };
+        const dadosQrCampo = {
+            ...qrFormCampo,
+            empresaId: empresaIdQrCampo,
+            empresaResponsavel: empresaResponsavelQrCampo,
+            token: tokenPublicoQrCampo,
+            codigo: codigoQrCampo,
+        };
         const payload = {
             codigo: codigoQrCampo,
             tipo: tipo.valor,
@@ -2200,7 +2240,8 @@ export function DashboardAuditoriaCampo({
             identificacao,
             area: String(qrFormCampo.area || "").trim() || null,
             local: String(qrFormCampo.local || "").trim() || null,
-            empresa_responsavel: String(qrFormCampo.empresaResponsavel || "").trim() || null,
+            empresa_id: empresaIdQrCampo,
+            empresa_responsavel: empresaResponsavelQrCampo || null,
             token_publico: tokenPublicoQrCampo,
             link: montarLinkQrCampo(dadosQrCampo),
             observacao: String(qrFormCampo.observacao || "").trim() || null,
@@ -3513,8 +3554,21 @@ const logoHtml = logoQr
                             <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 md:col-span-2">
                                 Empresa responsável
                                 <select
-                                    value={qrFormCampo.empresaResponsavel}
-                                    onChange={(e) => setQrFormCampo((atual) => ({ ...atual, empresaResponsavel: e.target.value }))}
+                                    value={qrFormCampo.empresaId}
+                                    onChange={(e) => {
+                                        const empresaId = e.target.value;
+                                        const empresaSelecionada =
+                                            empresasQrCampoOpcoes.find(
+                                                (empresa) => empresa.id === empresaId
+                                            ) || null;
+
+                                        setQrFormCampo((atual) => ({
+                                            ...atual,
+                                            empresaId,
+                                            empresaResponsavel:
+                                                empresaSelecionada?.nome || "",
+                                        }));
+                                    }}
                                     disabled={carregandoEmpresasQrCampo}
                                     className="mt-2 w-full rounded-2xl border border-blue-200 bg-white px-4 py-3 text-sm font-black text-slate-900 normal-case tracking-normal outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
                                 >
@@ -3522,7 +3576,7 @@ const logoHtml = logoQr
                                         {carregandoEmpresasQrCampo ? "Carregando empresas cadastradas..." : "Selecione uma empresa cadastrada"}
                                     </option>
                                     {empresasQrCampoOpcoes.map((empresa) => (
-                                        <option key={empresa.id || empresa.nome} value={empresa.nome}>
+                                        <option key={empresa.id} value={empresa.id}>
                                             {empresa.nome}
                                         </option>
                                     ))}
@@ -3550,7 +3604,14 @@ const logoHtml = logoQr
                         <div id="qr-auditoria-campo-para-impressao" className="mt-4 rounded-3xl border border-slate-200 bg-white p-3 text-center shadow-sm">
                             <div className="card">
                                 <div className="mx-auto flex w-fit justify-center rounded-3xl bg-slate-950 p-3 ring-1 ring-slate-900/10 shadow-sm">
-                                    <QrCodeComLogo value={linkQrCampoAtual} size={160} level="H" logoRatio={0.24} />
+                                    <QrCodeComLogo
+                                        value={linkQrCampoAtual}
+                                        size={160}
+                                        level="H"
+                                        logoRatio={0.24}
+                                        empresaId={qrFormCampo.empresaId}
+                                        empresas={empresasCadastradasQrCampo}
+                                    />
                                 </div>
                                 <h2 className="mt-3 truncate text-base font-black uppercase tracking-tight text-slate-950" title={qrFormCampo.identificacao || "Identificação pendente"}>{qrFormCampo.identificacao || "Identificação pendente"}</h2>
                             </div>
@@ -3663,7 +3724,14 @@ const logoHtml = logoQr
                                         <div key={item.id || item.codigo} className="grid gap-3 overflow-visible rounded-2xl bg-slate-50 p-5 ring-1 ring-slate-100 sm:grid-cols-[132px_minmax(0,1fr)]">
                                             <div className="flex items-start justify-center">
                                                 <div data-qrcode-campo-id={chaveQrSalvo} className="flex aspect-square w-[116px] items-center justify-center self-start rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-                                                    <QrCodeComLogo value={linkQrCampoSalvo} size={90} level="H" logoRatio={0.22} />
+                                                    <QrCodeComLogo
+                                                        value={linkQrCampoSalvo}
+                                                        size={90}
+                                                        level="H"
+                                                        logoRatio={0.22}
+                                                        empresaId={item.empresa_id || ""}
+                                                        empresas={empresasCadastradasQrCampo}
+                                                    />
                                                 </div>
                                             </div>
                                             <div className="min-w-0 overflow-hidden">

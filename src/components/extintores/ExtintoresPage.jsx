@@ -54,10 +54,10 @@ const ESTILOS_ETIQUETA_TERMICA = `
     .etiqueta-info-valor{max-width:38mm;overflow:hidden;font-size:2.15mm;font-weight:900;line-height:1;text-align:center;text-transform:uppercase;color:#000;white-space:nowrap;text-overflow:ellipsis}
 `;
 
-function EtiquetaQrExtintor({ item }) {
+function EtiquetaQrExtintor({ item, empresaId = "", empresas = [] }) {
     return <div className="etiqueta">
         <div className="etiqueta-cabecalho"><div><div className="etiqueta-codigo">{item.codigo}</div><div className="etiqueta-tipo">{item.tipo} · {String(item.capacidade).toUpperCase()}</div></div></div>
-        <div className="qr-print"><QrCodeComLogo value={gerarUrlQrExtintor(item)} size={230} level="H" includeMargin bgColor="#ffffff" fgColor="#000000" logoRatio={0.14} /></div>
+        <div className="qr-print"><QrCodeComLogo value={gerarUrlQrExtintor(item)} empresaId={empresaId} empresas={empresas} size={230} level="H" includeMargin bgColor="#ffffff" fgColor="#000000" logoRatio={0.14} /></div>
         <div className="etiqueta-instrucao">Escaneie para consultar a ficha anual</div>
         <div className="etiqueta-informacoes"><div className="etiqueta-info"><span className="etiqueta-info-icone" aria-hidden="true"><MapPin /></span><div><div className="etiqueta-info-rotulo">Local</div><div className="etiqueta-info-valor">{item.localizacao || item.ponto || "Não informado"}</div></div></div></div>
     </div>;
@@ -70,7 +70,7 @@ function capacidadesPorTipo(tipo) {
     return ["1 kg", "2 kg", "4 kg", "6 kg", "10 kg"];
 }
 
-export function ExtintoresPage() {
+export function ExtintoresPage({ empresasBanco = [] }) {
     const [itens, setItens] = useState([]);
     const [form, setForm] = useState(VAZIO);
     const [busca, setBusca] = useState("");
@@ -1236,11 +1236,11 @@ export function ExtintoresPage() {
             </div>
             {qr && (
                 <div id={`qr-extintor-${qr.id}`} className="sr-only">
-                    <EtiquetaQrExtintor item={qr} />
+                    <EtiquetaQrExtintor item={qr} empresaId={mapaSelecionado?.empresaId || qr?.empresaId || qr?.empresa_id || ""} empresas={empresasBanco} />
                 </div>
             )}
             <div className="sr-only" aria-hidden="true">
-                {qrsLote.map((item) => <div key={item.id} data-qr-extintor-lote><EtiquetaQrExtintor item={item} /></div>)}
+                {qrsLote.map((item) => <div key={item.id} data-qr-extintor-lote><EtiquetaQrExtintor item={item} empresaId={mapaSelecionado?.empresaId || item?.empresaId || item?.empresa_id || ""} empresas={empresasBanco} /></div>)}
             </div>
             {manutencaoAlvo && <ModalManutencao item={manutencaoAlvo} aberta={obterManutencaoAbertaExtintor(manutencaoAlvo.id)} form={formManutencao} setForm={setFormManutencao} retorno={formRetorno} setRetorno={setFormRetorno} onEnviar={enviarParaManutencao} onRetornar={registrarRetorno} onClose={() => setManutencaoAlvo(null)} />}
         </section>

@@ -23,9 +23,7 @@ const normalizarObjetoDds = (valor = {}) => {
 
 export function montarUrlConferenciaDds({ token = "", origem = "" } = {}) {
     const tokenSeguro = textoSeguroDds(token);
-    const origemFinal = obterOrigemPublicaSistema(
-        origem || (typeof window !== "undefined" ? window.location.origin : "")
-    );
+    const origemFinal = obterOrigemPublicaSistema(origem);
 
     const params = new URLSearchParams();
 

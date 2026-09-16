@@ -587,7 +587,7 @@ function FrenteCracha({ colaborador, nome, codigo, funcao }) {
     );
 }
 
-function VersoCracha({ valorQr }) {
+function VersoCracha({ valorQr, empresaId = "", empresas = [] }) {
     return (
         <section className="cracha-print-side">
             <h2 className="cracha-print-label">Verso</h2>
@@ -605,7 +605,7 @@ function VersoCracha({ valorQr }) {
 
                     <div className="cracha-qr-box">
                         <div className="cracha-qrcode">
-                            <QrCodeComLogo value={valorQr || ""} size={214} level="H" bgColor="#ffffff" fgColor="#000000" logoRatio={0.20} />
+                            <QrCodeComLogo value={valorQr || ""} empresaId={empresaId} empresas={empresas} size={214} level="H" bgColor="#ffffff" fgColor="#000000" logoRatio={0.20} />
                         </div>
                     </div>
 
@@ -621,7 +621,7 @@ function VersoCracha({ valorQr }) {
     );
 }
 
-export function CrachaColaboradorPrint({ colaborador, urlConsultaColaborador }) {
+export function CrachaColaboradorPrint({ colaborador, urlConsultaColaborador, empresasBanco = [] }) {
     const nome = String(colaborador?.nome || "Nome do colaborador").trim().toUpperCase();
     const codigo = String(colaborador?.codigoFuncionario || colaborador?.codigo || "COL-ANDE-9DZXM0").trim().toUpperCase();
     const funcao = String(colaborador?.funcao || "Função não informada").trim().toUpperCase();
@@ -630,7 +630,7 @@ export function CrachaColaboradorPrint({ colaborador, urlConsultaColaborador }) 
     return (
         <div className="cracha-print-root">
             <FrenteCracha colaborador={colaborador} nome={nome} codigo={codigo} funcao={funcao} />
-            <VersoCracha valorQr={valorQr} />
+            <VersoCracha valorQr={valorQr} empresaId={colaborador?.empresaId || colaborador?.empresa_id || ""} empresas={empresasBanco} />
         </div>
     );
 }

@@ -26,6 +26,7 @@ import {
     PERMISSOES_PADRAO_USUARIOS_POR_PERFIL,
 } from "../../constants/usuariosPermissoesConstants";
 import { supabase } from "../../lib/supabaseClient";
+import { useTenantRuntimeContext } from "../layout/TenantRuntimeContext.js";
 import { criarLoginAppComSenhaTemporariaService } from "../../services/acessosAppService";
 import {
     enviarAcessoUsuarioEmailService,
@@ -39,9 +40,12 @@ import {
     concluirSolicitacaoAcessoSistemaService,
     listarSolicitacoesAcessoSistemaService,
     listarUsuariosPermissoesSistemaService,
+    listarUsuariosPermissoesSistemaEscopoService,
     responderSolicitacaoAcessoSistemaService,
     salvarUsuarioPermissaoSistemaService,
+    salvarUsuarioPermissaoSistemaEscopoService,
     excluirUsuarioPermissaoSistemaService,
+    excluirUsuarioPermissaoSistemaEscopoService,
     listarPerfisPermissoesSistemaService,
     restaurarPerfilPermissaoSistemaService,
     salvarPerfilPermissaoSistemaService,
@@ -570,6 +574,11 @@ function usuarioTemLoginAuthAcessoApp(usuarioPermissao = {}) {
 
 const FORM_USUARIO_ACESSO_INICIAL = {
     id: null,
+    user_id: null,
+    membership_id: null,
+    tenant_id: null,
+    empresa_id: null,
+    membership_status: "",
     nome: "",
     email: "",
     funcao: "",
@@ -597,6 +606,24 @@ function montarFormularioUsuarioAcesso(usuario = null) {
 
     return {
         id: usuario.id || null,
+        user_id:
+            usuario.user_id
+            || usuario.userId
+            || null,
+        membership_id:
+            usuario.membership_id
+            || null,
+        tenant_id:
+            usuario.tenant_id
+            || usuario.tenantId
+            || null,
+        empresa_id:
+            usuario.empresa_id
+            || usuario.empresaId
+            || null,
+        membership_status:
+            usuario.membership_status
+            || "",
         nome: usuario.nome || "",
         email: normalizarTextoAcesso(usuario.email).toLowerCase(),
         funcao: usuario.funcao || "",
@@ -1419,7 +1446,39 @@ function ComunicacaoAcessoUsuarioCard({
     );
 }
 
-function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEdicaoConsumida = null }) {
+function UsuariosCadastradosApp({
+    usuario = null,
+    usuarioParaEditar = null,
+    onEdicaoConsumida = null,
+    tenantId = null,
+    modoTenant = false,
+    empresasBanco = [],
+}) {
+    /*
+     * SAFE_SCAN_I4C_B4_1_PAGE
+     *
+     * Usuários utilizam camada dual-mode B3.
+     * Superfícies globais permanecem desligadas no tenant.
+     */
+    const tenantIdNormalizado =
+        normalizarTextoAcesso(
+            tenantId
+        );
+
+    const empresasTenantDisponiveis =
+        useMemo(
+            () => (
+                Array.isArray(empresasBanco)
+                    ? empresasBanco.filter(
+                        (empresa) =>
+                            Boolean(
+                                empresa?.id
+                            )
+                    )
+                    : []
+            ),
+            [empresasBanco]
+        );
     const [usuarios, setUsuarios] = useState([]);
     const [carregando, setCarregando] = useState(false);
     const [mensagem, setMensagem] = useState("Usuários ainda não carregados.");
@@ -1526,7 +1585,14 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
         setMensagem("Consultando usuários e permissões no Supabase...");
 
         try {
-            const lista = await listarUsuariosPermissoesSistemaService({ supabase });
+            const lista =
+                await listarUsuariosPermissoesSistemaEscopoService({
+                    supabase,
+                    tenantId:
+                        modoTenant
+                            ? tenantIdNormalizado
+                            : null,
+                });
             setUsuarios(lista);
             setMensagem(lista.length ? `${lista.length} pessoa(s) carregada(s). A lista principal mostra apenas acessos ativos por padrão.` : "Nenhum usuário cadastrado encontrado.");
         } catch (error) {
@@ -1540,15 +1606,47 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
 
     function abrirCadastroVazio() {
         setReenvioEmailPendenteId("");
-        setFormulario(montarFormularioUsuarioAcesso());
+
+        setFormulario({
+            ...montarFormularioUsuarioAcesso(),
+            tenant_id:
+                modoTenant
+                    ? tenantIdNormalizado
+                    : null,
+            acesso_global:
+                false,
+        });
+
         setFormAberto(true);
         setErro("");
-        setMensagem("Preencha os dados, informe uma senha temporária e use Criar login do app para criar o acesso real no Supabase Auth.");
+
+        setMensagem(
+            modoTenant
+                ? "Preencha os dados do usuário deste tenant, selecione a empresa operacional quando aplicável e informe a senha temporária."
+                : "Preencha os dados, informe uma senha temporária e use Criar login do app para criar o acesso real no Supabase Auth."
+        );
     }
 
     function iniciarEdicao(item) {
         setReenvioEmailPendenteId("");
-        setFormulario(montarFormularioUsuarioAcesso(item));
+
+        const formularioEdicao =
+            montarFormularioUsuarioAcesso(
+                item
+            );
+
+        setFormulario({
+            ...formularioEdicao,
+            tenant_id:
+                modoTenant
+                    ? tenantIdNormalizado
+                    : formularioEdicao.tenant_id,
+            acesso_global:
+                modoTenant
+                    ? false
+                    : formularioEdicao.acesso_global,
+        });
+
         setFormAberto(true);
         setErro("");
         setMensagem(`Editando permissão de ${item?.email || "usuário selecionado"}.`);
@@ -1627,6 +1725,36 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
 
             return proximo;
         });
+    }
+
+    function atualizarEmpresaTenantFormulario(
+        empresaId = ""
+    ) {
+        const empresaIdTratado =
+            normalizarTextoAcesso(
+                empresaId
+            );
+
+        const empresaSelecionada =
+            empresasTenantDisponiveis.find(
+                (empresa) =>
+                    String(
+                        empresa?.id || ""
+                    ) === empresaIdTratado
+            )
+            || null;
+
+        setFormulario(
+            (atual) => ({
+                ...atual,
+                empresa_id:
+                    empresaIdTratado
+                    || null,
+                empresa:
+                    empresaSelecionada?.nome
+                    || "",
+            })
+        );
     }
 
     function selecionarFotoFormulario(evento) {
@@ -1790,6 +1918,19 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 dados: {
                     ...formularioComFoto,
                     email: emailTratado,
+                    tenant_id:
+                        modoTenant
+                            ? tenantIdNormalizado
+                            : null,
+                    empresa_id:
+                        formularioComFoto.empresa_id
+                        || null,
+                    acesso_global:
+                        modoTenant
+                            ? false
+                            : Boolean(
+                                formularioComFoto.acesso_global
+                            ),
                     // Criar login do app sempre usa a senha informada como senha temporária.
                     // Se o e-mail já existir no Supabase Auth, a senha será redefinida e a troca obrigatória será marcada.
                     resetarSenhaTemporaria: true,
@@ -2032,13 +2173,27 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 )
                 : "";
 
-            const salvo = await salvarUsuarioPermissaoSistemaService({
+            const salvo = await salvarUsuarioPermissaoSistemaEscopoService({
                 supabase,
                 usuario: {
                     ...formularioComFoto,
                     email: emailTratado,
+                    tenant_id:
+                        modoTenant
+                            ? tenantIdNormalizado
+                            : formularioComFoto.tenant_id,
+                    acesso_global:
+                        modoTenant
+                            ? false
+                            : Boolean(
+                                formularioComFoto.acesso_global
+                            ),
                 },
                 usuarioAtual: usuario,
+                tenantId:
+                    modoTenant
+                        ? tenantIdNormalizado
+                        : null,
             });
 
             salvamentoConfirmado = true;
@@ -2233,11 +2388,18 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
 
         try {
             const excluido =
-                await excluirUsuarioPermissaoSistemaService({
+                await excluirUsuarioPermissaoSistemaEscopoService({
                     supabase,
                     usuario: item,
                     usuarioAtual: usuario,
-                    observacao: "Acesso removido definitivamente pela aba Acessos do App.",
+                    observacao:
+                        modoTenant
+                            ? "Membership revogada pela aba Acessos do App."
+                            : "Acesso removido definitivamente pela aba Acessos do App.",
+                    tenantId:
+                        modoTenant
+                            ? tenantIdNormalizado
+                            : null,
                 });
 
             const emailRemovido =
@@ -2622,15 +2784,48 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                                         placeholder="usuario@empresa.com"
                                     />
                                 </label>
-                                <label className="block xl:col-span-1">
-                                    <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Empresa</span>
-                                    <input
-                                        value={formulario.empresa}
-                                        onChange={(evento) => atualizarCampoFormulario("empresa", evento.target.value)}
-                                        className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                        placeholder="Empresa / contrato"
-                                    />
-                                </label>
+                                {modoTenant ? (
+                                    <label className="block xl:col-span-1">
+                                        <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+                                            Empresa
+                                        </span>
+                                        <select
+                                            value={formulario.empresa_id || ""}
+                                            onChange={(evento) =>
+                                                atualizarEmpresaTenantFormulario(
+                                                    evento.target.value
+                                                )
+                                            }
+                                            className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                        >
+                                            <option value="">
+                                                Selecione a empresa operacional
+                                            </option>
+                                            {empresasTenantDisponiveis.map(
+                                                (empresa) => (
+                                                    <option
+                                                        key={empresa.id}
+                                                        value={empresa.id}
+                                                    >
+                                                        {empresa.nome || empresa.id}
+                                                    </option>
+                                                )
+                                            )}
+                                        </select>
+                                    </label>
+                                ) : (
+                                    <label className="block xl:col-span-1">
+                                        <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+                                            Empresa
+                                        </span>
+                                        <input
+                                            value={formulario.empresa}
+                                            onChange={(evento) => atualizarCampoFormulario("empresa", evento.target.value)}
+                                            className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                            placeholder="Empresa / contrato"
+                                        />
+                                    </label>
+                                )}
                                 <label className="block xl:col-span-1">
                                     <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Função</span>
                                     <input
@@ -2684,21 +2879,37 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                                         </div>
                                     </div>
                                 </label>
-                                <label className={`rounded-2xl bg-white p-3 ring-1 ${formulario.acesso_global ? "ring-blue-100" : "ring-slate-200"}`}>
-                                    <div className="flex items-start gap-3">
-                                        <input
-                                            type="checkbox"
-                                            checked={formulario.acesso_global}
-                                            disabled={formulario.perfil !== "administrador" || formulario.bloqueado}
-                                            onChange={(evento) => atualizarCampoFormulario("acesso_global", evento.target.checked)}
-                                            className="mt-1"
-                                        />
-                                        <div>
-                                            <p className="text-xs font-black text-slate-950">Acesso global</p>
-                                            <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500">Somente Administrador.</p>
+                                {modoTenant ? (
+                                    <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                                        <div className="flex items-start gap-3">
+                                            <ShieldCheck className="mt-0.5 h-4 w-4 text-slate-500" />
+                                            <div>
+                                                <p className="text-xs font-black text-slate-950">
+                                                    Escopo do tenant
+                                                </p>
+                                                <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500">
+                                                    Acesso global SafeScan não pode ser concedido por este ambiente.
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
-                                </label>
+                                ) : (
+                                    <label className={`rounded-2xl bg-white p-3 ring-1 ${formulario.acesso_global ? "ring-blue-100" : "ring-slate-200"}`}>
+                                        <div className="flex items-start gap-3">
+                                            <input
+                                                type="checkbox"
+                                                checked={formulario.acesso_global}
+                                                disabled={formulario.perfil !== "administrador" || formulario.bloqueado}
+                                                onChange={(evento) => atualizarCampoFormulario("acesso_global", evento.target.checked)}
+                                                className="mt-1"
+                                            />
+                                            <div>
+                                                <p className="text-xs font-black text-slate-950">Acesso global</p>
+                                                <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500">Somente Administrador.</p>
+                                            </div>
+                                        </div>
+                                    </label>
+                                )}
                             </div>
 
                             <div className="grid gap-3 md:grid-cols-3">
@@ -2880,10 +3091,12 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                             </div>
                         </div>
 
-                        <ComunicacaoAcessoUsuarioCard
-                            item={item}
-                            onPrepararReenvio={prepararReenvioEmailAcesso}
-                        />
+                        {!modoTenant ? (
+                            <ComunicacaoAcessoUsuarioCard
+                                item={item}
+                                onPrepararReenvio={prepararReenvioEmailAcesso}
+                            />
+                        ) : null}
                     </article>
                 )) : (
                     <div className="rounded-2xl bg-slate-50 px-4 py-4 text-xs font-semibold text-slate-500 ring-1 ring-slate-100">
@@ -3652,7 +3865,27 @@ Digite ${codigoConfirmacao} para confirmar.`
     );
 }
 
-export function AcessosAppPage({ usuario = null }) {
+export function AcessosAppPage({
+    usuario = null,
+    empresasBanco = [],
+}) {
+    const {
+        tenant,
+        tenantResolvido,
+    } = useTenantRuntimeContext();
+
+    const tenantId =
+        tenantResolvido
+            ? normalizarTextoAcesso(
+                tenant?.id
+            )
+            : "";
+
+    const modoTenant =
+        Boolean(
+            tenantId
+        );
+
     const [solicitacaoParaPermissao, setSolicitacaoParaPermissao] = useState(null);
     const [resumoCabecalho, setResumoCabecalho] = useState({
         ativos: null,
@@ -3681,45 +3914,154 @@ export function AcessosAppPage({ usuario = null }) {
 
         async function carregarResumoCabecalho() {
             try {
-                const [resultadoUsuarios, resultadoSolicitacoes, resultadoPerfis] = await Promise.allSettled([
-                    listarUsuariosPermissoesSistemaService({ supabase }),
-                    listarSolicitacoesAcessoSistemaService({ supabase }),
-                    listarPerfisPermissoesSistemaService({ supabase }),
-                ]);
+                const tarefas = [
+                    listarUsuariosPermissoesSistemaEscopoService({
+                        supabase,
+                        tenantId:
+                            modoTenant
+                                ? tenantId
+                                : null,
+                    }),
+                ];
+
+                if (!modoTenant) {
+                    tarefas.push(
+                        listarSolicitacoesAcessoSistemaService({
+                            supabase,
+                        }),
+                        listarPerfisPermissoesSistemaService({
+                            supabase,
+                        })
+                    );
+                }
+
+                const [
+                    resultadoUsuarios,
+                    resultadoSolicitacoes,
+                    resultadoPerfis,
+                ] = await Promise.allSettled(
+                    tarefas
+                );
 
                 if (!ativo) return;
 
-                const usuarios = resultadoUsuarios.status === "fulfilled" && Array.isArray(resultadoUsuarios.value)
-                    ? resultadoUsuarios.value
-                    : [];
-                const solicitacoes = resultadoSolicitacoes.status === "fulfilled" && Array.isArray(resultadoSolicitacoes.value)
-                    ? resultadoSolicitacoes.value
-                    : [];
-                const perfis = resultadoPerfis.status === "fulfilled" && Array.isArray(resultadoPerfis.value)
-                    ? resultadoPerfis.value
-                    : [];
+                const usuarios =
+                    resultadoUsuarios?.status === "fulfilled"
+                    && Array.isArray(
+                        resultadoUsuarios.value
+                    )
+                        ? resultadoUsuarios.value
+                        : [];
 
-                const emailAtual = normalizarTextoAcesso(usuario?.email).toLowerCase();
-                const idAtual = usuario?.id || usuario?.user_id || "";
-                const permissaoAtual = usuarios.find((item) => (
-                    (emailAtual && normalizarTextoAcesso(item.email).toLowerCase() === emailAtual)
-                    || (idAtual && (item.user_id === idAtual || item.id === idAtual))
-                )) || null;
+                const solicitacoes =
+                    !modoTenant
+                    && resultadoSolicitacoes?.status === "fulfilled"
+                    && Array.isArray(
+                        resultadoSolicitacoes.value
+                    )
+                        ? resultadoSolicitacoes.value
+                        : [];
 
-                setUsuarioResumoAtual(permissaoAtual);
+                const perfis =
+                    !modoTenant
+                    && resultadoPerfis?.status === "fulfilled"
+                    && Array.isArray(
+                        resultadoPerfis.value
+                    )
+                        ? resultadoPerfis.value
+                        : [];
+
+                const emailAtual =
+                    normalizarTextoAcesso(
+                        usuario?.email
+                    ).toLowerCase();
+
+                const idAtual =
+                    usuario?.id
+                    || usuario?.user_id
+                    || "";
+
+                const permissaoAtual =
+                    usuarios.find(
+                        (item) => (
+                            (
+                                emailAtual
+                                && normalizarTextoAcesso(
+                                    item.email
+                                ).toLowerCase() === emailAtual
+                            )
+                            || (
+                                idAtual
+                                && (
+                                    item.user_id === idAtual
+                                    || item.id === idAtual
+                                )
+                            )
+                        )
+                    )
+                    || null;
+
+                setUsuarioResumoAtual(
+                    permissaoAtual
+                );
 
                 setResumoCabecalho({
-                    ativos: usuarios.filter((item) => !item.excluido && item.ativo && !item.bloqueado).length,
-                    bloqueados: usuarios.filter((item) => !item.excluido && item.bloqueado).length,
-                    perfis: perfis.filter((item) => item.ativo !== false).length || PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.length,
-                    pendentes: solicitacoes.filter((item) => normalizarTextoAcesso(item.status || "pendente").toLowerCase() === "pendente").length,
+                    ativos:
+                        usuarios.filter(
+                            (item) =>
+                                !item.excluido
+                                && item.ativo
+                                && !item.bloqueado
+                        ).length,
+
+                    bloqueados:
+                        usuarios.filter(
+                            (item) =>
+                                !item.excluido
+                                && item.bloqueado
+                        ).length,
+
+                    perfis:
+                        modoTenant
+                            ? null
+                            : (
+                                perfis.filter(
+                                    (item) =>
+                                        item.ativo !== false
+                                ).length
+                                || PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.length
+                            ),
+
+                    pendentes:
+                        modoTenant
+                            ? null
+                            : solicitacoes.filter(
+                                (item) =>
+                                    normalizarTextoAcesso(
+                                        item.status
+                                        || "pendente"
+                                    ).toLowerCase() === "pendente"
+                            ).length,
                 });
             } catch {
                 if (!ativo) return;
-                setResumoCabecalho((atual) => ({
-                    ...atual,
-                    perfis: atual.perfis || PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.length,
-                }));
+
+                setResumoCabecalho(
+                    (atual) => ({
+                        ...atual,
+                        perfis:
+                            modoTenant
+                                ? null
+                                : (
+                                    atual.perfis
+                                    || PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.length
+                                ),
+                        pendentes:
+                            modoTenant
+                                ? null
+                                : atual.pendentes,
+                    })
+                );
             }
         }
 
@@ -3728,7 +4070,13 @@ export function AcessosAppPage({ usuario = null }) {
         return () => {
             ativo = false;
         };
-    }, [usuario?.email, usuario?.id, usuario?.user_id]);
+    }, [
+        modoTenant,
+        tenantId,
+        usuario?.email,
+        usuario?.id,
+        usuario?.user_id,
+    ]);
 
     const agoraHeroAcessosApp = new Date();
     const dataHeroAcessosApp = new Intl.DateTimeFormat("pt-BR", {
@@ -3812,13 +4160,19 @@ export function AcessosAppPage({ usuario = null }) {
                             Atalhos administrativos
                         </h2>
                         <p className="mt-3 max-w-3xl text-sm font-semibold leading-7 text-slate-500">
-                            Use os atalhos abaixo para acessar cadastro de login, solicitações pendentes, atualização da lista e edição dos perfis de permissão.
+                            {modoTenant
+                                ? "Gerencie os usuários e memberships deste ambiente. Solicitações, perfis globais e histórico de comunicação permanecem restritos ao fluxo global SafeScan."
+                                : "Use os atalhos abaixo para acessar cadastro de login, solicitações pendentes, atualização da lista e edição dos perfis de permissão."}
                         </p>
 
                         <div className="mt-5 space-y-2 text-sm font-semibold leading-6 text-slate-500">
                             <div className="flex items-center gap-2">
                                 <Info className="h-4 w-4 text-blue-600" strokeWidth={2.2} />
-                                <span>Gestão operacional de acessos, perfis e solicitações.</span>
+                                <span>
+                                    {modoTenant
+                                        ? "Gestão operacional restrita ao tenant atual."
+                                        : "Gestão operacional de acessos, perfis e solicitações."}
+                                </span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <UsersRound className="h-4 w-4 text-blue-600" strokeWidth={2.2} />
@@ -3840,18 +4194,22 @@ export function AcessosAppPage({ usuario = null }) {
                             >
                                 Atualizar usuários
                             </BotaoAcaoCabecalhoAcesso>
-                            <BotaoAcaoCabecalhoAcesso
-                                icon={ClipboardList}
-                                onClick={() => scrollParaSecaoAcessoApp("acessos-solicitacoes")}
-                            >
-                                Solicitações
-                            </BotaoAcaoCabecalhoAcesso>
-                            <BotaoAcaoCabecalhoAcesso
-                                icon={ShieldCheck}
-                                onClick={() => scrollParaSecaoAcessoApp("acessos-perfis")}
-                            >
-                                Editar perfis
-                            </BotaoAcaoCabecalhoAcesso>
+                            {!modoTenant ? (
+                                <>
+                                    <BotaoAcaoCabecalhoAcesso
+                                        icon={ClipboardList}
+                                        onClick={() => scrollParaSecaoAcessoApp("acessos-solicitacoes")}
+                                    >
+                                        Solicitações
+                                    </BotaoAcaoCabecalhoAcesso>
+                                    <BotaoAcaoCabecalhoAcesso
+                                        icon={ShieldCheck}
+                                        onClick={() => scrollParaSecaoAcessoApp("acessos-perfis")}
+                                    >
+                                        Editar perfis
+                                    </BotaoAcaoCabecalhoAcesso>
+                                </>
+                            ) : null}
                         </div>
 
                         <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-sm font-bold leading-6 text-emerald-800">
@@ -3903,20 +4261,24 @@ export function AcessosAppPage({ usuario = null }) {
                                 classeIcone="bg-rose-50 text-rose-700"
                                 classeLinha="bg-rose-500"
                             />
-                            <MiniResumoAcesso
-                                icon={UsersRound}
-                                valor={resumoCabecalho.perfis ?? PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.length}
-                                label="Perfis"
-                                classeIcone="bg-violet-50 text-violet-700"
-                                classeLinha="bg-violet-500"
-                            />
-                            <MiniResumoAcesso
-                                icon={ClipboardList}
-                                valor={resumoCabecalho.pendentes ?? "--"}
-                                label="Pendentes"
-                                classeIcone="bg-orange-50 text-orange-700"
-                                classeLinha="bg-orange-500"
-                            />
+                            {!modoTenant ? (
+                                <>
+                                    <MiniResumoAcesso
+                                        icon={UsersRound}
+                                        valor={resumoCabecalho.perfis ?? PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.length}
+                                        label="Perfis"
+                                        classeIcone="bg-violet-50 text-violet-700"
+                                        classeLinha="bg-violet-500"
+                                    />
+                                    <MiniResumoAcesso
+                                        icon={ClipboardList}
+                                        valor={resumoCabecalho.pendentes ?? "--"}
+                                        label="Pendentes"
+                                        classeIcone="bg-orange-50 text-orange-700"
+                                        classeLinha="bg-orange-500"
+                                    />
+                                </>
+                            ) : null}
                         </div>
                     </aside>
                 </div>
@@ -3927,16 +4289,26 @@ export function AcessosAppPage({ usuario = null }) {
                     usuario={usuario}
                     usuarioParaEditar={solicitacaoParaPermissao}
                     onEdicaoConsumida={() => setSolicitacaoParaPermissao(null)}
+                    tenantId={tenantId}
+                    modoTenant={modoTenant}
+                    empresasBanco={empresasBanco}
                 />
             </div>
 
-            <div id="acessos-solicitacoes" className="scroll-mt-24">
-                <SolicitacoesAcessoApp usuario={usuario} onPrepararPermissao={setSolicitacaoParaPermissao} />
-            </div>
+            {!modoTenant ? (
+                <>
+                    <div id="acessos-solicitacoes" className="scroll-mt-24">
+                        <SolicitacoesAcessoApp
+                            usuario={usuario}
+                            onPrepararPermissao={setSolicitacaoParaPermissao}
+                        />
+                    </div>
 
-            <div id="acessos-perfis" className="scroll-mt-24">
-                <RevisaoPerfisPadrao usuario={usuario} />
-            </div>
+                    <div id="acessos-perfis" className="scroll-mt-24">
+                        <RevisaoPerfisPadrao usuario={usuario} />
+                    </div>
+                </>
+            ) : null}
 
         </div>
     );
