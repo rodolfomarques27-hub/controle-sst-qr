@@ -44,6 +44,7 @@ import {
     obterContatosEmpresaAuditoriaCampoDireta,
     obterParametrosAuditoriaCampoDiretaUrl,
     uploadFotoAuditoriaCampoDireta,
+    removerFotosAuditoriaCampoPublica,
     validarFormularioAuditoriaCampoDireta,
     formatarTelefoneAuditoriaCampoDireta,
     formatarNumeroAuditoriaCampoDireta,
@@ -56,6 +57,7 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 import { QrCodeComLogo } from "../qr/QrCodeComLogo";
 import { lerMapaObraLocal } from "../../services/mapaObraLocalService";
+import { obterOrigemPublicaSistema } from "../../utils/urlPublicaUtils.js";
 import {
     AlertTriangle,
     ClipboardCheck,
@@ -298,8 +300,10 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         codigoQrParametro,
     } = extrairParametrosAuditoriaCampoDireta(parametros);
     const tipoInicial = obterTipoAuditoriaCampoPorParametro(tipoParametro);
-    const origem = typeof window !== "undefined" ? window.location.origin : "";
-    const linkOrigemQrCampo = typeof window !== "undefined" ? window.location.href : "";
+    const origem = obterOrigemPublicaSistema();
+    const linkOrigemQrCampo = typeof window !== "undefined"
+        ? `${origem}${window.location.pathname || "/"}${window.location.search || ""}${window.location.hash || ""}`
+        : "";
     const codigoQrCampoParametro = String(codigoQrParametro || "").trim();
     const [tokenAuditoriaPublicaSupabase, setTokenAuditoriaPublicaSupabase] = useState("");
     const [tokenAuditoriaQrCampoSalvo, setTokenAuditoriaQrCampoSalvo] = useState("");
@@ -816,10 +820,12 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
 
         const caminhosFotosNovasPendentes = [];
         let auditoriaPersistida = false;
+        let uploadPublicoAuditoria = false;
+        let tokenAuditoriaCampo = "";
 
         try {
-            const tokenAuditoriaCampo = tokenAuditoriaPublicaValidado || tokenAcessoAuditoriaCampo || obterParametroUrl("token") || obterParametroUrl("chave");
-            const uploadPublicoAuditoria = Boolean(!usuario && tokenAuditoriaCampo);
+            tokenAuditoriaCampo = tokenAuditoriaPublicaValidado || tokenAcessoAuditoriaCampo || obterParametroUrl("token") || obterParametroUrl("chave");
+            uploadPublicoAuditoria = Boolean(!usuario && tokenAuditoriaCampo);
             const referenciaUploadFotos = `auditoria-pendente-${Date.now()}`;
             const fotoAntesUrl = await uploadFotoAuditoriaCampoDireta({
                 supabaseClient: supabase,
@@ -827,8 +833,12 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 numeroAuditoria: referenciaUploadFotos,
                 tipo: "foto-antes",
                 validarArquivoAntesUpload,
+                empresaId: empresaSelecionadaAuditoria?.id || formulario.empresaId || formulario.empresa_id || "",
                 tokenPublico: tokenAuditoriaCampo,
                 publico: uploadPublicoAuditoria,
+                senhaPublica: uploadPublicoAuditoria
+                    ? senhaAcessoAuditoria.trim()
+                    : "",
             });
 
             if (fotoAntesUrl) {
@@ -841,8 +851,12 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 numeroAuditoria: referenciaUploadFotos,
                 tipo: "foto-depois",
                 validarArquivoAntesUpload,
+                empresaId: empresaSelecionadaAuditoria?.id || formulario.empresaId || formulario.empresa_id || "",
                 tokenPublico: tokenAuditoriaCampo,
                 publico: uploadPublicoAuditoria,
+                senhaPublica: uploadPublicoAuditoria
+                    ? senhaAcessoAuditoria.trim()
+                    : "",
             });
 
             if (fotoDepoisUrl) {
@@ -871,7 +885,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
             let data = null;
             let avisoPersistenciaSecundaria = "";
 
-            if (tokenAuditoriaCampo) {
+            if (uploadPublicoAuditoria) {
                 const { data: dadosRpc, error } = await supabase.rpc("salvar_auditoria_campo_publica", {
                     p_token: tokenAuditoriaCampo,
                     p_senha: senhaAcessoAuditoria.trim(),
@@ -988,13 +1002,22 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 && caminhosFotosNovasPendentes.length > 0
             ) {
                 try {
-                    const { error: erroRollbackStorage } =
-                        await supabase.storage
-                            .from("auditorias-campo")
-                            .remove(caminhosFotosNovasPendentes);
+                    if (uploadPublicoAuditoria) {
+                        await removerFotosAuditoriaCampoPublica({
+                            supabaseClient: supabase,
+                            caminhos: caminhosFotosNovasPendentes,
+                            tokenPublico: tokenAuditoriaCampo,
+                            senhaPublica: senhaAcessoAuditoria.trim(),
+                        });
+                    } else {
+                        const { error: erroRollbackStorage } =
+                            await supabase.storage
+                                .from("auditorias-campo")
+                                .remove(caminhosFotosNovasPendentes);
 
-                    if (erroRollbackStorage) {
-                        throw erroRollbackStorage;
+                        if (erroRollbackStorage) {
+                            throw erroRollbackStorage;
+                        }
                     }
                 } catch (rollbackError) {
                     console.warn(
@@ -1149,7 +1172,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                             <div className="w-full max-w-[240px] flex flex-col items-center justify-center rounded-[28px] border border-slate-200 bg-white/96 p-2.5 text-center shadow-[0_18px_40px_-24px_rgba(15,23,42,0.5)] backdrop-blur">
                                 <p className="w-full text-center text-[10px] font-black uppercase leading-none tracking-[0.24em] text-slate-950">QR CODE GERAL</p>
                                 <div className="mx-auto mt-2 flex h-24 w-24 items-center justify-center rounded-2xl bg-slate-50 p-2 ring-1 ring-slate-200">
-                                    {linkQrAuditoriaAtual ? <QrCodeComLogo value={linkQrAuditoriaAtual} size={96} level="H" logoRatio={0.22} /> : <QrCode className="h-11 w-11 text-slate-300" />}
+                                    {linkQrAuditoriaAtual ? <QrCodeComLogo value={linkQrAuditoriaAtual} empresaId={empresaSelecionadaAuditoria?.id || formulario.empresaId || formulario.empresa_id || ""} empresas={empresasBanco} size={96} level="H" logoRatio={0.22} /> : <QrCode className="h-11 w-11 text-slate-300" />}
                                 </div>
                                 <div className="mt-3 grid w-full grid-cols-2 gap-2">
                                     <button

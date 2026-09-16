@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import "./styles/app-layout-global.css";
 import App from "./App.jsx";
+import { TenantContextGate } from "./components/layout/TenantContextGate.jsx";
 
 const CHAVE_RECARGA_PRELOAD =
     "safescan:vite-preload-reload";
@@ -57,6 +58,8 @@ window.addEventListener(
 
 createRoot(document.getElementById("root")).render(
     <StrictMode>
-        <App />
+        <TenantContextGate>
+            <App />
+        </TenantContextGate>
     </StrictMode>
 );

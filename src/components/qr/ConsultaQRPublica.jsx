@@ -223,14 +223,24 @@ export function ConsultaQRPublica({ dados }) {
                             Verificação SST
                         </div>
 
-                        <FotoColaborador
-                            src={colaborador}
-                            colaborador={colaborador}
-                            colaboradorId={colaborador.id || colaborador.colaboradorId || colaborador.colaborador_id}
-                            nome={colaborador.nome}
-                            className="h-28 w-28 rounded-full"
-                            iconClassName="h-11 w-11"
-                        />
+                        {String(colaborador.fotoUrl || "").trim() ? (
+                            <img
+                                src={String(colaborador.fotoUrl || "").trim()}
+                                alt={`Foto de ${colaborador.nome || "colaborador"}`}
+                                className="h-28 w-28 rounded-full object-cover"
+                                loading="eager"
+                                decoding="async"
+                            />
+                        ) : (
+                            <FotoColaborador
+                                src={colaborador}
+                                colaborador={colaborador}
+                                colaboradorId={colaborador.id || colaborador.colaboradorId || colaborador.colaborador_id}
+                                nome={colaborador.nome}
+                                className="h-28 w-28 rounded-full"
+                                iconClassName="h-11 w-11"
+                            />
+                        )}
 
                         <h2 className="mt-4 max-w-full break-words text-xl font-bold leading-tight text-slate-950 sm:text-2xl">{colaborador.nome}</h2>
                         <p className="mt-2 text-sm font-semibold text-slate-500">{colaborador.funcao}</p>
