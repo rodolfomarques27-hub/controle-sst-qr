@@ -1,8 +1,12 @@
-﻿import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { ImagePlus, RotateCcw } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { obterUrlPublicaStorage } from "../../services/supabaseServices";
+import {
+    obterUrlLogoQrCodeTenantService,
+    resolverTenantIdBrandingRecursoService,
+} from "../../services/tenantBrandingService.js";
 import { classNames } from "../../utils/sstUtils";
 
 const BUCKET_LOGO_QR_CODE = "logos-empresas";
@@ -95,6 +99,70 @@ export function obterLogoQrCodeAtual({ usarPadrao = true } = {}) {
     return montarUrlLogoQrCodeGlobal(obterVersaoLogoQrCodeGlobal()) || (usarPadrao ? LOGO_PADRAO_QR_CODE : "");
 }
 
+function useLogoQrCodeTenant({
+    tenantId = "",
+    empresaId = "",
+    empresas = [],
+}) {
+    const tenantIdResolvido =
+        resolverTenantIdBrandingRecursoService({
+            tenantId,
+            empresaId,
+            empresas,
+        });
+
+    const logoTenantUrl =
+        obterUrlLogoQrCodeTenantService({
+            tenantId:
+                tenantIdResolvido,
+        });
+
+    const [
+        logoTenantCarregado,
+        setLogoTenantCarregado,
+    ] =
+        useState("");
+
+    useEffect(() => {
+        let ativo = true;
+
+        if (logoTenantUrl) {
+            const imagem =
+                new Image();
+
+            imagem.onload =
+                () => {
+                    if (ativo) {
+                        setLogoTenantCarregado(
+                            logoTenantUrl
+                        );
+                    }
+                };
+
+            imagem.onerror =
+                () => {
+                    if (ativo) {
+                        setLogoTenantCarregado("");
+                    }
+                };
+
+            imagem.src =
+                logoTenantUrl;
+        }
+
+        return () => {
+            ativo = false;
+        };
+    }, [logoTenantUrl]);
+
+    return (
+        logoTenantUrl &&
+        logoTenantCarregado === logoTenantUrl
+            ? logoTenantCarregado
+            : ""
+    );
+}
+
 export function QrCodeComLogo({
     value = "",
     size = 150,
@@ -105,10 +173,25 @@ export function QrCodeComLogo({
     logoSrc = "",
     logoRatio = 0.24,
     showLogo = true,
+    tenantId = "",
+    empresaId = "",
+    empresas = [],
     className = "",
 }) {
     const logoGlobal = useLogoQrCodeGlobal();
-    const logoFinal = logoSrc || logoGlobal || LOGO_PADRAO_QR_CODE;
+
+    const logoTenant =
+        useLogoQrCodeTenant({
+            tenantId,
+            empresaId,
+            empresas,
+        });
+
+    const logoFinal =
+        logoSrc ||
+        logoTenant ||
+        logoGlobal ||
+        LOGO_PADRAO_QR_CODE;
     const [logoRenderizado, setLogoRenderizado] = useState(logoFinal);
     const tamanhoQr = Math.max(80, Number(size) || 150);
     const proporcaoLogo = Math.min(0.28, Math.max(0.14, Number(logoRatio) || 0.24));

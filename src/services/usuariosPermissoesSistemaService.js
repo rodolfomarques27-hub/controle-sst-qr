@@ -460,6 +460,11 @@ export async function salvarUsuarioPermissaoSistemaService({ supabase, usuario, 
         p_bloqueado: dados.bloqueado,
         p_acesso_global: dados.acessoGlobal,
         p_observacao: dados.observacao,
+        p_empresa_id: normalizarIdentificadorI4C(
+            usuario?.empresa_id
+            || usuario?.empresaId
+            || null
+        ),
     });
 
     if (error) {
@@ -1032,4 +1037,478 @@ export function obterResumoPermissaoSistema(permissao = null) {
         bloqueado: permissaoNormalizada.bloqueado,
         ativo: permissaoNormalizada.ativo,
     };
+}
+/*
+ * SAFE_SCAN_I4C_B3_SERVICE_SCOPE
+ *
+ * Camada de compatibilidade para administração de acessos.
+ *
+ * - tenantId informado:
+ *   usa exclusivamente as RPCs tenant-scoped da I4C-A.
+ *
+ * - tenantId ausente:
+ *   preserva as RPCs administrativas globais legadas,
+ *   que após a I4C-A ficam restritas ao administrador
+ *   global SafeScan.
+ *
+ * A autorização continua obrigatoriamente server-side.
+ */
+function normalizarIdentificadorI4C(valor = null) {
+    const texto = String(valor ?? "").trim();
+    return texto || null;
+}
+
+function normalizarStatusMembershipI4C(valor = "") {
+    const status = String(valor || "")
+        .trim()
+        .toLowerCase();
+
+    return [
+        "pendente",
+        "ativo",
+        "suspenso",
+        "revogado",
+    ].includes(status)
+        ? status
+        : "pendente";
+}
+
+function normalizarUsuarioTenantSistemaI4C(usuario = null) {
+    if (!usuario) return null;
+
+    const status =
+        normalizarStatusMembershipI4C(
+            usuario.membership_status
+            || usuario.status
+        );
+
+    const perfil =
+        normalizarPerfilSistema(
+            usuario.papel
+            || usuario.perfil_legado
+            || usuario.perfil
+            || "consulta"
+        );
+
+    const bloqueado =
+        status === "suspenso"
+        || status === "revogado";
+
+    return normalizarPermissaoSistema({
+        ...usuario,
+
+        id:
+            usuario.membership_id
+            || usuario.id
+            || null,
+
+        membership_id:
+            usuario.membership_id
+            || usuario.id
+            || null,
+
+        tenant_id:
+            normalizarIdentificadorI4C(
+                usuario.tenant_id
+            ),
+
+        user_id:
+            normalizarIdentificadorI4C(
+                usuario.user_id
+            ),
+
+        empresa_id:
+            normalizarIdentificadorI4C(
+                usuario.empresa_id
+            ),
+
+        perfil,
+
+        ativo:
+            status === "ativo",
+
+        bloqueado,
+
+        acesso_global:
+            false,
+
+        permissoes:
+            usuario.membership_permissoes
+            && typeof usuario.membership_permissoes === "object"
+                ? usuario.membership_permissoes
+                : {},
+
+        membership_status:
+            status,
+
+        excluido:
+            status === "revogado",
+
+        created_at:
+            usuario.membership_created_at
+            || usuario.created_at
+            || null,
+
+        updated_at:
+            usuario.membership_updated_at
+            || usuario.updated_at
+            || null,
+    });
+}
+
+export async function listarUsuariosPermissoesSistemaEscopoService({
+    supabase,
+    tenantId = null,
+} = {}) {
+    if (!supabase) {
+        throw new Error(
+            "Cliente Supabase não informado para listar usuários e permissões."
+        );
+    }
+
+    const tenantIdNormalizado =
+        normalizarIdentificadorI4C(
+            tenantId
+        );
+
+    if (!tenantIdNormalizado) {
+        return listarUsuariosPermissoesSistemaService({
+            supabase,
+        });
+    }
+
+    const {
+        data,
+        error,
+    } = await supabase.rpc(
+        "admin_listar_usuarios_tenant_sistema",
+        {
+            p_tenant_id:
+                tenantIdNormalizado,
+        }
+    );
+
+    if (error) {
+        throw new Error(
+            error.message
+            || "Erro ao listar usuários do tenant."
+        );
+    }
+
+    return (
+        Array.isArray(data)
+            ? data
+            : []
+    )
+        .map(
+            (usuario) =>
+                normalizarUsuarioTenantSistemaI4C(
+                    usuario
+                )
+        )
+        .filter(Boolean);
+}
+
+export async function salvarUsuarioPermissaoSistemaEscopoService({
+    supabase,
+    usuario,
+    usuarioAtual = null,
+    tenantId = null,
+} = {}) {
+    if (!supabase) {
+        throw new Error(
+            "Cliente Supabase não informado para salvar usuário e permissão."
+        );
+    }
+
+    const tenantIdNormalizado =
+        normalizarIdentificadorI4C(
+            tenantId
+        );
+
+    if (!tenantIdNormalizado) {
+        return salvarUsuarioPermissaoSistemaService({
+            supabase,
+            usuario,
+            usuarioAtual,
+        });
+    }
+
+    const dados =
+        validarDadosUsuarioPermissaoSistema(
+            usuario
+        );
+
+    validarAlteracaoSeguraPermissaoPropria({
+        usuarioAlvo:
+            usuario,
+
+        usuarioAtual,
+
+        dadosValidados:
+            dados,
+    });
+
+    const userId =
+        normalizarIdentificadorI4C(
+            usuario?.user_id
+            || usuario?.userId
+        );
+
+    if (!userId) {
+        throw new Error(
+            "O acesso tenant exige usuário já vinculado ao Supabase Auth. Crie ou vincule o login antes de salvar a membership."
+        );
+    }
+
+    const empresaId =
+        normalizarIdentificadorI4C(
+            usuario?.empresa_id
+            || usuario?.empresaId
+        );
+
+    const status =
+        (
+            dados.perfil === "bloqueado"
+            || dados.bloqueado
+        )
+            ? "suspenso"
+            : dados.ativo
+                ? "ativo"
+                : "pendente";
+
+    let papel =
+        dados.perfil;
+
+    if (papel === "bloqueado") {
+        papel =
+            normalizarPerfilSistema(
+                usuario?.papel
+                || usuario?.perfil_legado
+                || "consulta"
+            );
+    }
+
+    if (
+        papel === "bloqueado"
+        || ![
+            "administrador",
+            "gestor",
+            "tecnico_sst",
+            "auditor",
+            "consulta",
+        ].includes(papel)
+    ) {
+        papel =
+            "consulta";
+    }
+
+    if (
+        status === "ativo"
+        && papel !== "administrador"
+        && !empresaId
+    ) {
+        throw new Error(
+            "Selecione a empresa operacional do usuário antes de ativar este acesso."
+        );
+    }
+
+    const permissoes =
+        usuario?.permissoes
+        && typeof usuario.permissoes === "object"
+            ? usuario.permissoes
+            : {};
+
+    const {
+        data,
+        error,
+    } = await supabase.rpc(
+        "admin_salvar_usuario_tenant_sistema",
+        {
+            p_tenant_id:
+                tenantIdNormalizado,
+
+            p_user_id:
+                userId,
+
+            p_email:
+                dados.email,
+
+            p_nome:
+                dados.nome,
+
+            p_funcao:
+                dados.funcao,
+
+            p_papel:
+                papel,
+
+            p_status:
+                status,
+
+            p_empresa_id:
+                empresaId,
+
+            p_empresa:
+                dados.empresa,
+
+            p_foto_url:
+                dados.fotoUrl,
+
+            p_observacao:
+                dados.observacao,
+
+            p_permissoes:
+                permissoes,
+        }
+    );
+
+    if (error) {
+        throw new Error(
+            error.message
+            || "Erro ao salvar usuário no tenant."
+        );
+    }
+
+    const usuarios =
+        await listarUsuariosPermissoesSistemaEscopoService({
+            supabase,
+            tenantId:
+                tenantIdNormalizado,
+        });
+
+    const salvo =
+        usuarios.find(
+            (item) =>
+                item?.user_id === userId
+        )
+        || null;
+
+    if (salvo) {
+        return salvo;
+    }
+
+    return normalizarPermissaoSistema({
+        ...usuario,
+        ...(data || {}),
+        user_id:
+            userId,
+        tenant_id:
+            tenantIdNormalizado,
+        empresa_id:
+            empresaId,
+        perfil:
+            papel,
+        ativo:
+            status === "ativo",
+        bloqueado:
+            status === "suspenso"
+            || status === "revogado",
+        acesso_global:
+            false,
+        membership_status:
+            status,
+        excluido:
+            status === "revogado",
+    });
+}
+
+export async function excluirUsuarioPermissaoSistemaEscopoService({
+    supabase,
+    usuario,
+    usuarioAtual = null,
+    observacao = "",
+    tenantId = null,
+} = {}) {
+    if (!supabase) {
+        throw new Error(
+            "Cliente Supabase não informado para revogar acesso."
+        );
+    }
+
+    const tenantIdNormalizado =
+        normalizarIdentificadorI4C(
+            tenantId
+        );
+
+    if (!tenantIdNormalizado) {
+        return excluirUsuarioPermissaoSistemaService({
+            supabase,
+            usuario,
+            usuarioAtual,
+            observacao,
+        });
+    }
+
+    const userId =
+        normalizarIdentificadorI4C(
+            usuario?.user_id
+            || usuario?.userId
+        );
+
+    if (!userId) {
+        throw new Error(
+            "Usuário tenant sem user_id do Supabase Auth."
+        );
+    }
+
+    const email =
+        normalizarEmail(
+            usuario?.email
+        );
+
+    const emailAtual =
+        normalizarEmail(
+            usuarioAtual?.email
+        );
+
+    if (
+        email
+        && emailAtual
+        && email === emailAtual
+    ) {
+        throw new Error(
+            "Você não pode revogar o próprio acesso deste tenant. Use outro administrador."
+        );
+    }
+
+    const {
+        data,
+        error,
+    } = await supabase.rpc(
+        "admin_revogar_usuario_tenant_sistema",
+        {
+            p_tenant_id:
+                tenantIdNormalizado,
+
+            p_user_id:
+                userId,
+        }
+    );
+
+    if (error) {
+        throw new Error(
+            error.message
+            || "Erro ao revogar acesso do tenant."
+        );
+    }
+
+    return normalizarPermissaoSistema({
+        ...usuario,
+        ...(data || {}),
+        user_id:
+            userId,
+        tenant_id:
+            tenantIdNormalizado,
+        ativo:
+            false,
+        bloqueado:
+            true,
+        acesso_global:
+            false,
+        membership_status:
+            "revogado",
+        excluido:
+            true,
+    });
 }

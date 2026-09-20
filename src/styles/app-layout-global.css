@@ -767,19 +767,14 @@
 
   /* ETAPA 8 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø acabamento final de harmonia dos formul├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬írios e personaliza├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo.
      Objetivo: eliminar espa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºos vazios, manter campos em linhas equilibradas e permitir arrastar cards. */
-  .colaborador-formulario-unificado {
-    overflow: hidden;
-  }
+
 
   .colaborador-formulario-unificado .colaborador-form-toggle {
     top: 1rem;
     right: 1rem;
   }
 
-  .colaborador-formulario-unificado > :not(.colaborador-form-toggle) {
-    width: 100%;
-    min-width: 0;
-  }
+
 
   .colaborador-formulario-unificado :where(.space-y-3, .space-y-4):has(input),
   .colaborador-formulario-unificado :where(.space-y-3, .space-y-4):has(select) {
@@ -1096,7 +1091,6 @@
   .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(input),
   .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(select) {
     display: grid !important;
-    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
     column-gap: clamp(0.8rem, 1vw, 1rem) !important;
     row-gap: 0.72rem !important;
     align-items: start !important;
@@ -1108,10 +1102,7 @@
     margin-top: 0 !important;
   }
 
-  .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(input) > :nth-child(1),
-  .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(select) > :nth-child(1) {
-    grid-column: 1 / span 4 !important;
-  }
+
 
   .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(input) > :nth-child(2),
   .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(select) > :nth-child(2) {
@@ -2526,9 +2517,7 @@
   }
 
   @media (max-width: 1320px) {
-    .empresas-cadastro-unificado .empresas-cadastro-grid {
-      grid-template-columns: 1fr !important;
-    }
+
 
     .empresas-form-panel--documento .empresa-form-grid--documento {
       min-height: auto !important;
@@ -2604,7 +2593,6 @@
 
   .empresa-form-grid--empresa-definitivo {
     display: flex !important;
-    flex-direction: column !important;
     gap: 0.62rem !important;
     align-items: stretch !important;
   }
@@ -2672,9 +2660,7 @@
     gap: 0.5rem !important;
   }
 
-  .empresa-form-linha--uploads {
-    align-items: stretch !important;
-  }
+
 
   .empresa-upload-wrapper {
     min-width: 0 !important;
@@ -2767,9 +2753,7 @@
     min-height: 0 !important;
   }
 
-  .empresas-form-panel--documento .empresa-form-grid--documento {
-    align-content: start !important;
-  }
+
 
   .empresas-form-panel--documento .empresa-doc-tipo-card {
     min-height: 4.15rem !important;
@@ -2780,9 +2764,7 @@
   }
 
   @media (max-width: 1320px) {
-    .empresas-cadastro-unificado .empresas-cadastro-grid {
-      grid-template-columns: 1fr !important;
-    }
+
   }
 
   @media (max-width: 900px) {
@@ -3023,10 +3005,7 @@
   }
 
   @media (max-width: 860px) {
-    .empresa-doc-tipo-card--grande {
-      grid-template-columns: 1fr !important;
-      min-height: auto !important;
-    }
+
 
     .empresa-doc-tipo-card__header {
       border-right: 0 !important;
@@ -3038,9 +3017,7 @@
 
 
   /* ETAPA 27 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø cards de LTCAT/PCMSO/PGR mais alinhados ao bloco de datas e usando melhor a largura lateral. */
-  .empresas-form-panel--documento .empresa-form-grid--documento {
-    gap: 0.5rem !important;
-  }
+
 
   .empresa-doc-tipo-card--grande {
     grid-template-columns: minmax(5.35rem, 0.22fr) minmax(0, 1fr) !important;
@@ -3085,10 +3062,7 @@
   }
 
   @media (max-width: 860px) {
-    .empresa-doc-tipo-card--grande {
-      grid-template-columns: 1fr !important;
-      min-height: auto !important;
-    }
+
   }
 
 
@@ -3164,8 +3138,6 @@
   .empresas-form-panel--documento .empresa-form-grid--documento {
     width: 100% !important;
     max-width: none !important;
-    grid-template-columns: minmax(0, 1fr) !important;
-    justify-items: stretch !important;
   }
 
   .empresas-form-panel--documento .empresa-form-grid--documento > select,
@@ -3186,8 +3158,6 @@
     width: 100% !important;
     max-width: none !important;
     min-width: 0 !important;
-    grid-template-columns: minmax(0, 1fr) !important;
-    justify-items: stretch !important;
     box-sizing: border-box !important;
   }
 
@@ -3197,7 +3167,6 @@
     max-width: none !important;
     min-width: 0 !important;
     inline-size: 100% !important;
-    justify-self: stretch !important;
     box-sizing: border-box !important;
     margin: 0 !important;
     grid-template-columns: minmax(4.6rem, 0.17fr) minmax(0, 1fr) !important;
@@ -3274,9 +3243,7 @@
   }
 
   @media (max-width: 860px) {
-    .empresas-form-panel--documento .empresa-doc-tipos-grid--vertical > .empresa-doc-tipo-card--grande {
-      grid-template-columns: 1fr !important;
-    }
+
 
     .empresas-form-panel--documento .empresa-doc-tipo-card__header {
       grid-template-columns: 1.65rem minmax(0, 1fr) !important;
@@ -3320,9 +3287,7 @@
     max-width: none !important;
   }
 
-  .empresas-form-panel--documento .empresa-form-grid--documento {
-    gap: 0.44rem !important;
-  }
+
 
   .empresas-form-panel--documento .empresa-doc-tipos-grid--vertical {
     gap: 0.42rem !important;
@@ -3347,9 +3312,7 @@
   }
 
   @media (max-width: 1320px) {
-    .empresas-cadastro-unificado .empresas-cadastro-grid {
-      grid-template-columns: 1fr !important;
-    }
+
   }
 
 
@@ -3464,9 +3427,7 @@
   }
 
   @media (max-width: 1320px) {
-    .empresas-cadastro-unificado .empresas-cadastro-grid {
-      grid-template-columns: 1fr !important;
-    }
+
   }
 
   @media (max-width: 860px) {
@@ -3572,9 +3533,7 @@
   }
 
   @media (max-width: 1320px) {
-    .empresas-cadastro-unificado .empresas-cadastro-grid {
-      grid-template-columns: 1fr !important;
-    }
+
   }
 
 
@@ -4284,7 +4243,6 @@
     }
 
     .page-header {
-        margin-bottom: 0.55rem !important;
         gap: 0.45rem !important;
     }
 
@@ -4602,7 +4560,6 @@
    Acabamento da sidebar recolhida: ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cones centralizados, alvo visual fixo e logo mais limpo. */
 @media (min-width: 1024px) {
     .app-sidebar[data-sidebar-expanded="false"] {
-        align-items: center !important;
         padding-left: 0.65rem !important;
         padding-right: 0.65rem !important;
     }
@@ -4632,7 +4589,6 @@
     .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-toggle {
         width: 2.55rem !important;
         height: 2.55rem !important;
-        min-height: 2.55rem !important;
         margin-left: auto !important;
         margin-right: auto !important;
         padding: 0 !important;
@@ -4655,8 +4611,6 @@
         min-height: 2.75rem !important;
         padding: 0 !important;
         display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
         border-radius: 1rem !important;
     }
 
@@ -5012,7 +4966,6 @@
         margin: 0 0 0.28rem !important;
         padding: 0 !important;
         gap: 0.18rem !important;
-        justify-content: flex-start !important;
     }
 
     .page-header-text {
@@ -5131,7 +5084,6 @@
     .dashboard-blocos-grid :where(.overflow-x-auto) {
         padding-right: 0.72rem !important;
         overflow-x: auto !important;
-        overflow-y: hidden !important;
         scroll-padding-right: 0.9rem !important;
     }
 
@@ -5150,17 +5102,11 @@
         width: 28% !important;
     }
 
-    .dashboard-blocos-grid :where(th:nth-child(3), td:nth-child(3)) {
-        width: 12% !important;
-    }
 
-    .dashboard-blocos-grid :where(th:nth-child(4), td:nth-child(4)) {
-        width: 12% !important;
-    }
 
-    .dashboard-blocos-grid :where(th:nth-child(5), td:nth-child(5)) {
-        width: 10% !important;
-    }
+
+
+
 
     .dashboard-blocos-grid :where(th:nth-child(6), td:nth-child(6)) {
         width: 8% !important;
@@ -5175,7 +5121,6 @@
         min-width: 3.25rem !important;
         min-height: 1.8rem !important;
         padding: 0.34rem 0.52rem !important;
-        border-radius: 999px !important;
         font-size: 0.62rem !important;
         line-height: 0.78rem !important;
     }
@@ -5200,14 +5145,11 @@
        (max-width: 1023.98px) and (max-height: 540px) {
     .app-mobile-header {
         display: grid !important;
-        grid-template-rows: auto auto !important;
         row-gap: 0.36rem !important;
         min-height: 0 !important;
         height: auto !important;
         margin: 0 0 0.34rem 0 !important;
         padding: 0.48rem 0.56rem !important;
-        border: 1px solid #dbe7f2 !important;
-        border-radius: 1.18rem !important;
         background: rgba(255, 255, 255, 0.96) !important;
         box-shadow: 0 10px 24px rgba(15, 23, 42, 0.075) !important;
         backdrop-filter: none !important;
@@ -5215,9 +5157,6 @@
 
     .app-mobile-header__topo {
         display: grid !important;
-        grid-template-columns: minmax(0, 1fr) auto !important;
-        align-items: center !important;
-        justify-content: normal !important;
         gap: 0.62rem !important;
         min-width: 0 !important;
         min-height: 2.28rem !important;
@@ -5226,9 +5165,6 @@
 
     .app-mobile-header__marca {
         display: flex !important;
-        flex-direction: row !important;
-        align-items: center !important;
-        justify-content: flex-start !important;
         gap: 0.56rem !important;
         min-width: 0 !important;
         max-width: 100% !important;
@@ -5273,25 +5209,17 @@
     .app-mobile-header__sair {
         display: inline-flex !important;
         flex: 0 0 auto !important;
-        align-items: center !important;
-        justify-content: center !important;
         min-height: 2.24rem !important;
         height: 2.24rem !important;
         padding: 0.42rem 0.72rem !important;
         border-radius: 0.92rem !important;
-        white-space: nowrap !important;
         font-size: 0.72rem !important;
         line-height: 0.9rem !important;
     }
 
-    .app-mobile-header__sair span {
-        display: inline !important;
-    }
 
-    .app-mobile-header__navegacao,
-    .app-mobile-header__tela-atual {
-        display: none !important;
-    }
+
+
 
     .app-mobile-header__select {
         display: block !important;
@@ -5324,22 +5252,10 @@
         width: min(100%, 38rem) !important;
         max-width: 38rem !important;
         gap: 0.42rem !important;
-        align-items: stretch !important;
         justify-content: start !important;
-        justify-items: stretch !important;
-        margin-top: 0.42rem !important;
     }
 
-    .page-actions > *,
-    .page-actions > .flex > *,
-    .page-actions > .top-actions-nowrap > *,
-    .top-actions-nowrap > *,
-    .toolbar-responsive > * {
-        width: 100% !important;
-        min-width: 0 !important;
-        max-width: 100% !important;
-        justify-self: stretch !important;
-    }
+
 
     .page-actions button,
     .page-actions a,
@@ -5351,15 +5267,9 @@
         min-width: 0 !important;
         min-height: 2.34rem !important;
         height: 2.34rem !important;
-        justify-content: center !important;
         gap: 0.42rem !important;
-        border-radius: 0.95rem !important;
         padding: 0.5rem 0.62rem !important;
-        font-size: 0.74rem !important;
-        line-height: 0.95rem !important;
-        white-space: nowrap !important;
         overflow: hidden !important;
-        text-overflow: ellipsis !important;
     }
 
     .page-actions button svg,
@@ -5889,21 +5799,13 @@
     .dashboard-sst-actions-horizontal {
         display: grid !important;
         grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-        align-items: stretch !important;
-        justify-items: stretch !important;
         gap: 0.42rem !important;
         width: 100% !important;
         max-width: 100% !important;
         min-width: 0 !important;
     }
 
-    .dashboard-sst-actions-horizontal > *,
-    .dashboard-sst-actions-horizontal button,
-    .dashboard-sst-actions-horizontal a {
-        width: 100% !important;
-        min-width: 0 !important;
-        max-width: 100% !important;
-    }
+
 
     .dashboard-sst-actions-horizontal button,
     .dashboard-sst-actions-horizontal a {
@@ -6182,9 +6084,7 @@
         margin-top: 0.48rem !important;
     }
 
-    .dashboard-sst-actions-horizontal > :not(button):not(a) {
-        display: contents !important;
-    }
+
 
     .dashboard-sst-actions-horizontal > *,
     .dashboard-sst-actions-horizontal button,
@@ -6192,7 +6092,6 @@
         width: 100% !important;
         max-width: 100% !important;
         min-width: 0 !important;
-        justify-self: stretch !important;
         box-sizing: border-box !important;
     }
 
@@ -6201,17 +6100,12 @@
         display: inline-flex !important;
         height: 2.46rem !important;
         min-height: 2.46rem !important;
-        align-items: center !important;
-        justify-content: center !important;
         gap: 0.38rem !important;
-        border-radius: 0.95rem !important;
         padding: 0.5rem 0.62rem !important;
         font-size: clamp(0.62rem, 1.28vw, 0.78rem) !important;
         line-height: 0.95rem !important;
         font-weight: 900 !important;
-        white-space: nowrap !important;
         overflow: hidden !important;
-        text-overflow: ellipsis !important;
     }
 
     .dashboard-sst-actions-horizontal button svg,
@@ -6294,13 +6188,7 @@
         border-radius: 1rem !important;
     }
 
-    [data-dashboard-bloco="pendencias"] table {
-        width: 100% !important;
-        min-width: 0 !important;
-        max-width: 100% !important;
-        table-layout: fixed !important;
-        border-collapse: collapse !important;
-    }
+
 
     [data-dashboard-bloco="pendencias"] :where(th, td) {
         min-width: 0 !important;
@@ -6416,12 +6304,7 @@
    N├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo altera o padr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo do ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cone mobile nem os bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes 2x2 do Dashboard SST. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
-    [data-dashboard-bloco="pendencias"] {
-        min-width: 0 !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        overflow: hidden !important;
-    }
+
 
     [data-dashboard-bloco="pendencias"] > *,
     [data-dashboard-bloco="pendencias"] :where(.rounded-3xl, .rounded-2xl) {
@@ -6433,10 +6316,7 @@
     [data-dashboard-bloco="pendencias"] :where(.responsive-table, .overflow-x-auto) {
         width: 100% !important;
         max-width: 100% !important;
-        overflow-x: hidden !important;
-        overflow-y: hidden !important;
         padding-right: 0.25rem !important;
-        border-radius: 1rem !important;
     }
 
     [data-dashboard-bloco="pendencias"] table {
@@ -6458,25 +6338,20 @@
     [data-dashboard-bloco="pendencias"] td {
         min-width: 0 !important;
         max-width: 100% !important;
-        vertical-align: middle !important;
         box-sizing: border-box !important;
         padding-top: 0.48rem !important;
         padding-bottom: 0.48rem !important;
         padding-left: 0.42rem !important;
         padding-right: 0.42rem !important;
-        font-size: 0.62rem !important;
         line-height: 0.86rem !important;
         overflow: hidden !important;
         text-align: left !important;
     }
 
     [data-dashboard-bloco="pendencias"] th {
-        font-size: 0.56rem !important;
         line-height: 0.72rem !important;
         font-weight: 950 !important;
         letter-spacing: 0.03em !important;
-        white-space: nowrap !important;
-        text-transform: uppercase !important;
     }
 
     [data-dashboard-bloco="pendencias"] th:nth-child(1),
@@ -6493,7 +6368,6 @@
     [data-dashboard-bloco="pendencias"] th:nth-child(3),
     [data-dashboard-bloco="pendencias"] td:nth-child(3) {
         width: 11% !important;
-        text-align: center !important;
     }
 
     [data-dashboard-bloco="pendencias"] th:nth-child(4),
@@ -6519,7 +6393,6 @@
     [data-dashboard-bloco="pendencias"] td:nth-child(1) .flex {
         display: grid !important;
         grid-template-columns: 2rem minmax(0, 1fr) !important;
-        align-items: center !important;
         gap: 0.48rem !important;
         min-width: 0 !important;
         max-width: 100% !important;
@@ -6532,37 +6405,21 @@
         min-height: 2rem !important;
         max-width: 2rem !important;
         max-height: 2rem !important;
-        border-radius: 999px !important;
-        object-fit: cover !important;
     }
 
-    [data-dashboard-bloco="pendencias"] td:nth-child(1) :where(p, span, strong, div),
-    [data-dashboard-bloco="pendencias"] td:nth-child(2) :where(p, span, strong, div),
-    [data-dashboard-bloco="pendencias"] td:nth-child(3) :where(p, span, strong, div) {
-        min-width: 0 !important;
-        max-width: 100% !important;
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
-        word-break: normal !important;
-        overflow-wrap: normal !important;
-    }
+
 
     [data-dashboard-bloco="pendencias"] td:nth-child(1) :where(strong, .font-semibold, .font-bold, .font-extrabold, .font-black) {
         display: block !important;
         font-size: 0.64rem !important;
         line-height: 0.82rem !important;
-        white-space: nowrap !important;
         overflow: hidden !important;
-        text-overflow: ellipsis !important;
     }
 
     [data-dashboard-bloco="pendencias"] td:nth-child(1) :where(p, span):not(.inline-flex):not(.rounded-full) {
         display: block !important;
-        font-size: 0.58rem !important;
         line-height: 0.74rem !important;
-        white-space: nowrap !important;
         overflow: hidden !important;
-        text-overflow: ellipsis !important;
     }
 
     [data-dashboard-bloco="pendencias"] td:nth-child(2) {
@@ -6572,14 +6429,12 @@
     [data-dashboard-bloco="pendencias"] td:nth-child(2) :where(p, span, strong, div) {
         display: -webkit-box !important;
         max-height: 1.76rem !important;
-        white-space: normal !important;
         -webkit-line-clamp: 2 !important;
         -webkit-box-orient: vertical !important;
     }
 
     [data-dashboard-bloco="pendencias"] td:nth-child(3) {
         white-space: nowrap !important;
-        font-size: 0.58rem !important;
         line-height: 0.76rem !important;
     }
 
@@ -6588,16 +6443,11 @@
         display: inline-flex !important;
         max-width: 100% !important;
         min-height: 1.72rem !important;
-        align-items: center !important;
-        justify-content: center !important;
         padding: 0.24rem 0.46rem !important;
-        border-radius: 999px !important;
         font-size: 0.58rem !important;
         line-height: 0.72rem !important;
         font-weight: 900 !important;
-        white-space: nowrap !important;
         overflow: hidden !important;
-        text-overflow: ellipsis !important;
     }
 
     [data-dashboard-bloco="pendencias"] td:nth-child(5) :where(button, a),
@@ -6608,16 +6458,11 @@
         max-width: 3.2rem !important;
         min-height: 1.72rem !important;
         height: 1.72rem !important;
-        align-items: center !important;
-        justify-content: center !important;
-        border-radius: 999px !important;
         padding: 0.22rem 0.38rem !important;
         font-size: 0.54rem !important;
         line-height: 0.68rem !important;
         font-weight: 900 !important;
-        white-space: nowrap !important;
         overflow: hidden !important;
-        text-overflow: ellipsis !important;
     }
 
     [data-dashboard-bloco="pendencias"] td:nth-child(6) :where(button, a) {
@@ -6634,8 +6479,6 @@
        (max-height: 410px) and (max-width: 860px) {
     [data-dashboard-bloco="pendencias"] th,
     [data-dashboard-bloco="pendencias"] td {
-        padding-left: 0.28rem !important;
-        padding-right: 0.28rem !important;
         font-size: 0.54rem !important;
         line-height: 0.72rem !important;
     }
@@ -6855,33 +6698,16 @@
         overflow: hidden !important;
     }
 
-    [data-dashboard-bloco="pendencias"] :where(.rounded-3xl, .rounded-2xl) {
-        width: 100% !important;
-        max-width: 100% !important;
-        min-width: 0 !important;
-        overflow: hidden !important;
-    }
+
 
     [data-dashboard-bloco="pendencias"] :where(.responsive-table, .overflow-x-auto) {
         width: 100% !important;
         max-width: 100% !important;
         min-width: 0 !important;
-        overflow-x: hidden !important;
-        overflow-y: hidden !important;
         padding-right: 0.35rem !important;
-        border-radius: 1rem !important;
     }
 
-    [data-dashboard-bloco="pendencias"] table,
-    [data-dashboard-bloco="pendencias"] thead,
-    [data-dashboard-bloco="pendencias"] tbody {
-        display: block !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        min-width: 0 !important;
-        table-layout: auto !important;
-        border-collapse: separate !important;
-    }
+
 
     [data-dashboard-bloco="pendencias"] tr {
         display: grid !important;
@@ -6889,7 +6715,6 @@
         max-width: 100% !important;
         min-width: 0 !important;
         grid-template-columns: minmax(0, 31fr) minmax(0, 28fr) minmax(4.2rem, 11fr) minmax(4.4rem, 12fr) minmax(3.4rem, 9fr) minmax(3rem, 9fr) !important;
-        align-items: center !important;
         column-gap: 0 !important;
     }
 
@@ -6899,25 +6724,19 @@
         min-width: 0 !important;
         max-width: 100% !important;
         height: 100% !important;
-        align-items: center !important;
         box-sizing: border-box !important;
         overflow: hidden !important;
         padding: 0.42rem 0.38rem !important;
         font-size: 0.6rem !important;
         line-height: 0.78rem !important;
         text-align: left !important;
-        vertical-align: middle !important;
     }
 
     [data-dashboard-bloco="pendencias"] th {
         min-height: 1.86rem !important;
         color: #64748b !important;
-        font-size: 0.56rem !important;
-        line-height: 0.68rem !important;
         font-weight: 950 !important;
         letter-spacing: 0.035em !important;
-        text-transform: uppercase !important;
-        white-space: nowrap !important;
     }
 
     [data-dashboard-bloco="pendencias"] td {
@@ -6927,7 +6746,6 @@
     [data-dashboard-bloco="pendencias"] th:nth-child(1),
     [data-dashboard-bloco="pendencias"] td:nth-child(1) {
         padding-left: 0.56rem !important;
-        justify-content: flex-start !important;
     }
 
     [data-dashboard-bloco="pendencias"] th:nth-child(3),
@@ -6948,27 +6766,9 @@
         padding-right: 0.62rem !important;
     }
 
-    [data-dashboard-bloco="pendencias"] td:nth-child(1) > div,
-    [data-dashboard-bloco="pendencias"] td:nth-child(1) .flex {
-        display: flex !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        min-width: 0 !important;
-        align-items: center !important;
-        gap: 0.42rem !important;
-        overflow: hidden !important;
-    }
 
-    [data-dashboard-bloco="pendencias"] td:nth-child(1) :where(img, .h-10, .h-11, .h-12, .w-10, .w-11, .w-12) {
-        width: 1.78rem !important;
-        height: 1.78rem !important;
-        min-width: 1.78rem !important;
-        min-height: 1.78rem !important;
-        max-width: 1.78rem !important;
-        max-height: 1.78rem !important;
-        border-radius: 999px !important;
-        object-fit: cover !important;
-    }
+
+
 
     [data-dashboard-bloco="pendencias"] td:nth-child(1) :where(p, span, strong, div),
     [data-dashboard-bloco="pendencias"] td:nth-child(2) :where(p, span, strong, div),
@@ -6985,7 +6785,6 @@
         display: block !important;
         font-size: 0.6rem !important;
         line-height: 0.74rem !important;
-        white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
     }
@@ -6994,7 +6793,6 @@
         display: block !important;
         font-size: 0.56rem !important;
         line-height: 0.7rem !important;
-        white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
     }
@@ -7002,7 +6800,6 @@
     [data-dashboard-bloco="pendencias"] td:nth-child(2) :where(p, span, strong, div) {
         display: -webkit-box !important;
         max-height: 1.48rem !important;
-        white-space: normal !important;
         -webkit-line-clamp: 2 !important;
         -webkit-box-orient: vertical !important;
     }
@@ -7079,29 +6876,13 @@
         padding-right: 0.46rem !important;
     }
 
-    [data-dashboard-bloco="pendencias"] td:nth-child(1) > div,
-    [data-dashboard-bloco="pendencias"] td:nth-child(1) .flex {
-        gap: 0.3rem !important;
-    }
 
-    [data-dashboard-bloco="pendencias"] td:nth-child(1) :where(img, .h-10, .h-11, .h-12, .w-10, .w-11, .w-12) {
-        width: 1.55rem !important;
-        height: 1.55rem !important;
-        min-width: 1.55rem !important;
-        min-height: 1.55rem !important;
-        max-width: 1.55rem !important;
-        max-height: 1.55rem !important;
-    }
 
-    [data-dashboard-bloco="pendencias"] td:nth-child(1) :where(strong, .font-semibold, .font-bold, .font-extrabold, .font-black) {
-        font-size: 0.52rem !important;
-        line-height: 0.64rem !important;
-    }
 
-    [data-dashboard-bloco="pendencias"] td:nth-child(1) :where(p, span):not(.inline-flex):not(.rounded-full) {
-        font-size: 0.48rem !important;
-        line-height: 0.58rem !important;
-    }
+
+
+
+
 
     [data-dashboard-bloco="pendencias"] td:nth-child(4) :where(span, p, div),
     [data-dashboard-bloco="pendencias"] td:nth-child(4) :where(.rounded-full, .inline-flex),
@@ -7772,7 +7553,6 @@
         display: grid !important;
         grid-template-columns: minmax(0, 1.38fr) minmax(0, 1.32fr) minmax(3.9rem, 0.52fr) minmax(9.2rem, 1.15fr) !important;
         column-gap: 0.46rem !important;
-        align-items: center !important;
     }
 
     .dashboard-pendencias-final__cabecalho {
@@ -8217,16 +7997,9 @@
 }
 
 /* Roteiro v1.0.4.9 ├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├â┬ó├óÔÇÜ┬¼├é┬Ø ajuste pontual da aba Colaboradores */
-.novo-colaborador-cabecalho-branco__icone {
-  background: #020617 !important;
-  color: #ffffff !important;
-  border-color: #020617 !important;
-}
 
-.novo-colaborador-cabecalho-branco__icone svg {
-  color: #ffffff !important;
-  stroke: #ffffff !important;
-}
+
+
 
 /* Apenas o texto pequeno BASE DE COLABORADORES em azul */
 .colaboradores-section-destaque .group > div:nth-child(2) > p:first-child {
@@ -8272,11 +8045,7 @@
   text-align-last: center !important;
 }
 
-.colaboradores-info-card img.h-20.w-20,
-.colaboradores-info-card .h-20.w-20 {
-  border-radius: 9999px !important;
-  overflow: hidden !important;
-}
+
 
 /* Roteiro v1.0.4.9 ├óÔé¼ÔÇØ ajuste final: datas centralizadas e moldura da foto do colaborador */
 .colaborador-formulario-unificado input[type="date"],
@@ -10039,7 +9808,6 @@
   font-weight: 950 !important;
   letter-spacing: 0.055em !important;
   line-height: 1.05 !important;
-  text-overflow: ellipsis !important;
   text-transform: uppercase !important;
   white-space: nowrap !important;
 }
@@ -10805,9 +10573,7 @@
 }
 
 @media (max-width: 1320px) {
-  .aniversariantes-resumo-unificado__grid {
-    grid-template-columns: 1fr 1fr !important;
-  }
+
 
   .aniversariantes-resumo-unificado__grafico {
     grid-column: 1 / -1 !important;
@@ -10944,9 +10710,7 @@
 }
 
 @media (max-width: 1320px) {
-  .aniversariantes-resumo-unificado__grid {
-    grid-template-columns: 1fr 1fr !important;
-  }
+
 
   .aniversariantes-resumo-unificado__grafico {
     grid-column: 1 / -1 !important;
@@ -10955,7 +10719,6 @@
 /* MICROETAPA 3C.2 - grafico aniversariantes em linha */
 .aniversariantes-resumo-unificado__grafico-topo {
   display: grid !important;
-  grid-template-columns: minmax(0, 1fr) auto !important;
   align-items: center !important;
   gap: 0.85rem !important;
 }
@@ -11040,19 +10803,14 @@
   grid-template-columns: minmax(14.5rem, 0.72fr) minmax(15.5rem, 0.72fr) minmax(29rem, 1.56fr) !important;
 }
 
-.aniversariantes-resumo-unificado__item--proximo {
-  justify-content: center !important;
-}
+
 
 .aniversariantes-resumo-unificado__item--proximo .aniversariantes-resumo-unificado__texto {
   width: auto !important;
   max-width: 18rem !important;
 }
 
-.aniversariantes-resumo-unificado__grafico-topo {
-  grid-template-columns: minmax(0, 1fr) auto !important;
-  align-items: center !important;
-}
+
 
 .aniversariantes-resumo-unificado__grafico-topo > div:first-child {
   display: flex !important;
@@ -11112,17 +10870,11 @@
 }
 
 @media (max-width: 1320px) {
-  .aniversariantes-resumo-unificado {
-    width: 100% !important;
-  }
 
-  .aniversariantes-resumo-unificado__grid {
-    grid-template-columns: 1fr 1fr !important;
-  }
 
-  .aniversariantes-resumo-unificado__item--proximo {
-    justify-content: flex-start !important;
-  }
+
+
+
 }
 
 @media (max-width: 980px) {
@@ -11233,9 +10985,7 @@
   grid-template-columns: 1fr !important;
 }
 
-.aniversariantes-resumo-unificado__grafico-topo > div:first-child {
-  max-width: none !important;
-}
+
 
 .aniversariantes-resumo-unificado__grafico-subtitulo {
   gap: 0 !important;
@@ -12194,11 +11944,7 @@
     width: 100% !important;
   }
 
-  .treinamentos-base-certificados-card__acao-treinamentos,
-  .treinamentos-base-certificados-card__acao-lote {
-    width: 100% !important;
-    min-width: 0 !important;
-  }
+
 }
 /* MICROETAPA 4F.4 - abertura em par e envio em massa */
 .treinamentos-base-certificados-card__acoes {
@@ -12301,20 +12047,11 @@
   }
 }
 /* MICROETAPA 4F.4.3 - card clicavel e hover acoes */
-.treinamentos-base-certificados-card__colaborador--clicavel {
-  cursor: pointer !important;
-}
 
-.treinamentos-base-certificados-card__colaborador--clicavel:hover {
-  border-color: #93c5fd !important;
-  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.11) !important;
-  transform: translateY(-1px) !important;
-}
 
-.treinamentos-base-certificados-card__colaborador--clicavel:focus-visible {
-  outline: 3px solid rgba(37, 99, 235, 0.2) !important;
-  outline-offset: 3px !important;
-}
+
+
+
 
 .treinamentos-base-certificados-card__acoes-colaborador .treinamentos-base-certificados-card__acao-treinamentos:hover:not(:disabled),
 .treinamentos-base-certificados-card__acoes-colaborador .treinamentos-base-certificados-card__acao-treinamentos:focus-visible:not(:disabled) {
@@ -12614,7 +12351,6 @@
   display: flex !important;
   flex-wrap: nowrap !important;
   align-items: center !important;
-  justify-content: flex-end !important;
   gap: 0.5rem !important;
   overflow: visible !important;
 }
@@ -12662,18 +12398,9 @@
 }
 
 @media (max-width: 760px) {
-  .treinamentos-layout-card .treinamentos-certificados-verificacao-acoes {
-    width: 100% !important;
-    min-width: 0 !important;
-    flex-wrap: wrap !important;
-    justify-content: flex-start !important;
-  }
 
-  .treinamentos-layout-card .treinamentos-certificados-verificacao-acoes > button {
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: none !important;
-  }
+
+
 }
 
 
@@ -13127,11 +12854,7 @@
 
   /* Final mobile detail spacing: below the divider with a clearer reading size. */
   @media (max-width: 1023.98px) {
-    .dashboard-summary-grid > .dashboard-summary-card:not([data-dashboard-card="armazenamentoUtilizado"]) > .dashboard-summary-card-detail {
-      top: 3.28rem !important;
-      font-size: 0.44rem !important;
-      line-height: 1 !important;
-    }
+
 
     .dashboard-summary-grid > .dashboard-summary-card:not([data-dashboard-card="armazenamentoUtilizado"]) > p.dashboard-summary-card-detail:last-child {
       top: 3.28rem !important;
@@ -13158,11 +12881,7 @@
       line-height: 0.96 !important;
     }
 
-    .dashboard-summary-grid > .dashboard-summary-card:not([data-dashboard-card="armazenamentoUtilizado"]) > .dashboard-summary-card-detail {
-      top: 3.28rem !important;
-      font-size: 0.44rem !important;
-      line-height: 1 !important;
-    }
+
 
     /* Final mobile detail spacing: below the divider with a clearer reading size. */
     .dashboard-summary-grid > .dashboard-summary-card:not([data-dashboard-card="armazenamentoUtilizado"]) > .dashboard-summary-card-detail {
@@ -13180,105 +12899,42 @@
 
 /* Mobile SST keeps the first decision layer visible: welcome plus indicators. */
 @media (max-width: 1023.98px) {
-  .dashboard-sst-header-actions,
-  .dashboard-sst-mobile-secondary,
-  .dashboard-sst-blocos-grid > [data-dashboard-bloco]:not([data-dashboard-bloco="cards"]) {
-    display: none !important;
-  }
 
-  .dashboard-hero-sst {
-    margin: 0 0 0.8rem !important;
-    border-radius: 18px !important;
-    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.1) !important;
-  }
 
-  .dashboard-hero-sst > .relative {
-    min-height: 152px !important;
-    gap: 0.65rem !important;
-    padding: 1.1rem !important;
-  }
+
+
+
 
   .dashboard-hero-sst > .relative > :first-child {
     text-shadow: 0 1px 6px rgba(0, 0, 0, 0.55) !important;
   }
 
-  .dashboard-hero-sst > .relative > :first-child h2 {
-    margin-top: 0.35rem !important;
-    font-size: 1.2rem !important;
-  }
 
-  .dashboard-hero-sst > .relative > :first-child p:last-of-type,
-  .dashboard-hero-sst > .relative > :first-child > div {
-    margin-top: 0.35rem !important;
-  }
 
-  .dashboard-hero-sst__date {
-    align-self: flex-start;
-    display: inline-flex;
-    max-width: 100%;
-    align-items: center;
-    gap: 0.42rem !important;
-    margin-top: 0.2rem;
-    padding: 0.48rem 0.7rem !important;
-    border-radius: 0.8rem !important;
-    font-size: 0.68rem !important;
-    line-height: 1.2 !important;
-    white-space: nowrap;
-  }
 
-  .dashboard-hero-sst__date > div {
-    display: flex;
-    align-items: center;
-    gap: 0.42rem !important;
-    flex-wrap: nowrap !important;
-  }
 
-  .dashboard-hero-sst__date > div > span:nth-of-type(2),
-  .dashboard-hero-sst__date > div > span:nth-of-type(4) {
-    display: none;
-  }
 
-  .dashboard-summary-grid {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) !important;
-    gap: 0.62rem !important;
-    margin-top: 0.8rem !important;
-  }
 
-  .dashboard-summary-card {
-    min-height: 5.55rem !important;
-    border-radius: 17px !important;
-    padding: 0.72rem 0.82rem !important;
-    box-shadow: 0 5px 13px rgba(15, 23, 42, 0.06) !important;
-  }
 
-  .dashboard-summary-card > div {
-    gap: 0.7rem !important;
-  }
+
+
+
+
+
+
+
+
 
   .dashboard-summary-card :where(.summary-card-icon, svg) {
     max-width: 1.65rem;
     max-height: 1.65rem;
   }
 
-  .dashboard-summary-card .summary-card-value,
-  .dashboard-summary-card p:nth-child(2) {
-    margin-top: 0.18rem !important;
-    padding-bottom: 0.18rem !important;
-    font-size: 1.42rem !important;
-  }
 
-  .dashboard-summary-card .summary-card-label,
-  .dashboard-summary-card h3 {
-    font-size: 0.68rem !important;
-    letter-spacing: 0.07em !important;
-  }
 
-  .dashboard-summary-card .summary-card-detail,
-  .dashboard-summary-card p:last-child {
-    margin-top: 0.15rem !important;
-    font-size: 0.62rem !important;
-  }
+
+
+
 }
 @media (max-width: 1023.98px) {
   .dashboard-sst-header-actions,
@@ -14136,7 +13792,6 @@
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
     font-size: 0.5rem !important;
-    letter-spacing: 0.02em !important;
     line-height: 1 !important;
   }
 
@@ -14829,11 +14484,7 @@
 
 /* Evita que o hover altere o eixo do bot├úo direto */
 
-.empresas-card-recolhido-padrao--cadastro
-  [data-empresas-card-cabecalho="cadastro"]
-  > button:hover {
-  transform: translateY(-50%) !important;
-}
+
 
 /* Responsividade */
 
@@ -17220,7 +16871,6 @@
  * ============================================================ */
 
 .treinamentos-certificados-acoes-documento__linha-superior {
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   gap: 0.4rem !important;
 }
 
@@ -17266,7 +16916,6 @@
 
 .treinamentos-certificados-acoes-documento__linha-superior {
   display: grid !important;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   gap: 0.45rem !important;
   width: 100% !important;
   align-items: stretch !important;
@@ -17788,10 +17437,6 @@
 
     display: grid !important;
 
-    grid-template-columns:
-      minmax(0, 1fr)
-      minmax(0, 1fr) !important;
-
     /*
      * +34px de largura somente no topo.
      */
@@ -17827,7 +17472,6 @@
     display: inline-flex !important;
 
     align-items: center !important;
-    justify-content: center !important;
 
     width: 100% !important;
 
@@ -17853,42 +17497,13 @@
    * Texto jamais deve quebrar ou sumir.
    */
 
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acoes-documento__linha-superior
-    > .treinamentos-certificados-acao--rever span,
 
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acoes-documento__linha-superior
-    > .treinamentos-certificados-acao--historico span {
-
-    display: inline-block !important;
-
-    min-width: max-content !important;
-
-    white-space: nowrap !important;
-
-    overflow: visible !important;
-
-    text-overflow: clip !important;
-  }
 
   /*
    * Ícones compactos para sobrar largura para o texto.
    */
 
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acoes-documento__linha-superior
-    > .treinamentos-certificados-acao--rever svg,
 
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acoes-documento__linha-superior
-    > .treinamentos-certificados-acao--historico svg {
-
-    width: 0.78rem !important;
-    height: 0.78rem !important;
-
-    flex: 0 0 auto !important;
-  }
 }
 /* ============================================================
  * CERT-HIST-UI-G1-R7
@@ -17985,644 +17600,5 @@
 
     white-space: nowrap !important;
     overflow: visible !important;
-  }
-}
-/* ============================================================
- * CERT-HIST-UI-G1-R8
- *
- * Primeira linha definitiva:
- *
- * [      Rever data      ][       Histórico       ]
- *              [ Abrir documento ]
- *              [     Excluir     ]
- *
- * O topo cresce 32px exclusivamente para a esquerda.
- * A borda direita permanece alinhada às linhas inferiores.
- * ============================================================ */
-
-@media (min-width: 1024px) {
-
-  /* ----------------------------------------------------------
-   * LINHA SUPERIOR
-   * ---------------------------------------------------------- */
-
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acoes-documento__linha-superior {
-
-    display: grid !important;
-
-    grid-template-columns:
-      minmax(0, 1fr)
-      minmax(0, 1fr) !important;
-
-    /*
-     * Aumenta 32px em relação ao bloco inferior.
-     */
-    width: calc(100% + 2rem) !important;
-
-    /*
-     * Compensa os mesmos 32px para a esquerda.
-     *
-     * Resultado:
-     * a borda direita NÃO muda.
-     */
-    margin-left: -2rem !important;
-    margin-right: 0 !important;
-
-    transform: none !important;
-
-    gap: 0.45rem !important;
-
-    padding: 0 !important;
-
-    overflow: visible !important;
-
-    box-sizing: border-box !important;
-  }
-
-  /* ----------------------------------------------------------
-   * BASE COMUM DOS DOIS BOTÕES
-   * ---------------------------------------------------------- */
-
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acoes-documento__linha-superior
-    > .treinamentos-certificados-acao--rever,
-
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acoes-documento__linha-superior
-    > .treinamentos-certificados-acao--historico {
-
-    display: inline-flex !important;
-
-    align-items: center !important;
-    justify-content: center !important;
-
-    width: 100% !important;
-
-    min-width: 0 !important;
-    max-width: none !important;
-
-    height: 2.55rem !important;
-    min-height: 2.55rem !important;
-
-    margin: 0 !important;
-
-    padding-left: 0.7rem !important;
-    padding-right: 0.7rem !important;
-
-    gap: 0.35rem !important;
-
-    border-radius: 0.85rem !important;
-
-    font-size: 0.75rem !important;
-    font-weight: 800 !important;
-    line-height: 1 !important;
-
-    white-space: nowrap !important;
-
-    overflow: hidden !important;
-    text-overflow: clip !important;
-
-    box-sizing: border-box !important;
-  }
-
-  /* ----------------------------------------------------------
-   * REVER DATA — AZUL VISÍVEL
-   * ---------------------------------------------------------- */
-
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acoes-documento__linha-superior
-    > .treinamentos-certificados-acao--rever {
-
-    color: #1e40af !important;
-
-    background: #bfdbfe !important;
-    background-color: #bfdbfe !important;
-
-    border: 1px solid #60a5fa !important;
-
-    box-shadow:
-      0 2px 5px rgba(37, 99, 235, 0.14) !important;
-  }
-
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acoes-documento__linha-superior
-    > .treinamentos-certificados-acao--rever:hover {
-
-    color: #1e3a8a !important;
-
-    background: #93c5fd !important;
-    background-color: #93c5fd !important;
-
-    border-color: #3b82f6 !important;
-  }
-
-  /* ----------------------------------------------------------
-   * HISTÓRICO — VERDE VISÍVEL
-   * ---------------------------------------------------------- */
-
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acoes-documento__linha-superior
-    > .treinamentos-certificados-acao--historico {
-
-    color: #065f46 !important;
-
-    background: #bbf7d0 !important;
-    background-color: #bbf7d0 !important;
-
-    border: 1px solid #4ade80 !important;
-
-    box-shadow:
-      0 2px 5px rgba(22, 163, 74, 0.14) !important;
-  }
-
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acoes-documento__linha-superior
-    > .treinamentos-certificados-acao--historico:hover {
-
-    color: #064e3b !important;
-
-    background: #86efac !important;
-    background-color: #86efac !important;
-
-    border-color: #22c55e !important;
-  }
-
-  /* ----------------------------------------------------------
-   * ÍCONES
-   * ---------------------------------------------------------- */
-
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acoes-documento__linha-superior
-    > .treinamentos-certificados-acao--rever svg,
-
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acoes-documento__linha-superior
-    > .treinamentos-certificados-acao--historico svg {
-
-    width: 0.8rem !important;
-    height: 0.8rem !important;
-
-    min-width: 0.8rem !important;
-
-    flex: 0 0 0.8rem !important;
-
-    stroke-width: 2.5 !important;
-  }
-
-  /* ----------------------------------------------------------
-   * TEXTO
-   * ---------------------------------------------------------- */
-
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acoes-documento__linha-superior
-    > .treinamentos-certificados-acao--rever span,
-
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acoes-documento__linha-superior
-    > .treinamentos-certificados-acao--historico span {
-
-    display: inline-block !important;
-
-    min-width: max-content !important;
-
-    white-space: nowrap !important;
-
-    overflow: visible !important;
-
-    text-overflow: clip !important;
-  }
-}
-/* ============================================================
- * CERT-HIST-UI-G1-R9
- *
- * Refinamento final:
- *
- * [    Alterar data    ][     Histórico     ]
- * [          Abrir documento                ]
- * [              Excluir                    ]
- * ============================================================ */
-
-@media (min-width: 1024px) {
-
-  /* ----------------------------------------------------------
-   * PRIMEIRA LINHA
-   *
-   * R8 = +32px.
-   * R9 = +48px.
-   *
-   * Ganho adicional = 16px total / 8px por botão.
-   * Cresce somente para a esquerda.
-   * ---------------------------------------------------------- */
-
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acoes-documento__linha-superior {
-
-    display: grid !important;
-
-    grid-template-columns:
-      minmax(0, 1fr)
-      minmax(0, 1fr) !important;
-
-    width: calc(100% + 3rem) !important;
-
-    margin-left: -3rem !important;
-    margin-right: 0 !important;
-
-    transform: none !important;
-
-    gap: 0.45rem !important;
-
-    overflow: visible !important;
-
-    box-sizing: border-box !important;
-  }
-
-  /* ----------------------------------------------------------
-   * ALTERAR DATA + HISTÓRICO
-   * ---------------------------------------------------------- */
-
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acoes-documento__linha-superior
-    > .treinamentos-certificados-acao--rever,
-
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acoes-documento__linha-superior
-    > .treinamentos-certificados-acao--historico {
-
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: none !important;
-
-    height: 2.6rem !important;
-    min-height: 2.6rem !important;
-
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-
-    padding-left: 0.72rem !important;
-    padding-right: 0.72rem !important;
-
-    gap: 0.34rem !important;
-
-    white-space: nowrap !important;
-
-    font-size: 0.75rem !important;
-    font-weight: 800 !important;
-
-    box-sizing: border-box !important;
-  }
-
-  /* ----------------------------------------------------------
-   * ABRIR DOCUMENTO + EXCLUIR
-   *
-   * Geometria rigorosamente idêntica.
-   * ---------------------------------------------------------- */
-
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acao--abrir,
-
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acao--excluir {
-
-    display: inline-flex !important;
-
-    align-items: center !important;
-    justify-content: center !important;
-
-    width: 100% !important;
-    min-width: 100% !important;
-    max-width: 100% !important;
-
-    height: 2.65rem !important;
-    min-height: 2.65rem !important;
-    max-height: 2.65rem !important;
-
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-
-    padding-left: 0.75rem !important;
-    padding-right: 0.75rem !important;
-
-    border-radius: 0.9rem !important;
-
-    font-size: 0.76rem !important;
-    font-weight: 800 !important;
-
-    line-height: 1 !important;
-
-    box-sizing: border-box !important;
-  }
-
-  /* Abrir preserva identidade principal */
-
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acao--abrir {
-
-    color: #ffffff !important;
-
-    background: #0f172a !important;
-    background-color: #0f172a !important;
-
-    border: 1px solid #0f172a !important;
-  }
-
-  /* Excluir preserva identidade destrutiva */
-
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acao--excluir {
-
-    color: #dc2626 !important;
-
-    background: #fee2e2 !important;
-    background-color: #fee2e2 !important;
-
-    border: 1px solid #fca5a5 !important;
-  }
-}
-/* ============================================================
- * CERT-HIST-UI-G1-R10
- *
- * Alinhamento dos botões inferiores à primeira linha.
- *
- * [ Alterar data ][ Histórico ]
- * [      Abrir documento      ]
- * [          Excluir          ]
- *
- * Abrir/Excluir crescem 48px SOMENTE para esquerda.
- * A borda direita permanece no ponto atual.
- * ============================================================ */
-
-@media (min-width: 1024px) {
-
-  /* ----------------------------------------------------------
-   * ABRIR DOCUMENTO
-   * ---------------------------------------------------------- */
-
-  .treinamentos-certificados-acoes-documento
-    > .treinamentos-certificados-acao--abrir {
-
-    /*
-     * +48px em relação à largura atual.
-     */
-    width: calc(100% + 3rem) !important;
-
-    min-width: calc(100% + 3rem) !important;
-    max-width: calc(100% + 3rem) !important;
-
-    /*
-     * Expande somente para esquerda.
-     * Borda direita permanece exatamente onde está.
-     */
-    margin-left: -3rem !important;
-    margin-right: 0 !important;
-
-    box-sizing: border-box !important;
-  }
-
-  /* ----------------------------------------------------------
-   * EXCLUIR
-   * ---------------------------------------------------------- */
-
-  .treinamentos-certificados-acoes-documento
-    > .treinamentos-certificados-acao--excluir {
-
-    width: calc(100% + 3rem) !important;
-
-    min-width: calc(100% + 3rem) !important;
-    max-width: calc(100% + 3rem) !important;
-
-    margin-left: -3rem !important;
-    margin-right: 0 !important;
-
-    box-sizing: border-box !important;
-  }
-}
-/* ============================================================
- * CERT-HIST-UI-G1-R11
- *
- * Corrige especificamente o espaço branco:
- *
- * [       Alterar data       ][        Histórico        ]
- * [                 Abrir documento                     ]
- * [                     Excluir                         ]
- *
- * A primeira linha NÃO é alterada.
- *
- * Abrir e Excluir recebem a mesma largura total da linha
- * superior, expandindo somente para a esquerda.
- * ============================================================ */
-
-@media (min-width: 1024px) {
-
-  /*
-   * IMPORTANTE:
-   *
-   * Não usamos ">" aqui.
-   * O botão é localizado pela própria classe,
-   * independentemente do wrapper existente no JSX.
-   */
-
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acao--abrir,
-
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acao--excluir {
-
-    /*
-     * Linha superior = largura normal + 48px.
-     *
-     * Portanto os inferiores recebem exatamente
-     * o mesmo ganho.
-     */
-    width: calc(100% + 3rem) !important;
-
-    min-width: calc(100% + 3rem) !important;
-    max-width: calc(100% + 3rem) !important;
-
-    /*
-     * Cresce para esquerda.
-     *
-     * A borda direita permanece no mesmo lugar.
-     */
-    position: relative !important;
-
-    left: -3rem !important;
-
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-
-    /*
-     * Mantém ambos rigorosamente iguais.
-     */
-    height: 2.65rem !important;
-    min-height: 2.65rem !important;
-    max-height: 2.65rem !important;
-
-    display: flex !important;
-
-    align-items: center !important;
-    justify-content: center !important;
-
-    padding-left: 0.75rem !important;
-    padding-right: 0.75rem !important;
-
-    border-radius: 0.9rem !important;
-
-    box-sizing: border-box !important;
-  }
-
-  /*
-   * Abrir documento mantém a aparência aprovada.
-   */
-
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acao--abrir {
-
-    background: #0f172a !important;
-    background-color: #0f172a !important;
-
-    color: #ffffff !important;
-
-    border: 1px solid #0f172a !important;
-  }
-
-  /*
-   * Excluir mantém a aparência aprovada.
-   */
-
-  .treinamentos-certificados-acoes-documento
-    .treinamentos-certificados-acao--excluir {
-
-    background: #fee2e2 !important;
-    background-color: #fee2e2 !important;
-
-    color: #dc2626 !important;
-
-    border: 1px solid #fca5a5 !important;
-  }
-}
-/* ============================================================
- * CERT-HIST-UI-G1-R12
- *
- * Correção definitiva da largura de:
- *
- * - Abrir documento
- * - Excluir
- *
- * A regra antiga:
- *
- * .treinamentos-layout-card button.treinamentos-certificados-acao
- *
- * possui width/min-width/max-width = 100% !important.
- *
- * Portanto usamos aqui um seletor intencionalmente mais
- * específico para que o calc(100% + 3rem) realmente prevaleça.
- *
- * A linha superior permanece intacta.
- * ============================================================ */
-
-@media (min-width: 1024px) {
-
-  /*
-   * IMPORTANTE:
-   *
-   * Esta combinação:
-   *
-   * .treinamentos-layout-card
-   * .treinamentos-certificados-acoes-documento
-   * button.treinamentos-certificados-acao
-   * .treinamentos-certificados-acao--abrir/excluir
-   *
-   * supera em especificidade a regra antiga que limita
-   * max-width a 100%.
-   */
-
-  .treinamentos-layout-card
-    .treinamentos-certificados-acoes-documento
-    button.treinamentos-certificados-acao.treinamentos-certificados-acao--abrir,
-
-  .treinamentos-layout-card
-    .treinamentos-certificados-acoes-documento
-    button.treinamentos-certificados-acao.treinamentos-certificados-acao--excluir {
-
-    /*
-     * Linha superior R9:
-     *
-     * width = 100% + 3rem
-     * deslocamento = -3rem
-     *
-     * Aplicamos exatamente a mesma geometria aos dois
-     * botões inferiores.
-     */
-
-    width: calc(100% + 3rem) !important;
-    min-width: calc(100% + 3rem) !important;
-    max-width: calc(100% + 3rem) !important;
-
-    /*
-     * Mantém a borda esquerda exatamente na posição
-     * em que o R11 já colocou.
-     *
-     * Como a largura agora deixa de ser limitada a 100%,
-     * o ganho restante aparece para a direita e elimina
-     * o espaço branco.
-     */
-
-    position: relative !important;
-    left: -3rem !important;
-
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-
-    box-sizing: border-box !important;
-
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-
-    padding-left: 0.75rem !important;
-    padding-right: 0.75rem !important;
-
-    border-radius: 0.9rem !important;
-
-    white-space: nowrap !important;
-  }
-
-  /*
-   * GEOMETRIA IGUAL.
-   */
-
-  .treinamentos-layout-card
-    .treinamentos-certificados-acoes-documento
-    button.treinamentos-certificados-acao.treinamentos-certificados-acao--abrir {
-
-    height: 2.65rem !important;
-    min-height: 2.65rem !important;
-    max-height: 2.65rem !important;
-
-    background: #0f172a !important;
-    background-color: #0f172a !important;
-
-    color: #ffffff !important;
-
-    border: 1px solid #0f172a !important;
-  }
-
-  .treinamentos-layout-card
-    .treinamentos-certificados-acoes-documento
-    button.treinamentos-certificados-acao.treinamentos-certificados-acao--excluir {
-
-    height: 2.65rem !important;
-    min-height: 2.65rem !important;
-    max-height: 2.65rem !important;
-
-    background: #fee2e2 !important;
-    background-color: #fee2e2 !important;
-
-    color: #dc2626 !important;
-
-    border: 1px solid #fca5a5 !important;
   }
 }

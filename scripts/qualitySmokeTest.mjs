@@ -884,7 +884,7 @@ assert.match(
 );
 assert.match(
     codigoUrlPublicaUtils,
-    /host === "localhost"[\s\S]*host === "127\.0\.0\.1"[\s\S]*host === "::1"/,
+    /host === "localhost"[\s\S]*host\.startsWith\([\s\S]*"127\."[\s\S]*host === "::1"/,
     "Os QR públicos devem bloquear origens locais de desenvolvimento."
 );
 assert.match(
