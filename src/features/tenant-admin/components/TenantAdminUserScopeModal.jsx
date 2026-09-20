@@ -72,7 +72,7 @@ function normalizarIds(
                     Boolean
                 )
         ),
-    ].sort();
+    ].sort((a, b) => a.localeCompare(b));
 }
 
 export function TenantAdminUserScopeModal({

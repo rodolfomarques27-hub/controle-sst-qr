@@ -188,8 +188,8 @@ serve(async (req) => {
       return texto(valor)
         .replace(/^\s*Auditoria\s+AUD-\d{4}-\d+\s*[.:\-–—]*\s*/i, "")
         .replace(/\bAUD-\d{4}-\d+\b/gi, "")
-        .replace(/\s+([.,;:!?])/g, "$1")
         .replace(/\s{2,}/g, " ")
+        .replace(/\s([.,;:!?])/g, "$1")
         .trim();
     }
 
