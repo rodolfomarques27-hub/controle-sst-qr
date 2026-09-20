@@ -118,9 +118,7 @@ function criarUrlQrDemo(
     );
 
     url.hash =
-        tipo === "campo"
-            ? "demonstracao-interativa"
-            : "demonstracao-interativa";
+        "demonstracao-interativa";
 
     return url.toString();
 }
