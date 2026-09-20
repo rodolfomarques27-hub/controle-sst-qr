@@ -31,6 +31,125 @@ function normalizarTextoObra(valor) {
     ).trim();
 }
 
+async function resolverTenantIdNovaObra(
+    obra = {}
+) {
+    const empresaContratanteId =
+        normalizarTextoObra(
+            obra.contratanteEmpresaId ||
+            obra.contratante_empresa_id
+        );
+
+    if (!empresaContratanteId) {
+        throw new Error(
+            "Empresa contratante não informada para definir o tenant da obra."
+        );
+    }
+
+    const {
+        data: empresaContratante,
+        error: erroEmpresaContratante,
+    } =
+        await supabase
+            .from(
+                "empresas"
+            )
+            .select(
+                "id, tenant_id"
+            )
+            .eq(
+                "id",
+                empresaContratanteId
+            )
+            .maybeSingle();
+
+    if (erroEmpresaContratante) {
+        console.error(
+            "Erro ao resolver o tenant da empresa contratante:",
+            erroEmpresaContratante
+        );
+
+        throw erroEmpresaContratante;
+    }
+
+    if (!empresaContratante) {
+        throw new Error(
+            "Empresa contratante não encontrada ou fora do escopo autorizado."
+        );
+    }
+
+    const tenantIdEmpresa =
+        normalizarTextoObra(
+            empresaContratante.tenant_id
+        );
+
+    if (!tenantIdEmpresa) {
+        throw new Error(
+            "A empresa contratante selecionada não possui tenant válido."
+        );
+    }
+
+    const tenantIdInformado =
+        normalizarTextoObra(
+            obra.tenantId ||
+            obra.tenant_id
+        );
+
+    if (
+        tenantIdInformado &&
+        tenantIdInformado !==
+            tenantIdEmpresa
+    ) {
+        throw new Error(
+            "O tenant informado para a obra diverge do tenant da empresa contratante."
+        );
+    }
+
+    const {
+        data: podeGerenciarTenant,
+        error: erroPermissaoTenant,
+    } =
+        await supabase.rpc(
+            "usuario_pode_gerenciar_tenant",
+            {
+                p_tenant_id:
+                    tenantIdEmpresa,
+            }
+        );
+
+    if (erroPermissaoTenant) {
+        console.error(
+            "Erro ao validar permissão para cadastrar obra no tenant:",
+            erroPermissaoTenant
+        );
+
+        throw erroPermissaoTenant;
+    }
+
+    if (podeGerenciarTenant !== true) {
+        throw new Error(
+            "Seu usuário não possui permissão para cadastrar obras neste tenant."
+        );
+    }
+
+    return tenantIdEmpresa;
+}
+
+function gerarIdNovaObra() {
+    const cryptoRuntime =
+        globalThis.crypto;
+
+    if (
+        !cryptoRuntime ||
+        typeof cryptoRuntime.randomUUID !== "function"
+    ) {
+        throw new Error(
+            "O navegador não disponibiliza um gerador seguro de identificador para a nova obra."
+        );
+    }
+
+    return cryptoRuntime.randomUUID();
+}
 
 function normalizarCepObra(valor) {
     return normalizarTextoObra(
@@ -313,7 +432,13 @@ function montarPayloadObra(
             obra
         );
 
-    return {
+    const tenantId =
+        normalizarTextoObra(
+            obra.tenantId ||
+            obra.tenant_id
+        );
+
+    const payload = {
         nome:
             normalizarTextoObra(
                 obra.nome
@@ -388,8 +513,14 @@ function montarPayloadObra(
                 obra.observacoes
             ),
     };
-}
 
+    if (tenantId) {
+        payload.tenant_id =
+            tenantId;
+    }
+
+    return payload;
+}
 
 function montarPayloadVinculoEmpresaObra(
     vinculo = {},
@@ -692,16 +823,29 @@ export async function listarObras() {
 export async function adicionarObra(
     obra = {}
 ) {
-    const payload =
-        montarPayloadObra(
+    const tenantId =
+        await resolverTenantIdNovaObra(
             obra
         );
+
+    const obraId =
+        gerarIdNovaObra();
+
+    const payload =
+        montarPayloadObra({
+            ...obra,
+
+            tenant_id:
+                tenantId,
+        });
+
+    payload.id =
+        obraId;
 
     let payloadTentativa =
         payload;
 
     let {
-        data,
         error,
     } =
         await supabase
@@ -710,9 +854,7 @@ export async function adicionarObra(
             )
             .insert(
                 payloadTentativa
-            )
-            .select()
-            .single();
+            );
 
 
     if (
@@ -731,7 +873,6 @@ export async function adicionarObra(
             );
 
         ({
-            data,
             error,
         } =
             await supabase
@@ -740,9 +881,7 @@ export async function adicionarObra(
                 )
                 .insert(
                     payloadTentativa
-                )
-                .select()
-                .single());
+                ));
     }
 
 
@@ -762,7 +901,6 @@ export async function adicionarObra(
             );
 
         ({
-            data,
             error,
         } =
             await supabase
@@ -771,9 +909,7 @@ export async function adicionarObra(
                 )
                 .insert(
                     payloadTentativa
-                )
-                .select()
-                .single());
+                ));
     }
 
 
@@ -786,9 +922,12 @@ export async function adicionarObra(
         throw error;
     }
 
-    return normalizarObraBanco(
-        data
-    );
+    return normalizarObraBanco({
+        ...payloadTentativa,
+
+        id:
+            obraId,
+    });
 }
 
 
