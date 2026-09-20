@@ -1,12 +1,27 @@
-import { StrictMode } from "react";
+import {
+    StrictMode,
+} from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import "./styles/app-layout-global.css";
 import App from "./App.jsx";
 import { TenantContextGate } from "./components/layout/TenantContextGate.jsx";
 import { SiteInstitucionalPage } from "./features/site-institucional/pages/SiteInstitucionalPage.jsx";
-import { deveRenderizarSiteInstitucionalDev } from "./routes/runtimeEntryService.js";
+import {
+    deveRenderizarPainelAdmin,
+    deveRenderizarSiteInstitucionalDev,
+} from "./routes/runtimeEntryService.js";
 
+import TenantAdminRoot
+    from "./features/tenant-admin/TenantAdminRoot.jsx";
+
+import {
+    AccessPortalPage,
+} from "./features/access-portal/AccessPortalPage.jsx";
+
+import {
+    deveRenderizarPortalAcesso,
+} from "./routes/runtimeEntryService.js";
 const CHAVE_RECARGA_PRELOAD =
     "safescan:vite-preload-reload";
 
@@ -58,12 +73,21 @@ window.addEventListener(
     }
 );
 
+const renderizarPainelAdmin =
+    deveRenderizarPainelAdmin();
+
+const renderizarPortalAcesso =
+    deveRenderizarPortalAcesso();
 const renderizarSiteInstitucionalDev =
     deveRenderizarSiteInstitucionalDev();
 
 createRoot(document.getElementById("root")).render(
     <StrictMode>
-        {renderizarSiteInstitucionalDev ? (
+        {renderizarPainelAdmin ? (
+            <TenantAdminRoot />
+        ) : renderizarPortalAcesso ? (
+            <AccessPortalPage />
+        ) : renderizarSiteInstitucionalDev ? (
             <SiteInstitucionalPage />
         ) : (
             <TenantContextGate>

@@ -10,8 +10,17 @@ export const ROTA_APRESENTACAO_DEV =
 export const ROTA_APP_COMPATIBILIDADE =
     "/app";
 
+export const ROTA_ADMIN_DEV =
+    "/admin";
+
+export const ROTA_APP_OPERACIONAL_DEV =
+    "/dev-app";
+
 export const HOST_SITE_INSTITUCIONAL_APEX =
     "safescanbrasil.com.br";
+
+export const HOST_ADMIN_SAFE_SCAN =
+    "admin.safescanbrasil.com.br";
 
 const PARAMETROS_PUBLICOS_OPERACIONAIS =
     Object.freeze([
@@ -156,13 +165,34 @@ function ehRotaAppCompatibilidade(
     );
 }
 
-function ehRotaInstitucional(
+function ehRotaAdminDev(
+    pathname
+) {
+    return correspondeRotaOuSubrota(
+        pathname,
+        ROTA_ADMIN_DEV
+    );
+}
+
+function ehRotaAppOperacionalDev(
     pathname
 ) {
     return (
-        pathname === "/" ||
         pathname ===
-            ROTA_APRESENTACAO_DEV
+        ROTA_APP_OPERACIONAL_DEV
+    );
+}
+function ehAmbientePublicoConhecido(
+    classificacao = {}
+) {
+    return (
+        classificacao.tipo ===
+            TIPOS_AMBIENTE_RUNTIME_TENANT.DESENVOLVIMENTO ||
+        classificacao.tipo ===
+            TIPOS_AMBIENTE_RUNTIME_TENANT.PREVIEW ||
+        ehHostInstitucional(
+            classificacao.hostname
+        )
     );
 }
 
@@ -174,6 +204,122 @@ function ehHostInstitucional(
             HOST_COMPATIBILIDADE_SAFE_SCAN ||
         hostname ===
             HOST_SITE_INSTITUCIONAL_APEX
+    );
+}
+
+export function deveRenderizarPainelAdmin(
+    localizacao = null
+) {
+    const alvo =
+        localizacao ??
+        (
+            typeof window !== "undefined"
+                ? window.location
+                : null
+        );
+
+    if (!alvo) {
+        return false;
+    }
+
+    const pathname =
+        normalizarPathname(
+            alvo.pathname
+        );
+
+    const classificacao =
+        classificarAmbienteRuntimeTenant(
+            alvo.hostname
+        );
+
+    if (
+        classificacao.hostname ===
+        HOST_ADMIN_SAFE_SCAN
+    ) {
+        return true;
+    }
+
+    if (
+        classificacao.tipo ===
+            TIPOS_AMBIENTE_RUNTIME_TENANT.DESENVOLVIMENTO ||
+        classificacao.tipo ===
+            TIPOS_AMBIENTE_RUNTIME_TENANT.PREVIEW
+    ) {
+        return ehRotaAdminDev(
+            pathname
+        );
+    }
+
+    return false;
+}
+
+export function deveRenderizarPortalAcesso(
+    localizacao = null
+) {
+    const alvo =
+        localizacao ??
+        (
+            typeof window !== "undefined"
+                ? window.location
+                : null
+        );
+
+    if (!alvo) {
+        return false;
+    }
+
+    const pathname =
+        normalizarPathname(
+            alvo.pathname
+        );
+
+    if (
+        !ehRotaAppCompatibilidade(
+            pathname
+        )
+    ) {
+        return false;
+    }
+
+    const classificacao =
+        classificarAmbienteRuntimeTenant(
+            alvo.hostname
+        );
+
+    /*
+     * Um hostname tenant continua
+     * pertencendo exclusivamente ao tenant.
+     *
+     * /app nunca substitui o contexto
+     * de uma empresa já resolvida pelo host.
+     */
+    if (
+        classificacao.tipo ===
+        TIPOS_AMBIENTE_RUNTIME_TENANT.TENANT
+    ) {
+        return false;
+    }
+
+    /*
+     * O hostname administrativo pertence
+     * exclusivamente ao Painel Mestre.
+     */
+    if (
+        classificacao.hostname ===
+        HOST_ADMIN_SAFE_SCAN
+    ) {
+        return false;
+    }
+
+    /*
+     * Somente superfícies públicas conhecidas
+     * recebem o portal neutro.
+     *
+     * Hosts desconhecidos ou reservados
+     * permanecem fail-closed.
+     */
+    return ehAmbientePublicoConhecido(
+        classificacao
     );
 }
 
@@ -203,7 +349,8 @@ export function deveRenderizarSiteInstitucional(
         );
 
     /*
-     * Tenant real sempre permanece operacional.
+     * Tenant real nunca pertence
+     * à superfície institucional.
      */
     if (
         classificacao.tipo ===
@@ -212,9 +359,44 @@ export function deveRenderizarSiteInstitucional(
         return false;
     }
 
+    const ambienteDevOuPreview =
+        (
+            classificacao.tipo ===
+                TIPOS_AMBIENTE_RUNTIME_TENANT.DESENVOLVIMENTO ||
+            classificacao.tipo ===
+                TIPOS_AMBIENTE_RUNTIME_TENANT.PREVIEW
+        );
+
     /*
-     * /app permanece como entrada operacional
-     * de compatibilidade no host institucional.
+     * Host admin pertence exclusivamente
+     * ao Painel Mestre.
+     */
+    if (
+        classificacao.hostname ===
+        HOST_ADMIN_SAFE_SCAN
+    ) {
+        return false;
+    }
+
+    /*
+     * /admin em DEV/Preview pertence
+     * exclusivamente ao Painel Mestre.
+     */
+    if (
+        ambienteDevOuPreview &&
+        ehRotaAdminDev(
+            pathname
+        )
+    ) {
+        return false;
+    }
+
+    /*
+     * /app em superfícies públicas conhecidas
+     * pertence ao Portal Neutro SafeScan.
+     *
+     * Hosts tenant já foram excluídos acima
+     * e permanecem no App operacional do tenant.
      */
     if (
         ehRotaAppCompatibilidade(
@@ -225,8 +407,8 @@ export function deveRenderizarSiteInstitucional(
     }
 
     /*
-     * Rotas públicas operacionais têm prioridade
-     * sobre a landing institucional.
+     * Rotas públicas operacionais e
+     * parâmetros de QR/DDS mantêm prioridade.
      */
     if (
         ehRotaPublicaOperacional(
@@ -240,44 +422,44 @@ export function deveRenderizarSiteInstitucional(
     }
 
     /*
-     * DEV e Preview:
-     * raiz = operacional
-     * /apresentacao = institucional
+     * /dev-app é a entrada explícita do
+     * App operacional somente em DEV.
+     *
+     * Preview, WWW e Apex continuam
+     * públicos/institucionais.
      */
     if (
         classificacao.tipo ===
-            TIPOS_AMBIENTE_RUNTIME_TENANT.DESENVOLVIMENTO ||
-        classificacao.tipo ===
-            TIPOS_AMBIENTE_RUNTIME_TENANT.PREVIEW
-    ) {
-        return (
-            pathname ===
-            ROTA_APRESENTACAO_DEV
-        );
-    }
-
-    /*
-     * Produção institucional:
-     * www.safescanbrasil.com.br
-     * safescanbrasil.com.br
-     */
-    if (
-        !ehHostInstitucional(
-            classificacao.hostname
+            TIPOS_AMBIENTE_RUNTIME_TENANT.DESENVOLVIMENTO &&
+        ehRotaAppOperacionalDev(
+            pathname
         )
     ) {
         return false;
     }
+    /*
+     * Fail-safe público:
+     *
+     * DEV, Preview, WWW e Apex ficam
+     * no institucional por padrão.
+     *
+     * Uma rota desconhecida ou malformada
+     * nunca cai silenciosamente no App.
+     */
+    if (
+        ehAmbientePublicoConhecido(
+            classificacao
+        )
+    ) {
+        return true;
+    }
 
-    return ehRotaInstitucional(
-        pathname
-    );
+    /*
+     * Host realmente desconhecido:
+     * permanece fail-closed.
+     */
+    return false;
 }
 
-/*
- * Mantém compatibilidade com main.jsx atual.
- * Nenhuma alteração em main.jsx é necessária
- * neste hotfix.
- */
 export const deveRenderizarSiteInstitucionalDev =
     deveRenderizarSiteInstitucional;
