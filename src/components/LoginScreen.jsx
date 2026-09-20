@@ -13,6 +13,10 @@ import {
     carregarFundoLoginPublicoService,
     obterUrlLogoContratanteLoginPublicoService,
 } from "../services/fundoLoginPublicoService";
+import { useTenantRuntimeContext } from "./layout/TenantRuntimeContext.js";
+import {
+    resolverBrandingLoginRuntimeService,
+} from "../services/tenantBrandingService.js";
 
 const AJUSTE_FUNDO_LOGIN_PADRAO = {
     size: "cover",
@@ -25,19 +29,39 @@ const URL_LOGO_CONTRATANTE_LOGIN =
         supabase,
     });
 
-function LogoContratanteLogin() {
+function LogoContratanteLogin({
+    url = "",
+}) {
+    const [usarFallbackGlobal, setUsarFallbackGlobal] = useState(false);
     const [falhaLogoContratante, setFalhaLogoContratante] = useState(false);
 
-    if (!URL_LOGO_CONTRATANTE_LOGIN || falhaLogoContratante) {
+    const urlPreferencial =
+        usarFallbackGlobal
+            ? URL_LOGO_CONTRATANTE_LOGIN
+            : url || URL_LOGO_CONTRATANTE_LOGIN;
+
+    if (!urlPreferencial || falhaLogoContratante) {
         return <Building2 className="h-10 w-10 text-emerald-300/80" />;
     }
 
     return (
         <img
-            src={URL_LOGO_CONTRATANTE_LOGIN}
+            src={urlPreferencial}
             alt="Logo da empresa contratante"
             className="max-h-[96px] max-w-[128px] object-contain"
-            onError={() => setFalhaLogoContratante(true)}
+            onError={() => {
+                if (
+                    !usarFallbackGlobal &&
+                    url &&
+                    url !== URL_LOGO_CONTRATANTE_LOGIN &&
+                    URL_LOGO_CONTRATANTE_LOGIN
+                ) {
+                    setUsarFallbackGlobal(true);
+                    return;
+                }
+
+                setFalhaLogoContratante(true);
+            }}
         />
     );
 }
@@ -103,6 +127,19 @@ function montarEstiloFundoLogin(
 }
 
 export function LoginScreen({ onLogin }) {
+    const {
+        branding,
+    } =
+        useTenantRuntimeContext();
+
+    const brandingLoginRuntime =
+        resolverBrandingLoginRuntimeService({
+            branding,
+        });
+
+    const logoContratanteUrl =
+        brandingLoginRuntime.logoContratanteUrl ||
+        URL_LOGO_CONTRATANTE_LOGIN;
     const [email, setEmail] =
         useState("");
 
@@ -145,10 +182,29 @@ export function LoginScreen({ onLogin }) {
         let cancelado = false;
 
         async function carregarFundoLogin() {
-            const resultado =
-                await carregarFundoLoginPublicoService({
-                    supabase,
+            const brandingRuntimeAtual =
+                resolverBrandingLoginRuntimeService({
+                    branding,
                 });
+
+            const resultado =
+                brandingRuntimeAtual.fundoLoginUrl
+                    ? {
+                        imagemUrl:
+                            brandingRuntimeAtual.fundoLoginUrl,
+
+                        ajuste:
+                            brandingRuntimeAtual.ajusteFundoLogin,
+
+                        origem:
+                            "tenant-runtime",
+
+                        erro:
+                            "",
+                    }
+                    : await carregarFundoLoginPublicoService({
+                        supabase,
+                    });
 
             if (
                 cancelado ||
@@ -203,7 +259,7 @@ export function LoginScreen({ onLogin }) {
         return () => {
             cancelado = true;
         };
-    }, []);
+    }, [branding]);
 
     const fazerLogin =
         async (event) => {
@@ -569,7 +625,7 @@ export function LoginScreen({ onLogin }) {
                                         </span>
 
                                         <div className="flex h-[100px] w-[132px] items-center justify-center overflow-visible bg-transparent p-0">
-                                            <LogoContratanteLogin />
+                                            <LogoContratanteLogin key={logoContratanteUrl || "global"} url={logoContratanteUrl} />
                                         </div>
                                     </div>
                                 </div>

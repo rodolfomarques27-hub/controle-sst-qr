@@ -37,6 +37,7 @@ function formatarCodigo(codigo) {
 export function AmbientesControleTabela({
   ponto,
   extintores,
+  empresas = [],
   onPositionChange,
   onPositionRemove,
   onPontosInternosChange,
@@ -219,6 +220,8 @@ export function AmbientesControleTabela({
           >
             <QrCodeComLogo
               value={urlPonto}
+              empresaId={ponto?.empresaId || ponto?.empresa_id || ""}
+              empresas={empresas}
               size={104}
               level="H"
               includeMargin
@@ -425,6 +428,8 @@ export function AmbientesControleTabela({
                     <div id={`qr-controle-${item.id}`} className="sr-only">
                       <QrCodeComLogo
                         value={urlQr(item)}
+                        empresaId={ponto?.empresaId || ponto?.empresa_id || ""}
+                        empresas={empresas}
                         size={180}
                         level="H"
                         includeMargin

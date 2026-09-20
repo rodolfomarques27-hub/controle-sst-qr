@@ -1,3 +1,5 @@
+import { useTenantRuntimeContext } from "./components/layout/TenantRuntimeContext.js";
+import { carregarAcessoTenantAtualService } from "./services/tenantMembershipService.js";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     supabase,
@@ -139,6 +141,25 @@ function AppTransicaoInterna() {
 }
 
 export default function App() {
+    const {
+        tenant,
+        tenantResolvido,
+    } = useTenantRuntimeContext();
+
+    const [
+        acessoTenantRuntime,
+        setAcessoTenantRuntime,
+    ] = useState({
+        estado:
+            "inativo",
+
+        membership:
+            null,
+
+        erro:
+            "",
+    });
+
     const [usuario, setUsuario] = useState(null);
     const chaveCargaInicialUsuarioRef = useRef("");
     const chaveUsuarioSessao = String(usuario?.id || usuario?.email || "").trim();
@@ -864,6 +885,131 @@ export default function App() {
     }, []);
 
     useEffect(() => {
+        if (
+            !SUPABASE_CONFIGURADO
+            || !tenantResolvido
+            || !tenant?.id
+            || !usuario?.id
+        ) {
+            setAcessoTenantRuntime(
+                (atual) => {
+                    if (
+                        atual.estado === "inativo"
+                        && atual.membership === null
+                        && !atual.erro
+                    ) {
+                        return atual;
+                    }
+
+                    return {
+                        estado:
+                            "inativo",
+
+                        membership:
+                            null,
+
+                        erro:
+                            "",
+                    };
+                }
+            );
+
+            return undefined;
+        }
+
+        let componenteAtivo = true;
+
+        setAcessoTenantRuntime({
+            estado:
+                "carregando",
+
+            membership:
+                null,
+
+            erro:
+                "",
+        });
+
+        async function validarAcessoTenantAtual() {
+            try {
+                const resultado =
+                    await carregarAcessoTenantAtualService({
+                        supabase,
+
+                        tenantId:
+                            tenant.id,
+
+                        userId:
+                            usuario.id,
+                    });
+
+                if (!componenteAtivo) {
+                    return;
+                }
+
+                if (
+                    resultado?.autorizado
+                    !== true
+                ) {
+                    setAcessoTenantRuntime({
+                        estado:
+                            "negado",
+
+                        membership:
+                            null,
+
+                        erro:
+                            "",
+                    });
+
+                    return;
+                }
+
+                setAcessoTenantRuntime({
+                    estado:
+                        "autorizado",
+
+                    membership:
+                        resultado.membership
+                        ?? null,
+
+                    erro:
+                        "",
+                });
+            } catch (error) {
+                if (!componenteAtivo) {
+                    return;
+                }
+
+                console.error(
+                    "Não foi possível validar a membership do tenant:",
+                    error
+                );
+
+                setAcessoTenantRuntime({
+                    estado:
+                        "erro",
+
+                    membership:
+                        null,
+
+                    erro:
+                        "Não foi possível validar seu acesso a este ambiente.",
+                });
+            }
+        }
+
+        validarAcessoTenantAtual();
+
+        return () => {
+            componenteAtivo = false;
+        };
+    }, [
+        tenantResolvido,
+        tenant?.id,
+        usuario?.id,
+    ]);
+    useEffect(() => {
         if (!SUPABASE_CONFIGURADO) return undefined;
 
         let componenteAtivo = true;
@@ -1137,6 +1283,25 @@ export default function App() {
         return () => window.clearTimeout(timer);
     }, [usuario, colaboradores]);
 
+    /*
+     * SAFE_SCAN_I4C_B4_1_TENANT_ACESSOS
+     *
+     * Membership administrativa do tenant concede somente a
+     * capacidade adicional de abrir Acessos do App.
+     * Não sintetiza perfil administrador global.
+     */
+    const tenantAdminPodeGerenciarAcessos = Boolean(
+        tenantResolvido
+        && tenant?.id
+        && acessoTenantRuntime.estado === "autorizado"
+        && String(
+            acessoTenantRuntime.membership?.status || ""
+        ).trim().toLowerCase() === "ativo"
+        && String(
+            acessoTenantRuntime.membership?.papel || ""
+        ).trim().toLowerCase() === "administrador"
+    );
+
     const navCompleta = useMemo(() => [
         { id: "dashboard", label: "Dashboard SST", icon: LayoutDashboard, grupo: "VISÃO GERAL" },
 
@@ -1163,13 +1328,46 @@ export default function App() {
     ], [podeAcessarAuditoria]);
 
     const nav = useMemo(() => {
-        if (!usuario?.email || carregandoPermissaoSistemaUsuario || !permissaoSistemaUsuario || erroPermissaoSistemaUsuario) {
+        if (!usuario?.email) {
+            return [];
+        }
+
+        if (
+            carregandoPermissaoSistemaUsuario
+            && !tenantAdminPodeGerenciarAcessos
+        ) {
+            return [];
+        }
+
+        if (
+            (
+                !permissaoSistemaUsuario
+                || erroPermissaoSistemaUsuario
+            )
+            && !tenantAdminPodeGerenciarAcessos
+        ) {
             return [];
         }
 
         return navCompleta.filter((item) => {
-            if (item.id === "auditoria" && !podeAcessarAuditoria) return false;
-            return usuarioPodeAcessarTelaSistema(permissaoSistemaUsuario, item.id);
+            if (
+                item.id === "auditoria"
+                && !podeAcessarAuditoria
+            ) {
+                return false;
+            }
+
+            if (
+                item.id === "acessosApp"
+                && tenantAdminPodeGerenciarAcessos
+            ) {
+                return true;
+            }
+
+            return usuarioPodeAcessarTelaSistema(
+                permissaoSistemaUsuario,
+                item.id
+            );
         });
     }, [
         carregandoPermissaoSistemaUsuario,
@@ -1177,24 +1375,89 @@ export default function App() {
         navCompleta,
         permissaoSistemaUsuario,
         podeAcessarAuditoria,
+        tenantAdminPodeGerenciarAcessos,
         usuario?.email,
     ]);
 
     const primeiraTelaPermitidaApp = useMemo(() => {
-        if (!usuario?.email || carregandoPermissaoSistemaUsuario || !permissaoSistemaUsuario || erroPermissaoSistemaUsuario) {
+        if (!usuario?.email) {
             return "";
         }
 
-        return obterPrimeiraTelaPermitidaApp(permissaoSistemaUsuario);
-    }, [carregandoPermissaoSistemaUsuario, erroPermissaoSistemaUsuario, permissaoSistemaUsuario, usuario?.email]);
+        if (
+            carregandoPermissaoSistemaUsuario
+            && !tenantAdminPodeGerenciarAcessos
+        ) {
+            return "";
+        }
 
-    const trocaSenhaTemporariaPendenteApp = Boolean(permissaoSistemaUsuario?.precisa_trocar_senha === true);
-    const telaAtualPermitidaApp = Boolean(!usuario?.email || !permissaoSistemaUsuario || usuarioPodeAcessarTelaSistema(permissaoSistemaUsuario, tela));
+        if (
+            (
+                !permissaoSistemaUsuario
+                || erroPermissaoSistemaUsuario
+            )
+            && !tenantAdminPodeGerenciarAcessos
+        ) {
+            return "";
+        }
+
+        const primeiraTelaLegada =
+            permissaoSistemaUsuario
+                ? obterPrimeiraTelaPermitidaApp(
+                    permissaoSistemaUsuario
+                )
+                : "";
+
+        return (
+            primeiraTelaLegada
+            || (
+                tenantAdminPodeGerenciarAcessos
+                    ? "acessosApp"
+                    : ""
+            )
+        );
+    }, [
+        carregandoPermissaoSistemaUsuario,
+        erroPermissaoSistemaUsuario,
+        permissaoSistemaUsuario,
+        tenantAdminPodeGerenciarAcessos,
+        usuario?.email,
+    ]);
+
+    const trocaSenhaTemporariaPendenteApp =
+        Boolean(
+            permissaoSistemaUsuario?.precisa_trocar_senha === true
+        );
+
+    const telaAtualPermitidaApp =
+        Boolean(
+            !usuario?.email
+            || !permissaoSistemaUsuario
+            || (
+                tenantAdminPodeGerenciarAcessos
+                && tela === "acessosApp"
+            )
+            || usuarioPodeAcessarTelaSistema(
+                permissaoSistemaUsuario,
+                tela
+            )
+        );
+
+    const contextoPermissaoProntoApp =
+        Boolean(
+            !carregandoPermissaoSistemaUsuario
+            && (
+                tenantAdminPodeGerenciarAcessos
+                || (
+                    permissaoSistemaUsuario
+                    && !erroPermissaoSistemaUsuario
+                )
+            )
+        );
+
     const aguardandoTelaPermitidaApp = Boolean(
         usuario?.email
-        && !carregandoPermissaoSistemaUsuario
-        && permissaoSistemaUsuario
-        && !erroPermissaoSistemaUsuario
+        && contextoPermissaoProntoApp
         && !trocaSenhaTemporariaPendenteApp
         && primeiraTelaPermitidaApp
         && !telaAtualPermitidaApp
@@ -1266,6 +1529,134 @@ export default function App() {
         return <SupabaseConfiguracaoPendente />;
     }
 
+    if (
+        tenantResolvido
+        && usuario?.id
+        && acessoTenantRuntime.estado
+            !== "autorizado"
+    ) {
+        const validandoAcessoTenant =
+            acessoTenantRuntime.estado ===
+                "inativo"
+            || acessoTenantRuntime.estado ===
+                "carregando";
+
+        const tituloAcessoTenant =
+            validandoAcessoTenant
+                ? "Validando acesso ao ambiente..."
+                : "Acesso não autorizado";
+
+        const mensagemAcessoTenant =
+            validandoAcessoTenant
+                ? "Aguarde enquanto confirmamos seu acesso a este ambiente."
+                : (
+                    acessoTenantRuntime.erro
+                    || "Seu usuário não possui acesso ativo a este ambiente."
+                );
+
+        return (
+            <div
+                style={{
+                    minHeight:
+                        "100vh",
+
+                    display:
+                        "grid",
+
+                    placeItems:
+                        "center",
+
+                    padding:
+                        "24px",
+
+                    background:
+                        "#f4f7f5",
+                }}
+            >
+                <div
+                    style={{
+                        width:
+                            "min(460px, 100%)",
+
+                        padding:
+                            "32px",
+
+                        border:
+                            "1px solid #dfe7e2",
+
+                        borderRadius:
+                            "18px",
+
+                        background:
+                            "#ffffff",
+
+                        boxShadow:
+                            "0 18px 50px rgba(15, 23, 42, 0.08)",
+
+                        textAlign:
+                            "center",
+                    }}
+                >
+                    <h2
+                        style={{
+                            margin:
+                                "0 0 12px",
+
+                            fontSize:
+                                "22px",
+                        }}
+                    >
+                        {tituloAcessoTenant}
+                    </h2>
+
+                    <p
+                        style={{
+                            margin:
+                                0,
+
+                            lineHeight:
+                                1.6,
+
+                            color:
+                                "#475569",
+                        }}
+                    >
+                        {mensagemAcessoTenant}
+                    </p>
+
+                    {!validandoAcessoTenant ? (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                void supabase.auth.signOut();
+                            }}
+                            style={{
+                                marginTop:
+                                    "22px",
+
+                                padding:
+                                    "10px 18px",
+
+                                border:
+                                    0,
+
+                                borderRadius:
+                                    "10px",
+
+                                cursor:
+                                    "pointer",
+
+                                fontWeight:
+                                    700,
+                            }}
+                        >
+                            Sair
+                        </button>
+                    ) : null}
+                </div>
+            </div>
+        );
+    }
     if (carregandoSessao) {
         return <AppCarregandoSistema />;
     }
@@ -1395,6 +1786,7 @@ export default function App() {
                     <AppContentRouter
                         supabaseClient={supabase}
                         tela={tela}
+                        tenantAdminPodeGerenciarAcessos={tenantAdminPodeGerenciarAcessos}
                         colaboradores={colaboradores}
                         empresasBanco={empresasBanco}
                         obrasEmpresasBanco={obrasEmpresasBanco}

@@ -517,6 +517,7 @@ function precarregarFotoConsultaQr(item = {}) {
 function ConsultaQRDesktop({
     colaborador,
     colaboradores = [],
+    empresasBanco = [],
     onSelecionarColaborador,
     supabaseClient,
     onAtualizarBanco,
@@ -1839,6 +1840,8 @@ ${error?.message || "Erro desconhecido."}`
                                 <div className="consulta-qr-resumo__qr-box">
                                     <QrCodeComLogo
                                         value={urlConsultaColaborador}
+                                        empresaId={colaboradorAtual?.empresaId || colaboradorAtual?.empresa_id || ""}
+                                        empresas={empresasBanco}
                                         size={88}
                                         level="H"
                                         includeMargin
@@ -1898,7 +1901,7 @@ ${error?.message || "Erro desconhecido."}`
                                         <p className="funcao-qr">{normalizarFuncaoMaoDeObraDds(colaboradorAtual.funcao || colaboradorAtual.cargo || "Sem função")}</p>
                                     </div>
                                     <div className="qr-print-safe-box">
-                                        <QrCodeComLogo value={urlConsultaColaborador} size={210} level="H" includeMargin bgColor="#ffffff" fgColor="#0f172a" logoRatio={0.22} />
+                                        <QrCodeComLogo value={urlConsultaColaborador} empresaId={colaboradorAtual?.empresaId || colaboradorAtual?.empresa_id || ""} empresas={empresasBanco} size={210} level="H" includeMargin bgColor="#ffffff" fgColor="#0f172a" logoRatio={0.22} />
                                     </div>
                                     <p className="empresa-qr">
                                         <span className="empresa-qr-texto">{obterNomeEmpresaEtiquetaQr(colaboradorAtual)}</span>
@@ -1914,7 +1917,7 @@ ${error?.message || "Erro desconhecido."}`
                                                 <p className="funcao-qr">{normalizarFuncaoMaoDeObraDds(item.funcao || item.cargo || "Sem função")}</p>
                                             </div>
                                             <div className="qr-print-safe-box">
-                                                <QrCodeComLogo value={montarUrlConsultaColaborador(item)} size={210} level="H" includeMargin bgColor="#ffffff" fgColor="#0f172a" logoRatio={0.22} />
+                                                <QrCodeComLogo value={montarUrlConsultaColaborador(item)} empresaId={item?.empresaId || item?.empresa_id || ""} empresas={empresasBanco} size={210} level="H" includeMargin bgColor="#ffffff" fgColor="#0f172a" logoRatio={0.22} />
                                             </div>
                                             <p className="empresa-qr">
                                                 <span className="empresa-qr-texto">{obterNomeEmpresaEtiquetaQr(item)}</span>
@@ -1927,6 +1930,7 @@ ${error?.message || "Erro desconhecido."}`
                                     <CrachaColaboradorPrint
                                         colaborador={colaboradorAtual}
                                         urlConsultaColaborador={urlConsultaColaborador}
+                                        empresasBanco={empresasBanco}
                                     />
                                 </div>
                             )}

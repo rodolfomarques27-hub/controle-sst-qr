@@ -1,0 +1,5442 @@
+.ss-site {
+    --ss-green: #1c9b5d;
+    --ss-green-dark: #087444;
+    --ss-green-soft: #e9f8f0;
+    --ss-ink: #10231d;
+    --ss-ink-soft: #39514a;
+    --ss-muted: #6d817a;
+    --ss-border: #dfe8e4;
+    --ss-surface: #f6f9f8;
+    --ss-white: #ffffff;
+    --ss-dark: #0d211a;
+
+    min-height: 100vh;
+    background: var(--ss-white);
+    color: var(--ss-ink);
+    font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    overflow-x: hidden;
+}
+
+.ss-site *,
+.ss-site *::before,
+.ss-site *::after {
+    box-sizing: border-box;
+}
+
+.ss-site a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.ss-site__container {
+    width: min(1180px, calc(100% - 48px));
+    margin: 0 auto;
+}
+
+.ss-site__header {
+    position: sticky;
+    z-index: 40;
+    top: 0;
+    border-bottom: 1px solid rgba(16, 35, 29, 0.08);
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(18px);
+}
+
+.ss-site__header-inner {
+    display: flex;
+    min-height: 78px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 28px;
+}
+
+.ss-site__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 225px;
+}
+
+.ss-site__brand-image {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    border-radius: 12px;
+}
+
+.ss-site__brand-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.ss-site__brand-copy strong {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+.ss-site__brand-copy small {
+    color: var(--ss-muted);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.ss-site__nav {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    color: #42574f;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.ss-site__nav a {
+    transition:
+        color 160ms ease,
+        transform 160ms ease;
+}
+
+.ss-site__nav a:hover {
+    color: var(--ss-green-dark);
+    transform: translateY(-1px);
+}
+
+.ss-site__header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.ss-site__button {
+    display: inline-flex;
+    min-height: 48px;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    padding: 0 20px;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1;
+    transition:
+        transform 160ms ease,
+        box-shadow 160ms ease,
+        border-color 160ms ease,
+        background 160ms ease;
+}
+
+.ss-site__button:hover {
+    transform: translateY(-2px);
+}
+
+.ss-site__button--compact {
+    min-height: 42px;
+    padding-inline: 16px;
+    font-size: 12px;
+}
+
+.ss-site__button--primary {
+    background: var(--ss-green);
+    color: var(--ss-white);
+    box-shadow: 0 13px 32px rgba(28, 155, 93, 0.18);
+}
+
+.ss-site__button--primary:hover {
+    background: var(--ss-green-dark);
+    box-shadow: 0 15px 36px rgba(8, 116, 68, 0.24);
+}
+
+.ss-site__button--secondary {
+    border-color: #cfdcd7;
+    background: var(--ss-white);
+    color: var(--ss-ink);
+}
+
+.ss-site__button--ghost {
+    min-height: 42px;
+    padding-inline: 14px;
+    color: #40564e;
+}
+
+.ss-site__button--ghost:hover {
+    background: #f3f7f5;
+}
+
+.ss-site__hero {
+    position: relative;
+    min-height: 690px;
+    padding: 80px 0 72px;
+    background:
+        linear-gradient(
+            180deg,
+            #fbfdfc 0%,
+            #ffffff 76%
+        );
+    overflow: hidden;
+}
+
+.ss-site__hero-glow {
+    position: absolute;
+    border-radius: 999px;
+    pointer-events: none;
+    filter: blur(1px);
+}
+
+.ss-site__hero-glow--one {
+    top: -230px;
+    right: -130px;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(
+        circle,
+        rgba(28, 155, 93, 0.12) 0%,
+        rgba(28, 155, 93, 0) 68%
+    );
+}
+
+.ss-site__hero-glow--two {
+    bottom: -270px;
+    left: -230px;
+    width: 640px;
+    height: 640px;
+    background: radial-gradient(
+        circle,
+        rgba(11, 85, 58, 0.08) 0%,
+        rgba(11, 85, 58, 0) 70%
+    );
+}
+
+.ss-site__hero-grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns:
+        minmax(0, 0.94fr)
+        minmax(0, 1.06fr);
+    align-items: center;
+    gap: 70px;
+}
+
+.ss-site__eyebrow,
+.ss-site__kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ss-green-dark);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+}
+
+.ss-site__eyebrow {
+    padding: 8px 11px;
+    border: 1px solid #cce9da;
+    border-radius: 999px;
+    background: rgba(234, 249, 241, 0.72);
+}
+
+.ss-site__hero h1 {
+    max-width: 650px;
+    margin: 24px 0 20px;
+    color: #0f211b;
+    font-size: clamp(46px, 5.15vw, 70px);
+    font-weight: 820;
+    letter-spacing: -0.055em;
+    line-height: 0.99;
+}
+
+.ss-site__hero h1 span {
+    color: var(--ss-green-dark);
+}
+
+.ss-site__hero-description {
+    max-width: 610px;
+    margin: 0;
+    color: #536a62;
+    font-size: 17px;
+    line-height: 1.72;
+}
+
+.ss-site__hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 30px;
+}
+
+.ss-site__hero-proof {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px 24px;
+    margin-top: 30px;
+    color: #536a62;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.ss-site__hero-proof div {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.ss-site__hero-proof svg {
+    color: var(--ss-green);
+}
+
+.ss-site__hero-visual {
+    position: relative;
+    padding: 36px 10px 44px 28px;
+}
+
+.ss-site__product-window {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(16, 35, 29, 0.12);
+    border-radius: 26px;
+    background: var(--ss-white);
+    box-shadow:
+        0 30px 80px rgba(16, 35, 29, 0.14),
+        0 4px 14px rgba(16, 35, 29, 0.04);
+    transform: perspective(1300px) rotateY(-4deg) rotateX(1deg);
+}
+
+.ss-site__product-topbar {
+    display: grid;
+    min-height: 50px;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 14px;
+    border-bottom: 1px solid #e6ece9;
+    padding: 0 17px;
+    color: #657871;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.ss-site__product-dots {
+    display: flex;
+    gap: 5px;
+}
+
+.ss-site__product-dots span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #cbd6d2;
+}
+
+.ss-site__product-status {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.ss-site__product-status > span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--ss-green);
+    box-shadow: 0 0 0 4px rgba(28, 155, 93, 0.11);
+}
+
+.ss-site__product-image-wrap {
+    position: relative;
+    height: 350px;
+    overflow: hidden;
+    background: #dce8e3;
+}
+
+.ss-site__product-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.ss-site__product-image-overlay {
+    position: absolute;
+    inset: auto 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 78px 28px 25px;
+    background:
+        linear-gradient(
+            180deg,
+            transparent 0%,
+            rgba(7, 39, 28, 0.86) 72%
+        );
+    color: white;
+}
+
+.ss-site__product-image-overlay span {
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.16em;
+    opacity: 0.72;
+}
+
+.ss-site__product-image-overlay strong {
+    max-width: 380px;
+    font-size: 19px;
+    line-height: 1.28;
+}
+
+.ss-site__product-bottom {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    min-height: 78px;
+}
+
+.ss-site__product-bottom div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-right: 1px solid #edf1ef;
+    color: #42574f;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.ss-site__product-bottom div:last-child {
+    border-right: 0;
+}
+
+.ss-site__product-bottom svg {
+    color: var(--ss-green);
+}
+
+.ss-site__float-card {
+    position: absolute;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-width: 180px;
+    border: 1px solid rgba(16, 35, 29, 0.08);
+    border-radius: 16px;
+    padding: 13px 15px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 18px 42px rgba(16, 35, 29, 0.13);
+}
+
+.ss-site__float-card svg {
+    flex: 0 0 auto;
+    color: var(--ss-green);
+}
+
+.ss-site__float-card div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ss-site__float-card strong {
+    font-size: 11px;
+}
+
+.ss-site__float-card span {
+    color: #70827c;
+    font-size: 9px;
+}
+
+.ss-site__float-card--documentos {
+    top: 9px;
+    right: -10px;
+}
+
+.ss-site__float-card--campo {
+    bottom: 3px;
+    left: 0;
+}
+
+.ss-site__section {
+    padding: 96px 0;
+}
+
+.ss-site__section-heading {
+    max-width: 710px;
+    margin-bottom: 48px;
+}
+
+.ss-site__section-heading--center {
+    margin-inline: auto;
+    text-align: center;
+}
+
+.ss-site__section-heading h2,
+.ss-site__product-story-copy h2,
+.ss-site__field-copy h2,
+.ss-site__security-grid h2,
+.ss-site__cta-card h2 {
+    margin: 14px 0 16px;
+    color: var(--ss-ink);
+    font-size: clamp(34px, 4vw, 50px);
+    font-weight: 820;
+    letter-spacing: -0.045em;
+    line-height: 1.05;
+}
+
+.ss-site__section-heading p,
+.ss-site__product-story-copy > p,
+.ss-site__field-copy > p,
+.ss-site__security-grid > div > p,
+.ss-site__cta-card p {
+    margin: 0;
+    color: var(--ss-muted);
+    font-size: 15px;
+    line-height: 1.72;
+}
+
+.ss-site__section--problem {
+    border-top: 1px solid #eef2f0;
+    background: var(--ss-surface);
+}
+
+.ss-site__problem-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    overflow: hidden;
+    border: 1px solid var(--ss-border);
+    border-radius: 24px;
+    background: var(--ss-white);
+}
+
+.ss-site__problem-item {
+    min-height: 180px;
+    padding: 26px;
+    border-right: 1px solid var(--ss-border);
+}
+
+.ss-site__problem-item:last-child {
+    border-right: 0;
+}
+
+.ss-site__problem-number {
+    display: inline-block;
+    margin-bottom: 34px;
+    color: var(--ss-green);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+}
+
+.ss-site__problem-item p {
+    margin: 0;
+    color: #40564e;
+    font-size: 14px;
+    font-weight: 750;
+    line-height: 1.55;
+}
+
+.ss-site__problem-result {
+    display: flex;
+    max-width: 780px;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 24px auto 0;
+    color: #3d554c;
+    text-align: center;
+}
+
+.ss-site__problem-result svg {
+    flex: 0 0 auto;
+    color: var(--ss-green);
+}
+
+.ss-site__problem-result p {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.ss-site__section--resources {
+    background: #ffffff;
+}
+
+.ss-site__resource-layout {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 18px;
+}
+
+.ss-site__resource-block {
+    display: flex;
+    gap: 22px;
+    min-height: 300px;
+    border: 1px solid var(--ss-border);
+    border-radius: 26px;
+    padding: 30px;
+    background: #fbfdfc;
+    transition:
+        transform 170ms ease,
+        box-shadow 170ms ease,
+        border-color 170ms ease;
+}
+
+.ss-site__resource-block:hover {
+    transform: translateY(-3px);
+    border-color: #c9ddd4;
+    box-shadow: 0 18px 40px rgba(16, 35, 29, 0.08);
+}
+
+
+
+
+
+.ss-site__resource-block--campo h3,
+.ss-site__resource-block--campo .ss-site__resource-items span {
+}
+
+
+.ss-site__resource-block--campo .ss-site__resource-icon {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.ss-site__resource-icon {
+    display: flex;
+    width: 52px;
+    height: 52px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d7ebe1;
+    border-radius: 16px;
+    background: var(--ss-green-soft);
+    color: var(--ss-green-dark);
+}
+
+.ss-site__resource-content h3 {
+    margin: 2px 0 10px;
+    color: var(--ss-ink);
+    font-size: 21px;
+    letter-spacing: -0.025em;
+}
+
+.ss-site__resource-content > p {
+    margin: 0;
+    color: var(--ss-muted);
+    font-size: 14px;
+    line-height: 1.65;
+}
+
+.ss-site__resource-items {
+    display: grid;
+    gap: 11px;
+    margin-top: 24px;
+}
+
+.ss-site__resource-items span {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    color: #42574f;
+    font-size: 13px;
+    font-weight: 720;
+    line-height: 1.5;
+}
+
+.ss-site__resource-items svg {
+    flex: 0 0 auto;
+    margin-top: 1px;
+    color: var(--ss-green);
+}
+
+.ss-site__section--product {
+    background: #f4f8f6;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+.ss-site__section--flow {
+    background: white;
+}
+
+.ss-site__flow {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    border-top: 1px solid var(--ss-border);
+    border-bottom: 1px solid var(--ss-border);
+}
+
+.ss-site__flow-step {
+    position: relative;
+    min-height: 230px;
+    padding: 28px 25px 24px;
+    border-right: 1px solid var(--ss-border);
+}
+
+.ss-site__flow-step:last-child {
+    border-right: 0;
+}
+
+.ss-site__flow-number {
+    color: var(--ss-green);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+}
+
+.ss-site__flow-step h3 {
+    margin: 42px 0 10px;
+    font-size: 18px;
+    letter-spacing: -0.02em;
+}
+
+.ss-site__flow-step p {
+    margin: 0;
+    color: var(--ss-muted);
+    font-size: 13px;
+    line-height: 1.65;
+}
+
+.ss-site__flow-arrow {
+    position: absolute;
+    z-index: 2;
+    top: 31px;
+    right: -10px;
+    padding: 3px;
+    border-radius: 50%;
+    background: white;
+    color: #9aaba5;
+}
+
+.ss-site__section--field {
+    background: #eef5f1;
+}
+
+.ss-site__field-grid {
+    display: grid;
+    grid-template-columns:
+        minmax(0, 0.92fr)
+        minmax(0, 1.08fr);
+    align-items: center;
+    gap: 100px;
+}
+
+.ss-site__field-visual {
+    position: relative;
+    display: flex;
+    min-height: 500px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 34px;
+    background:
+        radial-gradient(
+            circle at 40% 34%,
+            #316d56,
+            #102b21 65%
+        );
+}
+
+
+
+
+
+
+
+
+.ss-site__field-tag {
+    position: absolute;
+    right: 28px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 14px;
+    background: rgba(11, 32, 24, 0.72);
+    font-size: 11px;
+    font-weight: 800;
+    backdrop-filter: blur(12px);
+}
+
+.ss-site__field-copy h2 {
+    max-width: 650px;
+}
+
+.ss-site__field-points {
+    display: grid;
+    gap: 13px;
+    margin-top: 27px;
+}
+
+.ss-site__field-points div {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: #42574f;
+    font-size: 13px;
+    font-weight: 730;
+}
+
+.ss-site__field-points svg {
+    color: var(--ss-green);
+}
+
+.ss-site__section--security {
+    background: var(--ss-dark);
+    color: white;
+}
+
+.ss-site__security-grid {
+    display: grid;
+    grid-template-columns: 1fr 0.92fr;
+    align-items: center;
+    gap: 110px;
+}
+
+.ss-site__security-grid h2 {
+    color: white;
+}
+
+.ss-site__security-grid > div > p {
+    max-width: 590px;
+    color: #b9cbc4;
+}
+
+.ss-site__kicker--light {
+    color: #71e3aa;
+}
+
+.ss-site__domain-example {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    padding: 13px 15px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #dce9e4;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+}
+
+.ss-site__domain-example svg {
+    color: #71e3aa;
+}
+
+.ss-site__security-panel {
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    border-radius: 25px;
+    background: rgba(255, 255, 255, 0.055);
+}
+
+.ss-site__security-panel > div {
+    display: flex;
+    gap: 16px;
+    padding: 22px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.ss-site__security-panel > div:last-child {
+    border-bottom: 0;
+}
+
+.ss-site__security-panel svg {
+    flex: 0 0 auto;
+    color: #71e3aa;
+}
+
+.ss-site__security-panel span {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.ss-site__security-panel strong {
+    font-size: 13px;
+}
+
+.ss-site__security-panel small {
+    color: #aabfb7;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.ss-site__section--cta {
+    padding: 72px 0 90px;
+    background: #ffffff;
+}
+
+.ss-site__cta-card {
+    display: grid;
+    grid-template-columns:
+        minmax(0, 1fr)
+        auto;
+    align-items: center;
+    gap: 70px;
+    overflow: hidden;
+    border-radius: 30px;
+    padding: 55px 58px;
+    background:
+        radial-gradient(
+            circle at 100% 0%,
+            rgba(80, 226, 153, 0.18),
+            transparent 36%
+        ),
+        #12613e;
+    color: white;
+}
+
+.ss-site__cta-card h2 {
+    max-width: 700px;
+    color: white;
+    font-size: clamp(32px, 3.7vw, 46px);
+}
+
+.ss-site__cta-card p {
+    max-width: 690px;
+    color: #cce0d7;
+}
+
+.ss-site__cta-actions {
+    display: flex;
+    min-width: 280px;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ss-site__button--light {
+    background: white;
+    color: #125837;
+}
+
+.ss-site__button--dark-outline {
+    border-color: rgba(255, 255, 255, 0.22);
+    color: white;
+}
+
+.ss-site__footer {
+    border-top: 1px solid #e8eeeb;
+    background: #f8faf9;
+}
+
+.ss-site__footer-inner {
+    display: grid;
+    grid-template-columns:
+        minmax(0, 1fr)
+        auto;
+    gap: 30px 60px;
+    padding-top: 44px;
+    padding-bottom: 28px;
+}
+
+.ss-site__footer-brand {
+    display: flex;
+    max-width: 430px;
+    gap: 13px;
+    align-items: center;
+}
+
+.ss-site__footer-brand img {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+    border-radius: 11px;
+}
+
+.ss-site__footer-brand div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.ss-site__footer-brand strong {
+    font-size: 13px;
+}
+
+.ss-site__footer-brand span {
+    color: var(--ss-muted);
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+.ss-site__footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 20px;
+    color: #50665e;
+    font-size: 11px;
+    font-weight: 750;
+}
+
+.ss-site__footer-bottom {
+    display: flex;
+    grid-column: 1 / -1;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid #e3eae7;
+    padding-top: 22px;
+    color: #82918c;
+    font-size: 9px;
+}
+
+@media (max-width: 1080px) {
+    .ss-site__nav {
+        display: none;
+    }
+
+    .ss-site__hero-grid {
+        gap: 38px;
+    }
+
+    .ss-site__hero h1 {
+        font-size: clamp(44px, 5.7vw, 62px);
+    }
+
+    .ss-site__product-story,
+    .ss-site__field-grid,
+    .ss-site__security-grid {
+        gap: 55px;
+    }
+
+    .ss-site__flow {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .ss-site__flow-step:nth-child(3) {
+        border-right: 0;
+    }
+
+    .ss-site__flow-step:nth-child(n + 4) {
+        border-top: 1px solid var(--ss-border);
+    }
+}
+
+@media (max-width: 860px) {
+    .ss-site__container {
+        width: min(100% - 32px, 720px);
+    }
+
+    .ss-site__header-inner {
+        min-height: 70px;
+    }
+
+    .ss-site__brand {
+        min-width: auto;
+    }
+
+    .ss-site__brand-copy small,
+    .ss-site__button--ghost {
+        display: none;
+    }
+
+    .ss-site__hero {
+        padding-top: 60px;
+    }
+
+    .ss-site__hero-grid,
+    .ss-site__product-story,
+    .ss-site__field-grid,
+    .ss-site__security-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ss-site__hero-grid {
+        gap: 35px;
+    }
+
+    .ss-site__hero-copy {
+        text-align: center;
+    }
+
+    .ss-site__hero-description,
+    .ss-site__hero h1 {
+        margin-inline: auto;
+    }
+
+    .ss-site__hero-actions,
+    .ss-site__hero-proof {
+        justify-content: center;
+    }
+
+    .ss-site__hero-visual {
+        padding-inline: 15px;
+    }
+
+    .ss-site__product-window {
+        transform: none;
+    }
+
+    .ss-site__problem-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .ss-site__problem-item:nth-child(2) {
+        border-right: 0;
+    }
+
+    .ss-site__problem-item:nth-child(n + 3) {
+        border-top: 1px solid var(--ss-border);
+    }
+
+
+    .ss-site__field-grid {
+        gap: 55px;
+    }
+
+    .ss-site__field-copy {
+        text-align: center;
+    }
+
+    .ss-site__field-points {
+        max-width: 520px;
+        margin-inline: auto;
+        text-align: left;
+    }
+
+    .ss-site__security-grid {
+        gap: 45px;
+    }
+
+    .ss-site__cta-card {
+        grid-template-columns: 1fr;
+        gap: 35px;
+    }
+
+    .ss-site__cta-actions {
+        min-width: 0;
+    }
+}
+
+@media (max-width: 620px) {
+    .ss-site__container {
+        width: min(100% - 24px, 520px);
+    }
+
+    .ss-site__header-actions .ss-site__button--primary {
+        padding-inline: 12px;
+        font-size: 10px;
+    }
+
+    .ss-site__brand-image {
+        width: 38px;
+        height: 38px;
+    }
+
+    .ss-site__brand-copy strong {
+        font-size: 13px;
+    }
+
+    .ss-site__hero {
+        min-height: auto;
+        padding: 48px 0 58px;
+    }
+
+    .ss-site__hero h1 {
+        margin-top: 20px;
+    }
+
+    .ss-site__hero-description {
+        font-size: 15px;
+    }
+
+    .ss-site__hero-actions {
+        flex-direction: column;
+    }
+
+    .ss-site__hero-actions .ss-site__button {
+        width: 100%;
+    }
+
+    .ss-site__hero-proof {
+        display: grid;
+        justify-content: flex-start;
+        max-width: 320px;
+        margin-inline: auto;
+        text-align: left;
+    }
+
+    .ss-site__hero-visual {
+        padding: 24px 0 34px;
+    }
+
+    .ss-site__product-topbar {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .ss-site__product-topbar > span {
+        display: none;
+    }
+
+    .ss-site__product-image-wrap {
+        height: 280px;
+    }
+
+    .ss-site__product-bottom {
+        grid-template-columns: 1fr;
+    }
+
+    .ss-site__product-bottom div {
+        min-height: 52px;
+        border-right: 0;
+        border-bottom: 1px solid #edf1ef;
+    }
+
+    .ss-site__product-bottom div:last-child {
+        border-bottom: 0;
+    }
+
+    .ss-site__float-card {
+        position: static;
+        margin-top: 10px;
+    }
+
+    .ss-site__section {
+        padding: 72px 0;
+    }
+
+    .ss-site__section-heading h2,
+    .ss-site__product-story-copy h2,
+    .ss-site__field-copy h2,
+    .ss-site__security-grid h2,
+    .ss-site__cta-card h2 {
+        font-size: 34px;
+    }
+
+    .ss-site__problem-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ss-site__problem-item {
+        min-height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--ss-border);
+    }
+
+    .ss-site__problem-item:last-child {
+        border-bottom: 0;
+    }
+
+    .ss-site__problem-item:nth-child(n + 3) {
+        border-top: 0;
+    }
+
+    .ss-site__problem-number {
+        margin-bottom: 18px;
+    }
+
+    .ss-site__resource-block {
+        flex-direction: column;
+        min-height: auto;
+        padding: 24px;
+    }
+
+
+
+    .ss-site__flow {
+        grid-template-columns: 1fr;
+    }
+
+    .ss-site__flow-step,
+    .ss-site__flow-step:nth-child(3),
+    .ss-site__flow-step:nth-child(n + 4) {
+        min-height: auto;
+        border-right: 0;
+        border-top: 0;
+        border-bottom: 1px solid var(--ss-border);
+    }
+
+    .ss-site__flow-step:last-child {
+        border-bottom: 0;
+    }
+
+    .ss-site__flow-step h3 {
+        margin-top: 22px;
+    }
+
+    .ss-site__flow-arrow {
+        display: none;
+    }
+
+    .ss-site__field-visual {
+        min-height: 450px;
+    }
+
+
+    .ss-site__field-tag {
+        right: 12px;
+        bottom: 16px;
+    }
+
+    .ss-site__cta-card {
+        padding: 38px 26px;
+    }
+
+    .ss-site__footer-inner {
+        grid-template-columns: 1fr;
+    }
+
+    .ss-site__footer-links {
+        justify-content: flex-start;
+    }
+
+    .ss-site__footer-bottom {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 7px;
+    }
+}
+/* ============================================================
+   M12.3-A-R1 — ACESSO NEUTRO
+   ============================================================ */
+
+.ss-site button {
+    font-family: inherit;
+}
+
+.ss-site__button,
+.ss-site__footer-access,
+.ss-site__access-close {
+    cursor: pointer;
+}
+
+.ss-site__footer-access {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+}
+
+.ss-site__footer-access:hover {
+    color: var(--ss-green-dark);
+}
+
+.ss-site__access-layer {
+    position: fixed;
+    z-index: 1200;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: rgba(5, 20, 15, 0.66);
+    backdrop-filter: blur(10px);
+}
+
+.ss-site__access-dialog {
+    position: relative;
+    background: #ffffff;
+    box-shadow: 0 35px 100px rgba(0, 0, 0, 0.28);
+}
+
+.ss-site__access-close {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    background: #ffffff;
+}
+
+.ss-site__access-close:hover {
+    background: #f4f8f6;
+}
+
+
+.ss-site__access-dialog h2 {
+    font-weight: 900;
+}
+
+.ss-site__access-dialog > p {
+}
+
+.ss-site__access-form {
+}
+
+.ss-site__access-form label {
+    display: block;
+}
+
+.ss-site__access-input-wrap {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    background: #ffffff;
+    transition:
+        border-color 160ms ease,
+        box-shadow 160ms ease;
+}
+
+.ss-site__access-input-wrap:focus-within {
+    box-shadow: 0 0 0 4px rgba(28, 155, 93, 0.1);
+}
+
+.ss-site__access-input-wrap span {
+    padding: 0 10px;
+    color: #8b9a95;
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.ss-site__access-input-wrap input {
+    width: 100%;
+    height: 49px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font: inherit;
+}
+
+.ss-site__access-input-wrap input::placeholder {
+}
+
+.ss-site__access-error {
+    margin: 8px 0 0 !important;
+    color: #b42318 !important;
+    font-size: 10px !important;
+    font-weight: 750 !important;
+}
+
+.ss-site__access-submit {
+    width: 100%;
+    margin-top: 14px;
+}
+
+.ss-site__access-example {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 16px;
+    padding: 11px 13px;
+    border-radius: 12px;
+    background: #f4f9f6;
+    color: #657a72;
+    font-size: 10px;
+}
+
+.ss-site__access-example svg {
+    color: var(--ss-green-dark);
+}
+
+.ss-site__access-example strong {
+    color: #284239;
+}
+
+
+
+
+
+@media (max-width: 620px) {
+    .ss-site__access-layer {
+    }
+
+    .ss-site__access-dialog {
+    }
+
+    .ss-site__access-input-wrap {
+        flex-wrap: wrap;
+        padding: 7px 8px;
+    }
+
+    .ss-site__access-input-wrap span {
+        padding: 2px 4px;
+    }
+
+    .ss-site__access-input-wrap input {
+        min-width: 120px;
+        flex: 1;
+    }
+}
+/* ============================================================
+   M12.3-A-R2 — MAPA INTERATIVO + QR DEMONSTRATIVO
+   ============================================================ */
+
+.ss-site__section--product {
+    background:
+        radial-gradient(
+            circle at 90% 5%,
+            rgba(28, 155, 93, 0.09),
+            transparent 30%
+        ),
+        #ffffff;
+}
+
+.ss-site__demo-tabs {
+    display: flex;
+    width: fit-content;
+    max-width: 100%;
+    gap: 6px;
+    margin: 32px auto 24px;
+    padding: 6px;
+    overflow-x: auto;
+    border: 1px solid var(--ss-border);
+    border-radius: 18px;
+    background: #f4f8f6;
+}
+
+.ss-site__demo-tabs button {
+    display: inline-flex;
+    min-height: 46px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 0;
+    border-radius: 13px;
+    padding: 0 17px;
+    background: transparent;
+    color: #577169;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+        color 160ms ease,
+        background 160ms ease,
+        box-shadow 160ms ease,
+        transform 160ms ease;
+}
+
+.ss-site__demo-tabs button:hover {
+    color: var(--ss-green-dark);
+}
+
+.ss-site__demo-tabs button.is-active {
+    background: #ffffff;
+    color: var(--ss-green-dark);
+    box-shadow:
+        0 8px 24px rgba(16, 35, 29, 0.08),
+        0 0 0 1px rgba(28, 155, 93, 0.08);
+}
+
+.ss-site__demo-stage {
+    display: grid;
+    grid-template-columns:
+        minmax(280px, 0.78fr)
+        minmax(0, 1.48fr);
+    gap: 28px;
+    align-items: stretch;
+}
+
+.ss-site__demo-copy {
+    display: flex;
+    min-height: 540px;
+    flex-direction: column;
+    justify-content: center;
+    padding: 38px;
+    border: 1px solid var(--ss-border);
+    border-radius: 28px;
+    background:
+        linear-gradient(
+            160deg,
+            #ffffff 0%,
+            #f5fbf8 100%
+        );
+}
+
+.ss-site__demo-tag {
+    display: inline-flex;
+    width: fit-content;
+    margin-bottom: 17px;
+    color: var(--ss-green-dark);
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+}
+
+.ss-site__demo-copy h3 {
+    max-width: 470px;
+    margin: 0;
+    color: var(--ss-ink);
+    font-size: clamp(28px, 3vw, 42px);
+    font-weight: 900;
+    line-height: 1.03;
+    letter-spacing: -0.045em;
+}
+
+.ss-site__demo-copy > p {
+    max-width: 500px;
+    margin: 18px 0 0;
+    color: var(--ss-muted);
+    font-size: 14px;
+    line-height: 1.75;
+}
+
+.ss-site__demo-benefits {
+    display: grid;
+    gap: 11px;
+    margin-top: 26px;
+}
+
+.ss-site__demo-benefits span {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #425b53;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.ss-site__demo-benefits svg {
+    flex: 0 0 auto;
+    color: var(--ss-green);
+}
+
+.ss-site__demo-disclaimer {
+    margin-top: 28px;
+    color: #8a9c96;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.ss-site__demo-visual {
+    min-width: 0;
+}
+
+.ss-site__demo-loading {
+    display: grid;
+    min-height: 460px;
+    place-items: center;
+    border: 1px solid var(--ss-border);
+    border-radius: 22px;
+    background: #f7faf9;
+    color: var(--ss-muted);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.ss-site__map-demo {
+    min-height: 540px;
+    padding: 16px;
+    border: 1px solid var(--ss-border);
+    border-radius: 28px;
+    background: #ffffff;
+    box-shadow: 0 26px 70px rgba(12, 39, 29, 0.1);
+}
+
+.ss-site__map-demo-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 3px 5px 13px;
+}
+
+.ss-site__map-demo-top > div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ss-site__map-demo-top > div > span {
+    color: #899a94;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+}
+
+.ss-site__map-demo-top strong {
+    color: var(--ss-ink);
+    font-size: 14px;
+    font-weight: 850;
+}
+
+.ss-site__demo-live {
+    padding: 6px 9px;
+    border-radius: 999px;
+    background: var(--ss-green-soft);
+    color: var(--ss-green-dark);
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+}
+
+.ss-site__map-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.ss-site__map-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 7px;
+    border-radius: 8px;
+    background: #f5f8f7;
+    color: #64766f;
+    font-size: 9px;
+    font-weight: 750;
+}
+
+.ss-site__map-legend b {
+    display: grid;
+    min-width: 21px;
+    height: 21px;
+    place-items: center;
+    border-radius: 6px;
+    background: #0f2e24;
+    color: #ffffff;
+    font-size: 8px;
+}
+
+.ss-site__map-interactive {
+    height: 440px !important;
+    min-height: 440px !important;
+    border-radius: 18px !important;
+}
+
+.ss-site__map-instruction {
+    margin: 10px 0 0;
+    color: #7c8f88;
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.ss-site__qr-showcase {
+    min-height: 540px;
+    padding: 31px;
+    border: 1px solid var(--ss-border);
+    border-radius: 28px;
+    background:
+        radial-gradient(
+            circle at 88% 8%,
+            rgba(28, 155, 93, 0.1),
+            transparent 29%
+        ),
+        #ffffff;
+    box-shadow: 0 26px 70px rgba(12, 39, 29, 0.1);
+}
+
+.ss-site__qr-showcase-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding-bottom: 22px;
+    border-bottom: 1px solid var(--ss-border);
+}
+
+.ss-site__qr-showcase-icon {
+    display: grid;
+    width: 52px;
+    height: 52px;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 16px;
+    background: var(--ss-green-soft);
+    color: var(--ss-green-dark);
+}
+
+.ss-site__qr-showcase-icon--equipment {
+    background: #edf3fb;
+    color: #315f99;
+}
+
+.ss-site__qr-showcase-head > div {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+}
+
+.ss-site__qr-showcase-head small {
+    color: var(--ss-green-dark);
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.11em;
+}
+
+.ss-site__qr-showcase-head strong {
+    margin-top: 3px;
+    color: var(--ss-ink);
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: -0.025em;
+}
+
+.ss-site__qr-showcase-head span {
+    margin-top: 2px;
+    color: var(--ss-muted);
+    font-size: 11px;
+    font-weight: 650;
+}
+
+.ss-site__qr-showcase-body {
+    display: grid;
+    grid-template-columns:
+        auto
+        minmax(0, 1fr);
+    gap: 30px;
+    align-items: center;
+    padding-top: 32px;
+}
+
+.ss-site__qr-code-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 15px;
+    border: 1px solid #e0e9e5;
+    border-radius: 20px;
+    background: #ffffff;
+    box-shadow: inset 0 0 0 5px #f7faf8;
+}
+
+.ss-site__qr-code-box > span {
+    color: #879892;
+    font-size: 9px;
+    font-weight: 850;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.ss-site__qr-data-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.ss-site__qr-data-grid > div {
+    display: flex;
+    min-height: 78px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    padding: 13px;
+    border: 1px solid #e4ece8;
+    border-radius: 13px;
+    background: #f8faf9;
+}
+
+.ss-site__qr-data-grid span {
+    color: #81928c;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.ss-site__qr-data-grid strong {
+    color: #263b34;
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.ss-site__qr-data-grid strong.is-ok {
+    color: var(--ss-green-dark);
+}
+
+.ss-site__qr-showcase-foot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 28px;
+    padding-top: 17px;
+    border-top: 1px solid var(--ss-border);
+    color: #71837d;
+    font-size: 10px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.ss-site__qr-showcase-foot svg {
+    flex: 0 0 auto;
+    color: var(--ss-green);
+}
+
+.ss-site__field-visual {
+    overflow: hidden;
+}
+
+@media (min-width: 981px) {
+    .ss-site__field-visual {
+        min-height: 650px;
+    }
+}
+
+.ss-site__field-qr-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+    column-gap: 13px;
+    row-gap: 20px;
+    width: min(100%, 470px);
+    margin: 0 auto;
+}
+
+.ss-site__field-qr-card {
+    display: flex;
+    min-height: 290px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 20px;
+    border: 1px solid #cee4da;
+    border-radius: 24px;
+    background: #ffffff;
+    box-shadow: 0 20px 50px rgba(5, 28, 19, 0.15);
+    text-align: center;
+}
+
+.ss-site__field-qr-card--equipment {
+    transform: none;
+}
+
+.ss-site__field-qr-card--field {
+    grid-column: 1 / -1;
+    transform: none;
+}
+
+@media (min-width: 441px) {
+    .ss-site__field-qr-card--field {
+        display: grid;
+        min-height: 176px;
+        grid-template-columns:
+            152px
+            minmax(0, 1fr);
+        grid-template-areas:
+            "qr type"
+            "qr title"
+            "qr description";
+        align-items: center;
+        justify-items: start;
+        gap: 6px 22px;
+        padding: 20px 28px;
+        text-align: left;
+    }
+
+    .ss-site__field-qr-card--field
+        .ss-site__field-qr-type {
+        grid-area: type;
+    }
+
+    .ss-site__field-qr-card--field
+        .ss-site__field-qr-code {
+        grid-area: qr;
+        justify-self: center;
+    }
+
+    .ss-site__field-qr-card--field > strong {
+        grid-area: title;
+    }
+
+    .ss-site__field-qr-card--field > small {
+        grid-area: description;
+        max-width: none;
+    }
+}
+
+.ss-site__field-qr-type {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--ss-green-dark);
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+}
+
+.ss-site__field-qr-code {
+    display: grid;
+    place-items: center;
+    padding: 9px;
+    border: 1px solid #e4ece8;
+    border-radius: 16px;
+    background: #ffffff;
+}
+
+.ss-site__field-qr-card > strong {
+    color: var(--ss-ink);
+    font-size: 14px;
+    font-weight: 900;
+}
+
+.ss-site__field-qr-card > small {
+    max-width: 175px;
+    color: var(--ss-muted);
+    font-size: 10px;
+    line-height: 1.45;
+}
+
+.ss-site__field-demo-note {
+    display: block;
+    margin-top: 18px;
+    color: #899a94;
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+@media (max-width: 980px) {
+    .ss-site__demo-stage {
+        grid-template-columns: 1fr;
+    }
+
+    .ss-site__demo-copy {
+        min-height: 0;
+    }
+
+    .ss-site__qr-showcase {
+        min-height: 0;
+    }
+}
+
+@media (max-width: 680px) {
+    .ss-site__demo-tabs {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .ss-site__demo-stage {
+        gap: 18px;
+    }
+
+    .ss-site__demo-copy {
+        padding: 25px 21px;
+        border-radius: 22px;
+    }
+
+    .ss-site__map-demo,
+    .ss-site__qr-showcase {
+        padding: 14px;
+        border-radius: 22px;
+    }
+
+    .ss-site__map-interactive {
+        height: 370px !important;
+        min-height: 370px !important;
+    }
+
+    .ss-site__qr-showcase-body {
+        grid-template-columns: 1fr;
+    }
+
+    .ss-site__qr-code-box {
+        width: fit-content;
+        margin: 0 auto;
+    }
+
+    .ss-site__qr-data-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+    .ss-site__field-qr-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ss-site__field-qr-card--equipment {
+        transform: none;
+    }
+}
+
+@media (max-width: 440px) {
+    .ss-site__qr-data-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ss-site__map-legend span {
+        font-size: 8px;
+    }
+}
+/* ============================================================
+   M12.3-B1-R1.1 — PLANTA DETALHADA
+   ============================================================ */
+
+.ss-site__detail-map-layer {
+    position: fixed;
+    z-index: 1450;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 22px;
+    background: rgba(8, 18, 15, 0.74);
+    backdrop-filter: blur(9px);
+}
+
+.ss-site__detail-map-dialog {
+    width: min(1180px, calc(100vw - 44px));
+    max-height: calc(100vh - 44px);
+    overflow: auto;
+    border-radius: 26px;
+    background: #ffffff;
+    box-shadow: 0 35px 100px rgba(0, 0, 0, 0.32);
+}
+
+.ss-site__detail-map-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 22px 28px;
+    border-bottom: 1px solid #dfe8e4;
+}
+
+.ss-site__detail-map-header > div > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--ss-green-dark);
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+}
+
+.ss-site__detail-map-header h3 {
+    margin: 7px 0 2px;
+    color: var(--ss-ink);
+    font-size: 29px;
+    font-weight: 900;
+}
+
+.ss-site__detail-map-header p {
+    margin: 0;
+    color: var(--ss-muted);
+    font-size: 12px;
+}
+
+.ss-site__detail-map-header button {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border: 1px solid var(--ss-border);
+    border-radius: 13px;
+    background: #ffffff;
+    cursor: pointer;
+}
+
+.ss-site__detail-map-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 20px;
+    padding: 28px;
+    background: #f7f9f8;
+}
+
+.ss-site__detail-map-picture {
+    position: relative;
+    overflow: hidden;
+    height: 510px;
+    border: 14px solid #ffffff;
+    border-radius: 17px;
+    background: #d9cec0;
+    box-shadow: 0 0 0 1px #d6e1dc;
+}
+
+.ss-site__detail-map-picture img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.ss-site__detail-marker {
+    position: absolute;
+    display: grid;
+    width: 31px;
+    height: 31px;
+    place-items: center;
+    transform: translate(-50%, -50%);
+    border: 3px solid #ffffff;
+    border-radius: 50%;
+    background: #0ba36c;
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+    font-size: 9px;
+    font-weight: 900;
+}
+
+.ss-site__detail-map-legend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    min-height: 48px;
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: #071127;
+    color: #e8f2ee;
+    font-size: 10px;
+}
+
+.ss-site__detail-map-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.ss-site__detail-map-legend i {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #13b47a;
+}
+
+.ss-site__detail-map-sidebar {
+    display: grid;
+    align-content: start;
+    gap: 16px;
+}
+
+.ss-site__detail-summary,
+.ss-site__detail-equipment {
+    padding: 17px;
+    border: 1px solid #dce5e1;
+    border-radius: 17px;
+    background: #ffffff;
+}
+
+.ss-site__detail-summary > span,
+.ss-site__detail-equipment > span {
+    color: #879790;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 0.07em;
+}
+
+.ss-site__detail-summary > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 48px;
+    border-bottom: 1px solid #edf1ef;
+}
+
+.ss-site__detail-summary > div:last-child {
+    border-bottom: 0;
+}
+
+.ss-site__detail-equipment > div {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    margin-top: 9px;
+    padding: 10px;
+    border: 1px solid #ccebdc;
+    border-radius: 10px;
+    background: #f1fcf6;
+}
+
+.ss-site__detail-equipment > div > strong {
+    font-size: 11px;
+}
+
+.ss-site__detail-equipment > div > span {
+    overflow: hidden;
+    color: #40574f;
+    font-size: 10px;
+    font-weight: 750;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ss-site__detail-equipment > div > em {
+    color: #078b5a;
+    font-size: 8px;
+    font-style: normal;
+    font-weight: 900;
+}
+
+.ss-site__detail-note {
+    min-height: 140px;
+    box-sizing: border-box;
+    padding: 16px 16px 20px;
+    border: 1px solid #cfe5da;
+    border-radius: 14px;
+    background: #eef8f4;
+    color: #40574f;
+}
+
+.ss-site__detail-note strong {
+    display: block;
+    margin-bottom: 6px;
+    color: #087b55;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+}
+
+.ss-site__detail-note p {
+    width: 100%;
+    margin: 0;
+    font-size: 10px;
+    line-height: 1.6;
+    text-align: justify;
+    text-align-last: left;
+    text-justify: inter-word;
+}
+.ss-site__detail-map-footer {
+    display: flex;
+    min-height: 54px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-top: 1px solid #dfe8e4;
+    color: #6b7f77;
+    font-size: 10px;
+    font-weight: 750;
+}
+
+@media (max-width: 900px) {
+    .ss-site__detail-map-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .ss-site__detail-map-sidebar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 620px) {
+    .ss-site__detail-map-layer {
+        padding: 8px;
+    }
+
+    .ss-site__detail-map-dialog {
+        width: 100%;
+        max-height: calc(100vh - 16px);
+        border-radius: 20px;
+    }
+
+    .ss-site__detail-map-layout {
+        padding: 14px;
+    }
+
+    .ss-site__detail-map-picture {
+        height: 390px;
+    }
+
+    .ss-site__detail-map-sidebar {
+        grid-template-columns: 1fr;
+    }
+
+    .ss-site__detail-map-legend {
+        flex-wrap: wrap;
+        gap: 10px 18px;
+    }
+}
+
+/* M12.3-C1-R4 — CLAREZA-CAMPO-QR */
+.ss-site__field-visual {
+    background:
+        radial-gradient(
+            circle at top left,
+            rgba(103, 221, 175, 0.12) 0%,
+            rgba(103, 221, 175, 0) 36%
+        ),
+        radial-gradient(
+            circle at bottom right,
+            rgba(42, 136, 110, 0.16) 0%,
+            rgba(42, 136, 110, 0) 38%
+        ),
+        linear-gradient(
+            180deg,
+            #214a42 0%,
+            #173732 52%,
+            #102926 100%
+        );
+}
+
+.ss-site__field-qr-grid {
+    padding-top: 60px;
+    padding-bottom: 26px;
+}
+
+.ss-site__field-tag {
+    top: 16px;
+    bottom: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: calc(100% - 32px);
+    justify-content: center;
+    padding: 12px 18px;
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #f8fffc;
+    box-shadow: 0 10px 24px rgba(4, 20, 16, 0.18);
+    backdrop-filter: blur(4px);
+}
+
+.ss-site__field-tag svg {
+    color: #a7efce;
+}
+
+@media (max-width: 980px) {
+    .ss-site__field-qr-grid {
+        padding-top: 66px;
+        padding-bottom: 24px;
+    }
+
+    .ss-site__field-tag {
+        max-width: calc(100% - 24px);
+        padding: 10px 14px;
+    }
+}
+
+/* ============================================================
+   M12.3-D1 — ACCESS-MODAL-PRO
+   Refinamento visual CSS-only.
+   Lógica de slug / tenant / /app preservada.
+   ============================================================ */
+
+.ss-site__access-layer {
+    padding: 28px;
+    background:
+        radial-gradient(
+            circle at 50% 15%,
+            rgba(30, 145, 105, 0.16),
+            transparent 34%
+        ),
+        rgba(4, 18, 14, 0.74);
+    backdrop-filter: blur(14px);
+}
+
+.ss-site__access-dialog {
+    position: relative;
+    max-height: calc(100vh - 56px);
+    overflow-y: auto;
+    border: 1px solid #d7e7df;
+    border-radius: 30px;
+    background:
+        linear-gradient(
+            180deg,
+            #f3faf6 0%,
+            #ffffff 38%,
+            #ffffff 100%
+        );
+    box-shadow:
+        0 36px 110px rgba(0, 0, 0, 0.32),
+        0 8px 28px rgba(5, 74, 51, 0.1);
+}
+
+.ss-site__access-dialog::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 6px;
+    border-radius: 30px 30px 0 0;
+    background:
+        linear-gradient(
+            90deg,
+            #0c8b5e 0%,
+            #34b985 50%,
+            #0c8b5e 100%
+        );
+}
+
+.ss-site__access-close {
+    width: 40px;
+    height: 40px;
+    border-radius: 13px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 7px 18px rgba(10, 42, 31, 0.08);
+    transition:
+        transform 160ms ease,
+        border-color 160ms ease,
+        color 160ms ease,
+        background 160ms ease;
+}
+
+.ss-site__access-close:hover {
+    transform: translateY(-1px);
+    background: #f4fbf7;
+}
+
+
+.ss-site__access-dialog .ss-site__kicker {
+    display: inline-flex;
+    margin-bottom: 9px;
+    color: #0b7d57;
+}
+
+.ss-site__access-dialog h2 {
+    max-width: 460px;
+    margin: 0;
+    color: #10271f;
+    font-size: clamp(28px, 3vw, 36px);
+    line-height: 1.05;
+    letter-spacing: -0.035em;
+}
+
+.ss-site__access-dialog > p {
+    max-width: 500px;
+    margin: 14px 0 0;
+    color: #65786f;
+    font-size: 14px;
+    line-height: 1.65;
+}
+
+.ss-site__access-form {
+    padding: 20px;
+    border: 1px solid #dbeae3;
+    border-radius: 20px;
+    background: #f7fbf9;
+}
+
+.ss-site__access-form label {
+    display: block;
+    margin-bottom: 9px;
+    color: #223c32;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.015em;
+}
+
+.ss-site__access-input-wrap {
+    min-height: 56px;
+    border: 1px solid #cbded5;
+    border-radius: 15px;
+    background: #ffffff;
+    box-shadow: 0 5px 16px rgba(17, 57, 42, 0.05);
+    transition:
+        border-color 160ms ease,
+        box-shadow 160ms ease;
+}
+
+.ss-site__access-input-wrap:focus-within {
+    border-color: #29a975;
+    box-shadow:
+        0 0 0 4px rgba(41, 169, 117, 0.11),
+        0 7px 20px rgba(17, 57, 42, 0.06);
+}
+
+.ss-site__access-input-wrap input {
+    min-width: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #142820;
+}
+
+.ss-site__access-input-wrap input::placeholder {
+    color: #98aaa2;
+    font-weight: 500;
+}
+
+.ss-site__access-form button[type="submit"] {
+    min-height: 52px;
+    margin-top: 13px;
+    border-radius: 14px;
+    box-shadow: 0 12px 26px rgba(8, 126, 84, 0.2);
+}
+
+
+
+
+
+@media (max-width: 620px) {
+    .ss-site__access-layer {
+        padding: 14px;
+        place-items: end center;
+    }
+
+    .ss-site__access-dialog {
+        max-height: calc(100vh - 28px);
+        border-radius: 25px;
+    }
+
+    .ss-site__access-dialog::before {
+        border-radius: 25px 25px 0 0;
+    }
+
+    .ss-site__access-close {
+        top: 14px;
+        right: 14px;
+    }
+
+    .ss-site__access-dialog h2 {
+        padding-right: 34px;
+        font-size: 28px;
+    }
+
+    .ss-site__access-form {
+        padding: 16px;
+    }
+}
+
+/* ============================================================
+   M12.3-D2-R4B — ACCESS-HERO-FOTOGRAFICO
+   Hero real do SafeScan + descrição em duas linhas.
+   ============================================================ */
+
+.ss-site__access-dialog::before {
+    display: none;
+}
+
+.ss-site__access-dialog {
+    width: min(860px, 100%);
+    padding:
+        0
+        34px
+        34px;
+    overflow: auto;
+}
+
+.ss-site__access-hero {
+    position: relative;
+    display: flex;
+    min-height: clamp(126px, 8.2vw, 146px);
+    align-items: center;
+    margin:
+        0
+        -34px
+        28px;
+    padding:
+        24px
+        92px
+        24px
+        38px;
+    border: 0;
+    border-radius: 0;
+    background-color: #0b1726;
+    background-repeat: no-repeat;
+    background-position: center 42%;
+    background-size: cover;
+    box-shadow: none;
+    overflow: hidden;
+}
+
+.ss-site__access-hero::before,
+.ss-site__access-hero::after {
+    display: none;
+}
+
+.ss-site__access-hero .ss-site__kicker {
+    position: relative;
+    z-index: 2;
+    display: inline-flex;
+    margin: 0;
+    color: #ffffff;
+    font-size: clamp(20px, 2.15vw, 26px);
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.015em;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.28);
+}
+
+.ss-site__access-intro {
+    margin:
+        0
+        4px
+        26px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.ss-site__access-intro > h2 {
+    max-width: none;
+    margin: 0;
+    color: #10271f;
+    font-size: clamp(29px, 2.55vw, 34px);
+    font-weight: 900;
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+    white-space: nowrap;
+}
+
+.ss-site__access-description {
+    display: grid;
+    gap: 3px;
+    max-width: 720px;
+    margin: 11px 0 0;
+    padding: 0;
+    color: #667a71;
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.ss-site__access-description > span {
+    display: block;
+}
+
+.ss-site__access-close {
+    z-index: 10;
+    top: 20px;
+    right: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    background: rgba(5, 15, 28, 0.38);
+    color: #ffffff;
+    box-shadow: none;
+    backdrop-filter: blur(8px);
+}
+
+.ss-site__access-close:hover {
+    transform: translateY(-1px);
+    border-color: rgba(255, 255, 255, 0.38);
+    background: rgba(5, 15, 28, 0.52);
+    color: #ffffff;
+}
+
+.ss-site__access-form {
+    margin-top: 0;
+}
+
+@media (max-width: 820px) {
+    .ss-site__access-dialog {
+        width: min(720px, 100%);
+    }
+
+    .ss-site__access-intro > h2 {
+        white-space: normal;
+    }
+}
+
+@media (max-width: 620px) {
+    .ss-site__access-dialog {
+        width: 100%;
+        padding:
+            0
+            18px
+            22px;
+    }
+
+    .ss-site__access-hero {
+        min-height: 112px;
+        margin:
+            0
+            -18px
+            22px;
+        padding:
+            20px
+            62px
+            20px
+            22px;
+        background-position: center center;
+    }
+
+    .ss-site__access-hero .ss-site__kicker {
+        font-size: 20px;
+    }
+
+    .ss-site__access-intro {
+        margin:
+            0
+            2px
+            20px;
+    }
+
+    .ss-site__access-intro > h2 {
+        font-size: 28px;
+        white-space: normal;
+    }
+
+    .ss-site__access-description {
+        gap: 5px;
+    }
+}
+
+/* ============================================================
+   M12.3-D4B — ANCHOR-OFFSET
+   Compensa o header sticky da landing institucional.
+   ============================================================ */
+
+#inicio,
+#recursos,
+#como-funciona,
+#seguranca,
+#demonstracao {
+    scroll-margin-top: 96px;
+}
+
+/* ============================================================
+   M12.3-D4D-B — TYPOGRAPHY-POLISH
+   Legibilidade final de Recursos e Como funciona.
+   ============================================================ */
+
+/* ============================================================
+   M12.3-D4E-B — RESOURCE-CAMPO-LIGHT
+   Suaviza Campo e consulta e calibra somente a ancora Recursos.
+   ============================================================ */
+
+
+.ss-site__resource-block--campo h3,
+.ss-site__resource-block--campo .ss-site__resource-items span {
+    color: #173d30;
+}
+
+
+.ss-site__resource-block--campo .ss-site__resource-icon {
+    border-color: #c8e5d6;
+    background: #f7fcf9;
+    color: var(--ss-green-dark);
+}
+
+/*
+   A própria seção Recursos já possui 96px de padding superior.
+   Remover o scroll-margin adicional evita a folga dupla.
+*/
+#recursos {
+    scroll-margin-top: -80px;
+}
+
+/* ============================================================
+   M12.4-P1B-B — MOBILE-FIX
+   Tabs da demonstração + contraste do CTA final.
+   Escopo exclusivo: <= 620px.
+   ============================================================ */
+
+@media (max-width: 620px) {
+    /*
+       Três opções sempre visíveis.
+       Evita corte da terceira tab em telas estreitas.
+    */
+    .ss-site__demo-tabs {
+        display: grid;
+        grid-template-columns:
+            repeat(3, minmax(0, 1fr));
+        width: 100%;
+        max-width: 100%;
+        gap: 4px;
+        padding: 5px;
+        overflow: visible;
+    }
+
+    .ss-site__demo-tabs button {
+        width: 100%;
+        min-width: 0;
+        justify-content: center;
+        gap: 4px;
+        padding:
+            10px
+            5px;
+        font-size: 10px;
+        line-height: 1.25;
+        text-align: center;
+        white-space: normal;
+    }
+
+    .ss-site__demo-tabs button svg {
+        width: 14px;
+        height: 14px;
+        flex: 0 0 auto;
+    }
+
+    /*
+       O conteúdo já existe no JSX.
+       Define contraste explícito para evitar texto branco
+       sobre o fundo branco do CTA principal.
+    */
+    .ss-site__section--cta .ss-site__button--light {
+        border-color: #ffffff;
+        background: #ffffff;
+        color: #123c30;
+    }
+
+    .ss-site__section--cta .ss-site__button--light svg {
+        color: currentColor;
+    }
+
+    .ss-site__section--cta .ss-site__button--light:hover {
+        border-color: #f2faf6;
+        background: #f2faf6;
+        color: #08764f;
+    }
+}
+
+/* ============================================================
+   M12.4-P1C-B — MOBILE-COMPACT
+   Compacta Campo + QR e o painel do mapa somente no mobile.
+   Desktop e lógica dos componentes permanecem preservados.
+   ============================================================ */
+
+@media (max-width: 620px) {
+    /*
+       Campo + QR:
+       reduz altura acumulada dos três cartões mantendo todas
+       as informações e os três QRs demonstrativos.
+    */
+    .ss-site__field-qr-grid {
+    }
+
+    .ss-site__field-qr-card,
+    .ss-site__field-qr-card--field {
+    }
+
+    .ss-site__field-qr-code {
+    }
+
+    .ss-site__field-qr-code svg {
+        width: 104px !important;
+        height: 104px !important;
+    }
+
+    .ss-site__field-qr-type {
+    }
+
+    .ss-site__field-qr-card > strong {
+    }
+
+    .ss-site__field-qr-card > small {
+    }
+}
+
+@media (max-width: 440px) {
+    /*
+       Painel do ponto selecionado:
+       continua completo, porém ocupa menos da planta.
+    */
+    .ss-site__map-interactive > aside {
+        right: 8px !important;
+        bottom: 8px !important;
+        width: min(248px, calc(100% - 16px)) !important;
+        max-height: calc(100% - 58px) !important;
+        padding: 9px !important;
+        border-radius: 12px !important;
+    }
+
+    .ss-site__map-interactive > aside .mt-3 {
+        margin-top: 6px !important;
+    }
+
+    .ss-site__map-interactive > aside .mt-2 {
+        margin-top: 5px !important;
+    }
+
+    .ss-site__map-interactive > aside .p-2 {
+        padding: 5px !important;
+    }
+
+    .ss-site__map-interactive > aside h3 {
+        font-size: 12px !important;
+        line-height: 1.25;
+    }
+
+    .ss-site__map-interactive > aside p {
+        line-height: 1.35;
+    }
+}
+
+/* ============================================================
+   M12.4-P1C-C — MOBILE-COMPACT-STRONG
+   Segunda calibração mobile após reprovação visual do P1C-B.
+   ============================================================ */
+
+@media (max-width: 620px) {
+    /*
+       Bloco externo Campo + QR.
+    */
+    .ss-site__field-visual {
+        padding: 10px;
+        border-radius: 20px;
+    }
+
+    .ss-site__field-qr-grid {
+        gap: 7px;
+    }
+
+    /*
+       Cada cartão passa a ocupar sensivelmente menos altura.
+    */
+    .ss-site__field-qr-card,
+    .ss-site__field-qr-card--field {
+        min-height: 165px;
+        gap: 4px;
+        padding:
+            9px
+            10px;
+        border-radius: 16px;
+    }
+
+    /*
+       QR demonstrativo:
+       104px -> 80px.
+    */
+    .ss-site__field-qr-code {
+    }
+
+    .ss-site__field-qr-code svg {
+        width: 80px !important;
+        height: 80px !important;
+    }
+
+    .ss-site__field-qr-type {
+        gap: 4px;
+        font-size: 7px;
+        line-height: 1.15;
+    }
+
+    .ss-site__field-qr-type svg {
+        width: 13px;
+        height: 13px;
+    }
+
+    .ss-site__field-qr-card > strong {
+        font-size: 12px;
+        line-height: 1.2;
+    }
+
+    .ss-site__field-qr-card > small {
+        max-width: 180px;
+        font-size: 8px;
+        line-height: 1.25;
+    }
+
+    /*
+       Etiqueta superior do conjunto.
+    */
+    .ss-site__field-tag {
+        min-height: 34px;
+        gap: 6px;
+        padding:
+            7px
+            11px;
+        font-size: 9px;
+    }
+
+    .ss-site__field-tag svg {
+        width: 15px;
+        height: 15px;
+    }
+}
+
+@media (max-width: 440px) {
+    /*
+       Redução proporcional do painel da Área operacional.
+       Mantém conteúdo e comportamento intactos.
+    */
+    .ss-site__map-interactive > aside {
+        right: 4px !important;
+        bottom: 4px !important;
+        transform: scale(0.78) !important;
+        transform-origin: right bottom !important;
+    }
+}
+
+/* ============================================================
+   M12.4-P1C-D — QR-CONTAINER-TIGHT
+   Ajuste fino apenas no retângulo claro do QR.
+   ============================================================ */
+
+@media (max-width: 620px) {
+    .ss-site__field-qr-code {
+        padding: 2px;
+        border-radius: 8px;
+    }
+
+    .ss-site__field-qr-code svg {
+        display: block;
+        width: 80px !important;
+        height: 80px !important;
+    }
+}
+
+/* ============================================================
+   M12.4-P1C-E-B — QR-CARD-WIDTH
+   Estreita o card branco inteiro no celular.
+   QR, conteúdo, altura e desktop permanecem preservados.
+   ============================================================ */
+
+@media (max-width: 440px) {
+    .ss-site__field-qr-grid {
+        justify-items: center;
+    }
+
+    .ss-site__field-qr-card,
+    .ss-site__field-qr-card--field {
+        width: min(100%, 240px);
+        justify-self: center;
+        box-sizing: border-box;
+    }
+}
+
+/* ============================================================
+   M12.4-P1D-B — PROSE-JUSTIFIED
+   Padronização editorial dos textos corridos da landing.
+   Títulos, listas, labels, botões e microcopy ficam preservados.
+   ============================================================ */
+
+.ss-site__hero-description,
+.ss-site__section-heading p,
+.ss-site__product-story-copy > p,
+.ss-site__field-copy > p,
+.ss-site__security-grid > div > p,
+.ss-site__cta-card p,
+.ss-site__resource-content > p,
+.ss-site__flow-step p,
+.ss-site__demo-copy > p {
+    text-align: justify;
+    text-align-last: left;
+    text-justify: inter-word;
+}
+
+/* ============================================================
+   M12.4-P1E-B — MOBILE-HEADINGS
+   Padroniza apenas os títulos principais em telas mobile.
+   ============================================================ */
+
+@media (max-width: 620px) {
+    .ss-site__hero h1,
+    .ss-site__section-heading h2,
+    .ss-site__product-story-copy h2,
+    .ss-site__field-copy h2,
+    .ss-site__security-grid h2,
+    .ss-site__cta-card h2,
+    .ss-site__demo-copy h3 {
+        margin-inline: auto;
+        text-align: center;
+    }
+}
+
+/* ============================================================
+   M12.4-P1F — HERO-MOBILE-LINES
+   Mantém a frase e controla apenas sua disposição no mobile.
+   ============================================================ */
+
+.ss-site__hero h1 .ss-site__hero-title-line {
+    display: inline;
+}
+
+.ss-site__hero h1 .ss-site__hero-title-line--base {
+    color: #0f211b;
+}
+
+.ss-site__hero h1 .ss-site__hero-title-line--accent {
+    color: var(--ss-green-dark);
+}
+
+@media (max-width: 620px) {
+    .ss-site__hero h1 {
+        max-width: 100%;
+        font-size: clamp(36px, 9.8vw, 40px);
+        line-height: 0.99;
+    }
+
+    .ss-site__hero h1 .ss-site__hero-title-line {
+        display: block;
+        white-space: nowrap;
+    }
+}
+
+/* ============================================================
+   M12.4-P1F-R1 — HERO-ALL-VIEWPORTS
+   Preserva o mobile aprovado e aplica a mesma composição
+   controlada de três linhas também acima de 620px.
+   ============================================================ */
+
+@media (min-width: 621px) {
+    .ss-site__hero h1 .ss-site__hero-title-line {
+        display: block;
+        white-space: nowrap;
+    }
+}
+
+/* ============================================================
+   M12.4-P1F-R2 — HERO-VISUAL-DESKTOP-TUNING
+   Reduz levemente o mockup do Hero no desktop, preservando
+   mobile, texto, CTAs e badges flutuantes.
+   ============================================================ */
+
+@media (min-width: 621px) {
+    .ss-site__hero {
+        column-gap: clamp(28px, 3vw, 44px);
+    }
+    .ss-site__hero-visual {
+        width: min(100%, 560px);
+        max-width: clamp(500px, 36vw, 560px);
+        margin-left: auto;
+        margin-right: 0;
+        justify-self: end;
+    }
+}
+
+/* ============================================================
+   M12.4-P1F-R3-B — FIRST-VIEWPORT
+   Header + Hero fecham a primeira dobra no desktop.
+   Mobile/tablet em coluna continuam com altura natural.
+   ============================================================ */
+
+@media (min-width: 861px) {
+    .ss-site__hero {
+        min-height:
+            max(
+                690px,
+                calc(100vh - 78px)
+            );
+
+        min-height:
+            max(
+                690px,
+                calc(100dvh - 78px)
+            );
+    }
+}
+
+/* ============================================================
+   M12.4-P1G-B — FLOW-FIRST-VIEWPORT
+   Como funciona fecha uma tela completa no desktop.
+   A próxima seção só aparece após rolagem.
+   ============================================================ */
+
+@media (min-width: 861px) {
+    #como-funciona {
+        box-sizing: border-box;
+
+        min-height:
+            max(
+                690px,
+                calc(100vh - 78px)
+            );
+
+        min-height:
+            max(
+                690px,
+                calc(100dvh - 78px)
+            );
+
+        scroll-margin-top: 56px;
+    }
+}
+
+/* ============================================================
+   M12.4-P1H-B — HEADER-QUICK-ACCESS
+   Amplia a navegação institucional somente no desktop.
+   ============================================================ */
+
+@media (min-width: 1081px) {
+    .ss-site__header-inner {
+        gap: 20px;
+    }
+
+    .ss-site__nav {
+        gap: 18px;
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    #demonstracao-interativa,
+    #campo-qr {
+        scroll-margin-top: 56px;
+    }
+}
+
+/* ============================================================
+   M12.4-P1H-C1 — DEMO-ANCHOR-TUNING
+   Remove a folga duplicada da âncora da Demonstração.
+   A seção mantém seus 96px de padding interno.
+   ============================================================ */
+
+@media (min-width: 1081px) {
+    #demonstracao-interativa {
+    }
+}
+
+/* ============================================================
+   M12.4-P1H-C2 — DEMO-ANCHOR-UP
+   Ajuste fino do clique Demonstração no desktop.
+   Move a chegada visual aproximadamente 40px para cima.
+   Não altera o layout natural da seção.
+   ============================================================ */
+
+@media (min-width: 1081px) {
+    #demonstracao-interativa {
+        scroll-margin-top: -72px;
+    }
+}
+
+/* ============================================================
+   M12.4-P1H-C3 — DEMO-ANCHOR-FINAL
+   Ajuste visual final da âncora Demonstração.
+   -40px -> -56px.
+   ============================================================ */
+
+/* ============================================================
+   M12.4-P1H-C4 — DEMO-ANCHOR-UP
+   Ajuste fino final: -56px -> -72px.
+   ============================================================ */
+
+/* ============================================================
+   M12.4-P1H-D1 — DEMO-INTRO-COMPACT
+   Desktop:
+   - descrição em uma única linha;
+   - remove justificação apenas desse texto;
+   - aproxima o seletor da descrição.
+   Mobile/tablet permanecem naturais.
+   ============================================================ */
+
+@media (min-width: 1081px) {
+    #demonstracao-interativa
+    .ss-site__section-heading > p {
+        width: max-content;
+        max-width: none;
+        margin-inline: auto;
+        white-space: nowrap;
+        text-align: center;
+        text-align-last: center;
+        text-justify: auto;
+    }
+
+    #demonstracao-interativa
+    .ss-site__demo-tabs {
+    }
+}
+
+/* ============================================================
+   M12.4-P1H-E1 — DEMO-CARDS-EQUAL
+   Equaliza visualmente o card explicativo com o mapa.
+   Atua somente no desktop.
+   ============================================================ */
+
+@media (min-width: 981px) {
+    #demonstracao-interativa
+    .ss-site__demo-copy {
+        box-sizing: border-box;
+        min-height: 540px;
+        padding:
+            30px
+            28px;
+    }
+
+    #demonstracao-interativa
+    .ss-site__demo-copy h3 {
+        max-width: 100%;
+        font-size:
+            clamp(
+                28px,
+                2.4vw,
+                36px
+            );
+        line-height: 1.02;
+        letter-spacing: -0.04em;
+    }
+
+    #demonstracao-interativa
+    .ss-site__demo-copy > p {
+        margin-top: 14px;
+        line-height: 1.65;
+    }
+
+    #demonstracao-interativa
+    .ss-site__demo-benefits {
+        gap: 9px;
+        margin-top: 18px;
+    }
+
+    #demonstracao-interativa
+    .ss-site__demo-disclaimer {
+        margin-top: 18px;
+    }
+}
+
+/* ============================================================
+   M12.4-P1H-F1 — QR-PROOF-STRIP
+   Aproveita a área residual das demonstrações QR com
+   informação funcional, sem duplicar os dados específicos.
+   ============================================================ */
+
+.ss-site__qr-proof-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.ss-site__qr-proof-grid > div {
+    display: flex;
+    min-height: 58px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    padding:
+        10px
+        12px;
+    border: 1px solid #dfeae5;
+    border-radius: 13px;
+    background:
+        linear-gradient(
+            180deg,
+            #f9fcfa 0%,
+            #f3f8f6 100%
+        );
+}
+
+.ss-site__qr-proof-grid span {
+    color: var(--ss-green-dark);
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.ss-site__qr-proof-grid strong {
+    color: #2a4038;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1.3;
+}
+
+#demonstracao-interativa
+.ss-site__qr-showcase-foot {
+    margin-top: 18px;
+}
+
+@media (max-width: 680px) {
+    .ss-site__qr-proof-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .ss-site__qr-proof-grid > div {
+        min-height: 0;
+    }
+}
+
+/* ============================================================
+   M12.4-P1H-G1 — QR-SHOWCASE-HERO
+   Hero fotográfico padrão para Colaborador + QR
+   e Equipamento + QR.
+   ============================================================ */
+
+#demonstracao-interativa
+.ss-site__qr-showcase-head--hero {
+    position: relative;
+    min-height: 126px;
+    align-items: center;
+    gap: 16px;
+    padding:
+        20px
+        24px;
+    border: 0;
+    border-radius: 20px;
+    background-color: #0b1726;
+    background-repeat: no-repeat;
+    background-position: center 42%;
+    background-size: cover;
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+        0 14px 34px rgba(8, 35, 28, 0.16);
+    overflow: hidden;
+}
+
+#demonstracao-interativa
+.ss-site__qr-showcase-head--hero
+.ss-site__qr-showcase-icon,
+#demonstracao-interativa
+.ss-site__qr-showcase-head--hero
+.ss-site__qr-showcase-icon--equipment {
+    width: 54px;
+    height: 54px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.13);
+    color: #ffffff;
+    box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.12);
+    backdrop-filter: blur(8px);
+}
+
+#demonstracao-interativa
+.ss-site__qr-showcase-head--hero small {
+    color: #8fe7b9;
+    text-shadow:
+        0 2px 10px rgba(0, 0, 0, 0.28);
+}
+
+#demonstracao-interativa
+.ss-site__qr-showcase-head--hero strong {
+    margin-top: 4px;
+    color: #ffffff;
+    text-shadow:
+        0 2px 14px rgba(0, 0, 0, 0.3);
+}
+
+#demonstracao-interativa
+.ss-site__qr-showcase-head--hero
+> div
+> span {
+    margin-top: 4px;
+    color: rgba(255, 255, 255, 0.78);
+    text-shadow:
+        0 2px 10px rgba(0, 0, 0, 0.24);
+}
+
+@media (max-width: 680px) {
+    #demonstracao-interativa
+    .ss-site__qr-showcase-head--hero {
+        min-height: 108px;
+        padding:
+            16px
+            18px;
+        border-radius: 17px;
+        background-position: center 45%;
+    }
+
+    #demonstracao-interativa
+    .ss-site__qr-showcase-head--hero
+    .ss-site__qr-showcase-icon,
+    #demonstracao-interativa
+    .ss-site__qr-showcase-head--hero
+    .ss-site__qr-showcase-icon--equipment {
+        width: 46px;
+        height: 46px;
+        border-radius: 14px;
+    }
+
+    #demonstracao-interativa
+    .ss-site__qr-showcase-head--hero strong {
+        font-size: 18px;
+    }
+}
+
+/* ============================================================
+   M12.4-P1H-G2-B — PLANT-HERO-LEGEND
+   Hero padrão na Planta Demonstrativa e legenda coerente
+   com as cores reais dos marcadores do mapa.
+   ============================================================ */
+
+#demonstracao-interativa
+.ss-site__map-demo-top--hero {
+    position: relative;
+    min-height: 92px;
+    margin-bottom: 10px;
+    padding:
+        15px
+        18px;
+    border: 0;
+    border-radius: 18px;
+    background-color: #0b1726;
+    background-repeat: no-repeat;
+    background-position: center 42%;
+    background-size: cover;
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+        0 12px 30px rgba(8, 35, 28, 0.14);
+    overflow: hidden;
+}
+
+#demonstracao-interativa
+.ss-site__map-demo-top--hero
+> div
+> span {
+    color: #8fe7b9;
+    text-shadow:
+        0 2px 10px rgba(0, 0, 0, 0.28);
+}
+
+#demonstracao-interativa
+.ss-site__map-demo-top--hero
+strong {
+    color: #ffffff;
+    font-size: 15px;
+    text-shadow:
+        0 2px 14px rgba(0, 0, 0, 0.30);
+}
+
+#demonstracao-interativa
+.ss-site__map-demo-top--hero
+.ss-site__demo-live {
+    border:
+        1px solid
+        rgba(255, 255, 255, 0.18);
+    background:
+        rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+    box-shadow:
+        0 8px 22px rgba(0, 0, 0, 0.12);
+    backdrop-filter: blur(7px);
+}
+
+/* Área — marcador pai */
+#demonstracao-interativa
+.ss-site__map-legend-item--area {
+    border:
+        1px solid
+        rgba(37, 99, 235, 0.16);
+    background:
+        rgba(37, 99, 235, 0.07);
+    color: #1d4ed8;
+}
+
+#demonstracao-interativa
+.ss-site__map-legend-item--area
+b {
+    background: #2563eb;
+}
+
+/* Equipamento — marcador filho/item */
+#demonstracao-interativa
+.ss-site__map-legend-item--equipment {
+    border:
+        1px solid
+        rgba(5, 150, 105, 0.16);
+    background:
+        rgba(5, 150, 105, 0.07);
+    color: #047857;
+}
+
+#demonstracao-interativa
+.ss-site__map-legend-item--equipment
+b {
+    background: #059669;
+}
+
+/* Risco */
+#demonstracao-interativa
+.ss-site__map-legend-item--risk {
+    border:
+        1px solid
+        rgba(234, 88, 12, 0.18);
+    background:
+        rgba(234, 88, 12, 0.07);
+    color: #c2410c;
+}
+
+#demonstracao-interativa
+.ss-site__map-legend-item--risk
+b {
+    background: #ea580c;
+}
+
+/*
+   Segurança:
+   o mapa atual não possui uma quinta classe cromática.
+   Mantém o verde real dos itens/filhos em vez de inventar cor.
+*/
+#demonstracao-interativa
+.ss-site__map-legend-item--safety {
+    border:
+        1px solid
+        rgba(5, 150, 105, 0.16);
+    background:
+        rgba(5, 150, 105, 0.07);
+    color: #047857;
+}
+
+#demonstracao-interativa
+.ss-site__map-legend-item--safety
+b {
+    background: #059669;
+}
+
+/* Alerta */
+#demonstracao-interativa
+.ss-site__map-legend-item--alert {
+    border:
+        1px solid
+        rgba(245, 158, 11, 0.22);
+    background:
+        rgba(245, 158, 11, 0.09);
+    color: #a16207;
+}
+
+#demonstracao-interativa
+.ss-site__map-legend-item--alert
+b {
+    background: #f59e0b;
+    color: #ffffff;
+}
+
+@media (max-width: 680px) {
+    #demonstracao-interativa
+    .ss-site__map-demo-top--hero {
+        min-height: 82px;
+        margin-bottom: 8px;
+        padding:
+            12px
+            14px;
+        border-radius: 15px;
+        background-position: center 45%;
+    }
+}
+
+/* ============================================================
+   M12.4-P1H-H1 — DEMO-INTRO-GAP
+   Aproxima a descrição do seletor apenas no desktop.
+   Mantém mobile/tablet e todo o restante preservados.
+   ============================================================ */
+
+@media (min-width: 1081px) {
+    #demonstracao-interativa
+    .ss-site__section-heading {
+        margin-bottom: 16px;
+    }
+
+    #demonstracao-interativa
+    .ss-site__demo-tabs {
+        margin-top: 0;
+    }
+}
+
+/* ============================================================
+   M12.4-P1I-A1 — CAMPO-QR-DESKTOP-HARMONY
+   Harmoniza a seção Campo e QR em desktop:
+   - painel mais compacto;
+   - QRs menores;
+   - cards proporcionais;
+   - tipografia equilibrada;
+   - menor altura total da seção.
+   Mobile/tablet <= 980px preservados.
+   ============================================================ */
+
+@media (min-width: 981px) {
+    #campo-qr {
+        padding:
+            58px
+            0;
+    }
+
+    #campo-qr
+    .ss-site__field-grid {
+        grid-template-columns:
+            minmax(0, 0.9fr)
+            minmax(0, 1.1fr);
+        gap:
+            clamp(
+                40px,
+                4vw,
+                66px
+            );
+    }
+
+    /*
+       Painel verde:
+       650px -> aproximadamente 520px.
+    */
+    #campo-qr
+    .ss-site__field-visual {
+        min-height: 520px;
+        padding: 16px;
+        border-radius: 30px;
+    }
+
+    /*
+       Conjunto dos três cartões.
+    */
+    #campo-qr
+    .ss-site__field-qr-grid {
+        width:
+            min(
+                100%,
+                430px
+            );
+        column-gap: 12px;
+        row-gap: 14px;
+        padding-top: 54px;
+        padding-bottom: 18px;
+    }
+
+    /*
+       Dois cartões superiores:
+       290px -> aproximadamente 236px.
+    */
+    #campo-qr
+    .ss-site__field-qr-card {
+        min-height: 236px;
+        gap: 7px;
+        padding:
+            14px
+            14px
+            13px;
+        border-radius: 21px;
+    }
+
+    /*
+       Ponto de campo:
+       mantém formato horizontal, porém mais compacto.
+    */
+    #campo-qr
+    .ss-site__field-qr-card--field {
+        min-height: 142px;
+        grid-template-columns:
+            118px
+            minmax(0, 1fr);
+        gap:
+            4px
+            16px;
+        padding:
+            13px
+            18px;
+    }
+
+    /*
+       QR:
+       128px -> 102px.
+    */
+    #campo-qr
+    .ss-site__field-qr-code {
+        padding: 5px;
+        border-radius: 11px;
+    }
+
+    #campo-qr
+    .ss-site__field-qr-code
+    svg {
+        display: block;
+        width: 102px !important;
+        height: 102px !important;
+    }
+
+    #campo-qr
+    .ss-site__field-qr-type {
+        gap: 5px;
+        font-size: 8px;
+        line-height: 1.15;
+    }
+
+    #campo-qr
+    .ss-site__field-qr-type
+    svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    /*
+       Texto interno dos cartões recebe mais peso relativo
+       agora que o QR ficou menor.
+    */
+    #campo-qr
+    .ss-site__field-qr-card
+    > strong {
+        font-size: 14px;
+        line-height: 1.2;
+    }
+
+    #campo-qr
+    .ss-site__field-qr-card
+    > small {
+        max-width: 185px;
+        font-size: 9.5px;
+        line-height: 1.35;
+    }
+
+    /*
+       Etiqueta do painel.
+    */
+    #campo-qr
+    .ss-site__field-tag {
+        top: 14px;
+        gap: 7px;
+        padding:
+            9px
+            14px;
+        border-radius: 12px;
+        font-size: 10px;
+    }
+
+    #campo-qr
+    .ss-site__field-tag
+    svg {
+        width: 17px;
+        height: 17px;
+    }
+
+    /*
+       Coluna textual:
+       reduz peso do título e aproxima todos os elementos.
+    */
+    #campo-qr
+    .ss-site__field-copy {
+        align-self: center;
+        max-width: 650px;
+    }
+
+    #campo-qr
+    .ss-site__field-copy
+    h2 {
+        max-width: 620px;
+        margin:
+            10px
+            0
+            13px;
+        font-size:
+            clamp(
+                38px,
+                3.1vw,
+                44px
+            );
+        line-height: 1.02;
+    }
+
+    #campo-qr
+    .ss-site__field-copy
+    > p {
+        max-width: 620px;
+        font-size: 14px;
+        line-height: 1.62;
+    }
+
+    #campo-qr
+    .ss-site__field-points {
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    #campo-qr
+    .ss-site__field-points
+    div {
+        gap: 8px;
+        font-size: 12px;
+    }
+
+    #campo-qr
+    .ss-site__field-points
+    svg {
+        width: 16px;
+        height: 16px;
+        flex: 0 0 auto;
+    }
+
+    #campo-qr
+    .ss-site__field-demo-note {
+        margin-top: 14px;
+        font-size: 9px;
+    }
+}
+
+/* ============================================================
+   M12.4-P1I-A2 — CAMPO-QR-VIEWPORT
+   Faz Campo e QR ocupar a altura útil de uma tela desktop.
+   O conteúdo aprovado no P1I-A1 permanece inalterado.
+   A seção Multiempresa começa somente após o viewport atual.
+   Mobile/tablet <= 980px permanecem naturais.
+   ============================================================ */
+
+@media (min-width: 981px) {
+    #campo-qr {
+        display: flex;
+        min-height:
+            max(
+                636px,
+                calc(100dvh - 78px)
+            );
+        align-items: center;
+        box-sizing: border-box;
+    }
+
+    #campo-qr
+    > .ss-site__container {
+        flex: 0 0 auto;
+    }
+}
+
+/* ============================================================
+   M12.4-P1I-A3-R1 — CAMPO-QR-ANCHOR-ZERO
+   Remove somente o offset residual da âncora Campo e QR.
+   Não altera Demonstração nem outras âncoras.
+   Mobile/tablet <= 980px permanecem preservados.
+   ============================================================ */
+
+@media (min-width: 981px) {
+    #campo-qr {
+        scroll-margin-top: 0;
+    }
+}
+
+/* ============================================================
+   M12.4-P2-R3 — SECTION-VIEWPORT-HEIGHT
+
+   AJUSTE EXCLUSIVAMENTE VERTICAL.
+
+   Não altera:
+   - width
+   - grid
+   - flex
+   - padding
+   - margin
+   - cards
+   - QR Codes
+   - fontes
+   - alinhamento interno
+
+   Apenas impede que a próxima seção apareça no mesmo viewport
+   quando Fluxo ou Campo + QR forem acessados pelo menu.
+   ============================================================ */
+
+@media (min-width: 981px) {
+    #como-funciona,
+    #campo-qr {
+        min-height: 100vh;
+        min-height: 100dvh;
+    }
+}
+
+/* ============================================================
+   M12.4-P2-R4-A2 — SECURITY-DEMO-GROUP
+
+   Multiempresa + Demonstração formam um único alvo visual.
+
+   Não altera os tamanhos internos dos dois blocos.
+   Apenas:
+   - agrupa os dois no mesmo alvo de navegação;
+   - remove o isolamento 100dvh exclusivo de Multiempresa;
+   - evita interferência do bloco anterior;
+   - reserva no mínimo um viewport para o conjunto.
+   ============================================================ */
+
+@media (min-width: 981px) {
+    .ss-site__security-demo-group {
+        min-height: 100vh;
+        min-height: 100dvh;
+        scroll-margin-top: 0;
+    }
+}
+
+/* ============================================================
+   M12.4-P2-R4-A3 — SECURITY-HARMONY
+
+   Refinamento exclusivamente desktop de Multiempresa.
+
+   1. Corrige a especificidade da âncora #seguranca.
+   2. Reduz somente a largura útil do conteúdo Multiempresa.
+   3. Aproxima as duas colunas.
+
+   Não altera:
+   - Demonstração
+   - wrapper do grupo
+   - altura das seções
+   - títulos
+   - fontes
+   - cards/painel
+   - conteúdo
+   - mobile/tablet
+   ============================================================ */
+
+@media (min-width: 981px) {
+    /*
+       O ID torna esta regra mais específica que a regra antiga
+       #seguranca com 96px.
+    */
+    #seguranca.ss-site__security-demo-group {
+        scroll-margin-top: 0;
+    }
+
+    /*
+       Mantém o mesmo padrão centralizado das demais áreas,
+       sem alterar a estrutura das duas colunas.
+    */
+    .ss-site__section--security
+    .ss-site__security-grid {
+        max-width: 1080px;
+        gap: 72px;
+    }
+}
+
+/* ============================================================
+   M12.4-P2-R4-A4 — SECURITY-VERTICAL-COMPACT
+
+   Ajusta somente o comprimento vertical do Multiempresa.
+
+   Desktop:
+   96px -> 72px superior
+   96px -> 72px inferior
+
+   Redução total: 48px.
+
+   Preserva:
+   - largura 1080px
+   - gap 72px
+   - duas colunas
+   - painel lateral
+   - tipografia
+   - textos
+   - domínio
+   - Demonstração
+   - wrapper Multiempresa + Demonstração
+   - mobile/tablet
+   ============================================================ */
+
+@media (min-width: 981px) {
+    .ss-site__section--security {
+        padding-top: 72px;
+        padding-bottom: 72px;
+    }
+}
+
+/* ============================================================
+   M12.4 — CTA-FINAL-DEMONSTRACAO-VISIVEL
+
+   Corrige exclusivamente o botão branco
+   "Solicitar demonstração".
+
+   O JSX já contém texto e ArrowRight.
+   Nenhuma dimensão do CTA é alterada.
+   ============================================================ */
+
+.ss-site__section--cta
+.ss-site__cta-actions
+.ss-site__button.ss-site__button--light {
+    color: #0b6848 !important;
+    -webkit-text-fill-color: #0b6848 !important;
+    background-color: #ffffff !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    text-decoration: none;
+}
+
+.ss-site__section--cta
+.ss-site__cta-actions
+.ss-site__button.ss-site__button--light
+svg {
+    color: #0b6848 !important;
+    stroke: #0b6848 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.ss-site__section--cta
+.ss-site__cta-actions
+.ss-site__button.ss-site__button--light:hover {
+    color: #084f38 !important;
+    -webkit-text-fill-color: #084f38 !important;
+    background-color: #f7fbf9 !important;
+}
+
+.ss-site__section--cta
+.ss-site__cta-actions
+.ss-site__button.ss-site__button--light:hover
+svg {
+    color: #084f38 !important;
+    stroke: #084f38 !important;
+}
+
+/* ============================================================
+   M12.4 — MODAL-BACKGROUND-SCROLL-LOCK
+
+   Enquanto qualquer modal institucional estiver aberto:
+   - trava o scroll da página ao fundo;
+   - mantém o modal ativo;
+   - restaura automaticamente ao fechar;
+   - não altera tamanho, posição ou estrutura do modal.
+   ============================================================ */
+
+html:has([role="dialog"][aria-modal="true"]),
+body:has([role="dialog"][aria-modal="true"]) {
+    overflow: hidden !important;
+    overscroll-behavior: none;
+}
+
+html:has([role="dialog"][aria-modal="true"]) {
+    scrollbar-gutter: stable;
+}
+
+[role="dialog"][aria-modal="true"] {
+    overscroll-behavior: contain;
+}
+
+/* ============================================================
+   M12.4 — AREA-OPERACIONAL-MODAL-HERO
+
+   Aplica o hero fotográfico SafeScan exclusivamente no
+   cabeçalho do modal Área operacional demonstrativa.
+
+   Preserva:
+   - dimensões do modal
+   - mapa detalhado
+   - painel lateral
+   - scroll-lock
+   - itens demonstrativos
+   - comportamento do X
+   ============================================================ */
+
+.ss-site__detail-map-header {
+    position: relative;
+    background:
+        linear-gradient(
+            90deg,
+            rgba(5, 17, 31, 0.96) 0%,
+            rgba(7, 20, 35, 0.90) 42%,
+            rgba(8, 25, 40, 0.66) 72%,
+            rgba(9, 28, 44, 0.48) 100%
+        ),
+        url("../../../assets/nova-auditoria-hero-bg.webp");
+    background-repeat: no-repeat;
+    background-position: center 42%;
+    background-size: cover;
+    border-bottom-color: rgba(255, 255, 255, 0.10);
+}
+
+.ss-site__detail-map-header h1,
+.ss-site__detail-map-header h2,
+.ss-site__detail-map-header h3 {
+    color: #ffffff !important;
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.30);
+}
+
+.ss-site__detail-map-header p {
+    color: rgba(255, 255, 255, 0.78) !important;
+}
+
+.ss-site__detail-map-header span {
+    color: #76e0b4;
+}
+
+.ss-site__detail-map-header button {
+    color: #ffffff;
+    background: rgba(5, 17, 31, 0.58);
+    border-color: rgba(255, 255, 255, 0.24);
+    backdrop-filter: blur(8px);
+}
+
+.ss-site__detail-map-header button:hover {
+    background: rgba(5, 17, 31, 0.78);
+    border-color: rgba(255, 255, 255, 0.38);
+}
+
+/* ============================================================
+   M12.4 — CONTATO-COMERCIAL-FOOTER
+
+   Bloco comercial imediatamente antes do footer institucional.
+
+   Regras:
+   - mantém footer original intacto;
+   - não exibe e-mail comercial SafeScan;
+   - formulário isolado da aplicação operacional;
+   - sem Supabase/backend externo nesta microetapa;
+   - responsivo desktop/mobile.
+   ============================================================ */
+
+.ss-site__contact-section {
+    position: relative;
+    overflow: hidden;
+    padding: 64px 0;
+    background:
+        radial-gradient(
+            circle at 86% 6%,
+            rgba(62, 213, 143, 0.22),
+            transparent 34%
+        ),
+        radial-gradient(
+            circle at 12% 86%,
+            rgba(30, 160, 103, 0.16),
+            transparent 32%
+        ),
+        linear-gradient(
+            135deg,
+            #063b2e 0%,
+            #07513a 48%,
+            #0b6848 100%
+        );
+}
+
+.ss-site__contact-section::before,
+.ss-site__contact-section::after {
+    position: absolute;
+    content: "";
+    pointer-events: none;
+}
+
+.ss-site__contact-section::before {
+    top: -190px;
+    right: 8%;
+    width: 520px;
+    height: 520px;
+    border: 70px solid rgba(77, 221, 149, 0.08);
+    border-radius: 120px;
+    transform: rotate(37deg);
+}
+
+.ss-site__contact-section::after {
+    right: -150px;
+    bottom: -260px;
+    width: 620px;
+    height: 620px;
+    border: 1px solid rgba(126, 236, 182, 0.18);
+    border-radius: 50%;
+}
+
+.ss-site__contact-frame {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns:
+        minmax(0, 1.05fr)
+        minmax(420px, 0.95fr);
+    gap: 64px;
+    align-items: center;
+    border: 1px solid rgba(143, 235, 187, 0.36);
+    border-radius: 28px;
+    padding: 40px 46px;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 26px 70px rgba(2, 31, 23, 0.16);
+}
+
+.ss-site__contact-copy {
+    min-width: 0;
+    color: #ffffff;
+}
+
+.ss-site__contact-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    color: rgba(236, 255, 247, 0.84);
+    font-size: 11px;
+    font-weight: 850;
+    letter-spacing: 0.28em;
+}
+
+.ss-site__contact-kicker > span {
+    width: 48px;
+    height: 3px;
+    border-radius: 999px;
+    background: #8ef17b;
+}
+
+.ss-site__contact-copy h2 {
+    max-width: 690px;
+    margin: 0;
+    color: #ffffff;
+    font-size: clamp(38px, 4vw, 56px);
+    font-weight: 860;
+    letter-spacing: -0.045em;
+    line-height: 1.05;
+}
+
+.ss-site__contact-copy h2 strong {
+    display: block;
+    margin-top: 5px;
+    color: #8ef17b;
+    font: inherit;
+}
+
+.ss-site__contact-description {
+    max-width: 680px;
+    margin: 22px 0 0;
+    color: rgba(238, 249, 244, 0.88);
+    font-size: 16px;
+    line-height: 1.65;
+}
+
+.ss-site__contact-points {
+    display: grid;
+    gap: 16px;
+    margin-top: 28px;
+}
+
+.ss-site__contact-point {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.ss-site__contact-point > span {
+    display: grid;
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(63, 211, 135, 0.18);
+    color: #89f177;
+}
+
+.ss-site__contact-point > div {
+    display: grid;
+    gap: 3px;
+}
+
+.ss-site__contact-point strong {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.ss-site__contact-point small {
+    color: rgba(229, 244, 237, 0.78);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.ss-site__contact-signature {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 28px;
+    color: rgba(235, 251, 242, 0.75);
+    font-size: 9px;
+    font-weight: 850;
+    letter-spacing: 0.3em;
+}
+
+.ss-site__contact-signature > span {
+    width: 48px;
+    height: 3px;
+    flex: 0 0 48px;
+    border-radius: 999px;
+    background: #8ef17b;
+}
+
+.ss-site__contact-form-card {
+    border-radius: 24px;
+    padding: 30px 32px 26px;
+    background: #ffffff;
+    box-shadow:
+        0 28px 80px rgba(0, 28, 20, 0.22),
+        0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.ss-site__contact-form-head h3 {
+    margin: 0;
+    color: #102a22;
+    font-size: clamp(28px, 2.5vw, 38px);
+    font-weight: 850;
+    letter-spacing: -0.035em;
+    line-height: 1.08;
+}
+
+.ss-site__contact-form-head p {
+    margin: 8px 0 22px;
+    color: #70817b;
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.ss-site__contact-form {
+    display: grid;
+    gap: 10px;
+}
+
+.ss-site__contact-form-row {
+    display: grid;
+    grid-template-columns:
+        minmax(0, 1fr)
+        minmax(0, 1fr);
+    gap: 10px;
+}
+
+.ss-site__contact-form input,
+.ss-site__contact-form select {
+    width: 100%;
+    min-width: 0;
+    height: 48px;
+    box-sizing: border-box;
+    border: 1px solid #d5ded9;
+    border-radius: 11px;
+    padding: 0 14px;
+    outline: none;
+    background: #ffffff;
+    color: #18362c;
+    font: inherit;
+    font-size: 13px;
+    transition:
+        border-color 160ms ease,
+        box-shadow 160ms ease;
+}
+
+.ss-site__contact-form select {
+    cursor: pointer;
+}
+
+.ss-site__contact-form input::placeholder {
+    color: #8a9893;
+}
+
+.ss-site__contact-form input:focus,
+.ss-site__contact-form select:focus {
+    border-color: #1aa269;
+    box-shadow:
+        0 0 0 3px rgba(26, 162, 105, 0.11);
+}
+
+.ss-site__contact-submit {
+    display: inline-flex;
+    min-height: 54px;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    border: 0;
+    border-radius: 12px;
+    margin-top: 4px;
+    padding: 0 20px;
+    cursor: pointer;
+    background:
+        linear-gradient(
+            135deg,
+            #18a363 0%,
+            #0d8752 100%
+        );
+    color: #ffffff;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 850;
+    box-shadow:
+        0 12px 28px rgba(12, 135, 80, 0.18);
+    transition:
+        transform 160ms ease,
+        box-shadow 160ms ease,
+        filter 160ms ease;
+}
+
+.ss-site__contact-submit:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.03);
+    box-shadow:
+        0 15px 32px rgba(12, 135, 80, 0.24);
+}
+
+.ss-site__contact-form-note {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding-top: 8px;
+    color: #7b8b85;
+    font-size: 10px;
+    line-height: 1.4;
+    text-align: center;
+}
+
+.ss-site__contact-form-note svg {
+    flex: 0 0 auto;
+    color: #5e756c;
+}
+
+@media (max-width: 1080px) {
+    .ss-site__contact-frame {
+        grid-template-columns: 1fr;
+        gap: 38px;
+    }
+
+    .ss-site__contact-copy {
+        max-width: 760px;
+    }
+
+    .ss-site__contact-form-card {
+        width: min(100%, 680px);
+        box-sizing: border-box;
+    }
+}
+
+@media (max-width: 620px) {
+    .ss-site__contact-section {
+        padding: 42px 0;
+    }
+
+    .ss-site__contact-frame {
+        gap: 30px;
+        border-radius: 22px;
+        padding: 30px 18px;
+    }
+
+    .ss-site__contact-kicker {
+        margin-bottom: 20px;
+        font-size: 9px;
+        letter-spacing: 0.2em;
+    }
+
+    .ss-site__contact-kicker > span {
+        width: 34px;
+    }
+
+    .ss-site__contact-copy h2 {
+        font-size: 36px;
+    }
+
+    .ss-site__contact-description {
+        font-size: 14px;
+    }
+
+    .ss-site__contact-point {
+        align-items: flex-start;
+    }
+
+    .ss-site__contact-signature {
+        align-items: flex-start;
+        font-size: 8px;
+        line-height: 1.6;
+        letter-spacing: 0.18em;
+    }
+
+    .ss-site__contact-signature > span {
+        width: 34px;
+        flex-basis: 34px;
+        margin-top: 5px;
+    }
+
+    .ss-site__contact-form-card {
+        padding: 24px 18px 20px;
+    }
+
+    .ss-site__contact-form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .ss-site__contact-form input,
+    .ss-site__contact-form select {
+        height: 50px;
+    }
+}
+
+/* ============================================================
+   M12.4 — SOLUCOES-PERSONALIZADAS-NOVA-ARTE
+
+   Ordem:
+   Demonstração
+   -> Soluções personalizadas
+   -> Fale conosco
+   -> Footer
+   ============================================================ */
+
+.ss-site__custom-solutions {
+    padding:
+        44px
+        0;
+    background:
+        linear-gradient(
+            180deg,
+            #ffffff 0%,
+            #f8fbf9 100%
+        );
+}
+
+.ss-site__custom-solutions-card {
+    display: block;
+    overflow: hidden;
+    width: 100%;
+    border: 1px solid rgba(10, 72, 52, 0.16);
+    border-radius: 26px;
+    background: #052c22;
+    box-shadow:
+        0 18px 44px rgba(4, 48, 35, 0.12);
+    line-height: 0;
+    text-decoration: none;
+    transition:
+        transform 180ms ease,
+        box-shadow 180ms ease;
+}
+
+.ss-site__custom-solutions-card:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        0 24px 58px rgba(4, 48, 35, 0.18);
+}
+
+.ss-site__custom-solutions-card:focus-visible {
+    outline: 3px solid rgba(36, 190, 115, 0.42);
+    outline-offset: 5px;
+}
+
+.ss-site__custom-solutions-card img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2149 / 732;
+    object-fit: cover;
+}
+
+@media (max-width: 760px) {
+    .ss-site__custom-solutions {
+    }
+
+    .ss-site__custom-solutions-card {
+    }
+
+    .ss-site__custom-solutions-card:hover {
+        transform: none;
+    }
+
+    .ss-site__custom-solutions-card img {
+        object-fit: contain;
+    }
+}
+
+/* ============================================================
+   M12.4-P3-A3-R1 — CONTACT-NATIVE-ANCHOR
+
+   Referência homologada:
+   Demonstração interativa.
+
+   Demonstração:
+   padding-top = 96px
+   scroll-margin-top = -72px
+   respiro visual efetivo = 24px
+
+   Contato:
+   padding-top = 64px
+   scroll-margin-top = -40px
+   respiro visual efetivo = 24px
+
+   No desktop:
+   - o clique usa a âncora nativa;
+   - a seção reserva pelo menos um viewport;
+   - o bloco anterior não deve permanecer visível;
+   - conteúdo interno e formulário não são redimensionados.
+
+   Mobile/tablet preservam o handler atual.
+   ============================================================ */
+
+@media (min-width: 1081px) {
+    #contato.ss-site__contact-section {
+        box-sizing: border-box;
+        scroll-margin-top: -40px;
+    }
+}
+
+/* ============================================================
+   M12.6-R2 — CUSTOM-SOLUTIONS-RESPONSIVE
+
+   Desktop:
+   - arte aprovada permanece visualmente intacta;
+   - somente os dois botões desenhados recebem hotspots reais.
+
+   Mobile <= 760px:
+   - arte horizontal original deixa de ser usada como conteúdo;
+   - mesma identidade visual reaparece como fundo;
+   - textos e CTAs passam a ser HTML responsivo e legível;
+   - ambos os CTAs levam ao #contato.
+   ============================================================ */
+
+.ss-site__custom-solutions-card {
+    position: relative;
+}
+
+.ss-site__custom-solutions-hit {
+    position: absolute;
+    z-index: 3;
+    display: block;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.ss-site__custom-solutions-hit--primary {
+    left: 4.35%;
+    bottom: 5.6%;
+    width: 23.9%;
+    height: 11.5%;
+}
+
+.ss-site__custom-solutions-hit--secondary {
+    left: 29.55%;
+    bottom: 5.6%;
+    width: 18.2%;
+    height: 11.5%;
+}
+
+.ss-site__custom-solutions-hit:focus-visible {
+    outline: 3px solid rgba(255, 255, 255, 0.86);
+    outline-offset: 3px;
+}
+
+.ss-site__custom-solutions-mobile {
+    display: none;
+}
+
+@media (max-width: 760px) {
+    .ss-site__custom-solutions {
+        padding:
+            28px
+            0;
+    }
+
+    .ss-site__custom-solutions-card {
+        border-radius: 20px;
+        line-height: 1.35;
+        background: #052c22;
+    }
+
+    .ss-site__custom-solutions-image--desktop,
+    .ss-site__custom-solutions-hit {
+        display: none;
+    }
+
+    .ss-site__custom-solutions-mobile {
+        position: relative;
+        display: flex;
+        overflow: hidden;
+        padding:
+            30px
+            22px
+            24px;
+    }
+
+    .ss-site__custom-solutions-card
+    .ss-site__custom-solutions-mobile-bg {
+        position: absolute;
+        z-index: 0;
+        inset: 0;
+        display: block;
+        width: 100%;
+        height: 100%;
+        aspect-ratio: auto;
+        object-fit: cover;
+        object-position: 71% center;
+        transform: scale(1.08);
+        opacity: 0.52;
+    }
+
+
+    .ss-site__custom-solutions-mobile-content {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .ss-site__custom-solutions-mobile-kicker {
+        display: inline-flex;
+        margin-bottom: 14px;
+        align-items: center;
+        gap: 9px;
+        color: #b9f7d4;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.18em;
+    }
+
+    .ss-site__custom-solutions-mobile-kicker::before {
+        width: 28px;
+        height: 2px;
+        border-radius: 999px;
+        background: #65e889;
+        content: "";
+    }
+
+    .ss-site__custom-solutions-mobile-content h2 {
+        max-width: 330px;
+        margin:
+            0
+            0
+            14px;
+        color: #ffffff;
+        font-size:
+            clamp(
+                30px,
+                8.7vw,
+                42px
+            );
+        line-height: 0.98;
+        letter-spacing: -0.045em;
+    }
+
+    .ss-site__custom-solutions-mobile-content h2 strong {
+        display: block;
+        margin-top: 5px;
+        color: #68ed82;
+        font-weight: inherit;
+    }
+
+    .ss-site__custom-solutions-mobile-content > p {
+        max-width: 360px;
+        margin:
+            0
+            0
+            20px;
+        color: rgba(255, 255, 255, 0.82);
+        font-size: 14px;
+        line-height: 1.55;
+    }
+
+    .ss-site__custom-solutions-mobile-grid {
+        display: grid;
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            );
+        gap: 9px;
+    }
+
+    .ss-site__custom-solutions-mobile-grid span {
+        min-height: 72px;
+        padding:
+            11px
+            10px;
+        border:
+            1px solid
+            rgba(104, 237, 130, 0.2);
+        border-radius: 13px;
+        background:
+            rgba(0, 47, 35, 0.52);
+        color:
+            rgba(255, 255, 255, 0.68);
+        font-size: 11px;
+        line-height: 1.35;
+    }
+
+    .ss-site__custom-solutions-mobile-grid strong {
+        display: block;
+        margin-bottom: 3px;
+        color: #ffffff;
+        font-size: 12px;
+    }
+
+    .ss-site__custom-solutions-mobile-actions {
+        display: grid;
+    }
+
+    .ss-site__custom-solutions-mobile-button {
+        display: flex;
+        min-height: 48px;
+        align-items: center;
+        justify-content: center;
+        padding:
+            11px
+            16px;
+        border-radius: 12px;
+        font-size: 13px;
+        font-weight: 800;
+        line-height: 1.2;
+        text-align: center;
+        text-decoration: none;
+    }
+
+    .ss-site__custom-solutions-mobile-button--primary {
+        border:
+            1px solid
+            #46dd79;
+        background:
+            linear-gradient(
+                135deg,
+                #2ed36f,
+                #169c58
+            );
+        color: #ffffff;
+    }
+
+}
+
+@media (max-width: 390px) {
+    .ss-site__custom-solutions-mobile {
+        padding:
+            26px
+            18px
+            20px;
+    }
+
+    .ss-site__custom-solutions-mobile-content h2 {
+        font-size:
+            clamp(
+                28px,
+                9vw,
+                36px
+            );
+    }
+
+    .ss-site__custom-solutions-mobile-grid span {
+        min-height: 68px;
+        padding:
+            9px;
+    }
+}
+
+/* ============================================================
+   M12.6-R3-R1 — MOBILE-TEXT-ONLY-FINAL
+
+   Desktop:
+   - imagem original preservada;
+   - hotspots preservados.
+
+   Mobile <= 760px:
+   - imagem completamente ocultada;
+   - sem imagem de fundo;
+   - conteúdo somente HTML;
+   - altura natural;
+   - somente um CTA.
+   ============================================================ */
+
+@media (max-width: 760px) {
+    .ss-site__custom-solutions-card {
+        min-height: 0;
+    }
+
+    .ss-site__custom-solutions-card
+    img.ss-site__custom-solutions-image--desktop {
+        display: none;
+    }
+
+    .ss-site__custom-solutions-mobile {
+        min-height: 0;
+
+        background:
+            radial-gradient(
+                circle at 92% 88%,
+                rgba(46, 211, 111, 0.12),
+                transparent 34%
+            ),
+            linear-gradient(
+                155deg,
+                #063d2f 0%,
+                #032d23 58%,
+                #021f19 100%
+            );
+    }
+
+    .ss-site__custom-solutions-mobile-actions {
+        gap: 0;
+        margin-top: 22px;
+        padding-top: 0;
+    }
+}
+
+@media (max-width: 390px) {
+    .ss-site__custom-solutions-mobile {
+        min-height: 0;
+    }
+}
+
+/* ============================================================
+   M12.6-R5 — CUSTOM-SOLUTIONS-DESKTOP-VIEWPORT
+
+   Objetivo:
+   - preservar integralmente a arte aprovada;
+   - preservar os hotspots proporcionais;
+   - ampliar o banner no desktop;
+   - fazer a seção ocupar uma dobra completa;
+   - impedir que Contato apareça junto na mesma tela;
+   - não alterar mobile/tablet.
+   ============================================================ */
+
+@media (min-width: 1081px) {
+    #solucoes-personalizadas.ss-site__custom-solutions {
+        display: flex;
+        box-sizing: border-box;
+
+        min-height: 100dvh;
+
+        align-items: center;
+
+        padding:
+            clamp(
+                32px,
+                5vh,
+                56px
+            )
+            0;
+    }
+
+    #solucoes-personalizadas
+    > .ss-site__container {
+    }
+
+    #solucoes-personalizadas
+    .ss-site__custom-solutions-card {
+        margin: 0 auto;
+    }
+}
+
+/* ============================================================
+   M12.6-R6-R1 — MULTIEMPRESA-MOBILE-CARD
+
+   Objetivo mobile:
+   - remover aparência de seção escura full-width;
+   - criar envelope claro externo;
+   - transformar todo o conteúdo Multiempresa em um card;
+   - manter domínio e painel interno;
+   - usar altura natural;
+   - preservar desktop integralmente.
+   ============================================================ */
+
+@media (max-width: 760px) {
+    #seguranca
+    .ss-site__section--security {
+        padding:
+            28px
+            0;
+
+        background:
+            #f7faf8;
+    }
+
+    #seguranca
+    .ss-site__security-grid {
+        box-sizing: border-box;
+
+        width:
+            calc(
+                100% - 32px
+            );
+
+        max-width: none;
+
+        margin:
+            0
+            auto;
+
+        gap: 28px;
+
+        border:
+            1px solid
+            rgba(255, 255, 255, 0.09);
+
+        border-radius: 22px;
+
+        padding:
+            30px
+            20px
+            22px;
+
+        background:
+            linear-gradient(
+                155deg,
+                #073c2f 0%,
+                #032d23 54%,
+                #021f19 100%
+            );
+
+        box-shadow:
+            0
+            18px
+            42px
+            rgba(5, 49, 36, 0.13);
+    }
+
+    #seguranca
+    .ss-site__security-grid
+    > div:first-child {
+        min-width: 0;
+    }
+
+    #seguranca
+    .ss-site__security-grid h2 {
+        margin-top: 12px;
+    }
+
+    #seguranca
+    .ss-site__domain-example {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    #seguranca
+    .ss-site__security-panel {
+        border-radius: 18px;
+
+        background:
+            rgba(255, 255, 255, 0.055);
+    }
+
+    #seguranca
+    .ss-site__security-panel
+    > div {
+        padding:
+            18px
+            16px;
+    }
+}
+
+@media (max-width: 390px) {
+    #seguranca
+    .ss-site__security-grid {
+        width:
+            calc(
+                100% - 24px
+            );
+
+        border-radius: 20px;
+
+        padding:
+            26px
+            16px
+            18px;
+    }
+}
+
+/* ============================================================
+   M12.6-R7-R1 — MULTIEMPRESA-DESKTOP-CARD
+
+   Objetivo:
+   - remover o full-bleed escuro no desktop;
+   - manter identidade escura em card central;
+   - preservar duas colunas e painel interno;
+   - harmonizar com a linguagem visual da landing;
+   - preservar mobile/tablet.
+   ============================================================ */
+
+@media (min-width: 981px) {
+    #seguranca
+    .ss-site__section--security {
+        padding:
+            72px
+            0
+            82px;
+
+        background:
+            #f7faf8;
+    }
+
+    #seguranca
+    .ss-site__security-grid {
+        box-sizing: border-box;
+
+        width:
+            min(
+                1180px,
+                calc(100% - 64px)
+            );
+
+        max-width: none;
+
+        margin:
+            0
+            auto;
+
+        grid-template-columns:
+            1fr
+            0.92fr;
+
+        gap:
+            clamp(
+                52px,
+                5vw,
+                72px
+            );
+
+        border:
+            1px solid
+            rgba(255, 255, 255, 0.10);
+
+        border-radius: 28px;
+
+        padding:
+            clamp(
+                46px,
+                4.5vw,
+                62px
+            )
+            clamp(
+                46px,
+                5vw,
+                68px
+            );
+
+        background:
+            linear-gradient(
+                155deg,
+                #073c2f 0%,
+                #032d23 56%,
+                #021f19 100%
+            );
+
+        box-shadow:
+            0
+            24px
+            60px
+            rgba(5, 49, 36, 0.13);
+    }
+
+    #seguranca
+    .ss-site__security-grid
+    > div:first-child {
+        min-width: 0;
+    }
+
+    #seguranca
+    .ss-site__security-panel {
+        background:
+            rgba(255, 255, 255, 0.055);
+    }
+}
+
+/* ============================================================
+   M12.6-R8 — CUSTOM-SOLUTIONS-V2-HARMONY
+
+   Desktop:
+   - nova arte clara;
+   - largura igual à família principal de cards;
+   - viewport integral continua preservado;
+   - hotspots recalibrados para a arte V2.
+
+   Mobile:
+   - permanece totalmente HTML/text-only;
+   - nenhuma alteração.
+   ============================================================ */
+
+@media (min-width: 1081px) {
+    #solucoes-personalizadas
+    > .ss-site__container {
+        width:
+            min(
+                1180px,
+                calc(100% - 64px)
+            );
+    }
+
+    #solucoes-personalizadas
+    .ss-site__custom-solutions-card {
+        width: 100%;
+        border-radius: 24px;
+
+        box-shadow:
+            0
+            18px
+            48px
+            rgba(5, 49, 36, 0.11);
+    }
+
+    #solucoes-personalizadas
+    .ss-site__custom-solutions-hit--primary {
+        left: 4.15%;
+        bottom: 9.15%;
+        width: 25%;
+        height: 11.75%;
+    }
+
+    #solucoes-personalizadas
+    .ss-site__custom-solutions-hit--secondary {
+        left: 29.15%;
+        bottom: 9.15%;
+        width: 18.5%;
+        height: 11.75%;
+    }
+}
+
+/* ============================================================
+   M12.6-R10-R1 — CUSTOM-SOLUTIONS-NO-FRAME
+
+   Causa confirmada:
+   - border residual do card;
+   - box-shadow base;
+   - box-shadow do hover;
+   - box-shadow desktop do R8.
+
+   Objetivo:
+   - exibir somente a imagem;
+   - preservar border-radius/recorte;
+   - preservar hotspots;
+   - preservar largura 1180px;
+   - preservar mobile.
+   ============================================================ */
+
+@media (min-width: 1081px) {
+    #solucoes-personalizadas
+    .ss-site__custom-solutions-card {
+        border:
+            0
+            !important;
+
+        outline:
+            0
+            !important;
+
+        background:
+            transparent
+            !important;
+
+        box-shadow:
+            none
+            !important;
+
+        filter:
+            none
+            !important;
+    }
+
+    #solucoes-personalizadas
+    .ss-site__custom-solutions-card:hover {
+        transform:
+            none
+            !important;
+
+        box-shadow:
+            none
+            !important;
+    }
+
+    #solucoes-personalizadas
+    .ss-site__custom-solutions-card:focus,
+    #solucoes-personalizadas
+    .ss-site__custom-solutions-card:focus-visible {
+        outline:
+            0
+            !important;
+
+        box-shadow:
+            none
+            !important;
+    }
+
+    #solucoes-personalizadas
+    img.ss-site__custom-solutions-image--desktop {
+        border:
+            0
+            !important;
+
+        outline:
+            0
+            !important;
+
+        box-shadow:
+            none
+            !important;
+
+        filter:
+            none
+            !important;
+    }
+}
+
+/* ============================================================
+   M12.7-R3-R1 — HERO-PREVIEW-ONE-LINE
+
+   Desktop:
+   - frase do preview em uma única linha;
+   - leve calibração tipográfica para caber;
+   - mobile preservado.
+   ============================================================ */
+
+@media (min-width: 1081px) {
+    .ss-site__product-image-overlay strong {
+        display: block;
+
+        max-width: none;
+
+        white-space:
+            nowrap;
+
+        font-size:
+            clamp(
+                14px,
+                0.95vw,
+                17px
+            );
+
+        line-height: 1.2;
+
+        letter-spacing:
+            -0.012em;
+    }
+}
+
+/* M12.7.7 HOTFIX ECOSSISTEMA */
+.ss-site__resource-block--pessoas,
+.ss-site__resource-block--gestao {
+    grid-column: span 5;
+}
+
+.ss-site__resource-block--documentos,
+.ss-site__resource-block--campo {
+    grid-column: span 7;
+}
+
+.ss-site__resource-block--documentos {
+    background: linear-gradient(135deg, #f8fcfa, #edf8f2);
+}
+
+@media (max-width: 860px) {
+    .ss-site__resource-block--pessoas,
+    .ss-site__resource-block--gestao,
+    .ss-site__resource-block--documentos,
+    .ss-site__resource-block--campo {
+        grid-column: span 12;
+    }
+}

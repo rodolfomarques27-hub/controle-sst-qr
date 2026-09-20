@@ -38,16 +38,27 @@ export async function criarLoginAppComSenhaTemporariaService({ supabase, dados }
         throw new Error("Cliente Supabase não informado para criar login do app.");
     }
 
+    /*
+     * SAFE_SCAN_I4C_B3_EDGE_CONTEXT
+     *
+     * tenantId/empresaId seguem como contexto declarado pelo cliente,
+     * mas a futura Edge tenant-aware deverá revalidar ambos server-side.
+     */
     const nome = normalizarTextoAcessosApp(dados?.nome);
     const email = normalizarEmailAcessosApp(dados?.email);
     const funcao = normalizarTextoAcessosApp(dados?.funcao);
     const empresa = normalizarTextoAcessosApp(dados?.empresa);
+    const empresaId = normalizarTextoAcessosApp(dados?.empresa_id || dados?.empresaId);
+    const tenantId = normalizarTextoAcessosApp(dados?.tenant_id || dados?.tenantId);
     const fotoUrl = normalizarTextoAcessosApp(dados?.foto_url || dados?.fotoUrl);
     const perfil = normalizarPerfilAcessosApp(dados?.perfil);
     const senhaTemporaria = String(dados?.senhaTemporaria || dados?.senha_temporaria || "");
     const ativo = perfil === "bloqueado" ? false : normalizarBooleanoAcessosApp(dados?.ativo ?? true);
     const bloqueado = perfil === "bloqueado" ? true : normalizarBooleanoAcessosApp(dados?.bloqueado ?? false);
-    const acessoGlobal = perfil === "administrador" ? normalizarBooleanoAcessosApp(dados?.acesso_global ?? dados?.acessoGlobal ?? false) : false;
+    const acessoGlobalSolicitado = perfil === "administrador"
+        ? normalizarBooleanoAcessosApp(dados?.acesso_global ?? dados?.acessoGlobal ?? false)
+        : false;
+    const acessoGlobal = tenantId ? false : acessoGlobalSolicitado;
     const observacao = normalizarTextoAcessosApp(dados?.observacao);
     const resetarSenhaTemporaria = normalizarBooleanoAcessosApp(dados?.resetarSenhaTemporaria ?? dados?.resetar_senha_temporaria ?? false);
 
@@ -67,12 +78,24 @@ export async function criarLoginAppComSenhaTemporariaService({ supabase, dados }
         throw new Error("Usuário bloqueado não pode receber acesso global.");
     }
 
+    if (
+        tenantId
+        && perfil !== "administrador"
+        && !empresaId
+    ) {
+        throw new Error(
+            "Selecione a empresa operacional antes de criar um login tenant-scoped."
+        );
+    }
+
     const { data, error } = await supabase.functions.invoke("admin-criar-login-app", {
         body: {
             nome,
             email,
             funcao,
             empresa,
+            empresaId,
+            tenantId,
             fotoUrl,
             perfil,
             senhaTemporaria,

@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { Header } from "../commonComponents";
+import { useTenantRuntimeContext } from "../layout/TenantRuntimeContext.js";
+import { obterOrigemPublicaSistema } from "../../utils/urlPublicaUtils.js";
 import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import { calcularUsoStorageRealSistema } from "../../services/storageSegurancaService";
 import { DashboardBlocosGrid } from "./DashboardBlocosGrid";
@@ -86,6 +88,57 @@ import {
 } from "../../utils/sstUtils";
 
 const CACHE_USO_STORAGE_DASHBOARD = "dashboardSstUsoStorageResumo";
+
+function obterConfiguracaoUrlSistemaEmailDashboard(
+    contextoRuntime = null
+) {
+    const tenantResolvido =
+        contextoRuntime?.tenantResolvido === true;
+
+    const origemPublicaCanonica =
+        String(
+            contextoRuntime?.origemPublicaCanonica
+            || ""
+        ).trim();
+
+    if (tenantResolvido) {
+        if (!origemPublicaCanonica) {
+            return {
+                urlSistema:
+                    "",
+
+                bloqueado:
+                    true,
+            };
+        }
+
+        const origemValidada =
+            obterOrigemPublicaSistema(
+                origemPublicaCanonica
+            );
+
+        const origemCanonicaValida =
+            origemValidada === origemPublicaCanonica;
+
+        return {
+            urlSistema:
+                origemCanonicaValida
+                    ? origemValidada
+                    : "",
+
+            bloqueado:
+                !origemCanonicaValida,
+        };
+    }
+
+    return {
+        urlSistema:
+            obterOrigemPublicaSistema(),
+
+        bloqueado:
+            false,
+    };
+}
 
 const CHAVES_CARTAS_COM_RESUMO = new Set([
     "colaboradoresMobilizados",
@@ -184,6 +237,40 @@ export function Dashboard({
     onAtualizarInformacoes,
     atualizandoInformacoes = false,
 }) {
+    const contextoTenantRuntime =
+        useTenantRuntimeContext();
+
+    const configuracaoUrlSistemaEmail =
+        obterConfiguracaoUrlSistemaEmailDashboard(
+            contextoTenantRuntime
+        );
+
+    const urlSistemaEmail =
+        configuracaoUrlSistemaEmail.urlSistema;
+
+    const envioEmailTenantBloqueado =
+        configuracaoUrlSistemaEmail.bloqueado;
+
+    const validarOrigemSistemaEmail = (
+        mostrarMensagem = true
+    ) => {
+        if (!envioEmailTenantBloqueado) {
+            return true;
+        }
+
+        console.error(
+            "Envio de e-mail bloqueado: tenant resolvido sem origem pública canônica válida."
+        );
+
+        if (mostrarMensagem) {
+            alert(
+                "Não foi possível enviar o e-mail porque o domínio público principal deste ambiente não está disponível."
+            );
+        }
+
+        return false;
+    };
+
     const [agoraHeroDashboard, setAgoraHeroDashboard] = useState(() => new Date());
     useEffect(() => {
         const intervaloAgoraHeroDashboard = setInterval(() => {
@@ -1485,7 +1572,7 @@ export function Dashboard({
             assunto: `Aviso SST - ${statusEmail} - ${item.colaborador?.nome || "Colaborador"}`,
             sistema: "SafeScan Brasil",
             remetenteNome: "SafeScan Brasil - Controle de SST",
-            urlSistema: "https://www.safescanbrasil.com.br",
+            urlSistema: urlSistemaEmail,
             empresa,
             tstResponsavel: item.colaborador?.empresaTstResponsavel || "",
             itens: [
@@ -1507,6 +1594,10 @@ export function Dashboard({
 
     const enviarAlertaEmailPendencia = async (item, mostrarMensagem = true) => {
         if (!item) return false;
+
+        if (!validarOrigemSistemaEmail(mostrarMensagem)) {
+            return false;
+        }
 
         if (mostrarMensagem) {
             setEnviandoEmail(true);
@@ -1644,7 +1735,7 @@ export function Dashboard({
                 `Aviso SST - A VENCER - ${nomeEmpresa} - ${nomeDocumento}`,
             sistema: "SafeScan Brasil",
             remetenteNome: "SafeScan Brasil - Controle de SST",
-            urlSistema: "https://www.safescanbrasil.com.br",
+            urlSistema: urlSistemaEmail,
             empresa: nomeEmpresa,
             tstResponsavel:
                 empresaContato?.tst_responsavel ||
@@ -1694,6 +1785,10 @@ export function Dashboard({
         mostrarMensagem = true
     ) => {
         if (!documento) return false;
+
+        if (!validarOrigemSistemaEmail(mostrarMensagem)) {
+            return false;
+        }
 
         if (mostrarMensagem) {
             setEnviandoEmail(true);
@@ -1915,6 +2010,10 @@ export function Dashboard({
     };
 
     const enviarGrupoDocumentosEmLote = async (grupo) => {
+        if (!validarOrigemSistemaEmail(false)) {
+            return false;
+        }
+
         const quantidade = grupo.itens.length;
         const payload = {
             para: grupo.para,
@@ -1922,7 +2021,7 @@ export function Dashboard({
             assunto: `Aviso SST - ${grupo.empresa} - ${grupo.nomeResponsavel} - ${quantidade} documento(s)`,
             sistema: "SafeScan Brasil",
             remetenteNome: "SafeScan Brasil - Controle de SST",
-            urlSistema: "https://www.safescanbrasil.com.br",
+            urlSistema: urlSistemaEmail,
             empresa: grupo.empresa,
             tstResponsavel: grupo.tstResponsavel,
             itens: grupo.itens,
