@@ -9,6 +9,8 @@ import {
 export function TenantAdminLayout({
     usuario,
     onSair,
+    secaoAtiva,
+    onNavegar,
     children,
 }) {
     return (
@@ -16,6 +18,8 @@ export function TenantAdminLayout({
             <TenantAdminSidebar
                 usuario={usuario}
                 onSair={onSair}
+                secaoAtiva={secaoAtiva}
+                onNavegar={onNavegar}
             />
 
             <div className="min-h-screen lg:pl-[270px]">

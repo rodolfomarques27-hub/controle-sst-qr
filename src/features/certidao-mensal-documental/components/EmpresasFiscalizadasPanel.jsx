@@ -240,12 +240,12 @@ export function EmpresasFiscalizadasPanel({
                                 "Competência não aplicável"
                             )
                             : resumoComErro
-                                ? "Não foi possível calcular o progresso documental."
+                                ? "Não foi possível calcular a conformidade documental."
                                 : !resumoCarregado
-                                    ? `Calculando progresso de ${totalDocumentos} documento(s).`
+                                    ? `Calculando conformidade dos ${totalDocumentos} itens exigíveis.`
                                     : completa
-                                        ? `${documentosOk} de ${totalDocumentos} documentos localizados. Situação OK.`
-                                        : `${documentosOk} de ${totalDocumentos} documentos localizados. ${documentosFaltando} faltando.`;
+                                        ? `Conformes: ${documentosOk} de ${totalDocumentos}. Todos os itens exigíveis estão conformes.`
+                                        : `Conformes: ${documentosOk} de ${totalDocumentos}. Itens que ainda requerem atenção: ${documentosFaltando}.`;
 
                     return (
                         <button

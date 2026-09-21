@@ -1,4 +1,10 @@
 import {
+    useCallback,
+    useEffect,
+    useState,
+} from "react";
+
+import {
     supabase,
 } from "../../lib/supabaseClient.js";
 
@@ -14,7 +20,167 @@ import {
     TenantAdminDashboardPage,
 } from "./pages/TenantAdminDashboardPage.jsx";
 
+import {
+    TenantAdminClientsPage,
+} from "./pages/TenantAdminClientsPage.jsx";
+
+import {
+    TenantAdminNewClientPage,
+} from "./pages/TenantAdminNewClientPage.jsx";
+
+import {
+    TenantAdminInfrastructurePage,
+} from "./pages/TenantAdminInfrastructurePage.jsx";
+
+const SECOES_ADMIN =
+    new Set([
+        "painel",
+        "clientes",
+        "novo-cliente",
+        "infraestrutura",
+    ]);
+
+function obterSecaoAdminAtual() {
+    if (
+        typeof window ===
+        "undefined"
+    ) {
+        return "painel";
+    }
+
+    const hash =
+        String(
+            window.location.hash ||
+            ""
+        )
+            .replace(
+                /^#/,
+                ""
+            )
+            .trim()
+            .toLowerCase();
+
+    return SECOES_ADMIN.has(
+        hash
+    )
+        ? hash
+        : "painel";
+}
+
 export default function TenantAdminRoot() {
+    const [
+        secaoAtiva,
+        setSecaoAtiva,
+    ] =
+        useState(
+            obterSecaoAdminAtual
+        );
+
+    useEffect(
+        () => {
+            function sincronizarHash() {
+                setSecaoAtiva(
+                    obterSecaoAdminAtual()
+                );
+            }
+
+            window.addEventListener(
+                "hashchange",
+                sincronizarHash
+            );
+
+            return () => {
+                window.removeEventListener(
+                    "hashchange",
+                    sincronizarHash
+                );
+            };
+        },
+        []
+    );
+
+    const navegar =
+        useCallback(
+            (secao) => {
+                const proximaSecao =
+                    SECOES_ADMIN.has(
+                        secao
+                    )
+                        ? secao
+                        : "painel";
+
+                const proximoHash =
+                    "#" +
+                    proximaSecao;
+
+                if (
+                    window.location.hash ===
+                    proximoHash
+                ) {
+                    setSecaoAtiva(
+                        proximaSecao
+                    );
+
+                    return;
+                }
+
+                window.location.hash =
+                    proximaSecao;
+            },
+            []
+        );
+
+    function renderizarConteudo() {
+        if (
+            secaoAtiva ===
+            "clientes"
+        ) {
+            return (
+                <TenantAdminClientsPage
+                    onNovoCliente={
+                        () =>
+                            navegar(
+                                "novo-cliente"
+                            )
+                    }
+                />
+            );
+        }
+
+        if (
+            secaoAtiva ===
+            "novo-cliente"
+        ) {
+            return (
+                <TenantAdminNewClientPage
+                    onVoltar={
+                        () =>
+                            navegar(
+                                "clientes"
+                            )
+                    }
+                />
+            );
+        }
+
+        if (
+            secaoAtiva ===
+            "infraestrutura"
+        ) {
+            return (
+                <TenantAdminInfrastructurePage />
+            );
+        }
+
+        return (
+            <TenantAdminDashboardPage
+                onNavegar={
+                    navegar
+                }
+            />
+        );
+    }
+
     return (
         <TenantAdminAuthGate
             supabase={supabase}
@@ -26,8 +192,14 @@ export default function TenantAdminRoot() {
                 <TenantAdminLayout
                     usuario={usuario}
                     onSair={sair}
+                    secaoAtiva={
+                        secaoAtiva
+                    }
+                    onNavegar={
+                        navegar
+                    }
                 >
-                    <TenantAdminDashboardPage />
+                    {renderizarConteudo()}
                 </TenantAdminLayout>
             )}
         </TenantAdminAuthGate>

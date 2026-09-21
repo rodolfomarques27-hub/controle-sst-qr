@@ -1,0 +1,6 @@
+{
+  "service": "SafeScan Brasil",
+  "purpose": "tenant-domain-health",
+  "protocol": "safescan-tenant-v1",
+  "version": 1
+}

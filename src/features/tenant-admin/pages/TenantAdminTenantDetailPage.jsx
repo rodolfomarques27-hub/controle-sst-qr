@@ -40,6 +40,10 @@ import {
     TenantAdminUserScopeModal,
 } from "../components/TenantAdminUserScopeModal.jsx";
 
+import {
+    TenantAdminDomainReadinessPanel,
+} from "../components/TenantAdminDomainReadinessPanel.jsx";
+
 function formatarData(
     valor
 ) {
@@ -494,6 +498,23 @@ export function TenantAdminTenantDetailPage({
                 >
                     Módulos
                 </button>
+
+                <button
+                    type="button"
+                    onClick={
+                        () =>
+                            setAbaAtiva(
+                                "dominio-ativacao"
+                            )
+                    }
+                    className={
+                        abaAtiva === "dominio-ativacao"
+                            ? "rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white shadow-sm"
+                            : "rounded-xl px-4 py-2.5 text-xs font-bold text-slate-500 transition hover:bg-emerald-50 hover:text-emerald-800"
+                    }
+                >
+                    Domínio e ativação
+                </button>
             </nav>
 
             {
@@ -845,13 +866,28 @@ export function TenantAdminTenantDetailPage({
             </section>
                         </>
                     )
-                    : (
-                        <TenantAdminModulesPanel
-                            tenant={
-                                tenant
-                            }
-                        />
-                    )
+                    : abaAtiva ===
+                        "modulos"
+                        ? (
+                            <TenantAdminModulesPanel
+                                tenant={
+                                    tenant
+                                }
+                            />
+                        )
+                        : (
+                            <TenantAdminDomainReadinessPanel
+                                tenant={
+                                    tenant
+                                }
+                                empresas={
+                                    empresas
+                                }
+                                usuarios={
+                                    usuarios
+                                }
+                            />
+                        )
             }
 
             <TenantAdminUserScopeModal

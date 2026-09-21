@@ -505,9 +505,10 @@ export function CertidaoMensalDocumentalPage({
                                 : "conforme",
                     totalDocumentosExigiveis:
                         totalExigiveisEmpresa,
-                    // SAFE_SCAN_EMPRESA_PROGRESSO_DOCUMENTAL_A33_PAGE
-                    // ASO/PCMSO e Relação de Empregados não entram
-                    // no indicador resumido de certidões.
+                    // SAFE_SCAN_EMPRESA_PROGRESSO_DOCUMENTAL_A35_PAGE
+                    // O indicador usa o perfil integral da competência.
+                    // Relação de Empregados e ASO/PCMSO participam
+                    // sempre que estiverem configurados como exigidos.
                     idsDocumentosExigiveis:
                         [
                             ...new Set(
@@ -527,15 +528,6 @@ export function CertidaoMensalDocumentalPage({
                                             ).trim()
                                     )
                                     .filter(Boolean)
-                                    .filter(
-                                        (id) =>
-                                            ![
-                                                "relacao-empregados",
-                                                "aso-pcmso",
-                                            ].includes(
-                                                id
-                                            )
-                                    )
                             ),
                         ],
                     totalDocumentosNaoExigiveis:
@@ -688,6 +680,21 @@ export function CertidaoMensalDocumentalPage({
         conformidadeMes:
             0,
     }));
+    /*
+     * SAFE_SCAN_EMPRESA_PROGRESSO_DOCUMENTAL_A35_PAGE
+     *
+     * A lista de empresas usa a mesma classificação documental
+     * aplicada ao resumo da competência:
+     *
+     *   CONFORMES / TOTAL EXIGÍVEL
+     *
+     * O indicador não representa mera presença física de arquivo.
+     */
+    const [
+        resumoDocumentalEmpresas,
+        setResumoDocumentalEmpresas,
+    ] = useState({});
+
     const laboratorioPdf =
         useCertidaoPdfLaboratorio();
 
@@ -707,6 +714,14 @@ export function CertidaoMensalDocumentalPage({
     useEffect(() => {
         let efeitoAtivo =
             true;
+
+        /*
+         * Evita exibir números da competência anterior
+         * enquanto a nova classificação está sendo calculada.
+         */
+        setResumoDocumentalEmpresas(
+            {}
+        );
 
         const empresasExigiveis =
             empresas.filter(
@@ -1296,6 +1311,52 @@ export function CertidaoMensalDocumentalPage({
                 const atualizacoes =
                     [];
 
+                /*
+                 * SAFE_SCAN_EMPRESA_PROGRESSO_DOCUMENTAL_A35_CLASSIFICACAO
+                 *
+                 * Reaproveita exatamente o mesmo fluxo
+                 * de classificação do resumo documental global.
+                 */
+                const resumoPorEmpresa =
+                    Object.fromEntries(
+                        [
+                            ...exigiveisPorEmpresa
+                                .entries(),
+                        ].map(
+                            ([
+                                empresaId,
+                                idsExigiveis,
+                            ]) => [
+                                empresaId,
+                                {
+                                    competencia,
+
+                                    totalBase:
+                                        idsExigiveis
+                                            .size,
+
+                                    confirmados:
+                                        0,
+
+                                    emAnalise:
+                                        0,
+
+                                    pendentes:
+                                        0,
+
+                                    vencidas:
+                                        0,
+
+                                    pendenciasCriticas:
+                                        0,
+
+                                    naoAplicaveis:
+                                        0,
+                                },
+                            ]
+                        )
+                    );
+
                 for (
                     const [
                         empresaId,
@@ -1308,6 +1369,15 @@ export function CertidaoMensalDocumentalPage({
                                 empresaId
                             ) ||
                         null;
+
+                    const resumoEmpresa =
+                        resumoPorEmpresa[
+                            empresaId
+                        ];
+
+                    if (!resumoEmpresa) {
+                        continue;
+                    }
 
                     for (
                         const tipoDocumento of
@@ -1528,6 +1598,28 @@ export function CertidaoMensalDocumentalPage({
                             }
                         }
 
+                        /*
+                         * ASO + PCMSO permanece no universo exigível,
+                         * mas é controle interno não bloqueante.
+                         *
+                         * Os indicadores ocupacionais continuam visíveis
+                         * no card específico; aqui ele conta como atendido
+                         * para a conformidade documental.
+                         */
+                        if (
+                            tipoDocumento ===
+                            "aso-pcmso"
+                        ) {
+                            confirmados +=
+                                1;
+
+                            resumoEmpresa
+                                .confirmados +=
+                                1;
+
+                            continue;
+                        }
+
                         if (
                             [
                                 "NAO_APLICAVEL",
@@ -1538,6 +1630,10 @@ export function CertidaoMensalDocumentalPage({
                             )
                         ) {
                             naoAplicaveis +=
+                                1;
+
+                            resumoEmpresa
+                                .naoAplicaveis +=
                                 1;
 
                             continue;
@@ -1551,6 +1647,14 @@ export function CertidaoMensalDocumentalPage({
                                 1;
 
                             pendenciasCriticas +=
+                                1;
+
+                            resumoEmpresa
+                                .vencidas +=
+                                1;
+
+                            resumoEmpresa
+                                .pendenciasCriticas +=
                                 1;
 
                             continue;
@@ -1575,6 +1679,14 @@ export function CertidaoMensalDocumentalPage({
                             pendenciasCriticas +=
                                 1;
 
+                            resumoEmpresa
+                                .pendentes +=
+                                1;
+
+                            resumoEmpresa
+                                .pendenciasCriticas +=
+                                1;
+
                             continue;
                         }
 
@@ -1588,6 +1700,10 @@ export function CertidaoMensalDocumentalPage({
                             )
                         ) {
                             confirmados +=
+                                1;
+
+                            resumoEmpresa
+                                .confirmados +=
                                 1;
 
                             continue;
@@ -1615,10 +1731,18 @@ export function CertidaoMensalDocumentalPage({
                             emAnalise +=
                                 1;
 
+                            resumoEmpresa
+                                .emAnalise +=
+                                1;
+
                             continue;
                         }
 
                         pendentes +=
+                            1;
+
+                        resumoEmpresa
+                            .pendentes +=
                             1;
                     }
                 }
@@ -1673,6 +1797,71 @@ export function CertidaoMensalDocumentalPage({
                         )
                         : "Aguardando documentos reais";
 
+                const resumoDocumentalEmpresasFinal =
+                    Object.fromEntries(
+                        Object.entries(
+                            resumoPorEmpresa
+                        ).map(
+                            ([
+                                empresaId,
+                                dados,
+                            ]) => {
+                                const total =
+                                    Math.max(
+                                        dados.totalBase -
+                                            dados.naoAplicaveis,
+                                        0
+                                    );
+
+                                const ok =
+                                    Math.min(
+                                        dados.confirmados,
+                                        total
+                                    );
+
+                                return [
+                                    empresaId,
+                                    {
+                                        competencia,
+
+                                        total,
+
+                                        ok,
+
+                                        faltando:
+                                            Math.max(
+                                                total - ok,
+                                                0
+                                            ),
+
+                                        emAnalise:
+                                            dados.emAnalise,
+
+                                        pendentes:
+                                            dados.pendentes,
+
+                                        vencidas:
+                                            dados.vencidas,
+
+                                        pendenciasCriticas:
+                                            dados
+                                                .pendenciasCriticas,
+
+                                        carregado:
+                                            true,
+
+                                        erro:
+                                            "",
+                                    },
+                                ];
+                            }
+                        )
+                    );
+
+                setResumoDocumentalEmpresas(
+                    resumoDocumentalEmpresasFinal
+                );
+
                 setResumoDocumentalEstado({
                     chave:
                         chaveResumo,
@@ -1709,6 +1898,47 @@ export function CertidaoMensalDocumentalPage({
                 console.error(
                     "[Certidões Mensais] Falha ao carregar resumo documental.",
                     erro
+                );
+
+                const mensagemErroResumo =
+                    String(
+                        erro?.message ||
+                        "Falha ao carregar resumo documental."
+                    ).trim();
+
+                setResumoDocumentalEmpresas(
+                    Object.fromEntries(
+                        [
+                            ...exigiveisPorEmpresa
+                                .entries(),
+                        ].map(
+                            ([
+                                empresaId,
+                                idsExigiveis,
+                            ]) => [
+                                empresaId,
+                                {
+                                    competencia,
+
+                                    total:
+                                        idsExigiveis
+                                            .size,
+
+                                    ok:
+                                        null,
+
+                                    faltando:
+                                        null,
+
+                                    carregado:
+                                        false,
+
+                                    erro:
+                                        mensagemErroResumo,
+                                },
+                            ]
+                        )
+                    )
                 );
 
                 setResumoDocumentalEstado({
@@ -4856,11 +5086,14 @@ return {
                         return {
                             ...documento,
                             status:
-                                "pendente",
+                                "controleInterno",
                             detalhePrincipal:
-                                "Histórico insuficiente — requer confirmação",
+                                "Controle interno histórico — não bloqueia a Certidão",
                             detalheSecundario:
-                                motivoHistoricoItem15,
+                                (
+                                    motivoHistoricoItem15 ||
+                                    "Dados ocupacionais mantidos para acompanhamento interno."
+                                ),
                             resumoItens: [
                                 {
                                     rotulo:
@@ -4904,7 +5137,7 @@ return {
                                     rotulo:
                                         "Situação",
                                     valor:
-                                        "Histórico requer confirmação",
+                                        "Controle interno — não bloqueante",
                                 },
                                 {
                                     rotulo:
@@ -4937,12 +5170,7 @@ return {
                     return {
                         ...documento,
                         status:
-                            totalAtivosItem15 > 0 &&
-                            asosValidosItem15 ===
-                                totalAtivosItem15 &&
-                            pcmsoVigenteItem15
-                                ? "confirmado"
-                                : "pendente",
+                            "controleInterno",
                         detalhePrincipal:
                             `ASO válidos: ${asosValidosItem15}/${totalAtivosItem15} | PCMSO: ${pcmsoVigenteItem15 ? "Vigente" : "Pendente"}`,
                         detalheSecundario:
@@ -4968,15 +5196,15 @@ return {
                             },
                             {
                                 rotulo:
-                                    "ASOs pendentes",
+                                    "ASOs a regularizar",
                                 valor:
                                     String(
                                         asosPendentesItem15
                                     ),
                                 detalhe:
                                     asosPendentesItem15
-                                        ? "requer regularização"
-                                        : "nenhuma pendência",
+                                        ? "acompanhamento interno"
+                                        : "nenhum ponto de atenção",
                                 tom:
                                     asosPendentesItem15
                                         ? "alerta"
@@ -5373,6 +5601,7 @@ return {
                 }
             );
 
+            cicloMensal.recarregar();
             return resultado;
         };
 
@@ -5511,6 +5740,7 @@ return {
                 }
             );
 
+            cicloMensal.recarregar();
             return resultado;
         };
 
@@ -5602,6 +5832,12 @@ return {
                     agruparRelatorioAnualPorObras,
                 } = await import(
                     "../services/certidaoMensalRelatorioAnualObrasService.js"
+                );
+
+const {
+                    carregarHistoricoMensalLiveCertidaoMensal,
+                } = await import(
+                    "../services/certidaoMensalRelatorioAnualDataService.js"
                 );
 
 
@@ -5816,6 +6052,38 @@ return {
                                 : null
                         );
 
+                const anoRelatorioMensal =
+                    Number(
+                        String(
+                            competencia ||
+                            ""
+                        )
+                            .split("/")
+                            .at(-1)
+                    );
+
+                if (
+                    !Number.isInteger(
+                        anoRelatorioMensal
+                    )
+                ) {
+                    throw new Error(
+                        "Ano inválido para consolidar o histórico anual do relatório mensal."
+                    );
+                }
+
+                const historicoAnualLive =
+                    await carregarHistoricoMensalLiveCertidaoMensal({
+                        ano:
+                            anoRelatorioMensal,
+
+                        empresa:
+                            empresaSelecionada,
+
+                        clienteSupabase:
+                            supabase,
+                    });
+
                 imprimirRelatorioCertidaoMensal({
                     competencia,
                     empresa:
@@ -5830,7 +6098,7 @@ return {
                     competenciaAtual:
                         cicloMensal.competenciaAtual,
                     historicoAnual:
-                        cicloMensal.historicoAnual,
+                        historicoAnualLive,
                     documentos:
                         documentosVisiveisCompetencia,
                 });
@@ -5984,198 +6252,6 @@ return {
                 .chave !==
                 chaveDocumentosPersistidos
         );
-
-    /*
-     * SAFE_SCAN_EMPRESA_PROGRESSO_DOCUMENTAL_A32_PAGE
-     *
-     * Quantidade presente/total por empresa.
-     */
-    const [
-        resumoDocumentalEmpresas,
-        setResumoDocumentalEmpresas,
-    ] = useState({});
-
-    useEffect(() => {
-        let efeitoAtivo =
-            true;
-
-        const empresasAlvo =
-            empresasVisiveisCompetencia
-                .filter(
-                    (empresa) =>
-                        empresa
-                            ?.vigenciaContratual
-                            ?.exigivel !==
-                        false
-                );
-
-        async function carregarResumo() {
-            const resultado =
-                {};
-
-            const tamanhoLote =
-                4;
-
-            for (
-                let indice = 0;
-                indice < empresasAlvo.length;
-                indice += tamanhoLote
-            ) {
-                const lote =
-                    empresasAlvo.slice(
-                        indice,
-                        indice + tamanhoLote
-                    );
-
-                await Promise.all(
-                    lote.map(
-                        async (
-                            empresa
-                        ) => {
-                            const tipos =
-                                [
-                                    ...new Set(
-                                        (
-                                            Array.isArray(
-                                                empresa
-                                                    ?.idsDocumentosExigiveis
-                                            )
-                                                ? empresa
-                                                    .idsDocumentosExigiveis
-                                                : []
-                                        )
-                                            .map(
-                                                (id) =>
-                                                    String(
-                                                        id || ""
-                                                    ).trim()
-                                            )
-                                            .filter(Boolean)
-                                    ),
-                                ];
-
-                            const total =
-                                tipos.length;
-
-                            if (!total) {
-                                resultado[
-                                    empresa.id
-                                ] = {
-                                    competencia,
-
-                                    total:
-                                        0,
-
-                                    ok:
-                                        0,
-
-                                    faltando:
-                                        0,
-
-                                    carregado:
-                                        true,
-
-                                    erro:
-                                        "",
-                                };
-
-                                return;
-                            }
-
-                            try {
-                                const registros =
-                                    await buscarDocumentosAtuaisCertidaoMensal({
-                                        empresaId:
-                                            empresa.id,
-
-                                        competencia,
-
-                                        tiposDocumento:
-                                            tipos,
-                                    });
-
-                                const ok =
-                                    tipos.filter(
-                                        (
-                                            tipoDocumento
-                                        ) =>
-                                            Boolean(
-                                                registros?.[
-                                                    tipoDocumento
-                                                ]
-                                            )
-                                    ).length;
-
-                                resultado[
-                                    empresa.id
-                                ] = {
-                                    competencia,
-
-                                    total,
-
-                                    ok,
-
-                                    faltando:
-                                        Math.max(
-                                            total -
-                                                ok,
-                                            0
-                                        ),
-
-                                    carregado:
-                                        true,
-
-                                    erro:
-                                        "",
-                                };
-                            }
-                            catch (erro) {
-                                resultado[
-                                    empresa.id
-                                ] = {
-                                    competencia,
-
-                                    total,
-
-                                    ok:
-                                        null,
-
-                                    faltando:
-                                        null,
-
-                                    carregado:
-                                        false,
-
-                                    erro:
-                                        erro
-                                            ?.message ||
-                                        "Resumo indisponível.",
-                                };
-                            }
-                        }
-                    )
-                );
-            }
-
-            if (!efeitoAtivo) {
-                return;
-            }
-
-            setResumoDocumentalEmpresas(
-                resultado
-            );
-        }
-
-        carregarResumo();
-
-        return () => {
-            efeitoAtivo =
-                false;
-        };
-    }, [
-        competencia,
-        empresasVisiveisCompetencia,
-    ]);
 
     const empresasComResumoDocumental =
         useMemo(

@@ -179,20 +179,23 @@ function validarEvidenciaOcupacional({
     };
 }
 
-function determinarStatusAsoPcmso(
+function determinarSituacaoOperacionalAsoPcmso(
     evidencia,
 ) {
-    return (
-        evidencia.historicoConfiavel &&
-        evidencia.totalAtivos > 0 &&
-        evidencia.asosValidos ===
-            evidencia.totalAtivos &&
-        evidencia.asosPendentes === 0 &&
-        evidencia.pcmsoLocalizado &&
-        evidencia.pcmsoVigente
-    )
-        ? "CONFORME"
-        : "PENDENTE";
+    const regular =
+        (
+            evidencia.historicoConfiavel &&
+            evidencia.totalAtivos > 0 &&
+            evidencia.asosValidos ===
+                evidencia.totalAtivos &&
+            evidencia.asosPendentes === 0 &&
+            evidencia.pcmsoLocalizado &&
+            evidencia.pcmsoVigente
+        );
+
+    return regular
+        ? "REGULAR"
+        : "ATENCAO_INTERNA";
 }
 
 function determinarStatusRelacaoEmpregados(
@@ -257,10 +260,23 @@ export function criarSnapshotAsoPcmsoAPartirDaEvidenciaInterna({
         );
     }
 
-    const statusConsolidacao =
-        determinarStatusAsoPcmso(
+    /*
+     * ASO + PCMSO é controle interno do SafeScan.
+     *
+     * A cobertura ocupacional continua sendo registrada no snapshot,
+     * mas não gera pendência documental da Certidão Mensal.
+     */
+    const situacaoOperacional =
+        determinarSituacaoOperacionalAsoPcmso(
             evidencia,
         );
+
+    const requerAtencaoInterna =
+        situacaoOperacional ===
+        "ATENCAO_INTERNA";
+
+    const statusConsolidacao =
+        "CONFORME";
 
     return Object.freeze({
         versao:
@@ -306,6 +322,10 @@ export function criarSnapshotAsoPcmsoAPartirDaEvidenciaInterna({
             evidencia.validadePcmso,
 
         statusConsolidacao,
+
+        situacaoOperacional,
+
+        requerAtencaoInterna,
     });
 }
 
@@ -328,12 +348,12 @@ export function montarItensAutomaticosCertidaoMensal({
             snapshotMaoDeObraSeguro,
         );
 
+    /*
+     * A situação ocupacional continua no snapshot.
+     * Para a Certidão, ASO + PCMSO é sempre não bloqueante.
+     */
     const statusAsoPcmso =
-        snapshotAsoPcmsoSeguro
-            .statusConsolidacao ===
-        "CONFORME"
-            ? "CONFORME"
-            : "PENDENTE";
+        "CONFORME";
 
     return Object.freeze([
         Object.freeze({

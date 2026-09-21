@@ -1919,3 +1919,600 @@ export async function carregarDadosRelatorioAnualCertidaoMensal({
         agora,
     });
 }
+
+export async function carregarHistoricoMensalLiveCertidaoMensal({
+    ano,
+    empresa,
+    clienteSupabase = null,
+    agora = new Date(),
+} = {}) {
+    const anoNormalizado =
+        normalizarAnoRelatorioAnualCertidao(
+            ano,
+        );
+
+    const empresaNormalizada =
+        normalizarEmpresa(
+            empresa,
+        );
+
+    if (!empresaNormalizada.id) {
+        throw new Error(
+            "Empresa inválida para o histórico mensal.",
+        );
+    }
+
+    const cliente =
+        validarClienteSupabase(
+            clienteSupabase ||
+            await obterClienteSupabasePadrao(),
+        );
+
+    const empresaIds = [
+        empresaNormalizada.id,
+    ];
+
+    const regrasPerfil =
+        await buscarRegrasPerfilDocumental({
+            clienteSupabase:
+                cliente,
+            empresaIds,
+        });
+
+    const competencias =
+        await buscarCompetenciasAno({
+            clienteSupabase:
+                cliente,
+            empresaIds,
+            ano:
+                anoNormalizado,
+        });
+
+    const competenciasAnterior =
+        anoNormalizado > 2000
+            ? await buscarCompetenciasAno({
+                clienteSupabase:
+                    cliente,
+                empresaIds,
+                ano:
+                    anoNormalizado - 1,
+            })
+            : [];
+
+    const competenciasPosterior =
+        await buscarCompetenciasAno({
+            clienteSupabase:
+                cliente,
+            empresaIds,
+            ano:
+                anoNormalizado + 1,
+        });
+
+    const competenciasCandidatas =
+        [
+            ...new Map(
+                [
+                    ...competenciasAnterior,
+                    ...competencias,
+                    ...competenciasPosterior,
+                ].map(
+                    (registro) => [
+                        textoSeguro(
+                            registro?.id,
+                            60,
+                        ),
+                        registro,
+                    ],
+                ),
+            ).values(),
+        ];
+
+    const competenciaIdsCandidatas =
+        competenciasCandidatas
+            .map(
+                (registro) =>
+                    textoSeguro(
+                        registro?.id,
+                        60,
+                    ),
+            )
+            .filter(Boolean);
+
+    const itensCandidatos =
+        competenciaIdsCandidatas.length > 0
+            ? await buscarItensCompetencias({
+                clienteSupabase:
+                    cliente,
+                competenciaIds:
+                    competenciaIdsCandidatas,
+            })
+            : [];
+
+    const competenciaIdsRelatorio =
+        new Set(
+            competencias
+                .map(
+                    (registro) =>
+                        textoSeguro(
+                            registro?.id,
+                            60,
+                        ),
+                )
+                .filter(Boolean),
+        );
+
+    const itens =
+        itensCandidatos.filter(
+            (item) =>
+                competenciaIdsRelatorio.has(
+                    textoSeguro(
+                        item?.competencia_id,
+                        60,
+                    ),
+                ),
+        );
+
+    const versoes =
+        await buscarVersoesAtuaisItens({
+            clienteSupabase:
+                cliente,
+            itens:
+                itensCandidatos,
+            competencias:
+                competenciasCandidatas,
+        });
+
+    const regrasPerfilEmpresa =
+        regrasPerfil.filter(
+            (regra) =>
+                textoSeguro(
+                    regra?.empresaId ||
+                    regra?.empresa_id,
+                    60,
+                ) ===
+                empresaNormalizada.id,
+        );
+
+    const versoesEmpresa =
+        versoes.filter(
+            (versao) =>
+                textoSeguro(
+                    versao?.empresaId ||
+                    versao?.empresa_id,
+                    60,
+                ) ===
+                empresaNormalizada.id,
+        );
+
+    const itensPorCompetencia =
+        criarMapaItensPorCompetencia(
+            itens,
+        );
+
+    const competenciasPorMes =
+        new Map();
+
+    for (const registro of competencias) {
+        const referencia =
+            obterMesCompetencia(
+                registro?.competencia,
+            );
+
+        if (
+            referencia?.ano !==
+            anoNormalizado
+        ) {
+            continue;
+        }
+
+        competenciasPorMes.set(
+            referencia.mes,
+            registro,
+        );
+    }
+
+    const tiposInternos =
+        new Set([
+            "relacao-empregados",
+            "aso-pcmso",
+        ]);
+
+    return MESES_RELATORIO_ANUAL_CERTIDAO.map(
+        (mes) => {
+            const competenciaIso =
+                obterCompetenciaIso(
+                    anoNormalizado,
+                    mes.numero,
+                );
+
+            const vigencia =
+                classificarCompetenciaVigenciaContratual({
+                    empresa:
+                        empresaNormalizada,
+                    competencia:
+                        competenciaIso,
+                });
+
+            const futura =
+                competenciaFutura({
+                    ano:
+                        anoNormalizado,
+                    mes:
+                        mes.numero,
+                    agora,
+                });
+
+            const competenciaPersistida =
+                competenciasPorMes.get(
+                    mes.numero,
+                ) || null;
+
+            if (
+                !vigencia.exigivel ||
+                futura
+            ) {
+                return {
+                    competencia:
+                        competenciaIso,
+
+                    status:
+                        textoSeguro(
+                            competenciaPersistida?.status,
+                            60,
+                        ),
+
+                    resumo: {
+                        totalExigiveis:
+                            null,
+                        totalConfirmados:
+                            null,
+                        totalPendentes:
+                            null,
+                    },
+                };
+            }
+
+            const statusCompetencia =
+                textoSeguro(
+                    competenciaPersistida?.status,
+                    60,
+                ).toUpperCase();
+
+            /*
+             * Competência fechada:
+             * usa exatamente a fotografia persistida pelo fechamento.
+             * Não recalcula retroativamente versões, perfil ou itens.
+             */
+            if (
+                statusCompetencia ===
+                "FECHADA"
+            ) {
+                const resumoPersistido =
+                    competenciaPersistida?.resumo &&
+                    typeof competenciaPersistida.resumo ===
+                        "object" &&
+                    !Array.isArray(
+                        competenciaPersistida.resumo,
+                    )
+                        ? competenciaPersistida.resumo
+                        : {};
+
+                const totalPersistido =
+                    normalizarNumero(
+                        resumoPersistido
+                            ?.totalExigiveis ??
+                        resumoPersistido
+                            ?.total_exigiveis ??
+                        resumoPersistido
+                            ?.totalItens ??
+                        resumoPersistido
+                            ?.total_itens,
+                    );
+
+                const conformesPersistidos =
+                    normalizarNumero(
+                        resumoPersistido
+                            ?.totalConfirmados ??
+                        resumoPersistido
+                            ?.total_confirmados ??
+                        resumoPersistido
+                            ?.totalConformes ??
+                        resumoPersistido
+                            ?.total_conformes,
+                    );
+
+                const pendentesPersistidos =
+                    normalizarNumero(
+                        resumoPersistido
+                            ?.totalPendentes ??
+                        resumoPersistido
+                            ?.total_pendentes ??
+                        resumoPersistido
+                            ?.pendentes,
+                    );
+
+                const total =
+                    totalPersistido ??
+                    (
+                        (
+                            conformesPersistidos ??
+                            0
+                        ) +
+                        (
+                            pendentesPersistidos ??
+                            0
+                        )
+                    );
+
+                const conformes =
+                    Math.min(
+                        conformesPersistidos ??
+                        0,
+                        total,
+                    );
+
+                const pendentes =
+                    pendentesPersistidos ??
+                    Math.max(
+                        0,
+                        total - conformes,
+                    );
+
+                return {
+                    competencia:
+                        competenciaIso,
+
+                    status:
+                        statusCompetencia,
+
+                    resumo: {
+                        totalExigiveis:
+                            total,
+                        totalConfirmados:
+                            conformes,
+                        totalPendentes:
+                            pendentes,
+                    },
+                };
+            }
+
+            const competenciaId =
+                textoSeguro(
+                    competenciaPersistida?.id ||
+                    competenciaPersistida
+                        ?.competencia_id ||
+                    competenciaPersistida
+                        ?.competenciaId,
+                    60,
+                );
+
+            const itensCompetencia =
+                competenciaId
+                    ? (
+                        itensPorCompetencia.get(
+                            competenciaId,
+                        ) || []
+                    )
+                    : [];
+
+            /*
+             * Parte externa:
+             * reutiliza exatamente o mesmo resolvedor temporal,
+             * versões e regras de exigibilidade do relatório anual.
+             */
+            const perfilExterno =
+                resolverPerfilExternoCompetencia({
+                    empresaId:
+                        empresaNormalizada.id,
+                    competencia:
+                        competenciaIso,
+                    regrasPerfil:
+                        regrasPerfilEmpresa,
+                });
+
+            /*
+             * O perfil completo define também quais controles internos
+             * estão exigidos nesta competência.
+             */
+            const perfilDocumentalCompleto =
+                montarPerfilDocumentalCompetencia({
+                    empresaId:
+                        empresaNormalizada.id,
+                    competencia:
+                        competenciaIso,
+                    regras:
+                        regrasPerfilEmpresa,
+                });
+
+            const tiposInternosExigiveis =
+                new Set(
+                    perfilDocumentalCompleto
+                        .documentos
+                        .filter(
+                            (documento) =>
+                                documento.origemSistema &&
+                                documento.exigido !==
+                                    false &&
+                                tiposInternos.has(
+                                    documento.id
+                                )
+                        )
+                        .map(
+                            (documento) =>
+                                documento.id
+                        )
+                );
+
+            const resumoExterno =
+                extrairResumoCompetencia(
+                    competenciaPersistida || {
+                        id:
+                            "",
+                        empresa_id:
+                            empresaNormalizada.id,
+                        competencia:
+                            competenciaIso,
+                        status:
+                            "ABERTA",
+                    },
+                    itensCompetencia,
+                    perfilExterno.total,
+                    versoesEmpresa,
+                    regrasPerfilEmpresa,
+                ) || {
+                    conformes:
+                        0,
+                    pendentes:
+                        perfilExterno.total,
+                    total:
+                        perfilExterno.total,
+                };
+
+            /*
+             * Parte interna:
+             * Relação de Empregados + ASO/PCMSO pertencem ao
+             * relatório mensal e precisam participar do denominador.
+             *
+             * Se o item interno ainda não existe, ele continua
+             * exigível e é tratado como pendente.
+             *
+             * DISPENSADO permanece fora do denominador, seguindo
+             * a mesma semântica do fechamento da competência.
+             */
+            const itensInternosPorTipo =
+                new Map(
+                    itensCompetencia
+                        .filter(
+                            (item) =>
+                                textoSeguro(
+                                    item?.origem,
+                                    30,
+                                ).toUpperCase() ===
+                                    "SISTEMA" &&
+                                tiposInternosExigiveis.has(
+                                    textoSeguro(
+                                        item?.tipo_documento ||
+                                        item?.tipoDocumento,
+                                        120,
+                                    ),
+                                ),
+                        )
+                        .map(
+                            (item) => [
+                                textoSeguro(
+                                    item?.tipo_documento ||
+                                    item?.tipoDocumento,
+                                    120,
+                                ),
+                                item,
+                            ],
+                        ),
+                );
+
+            let totalInternos =
+                0;
+
+            let conformesInternos =
+                0;
+
+            for (
+                const tipoDocumento of
+                tiposInternosExigiveis
+            ) {
+                const item =
+                    itensInternosPorTipo.get(
+                        tipoDocumento,
+                    );
+
+                const statusItem =
+                    textoSeguro(
+                        item?.status,
+                        60,
+                    ).toUpperCase();
+
+                /*
+                 * ASO + PCMSO é informação interna não bloqueante.
+                 * Quando estiver exigido no perfil, participa do total,
+                 * mas conta como atendido para a Certidão.
+                 */
+                if (
+                    tipoDocumento ===
+                    "aso-pcmso"
+                ) {
+                    totalInternos +=
+                        1;
+
+                    conformesInternos +=
+                        1;
+
+                    continue;
+                }
+
+                if (
+                    statusItem ===
+                    "DISPENSADO"
+                ) {
+                    continue;
+                }
+
+                totalInternos +=
+                    1;
+
+                if (
+                    statusItem ===
+                    "CONFORME"
+                ) {
+                    conformesInternos +=
+                        1;
+                }
+            }
+
+            const totalExternos =
+                normalizarNumero(
+                    resumoExterno?.total,
+                ) ??
+                perfilExterno.total;
+
+            const conformesExternos =
+                Math.min(
+                    normalizarNumero(
+                        resumoExterno?.conformes,
+                    ) ??
+                    0,
+                    totalExternos,
+                );
+
+            const total =
+                totalExternos +
+                totalInternos;
+
+            const conformes =
+                Math.min(
+                    total,
+                    conformesExternos +
+                    conformesInternos,
+                );
+
+            return {
+                competencia:
+                    competenciaIso,
+
+                status:
+                    statusCompetencia ||
+                    "ABERTA",
+
+                resumo: {
+                    totalExigiveis:
+                        total,
+                    totalConfirmados:
+                        conformes,
+                    totalPendentes:
+                        Math.max(
+                            0,
+                            total - conformes,
+                        ),
+                },
+            };
+        },
+    );
+}
