@@ -50,6 +50,7 @@ function InfraCard({
     detalhe,
     ok,
     pendente,
+    statusLabel,
 }) {
     return (
         <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -62,11 +63,13 @@ function InfraCard({
                     ok={ok}
                     pendente={pendente}
                 >
-                    {ok
-                        ? "OK"
-                        : pendente
-                            ? "Pendente"
-                            : "Aguardando"}
+                    {statusLabel ?? (
+                        ok
+                            ? "OK"
+                            : pendente
+                                ? "Pendente"
+                                : "Aguardando"
+                    )}
                 </StatusBadge>
             </div>
 
@@ -321,7 +324,7 @@ export function TenantAdminInfrastructurePage() {
                             ? (
                                 dnssecAtivo
                                     ? "Ativo"
-                                    : "Não detectado"
+                                    : "Não configurado"
                             )
                             : "Não diagnosticado"
                     }
@@ -330,18 +333,18 @@ export function TenantAdminInfrastructurePage() {
                             ? (
                                 dnssecAtivo
                                     ? "Registro DS publicado e detectado no domínio."
-                                    : "Nenhum DS foi localizado."
+                                    : "Nenhum DS foi localizado. DNSSEC é opcional e não bloqueia wildcard DNS, HTTPS nem ativação automática."
                             )
                             : "A integridade DNSSEC será verificada sem alterar a zona."
                     }
                     ok={
                         dnssecAtivo
                     }
-                    pendente={
-                        Boolean(
-                            diagnostico
-                        ) &&
+                    statusLabel={
+                        diagnostico &&
                         !dnssecAtivo
+                            ? "Opcional"
+                            : undefined
                     }
                 />
 
