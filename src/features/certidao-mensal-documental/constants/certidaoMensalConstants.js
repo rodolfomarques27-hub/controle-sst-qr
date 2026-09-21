@@ -1,6 +1,10 @@
 export const STATUS_DOCUMENTAL = Object.freeze({
     confirmado: { rotulo: "Confirmado", classe: "is-confirmado" },
     emAnalise: { rotulo: "Em análise", classe: "is-em-analise" },
+    controleInterno: {
+        rotulo: "Controle interno",
+        classe: "is-em-analise",
+    },
     pendente: { rotulo: "Pendente", classe: "is-pendente" },
     reenvioSolicitado: {
         rotulo: "Reenvio solicitado",

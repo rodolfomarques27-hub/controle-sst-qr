@@ -192,7 +192,9 @@ function EstadoDominio({
     );
 }
 
-export function TenantAdminDashboardPage() {
+export function TenantAdminDashboardPage({
+    onNavegar,
+}) {
     const [
         tenants,
         setTenants,
@@ -438,9 +440,13 @@ export function TenantAdminDashboardPage() {
 
                     <button
                         type="button"
-                        disabled
-                        title="Provisionamento será habilitado em etapa posterior."
-                        className="inline-flex cursor-not-allowed items-center gap-2 rounded-xl bg-emerald-400/15 px-4 py-2.5 text-sm font-bold text-emerald-100/50"
+                        onClick={
+                            () =>
+                                onNavegar?.(
+                                    "novo-cliente"
+                                )
+                        }
+                        className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-400"
                     >
                         <Plus className="h-4 w-4" />
                         Novo cliente

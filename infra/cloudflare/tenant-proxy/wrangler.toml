@@ -1,0 +1,13 @@
+name = "safescan-tenant-proxy"
+main = "worker.mjs"
+compatibility_date = "2026-09-20"
+workers_dev = false
+
+# IMPORTANTE:
+# Nenhuma route é declarada nesta etapa.
+#
+# A route futura, somente após autorização explícita, será:
+#
+#   *.safescanbrasil.com.br/*
+#
+# O DNS wildcard também NÃO é criado por este arquivo.

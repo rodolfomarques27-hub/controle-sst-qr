@@ -11,6 +11,10 @@ const STATUS_RELATORIO = Object.freeze({
         rotulo: "Pendente",
         classe: "pendente",
     },
+    controleInterno: {
+        rotulo: "Controle interno",
+        classe: "analise",
+    },
     pendente: {
         rotulo: "Pendente",
         classe: "pendente",
@@ -316,6 +320,14 @@ function normalizarStatus(valor) {
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, "");
 
+    if (
+        texto.includes(
+            "controleinterno"
+        )
+    ) {
+        return "controleInterno";
+    }
+
     if (texto.includes("venc")) {
         return "vencido";
     }
@@ -552,7 +564,7 @@ function extrairCompetenciaHistorico(
 
     const formatoIso =
         texto.match(
-            /(?:^|[^\d])(\d{4})-(0?[1-9]|1[0-2])(?:$|[^\d-])/,
+            /(?:^|[^\d])(\d{4})-(0?[1-9]|1[0-2])(?:-(?:0[1-9]|[12]\d|3[01]))?(?:$|[^\d])/,
         );
 
     if (formatoIso) {
@@ -804,8 +816,20 @@ export function montarHistoricoRelatorio({
                             numeroMes >
                                 competenciaSelecionada.mes;
 
+                        /*
+                         * O histórico do relatório mensal é temporal:
+                         * uma competência não pode antecipar resultados
+                         * de competências posteriores à selecionada.
+                         *
+                         * Exemplo:
+                         * relatório JAN/2026 => FEV–DEZ = —
+                         * relatório SET/2026 => OUT–DEZ = —
+                         */
                         let valor =
-                            exigivel
+                            (
+                                exigivel &&
+                                !futura
+                            )
                                 ? (
                                     registro?.[propriedade] ??
                                     null
@@ -906,9 +930,15 @@ export function imprimirRelatorioCertidaoMensal({
         itens.length;
 
     const conformes =
-        contarStatus(
-            itens,
-            "confirmado"
+        (
+            contarStatus(
+                itens,
+                "confirmado"
+            ) +
+            contarStatus(
+                itens,
+                "controleInterno"
+            )
         );
 
     const pendentes =

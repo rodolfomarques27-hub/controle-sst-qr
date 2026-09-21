@@ -430,3 +430,168 @@ export async function salvarEscopoEmpresasMembershipAdminService({
 
     return data ?? null;
 }
+
+const SLUGS_TENANT_RESERVADOS =
+    new Set([
+        "www",
+        "app",
+        "admin",
+        "api",
+        "qr",
+        "status",
+        "assets",
+        "static",
+        "auth",
+    ]);
+
+export function montarProvisionamentoTenantRascunhoPayload({
+    nomeTenant,
+    slug,
+    empresaNome,
+    empresaTipo = "Contratante",
+} = {}) {
+    const nomeTenantNormalizado =
+        String(
+            nomeTenant || ""
+        ).trim();
+
+    const slugNormalizado =
+        String(
+            slug || ""
+        )
+            .trim()
+            .toLowerCase();
+
+    const empresaNomeNormalizado =
+        String(
+            empresaNome || ""
+        ).trim();
+
+    const tiposPermitidos =
+        {
+            contratante:
+                "Contratante",
+            terceirizada:
+                "Terceirizada",
+            subcontratada:
+                "Subcontratada",
+        };
+
+    const empresaTipoNormalizado =
+        tiposPermitidos[
+            String(
+                empresaTipo || ""
+            )
+                .trim()
+                .toLowerCase()
+        ];
+
+    if (
+        nomeTenantNormalizado.length <
+            2 ||
+        nomeTenantNormalizado.length >
+            160
+    ) {
+        throw new Error(
+            "Nome do cliente deve possuir entre 2 e 160 caracteres."
+        );
+    }
+
+    if (
+        slugNormalizado.length <
+            2 ||
+        slugNormalizado.length >
+            63 ||
+        !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(
+            slugNormalizado
+        )
+    ) {
+        throw new Error(
+            "Slug inválido. Use letras minúsculas, números e hífens."
+        );
+    }
+
+    if (
+        SLUGS_TENANT_RESERVADOS.has(
+            slugNormalizado
+        )
+    ) {
+        throw new Error(
+            "Este slug é reservado pela plataforma SafeScan."
+        );
+    }
+
+    if (
+        empresaNomeNormalizado.length <
+            2 ||
+        empresaNomeNormalizado.length >
+            160
+    ) {
+        throw new Error(
+            "Nome da empresa inicial deve possuir entre 2 e 160 caracteres."
+        );
+    }
+
+    if (!empresaTipoNormalizado) {
+        throw new Error(
+            "Tipo da empresa inicial inválido."
+        );
+    }
+
+    const hostname =
+        slugNormalizado +
+        ".safescanbrasil.com.br";
+
+    return {
+        p_nome_tenant:
+            nomeTenantNormalizado,
+        p_slug:
+            slugNormalizado,
+        p_empresa_nome:
+            empresaNomeNormalizado,
+        p_hostname:
+            hostname,
+        p_empresa_tipo:
+            empresaTipoNormalizado,
+    };
+}
+
+export async function provisionarTenantRascunhoService({
+    supabase,
+    nomeTenant,
+    slug,
+    empresaNome,
+    empresaTipo = "Contratante",
+} = {}) {
+    if (!supabase) {
+        throw new Error(
+            "Cliente Supabase não informado."
+        );
+    }
+
+    const payload =
+        montarProvisionamentoTenantRascunhoPayload({
+            nomeTenant,
+            slug,
+            empresaNome,
+            empresaTipo,
+        });
+
+    const {
+        data,
+        error,
+    } =
+        await supabase.rpc(
+            "admin_provisionar_tenant_rascunho",
+            payload
+        );
+
+    if (error) {
+        throw new Error(
+            error.message ||
+            "Não foi possível provisionar o novo cliente."
+        );
+    }
+
+    return data ?? null;
+}
