@@ -41,6 +41,10 @@ import {
 } from "../components/TenantAdminCreateClientConfirmModal.jsx";
 
 import {
+    TenantAdminHero,
+} from "../components/TenantAdminHero.jsx";
+
+import {
     montarOnboardingCompletoPreviewService,
     normalizarCnpjOnboarding,
     validarAdministradorInicialOnboardingService,
@@ -998,37 +1002,12 @@ export function TenantAdminNewClientPage({
     }
 
     return (
-        <div className="mx-auto max-w-[1280px]">
-            <button
-                type="button"
-                onClick={
-                    onVoltar
-                }
-                className="mb-4 inline-flex items-center gap-2 text-xs font-semibold text-slate-500 transition hover:text-slate-900"
-            >
-                <ArrowLeft className="h-4 w-4" />
-                Voltar para clientes
-            </button>
+        <div className="mx-auto w-full max-w-[1500px]">
 
-            <section className="rounded-[1.75rem] bg-gradient-to-r from-[#09271c] via-[#0b3324] to-[#0b3d2a] px-7 py-7 text-white shadow-sm">
-                <div className="inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-3 py-1.5">
-                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-300" />
-
-                    <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-100">
-                        Onboarding administrativo
-                    </span>
-                </div>
-
-                <h1 className="mt-4 text-3xl font-bold tracking-tight">
-                    Novo cliente
-                </h1>
-
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-300">
-                    Cadastre a empresa, confirme o CNPJ,
-                    configure a marca, o responsável pelo sistema
-                    e as condições comerciais.
-                </p>
-            </section>
+            <TenantAdminHero
+                titulo="Novo cliente"
+                subtitulo="Cadastre a empresa, valide o CNPJ e configure o novo ambiente SafeScan."
+            />
 
             <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="grid gap-2 md:grid-cols-3 xl:grid-cols-6">

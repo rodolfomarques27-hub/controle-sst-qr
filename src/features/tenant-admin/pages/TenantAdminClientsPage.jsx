@@ -27,6 +27,10 @@ import {
     TenantAdminTenantDetailPage,
 } from "./TenantAdminTenantDetailPage.jsx";
 
+import {
+    TenantAdminHero,
+} from "../components/TenantAdminHero.jsx";
+
 function numeroSeguro(
     valor
 ) {
@@ -200,7 +204,19 @@ export function TenantAdminClientsPage({
 
     useEffect(
         () => {
-            carregar();
+            const timeoutId =
+                window.setTimeout(
+                    () => {
+                        carregar();
+                    },
+                    0
+                );
+
+            return () => {
+                window.clearTimeout(
+                    timeoutId
+                );
+            };
         },
         [
             carregar,
@@ -328,41 +344,23 @@ export function TenantAdminClientsPage({
     }
 
     return (
-        <div className="mx-auto max-w-[1500px]">
-            <section className="rounded-[1.75rem] bg-gradient-to-r from-[#09271c] via-[#0b3324] to-[#0b3d2a] px-7 py-7 text-white shadow-sm">
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                    <div>
-                        <div className="inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-3 py-1.5">
-                            <Building2 className="h-3.5 w-3.5 text-emerald-300" />
-
-                            <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-100">
-                                Gestão de clientes
-                            </span>
-                        </div>
-
-                        <h1 className="mt-4 text-3xl font-bold tracking-tight">
-                            Clientes
-                        </h1>
-
-                        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-                            Consulte os ambientes cadastrados,
-                            filtre pendências e abra o perfil
-                            administrativo de cada cliente.
-                        </p>
-                    </div>
-
+        <div className="mx-auto w-full max-w-[1500px]">
+            <TenantAdminHero
+                titulo="Clientes"
+                subtitulo="Consulte os ambientes cadastrados, acompanhe pendências e gerencie cada cliente da plataforma."
+                acoes={
                     <button
                         type="button"
                         onClick={
                             onNovoCliente
                         }
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-400"
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-black/10 transition hover:bg-emerald-500"
                     >
                         <Plus className="h-4 w-4" />
                         Novo cliente
                     </button>
-                </div>
-            </section>
+                }
+            />
 
             <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="grid gap-3 lg:grid-cols-[minmax(300px,1fr)_220px_230px_auto]">

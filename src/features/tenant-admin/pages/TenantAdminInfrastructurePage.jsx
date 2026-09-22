@@ -6,7 +6,6 @@ import {
     Activity,
     AlertTriangle,
     CheckCircle2,
-    Cloud,
     Globe2,
     LoaderCircle,
     Network,
@@ -27,6 +26,10 @@ import {
 import {
     diagnosticarInfraestruturaGlobalService,
 } from "../services/tenantAdminInfrastructureService.js";
+
+import {
+    TenantAdminHero,
+} from "../components/TenantAdminHero.jsx";
 
 function StatusBadge({
     ok,
@@ -322,29 +325,11 @@ export function TenantAdminInfrastructurePage() {
             : [];
 
     return (
-        <div>
-            <section className="overflow-hidden rounded-3xl bg-gradient-to-r from-[#071d15] via-[#083223] to-[#075c3c] text-white shadow-sm">
-                <div className="flex flex-col gap-6 px-6 py-7 lg:flex-row lg:items-end lg:justify-between">
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <Cloud className="h-5 w-5 text-emerald-300" />
-
-                            <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-200">
-                                Infraestrutura global
-                            </span>
-                        </div>
-
-                        <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
-                            Domínios e ativação automática
-                        </h1>
-
-                        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">
-                            Visão central da infraestrutura usada para publicar,
-                            validar e ativar novos clientes SafeScan sem configuração
-                            manual por empresa.
-                        </p>
-                    </div>
-
+        <div className="mx-auto w-full max-w-[1500px]">
+            <TenantAdminHero
+                titulo="Infraestrutura"
+                subtitulo="Monitore domínios, DNS, HTTPS e serviços globais da plataforma."
+                acoes={
                     <button
                         type="button"
                         onClick={
@@ -353,7 +338,7 @@ export function TenantAdminInfrastructurePage() {
                         disabled={
                             carregando
                         }
-                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-400 disabled:cursor-wait disabled:bg-slate-500"
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-bold text-white shadow-lg shadow-black/10 transition hover:bg-emerald-500 disabled:cursor-wait disabled:bg-slate-500"
                     >
                         {carregando ? (
                             <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -365,8 +350,8 @@ export function TenantAdminInfrastructurePage() {
                             ? "Diagnosticando..."
                             : "Diagnosticar infraestrutura"}
                     </button>
-                </div>
-            </section>
+                }
+            />
 
             <section className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <InfraCard
