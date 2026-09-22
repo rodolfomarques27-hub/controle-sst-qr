@@ -23,8 +23,14 @@ import {
 } from "../components/TenantAdminHero.jsx";
 
 import {
+    listarEmpresasTenantAdminService,
     listarTenantsPlataformaService,
+    listarUsuariosTenantAdminService,
 } from "../services/tenantAdminService.js";
+
+import {
+    TenantAdminDomainReadinessPanel,
+} from "../components/TenantAdminDomainReadinessPanel.jsx";
 
 function texto(
     valor
@@ -172,6 +178,36 @@ export function TenantAdminDomainsPage() {
     ] =
         useState("");
 
+    const [
+        tenantSelecionado,
+        setTenantSelecionado,
+    ] =
+        useState(null);
+
+    const [
+        empresasTenantSelecionado,
+        setEmpresasTenantSelecionado,
+    ] =
+        useState([]);
+
+    const [
+        usuariosTenantSelecionado,
+        setUsuariosTenantSelecionado,
+    ] =
+        useState([]);
+
+    const [
+        carregandoReadiness,
+        setCarregandoReadiness,
+    ] =
+        useState(false);
+
+    const [
+        erroReadiness,
+        setErroReadiness,
+    ] =
+        useState("");
+
     const carregar =
         useCallback(
             async () => {
@@ -232,6 +268,108 @@ export function TenantAdminDomainsPage() {
             carregar,
         ]
     );
+
+    async function abrirDiagnosticoTenant(
+        tenant
+    ) {
+        const tenantId =
+            texto(
+                tenant?.tenant_id
+            );
+
+        if (
+            !tenantId ||
+            carregandoReadiness
+        ) {
+            return;
+        }
+
+        setTenantSelecionado(
+            tenant
+        );
+
+        setEmpresasTenantSelecionado(
+            []
+        );
+
+        setUsuariosTenantSelecionado(
+            []
+        );
+
+        setErroReadiness(
+            ""
+        );
+
+        setCarregandoReadiness(
+            true
+        );
+
+        try {
+            const [
+                empresas,
+                usuarios,
+            ] =
+                await Promise.all([
+                    listarEmpresasTenantAdminService({
+                        supabase,
+                        tenantId,
+                    }),
+                    listarUsuariosTenantAdminService({
+                        supabase,
+                        tenantId,
+                    }),
+                ]);
+
+            setEmpresasTenantSelecionado(
+                Array.isArray(
+                    empresas
+                )
+                    ? empresas
+                    : []
+            );
+
+            setUsuariosTenantSelecionado(
+                Array.isArray(
+                    usuarios
+                )
+                    ? usuarios
+                    : []
+            );
+        }
+        catch (error) {
+            setErroReadiness(
+                error?.message ||
+                "Não foi possível carregar os dados necessários para o diagnóstico."
+            );
+        }
+        finally {
+            setCarregandoReadiness(
+                false
+            );
+        }
+    }
+
+    function fecharDiagnosticoTenant() {
+        setTenantSelecionado(
+            null
+        );
+
+        setEmpresasTenantSelecionado(
+            []
+        );
+
+        setUsuariosTenantSelecionado(
+            []
+        );
+
+        setErroReadiness(
+            ""
+        );
+
+        setCarregandoReadiness(
+            false
+        );
+    }
 
     const metricas =
         useMemo(
@@ -341,54 +479,78 @@ export function TenantAdminDomainsPage() {
                 </article>
 
                 <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <p className="text-xs font-semibold text-slate-500">
-                        Configurados
-                    </p>
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <p className="text-xs font-semibold text-slate-500">
+                                Configurados
+                            </p>
 
-                    <p className="mt-2 text-3xl font-black tracking-tight text-slate-950">
-                        {carregando
-                            ? "—"
-                            : metricas.configurados}
-                    </p>
+                            <p className="mt-2 text-3xl font-black tracking-tight text-slate-950">
+                                {carregando
+                                    ? "—"
+                                    : metricas.configurados}
+                            </p>
 
-                    <p className="mt-1 text-[11px] text-slate-400">
-                        Possuem domínio principal
-                    </p>
+                            <p className="mt-1 text-[11px] text-slate-400">
+                                Possuem domínio principal
+                            </p>
+                        </div>
+
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                            <Globe2 className="h-5 w-5" />
+                        </span>
+                    </div>
                 </article>
 
                 <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <p className="text-xs font-semibold text-slate-500">
-                        Verificados
-                    </p>
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <p className="text-xs font-semibold text-slate-500">
+                                Verificados
+                            </p>
 
-                    <p className="mt-2 text-3xl font-black tracking-tight text-slate-950">
-                        {carregando
-                            ? "—"
-                            : metricas.verificados}
-                    </p>
+                            <p className="mt-2 text-3xl font-black tracking-tight text-slate-950">
+                                {carregando
+                                    ? "—"
+                                    : metricas.verificados}
+                            </p>
 
-                    <p className="mt-1 text-[11px] text-slate-400">
-                        Domínios confirmados
-                    </p>
+                            <p className="mt-1 text-[11px] text-slate-400">
+                                Domínios confirmados
+                            </p>
+                        </div>
+
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                            <CheckCircle2 className="h-5 w-5" />
+                        </span>
+                    </div>
                 </article>
 
                 <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <p className="text-xs font-semibold text-slate-500">
-                        Pendências
-                    </p>
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <p className="text-xs font-semibold text-slate-500">
+                                Pendências
+                            </p>
 
-                    <p className="mt-2 text-3xl font-black tracking-tight text-slate-950">
-                        {carregando
-                            ? "—"
-                            : (
-                                metricas.pendentes +
-                                metricas.naoConfigurados
-                            )}
-                    </p>
+                            <p className="mt-2 text-3xl font-black tracking-tight text-slate-950">
+                                {carregando
+                                    ? "—"
+                                    : (
+                                        metricas.pendentes +
+                                        metricas.naoConfigurados
+                                    )}
+                            </p>
 
-                    <p className="mt-1 text-[11px] text-slate-400">
-                        Exigem configuração ou verificação
-                    </p>
+                            <p className="mt-1 text-[11px] text-slate-400">
+                                Exigem configuração ou verificação
+                            </p>
+                        </div>
+
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+                            <AlertTriangle className="h-5 w-5" />
+                        </span>
+                    </div>
                 </article>
             </section>
 
@@ -474,7 +636,7 @@ export function TenantAdminDomainsPage() {
                                     </th>
 
                                     <th className="px-5 py-3 text-right text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">
-                                        Acesso
+                                        Ações
                                     </th>
                                 </tr>
                             </thead>
@@ -547,24 +709,55 @@ export function TenantAdminDomainsPage() {
                                                     </span>
                                                 </td>
 
-                                                <td className="px-5 py-4 text-right">
-                                                    {dominio ? (
-                                                        <a
-                                                            href={
-                                                                `https://${dominio}`
+                                                <td className="px-5 py-4">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={
+                                                                () =>
+                                                                    abrirDiagnosticoTenant(
+                                                                        tenant
+                                                                    )
                                                             }
-                                                            target="_blank"
-                                                            rel="noreferrer"
-                                                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+                                                            disabled={
+                                                                carregandoReadiness &&
+                                                                tenantSelecionado?.tenant_id ===
+                                                                    tenant.tenant_id
+                                                            }
+                                                            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-500 disabled:cursor-wait disabled:bg-slate-400"
                                                         >
-                                                            Abrir
-                                                            <ExternalLink className="h-3.5 w-3.5" />
-                                                        </a>
-                                                    ) : (
-                                                        <span className="text-xs font-semibold text-slate-300">
-                                                            —
-                                                        </span>
-                                                    )}
+                                                            <ShieldAlert className="h-3.5 w-3.5" />
+
+                                                            {carregandoReadiness &&
+                                                            tenantSelecionado?.tenant_id ===
+                                                                tenant.tenant_id
+                                                                ? "Carregando..."
+                                                                : "Diagnosticar"}
+                                                        </button>
+
+                                                        {dominio ? (
+                                                            <a
+                                                                href={
+                                                                    `https://${dominio}`
+                                                                }
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-slate-800"
+                                                            >
+                                                                Abrir
+                                                                <ExternalLink className="h-3.5 w-3.5" />
+                                                            </a>
+                                                        ) : (
+                                                            <span
+                                                                aria-disabled="true"
+                                                                title="Domínio não configurado"
+                                                                className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg bg-slate-200 px-3 py-2 text-xs font-bold text-slate-400"
+                                                            >
+                                                                Abrir
+                                                                <ExternalLink className="h-3.5 w-3.5" />
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         );
@@ -575,6 +768,82 @@ export function TenantAdminDomainsPage() {
                     </div>
                 ) : null}
             </section>
+
+            {tenantSelecionado ? (
+                <section className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-sm sm:p-5">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">
+                                Diagnóstico individual
+                            </p>
+
+                            <h2 className="mt-1 text-lg font-black tracking-tight text-slate-950">
+                                {tenantSelecionado.tenant_nome ||
+                                    "Tenant sem nome"}
+                            </h2>
+
+                            <p className="mt-1 font-mono text-[11px] text-slate-500">
+                                {tenantSelecionado.tenant_slug ||
+                                    "—"}
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={
+                                fecharDiagnosticoTenant
+                            }
+                            className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                        >
+                            Fechar diagnóstico
+                        </button>
+                    </div>
+
+                    {erroReadiness ? (
+                        <div className="mt-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+
+                            <div>
+                                <p className="text-xs font-bold">
+                                    Falha ao carregar dados do tenant
+                                </p>
+
+                                <p className="mt-1 text-xs leading-5 text-red-600">
+                                    {erroReadiness}
+                                </p>
+                            </div>
+                        </div>
+                    ) : null}
+
+                    {!erroReadiness &&
+                    carregandoReadiness ? (
+                        <div className="mt-5 flex min-h-[160px] items-center justify-center rounded-xl border border-slate-200 bg-white">
+                            <div className="text-center">
+                                <RefreshCw className="mx-auto h-6 w-6 animate-spin text-emerald-600" />
+
+                                <p className="mt-3 text-xs font-semibold text-slate-500">
+                                    Carregando empresas e usuários do tenant...
+                                </p>
+                            </div>
+                        </div>
+                    ) : null}
+
+                    {!erroReadiness &&
+                    !carregandoReadiness ? (
+                        <TenantAdminDomainReadinessPanel
+                            tenant={
+                                tenantSelecionado
+                            }
+                            empresas={
+                                empresasTenantSelecionado
+                            }
+                            usuarios={
+                                usuariosTenantSelecionado
+                            }
+                        />
+                    ) : null}
+                </section>
+            ) : null}
         </div>
     );
 }
