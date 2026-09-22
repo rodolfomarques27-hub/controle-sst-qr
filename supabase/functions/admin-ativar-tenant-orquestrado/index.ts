@@ -19,8 +19,17 @@ const GOOGLE_DOH =
 const CLOUDFLARE_DOH =
     "https://cloudflare-dns.com/dns-query";
 
+const BASE_DOMAIN =
+    "safescanbrasil.com.br";
+
 const HEALTH_PATH =
     "/safescan-tenant-health.json";
+
+const PROXY_MARKER_HEADER =
+    "x-safescan-tenant-proxy";
+
+const PROXY_MARKER_EXPECTED =
+    "v1";
 
 const ATIVACAO_REAL_HABILITADA =
     false;
@@ -479,6 +488,18 @@ async function diagnosticarHttps(
                 null;
         }
 
+        const proxyMarker =
+            texto(
+                response.headers.get(
+                    PROXY_MARKER_HEADER
+                )
+            ).toLowerCase();
+
+        const proxyWorkerSafeScan =
+            response.ok &&
+            proxyMarker ===
+                PROXY_MARKER_EXPECTED;
+
         const assinaturaSafeScan =
             response.ok &&
             payload?.service ===
@@ -494,12 +515,17 @@ async function diagnosticarHttps(
 
         return {
             ok:
-                assinaturaSafeScan,
+                assinaturaSafeScan &&
+                proxyWorkerSafeScan,
 
             respondeu:
                 response.ok,
 
             assinaturaSafeScan,
+
+            proxyWorkerSafeScan,
+
+            proxyMarker,
 
             statusHttp:
                 response.status,
@@ -523,6 +549,12 @@ async function diagnosticarHttps(
             assinaturaSafeScan:
                 false,
 
+            proxyWorkerSafeScan:
+                false,
+
+            proxyMarker:
+                "",
+
             statusHttp:
                 null,
 
@@ -534,6 +566,71 @@ async function diagnosticarHttps(
                     : "Falha desconhecida ao acessar HTTPS.",
         };
     }
+}
+
+async function diagnosticarInfraestruturaGlobal() {
+    const wildcardHost =
+        `infra-server-${Date.now()}.${BASE_DOMAIN}`;
+
+    const dns =
+        await diagnosticarDns(
+            wildcardHost
+        );
+
+    const https =
+        await diagnosticarHttps(
+            wildcardHost
+        );
+
+    const workerValidado =
+        dns.ok &&
+        https.ok &&
+        https.assinaturaSafeScan ===
+            true &&
+        https.proxyWorkerSafeScan ===
+            true;
+
+    return {
+        ok:
+            true,
+
+        bloqueado:
+            !workerValidado,
+
+        modo:
+            "infraestrutura",
+
+        consultadoEm:
+            new Date().toISOString(),
+
+        wildcardHost,
+
+        dns,
+
+        https,
+
+        worker:
+            {
+                validado:
+                    workerValidado,
+
+                marker:
+                    https.proxyMarker ||
+                    "",
+
+                assinaturaSafeScan:
+                    https.assinaturaSafeScan ===
+                    true,
+
+                mensagem:
+                    workerValidado
+                        ? "Wildcard DNS, HTTPS, assinatura SafeScan e marker do Worker validados."
+                        : "A prova server-side do Worker ainda não está GREEN.",
+            },
+
+        ativacaoRealHabilitada:
+            ATIVACAO_REAL_HABILITADA,
+    };
 }
 
 Deno.serve(
@@ -719,16 +816,50 @@ Deno.serve(
                 );
             }
 
-            const tenantId =
-                texto(
-                    body?.tenantId
-                );
-
             const modo =
                 texto(
                     body?.modo ||
                     "diagnostico"
                 ).toLowerCase();
+
+            if (
+                ![
+                    "diagnostico",
+                    "ativar",
+                    "infraestrutura",
+                ].includes(
+                    modo
+                )
+            ) {
+                return jsonResponse(
+                    400,
+                    {
+                        ok:
+                            false,
+
+                        erro:
+                            "Modo inválido.",
+                    }
+                );
+            }
+
+            if (
+                modo ===
+                    "infraestrutura"
+            ) {
+                const infraestrutura =
+                    await diagnosticarInfraestruturaGlobal();
+
+                return jsonResponse(
+                    200,
+                    infraestrutura
+                );
+            }
+
+            const tenantId =
+                texto(
+                    body?.tenantId
+                );
 
             if (
                 !uuidValido(
@@ -743,26 +874,6 @@ Deno.serve(
 
                         erro:
                             "tenantId inválido.",
-                    }
-                );
-            }
-
-            if (
-                ![
-                    "diagnostico",
-                    "ativar",
-                ].includes(
-                    modo
-                )
-            ) {
-                return jsonResponse(
-                    400,
-                    {
-                        ok:
-                            false,
-
-                        erro:
-                            "Modo inválido.",
                     }
                 );
             }
@@ -1005,7 +1116,8 @@ Deno.serve(
             const prontoParaAtivar =
                 dns.ok &&
                 https.ok &&
-                https.assinaturaSafeScan;
+                https.assinaturaSafeScan &&
+                https.proxyWorkerSafeScan;
 
             const diagnostico = {
                 ok:

@@ -17,6 +17,14 @@ import {
 } from "lucide-react";
 
 import {
+    supabase,
+} from "../../../lib/supabaseClient.js";
+
+import {
+    diagnosticarInfraestruturaGlobalServerService,
+} from "../services/tenantAdminActivationService.js";
+
+import {
     diagnosticarInfraestruturaGlobalService,
 } from "../services/tenantAdminInfrastructureService.js";
 
@@ -172,8 +180,94 @@ export function TenantAdminInfrastructurePage() {
         setErro("");
 
         try {
+            const [
+                publico,
+                servidor,
+            ] =
+                await globalThis.Promise.all([
+                    diagnosticarInfraestruturaGlobalService(),
+                    diagnosticarInfraestruturaGlobalServerService({
+                        supabase,
+                    }),
+                ]);
+
+            const workerValidado =
+                servidor?.worker?.validado ===
+                    true &&
+                servidor?.bloqueado ===
+                    false;
+
+            const ativacaoRealHabilitada =
+                servidor?.ativacaoRealHabilitada ===
+                true;
+
+            const ativacaoPronta =
+                workerValidado &&
+                ativacaoRealHabilitada;
+
             const resultado =
-                await diagnosticarInfraestruturaGlobalService();
+                {
+                    ...publico,
+
+                    worker:
+                        {
+                            ...publico?.worker,
+
+                            validado:
+                                workerValidado,
+
+                            marker:
+                                servidor?.worker?.marker ||
+                                "",
+
+                            assinaturaSafeScan:
+                                servidor?.worker?.assinaturaSafeScan ===
+                                true,
+
+                            fonteValidacao:
+                                "server-side",
+
+                            status:
+                                servidor?.worker?.mensagem ||
+                                publico?.worker?.status ||
+                                "Prova server-side do Worker indisponível.",
+                        },
+
+                    ativacaoAutomatica:
+                        {
+                            ...publico?.ativacaoAutomatica,
+
+                            pronta:
+                                ativacaoPronta,
+
+                            motivo:
+                                !workerValidado
+                                    ? (
+                                        servidor?.worker?.mensagem ||
+                                        "A prova server-side do Worker não está GREEN."
+                                    )
+                                    : ativacaoRealHabilitada
+                                        ? "Worker e gate server-side estão prontos para ativação."
+                                        : "Worker validado server-side. A ativação real permanece bloqueada pelo gate do servidor.",
+                        },
+
+                    provaServerSide:
+                        {
+                            consultadoEm:
+                                servidor?.consultadoEm ||
+                                null,
+
+                            wildcardHost:
+                                servidor?.wildcardHost ||
+                                "",
+
+                            bloqueado:
+                                servidor?.bloqueado ===
+                                true,
+
+                            ativacaoRealHabilitada,
+                        },
+                };
 
             setDiagnostico(
                 resultado
@@ -543,10 +637,8 @@ export function TenantAdminInfrastructurePage() {
                         </div>
 
                         <p className="text-xs leading-5 text-slate-500">
-                            {diagnostico?.worker?.validado
-                                ? "O Worker SafeScan e a rota wildcard estão operacionais. A disponibilidade continua sendo conferida pelo diagnóstico de DNS e HTTPS."
-                                : diagnostico?.worker?.status ||
-                                  "Execute o diagnóstico para validar o Worker e a rota wildcard."}
+                            {diagnostico?.worker?.status ||
+                                "Execute o diagnóstico para validar o Worker e a rota wildcard."}
                         </p>
                     </div>
                 </article>

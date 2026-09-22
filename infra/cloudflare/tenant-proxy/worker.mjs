@@ -8,6 +8,13 @@ const RESERVED_LABELS =
     new Set([
         "www",
         "admin",
+        "app",
+        "api",
+        "qr",
+        "status",
+        "assets",
+        "static",
+        "auth",
         "idealiza",
     ]);
 

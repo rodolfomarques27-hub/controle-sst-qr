@@ -79,10 +79,35 @@ async function executarFunction({
         );
     }
 
+    const modoNormalizado =
+        texto(
+            modo
+        ).toLowerCase();
+
+    const requerTenant =
+        modoNormalizado !==
+            "infraestrutura";
+
     const tenant =
-        validarTenantId(
-            tenantId
-        );
+        requerTenant
+            ? validarTenantId(
+                tenantId
+            )
+            : "";
+
+    const body =
+        requerTenant
+            ? {
+                tenantId:
+                    tenant,
+
+                modo:
+                    modoNormalizado,
+            }
+            : {
+                modo:
+                    modoNormalizado,
+            };
 
     const {
         data,
@@ -91,13 +116,7 @@ async function executarFunction({
         await supabase.functions.invoke(
             FUNCTION_NAME,
             {
-                body:
-                    {
-                        tenantId:
-                            tenant,
-
-                        modo,
-                    },
+                body,
             }
         );
 
@@ -132,6 +151,31 @@ export async function diagnosticarAtivacaoTenantService({
         modo:
             "diagnostico",
     });
+}
+
+export async function diagnosticarInfraestruturaGlobalServerService({
+    supabase,
+} = {}) {
+    const data =
+        await executarFunction({
+            supabase,
+            modo:
+                "infraestrutura",
+        });
+
+    if (
+        data?.modo !==
+            "infraestrutura" ||
+        !data?.worker ||
+        !data?.dns ||
+        !data?.https
+    ) {
+        throw new Error(
+            "O diagnóstico global server-side retornou uma resposta incompleta."
+        );
+    }
+
+    return data;
 }
 
 export async function ativarTenantOrquestradoService({

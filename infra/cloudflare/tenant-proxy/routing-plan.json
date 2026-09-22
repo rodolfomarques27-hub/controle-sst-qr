@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 2,
+  "mode": "plan-only",
+  "zone": "safescanbrasil.com.br",
+  "workerScript": "safescan-tenant-proxy",
+  "dnsWildcard": {
+    "management": "preserve-existing",
+    "type": "A",
+    "name": "*.safescanbrasil.com.br",
+    "content": "76.76.21.21",
+    "proxied": true
+  },
+  "routes": {
+    "bypass": [
+      {
+        "pattern": "www.safescanbrasil.com.br/*",
+        "script": null
+      },
+      {
+        "pattern": "admin.safescanbrasil.com.br/*",
+        "script": null
+      },
+      {
+        "pattern": "idealiza.safescanbrasil.com.br/*",
+        "script": null
+      }
+    ],
+    "reservedWorkerRejectHosts": [
+      "app.safescanbrasil.com.br",
+      "api.safescanbrasil.com.br",
+      "qr.safescanbrasil.com.br",
+      "status.safescanbrasil.com.br",
+      "assets.safescanbrasil.com.br",
+      "static.safescanbrasil.com.br",
+      "auth.safescanbrasil.com.br"
+    ],
+    "wildcard": {
+      "pattern": "*.safescanbrasil.com.br/*",
+      "script": "safescan-tenant-proxy"
+    }
+  }
+}
