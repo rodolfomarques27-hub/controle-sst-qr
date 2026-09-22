@@ -12,10 +12,312 @@ import {
 } from "lucide-react";
 
 import {
+    useEffect,
     useState,
 } from "react";
 
+import {
+    supabase,
+} from "../../../lib/supabaseClient.js";
+
 import sidebarBackground from "../../../assets/sidebar-construcao.webp";
+
+const BUCKET_FOTOS_USUARIOS_SIDEBAR =
+    "fotos-colaboradores";
+
+function valorFotoSidebarEhUrlFinal(
+    valor = ""
+) {
+    const valorTratado =
+        String(
+            valor || ""
+        ).trim();
+
+    return (
+        /^https?:\/\//i.test(
+            valorTratado
+        ) ||
+        valorTratado.startsWith(
+            "blob:"
+        ) ||
+        valorTratado.startsWith(
+            "data:"
+        )
+    );
+}
+
+function normalizarCaminhoFotoSidebar(
+    valor = ""
+) {
+    const valorTratado =
+        String(
+            valor || ""
+        ).trim();
+
+    if (!valorTratado) {
+        return "";
+    }
+
+    if (
+        valorFotoSidebarEhUrlFinal(
+            valorTratado
+        ) &&
+        !valorTratado.includes(
+            "/storage/v1/object/"
+        )
+    ) {
+        return valorTratado;
+    }
+
+    try {
+        const url =
+            new URL(
+                valorTratado
+            );
+
+        const partes =
+            url.pathname
+                .split("/")
+                .filter(
+                    Boolean
+                );
+
+        const indiceBucket =
+            partes.findIndex(
+                (parte) =>
+                    parte ===
+                    BUCKET_FOTOS_USUARIOS_SIDEBAR
+            );
+
+        if (
+            indiceBucket >= 0 &&
+            partes.length >
+                indiceBucket + 1
+        ) {
+            return decodeURIComponent(
+                partes
+                    .slice(
+                        indiceBucket + 1
+                    )
+                    .join("/")
+            );
+        }
+    }
+    catch {
+        // Valor pode ser somente o caminho interno do Storage.
+    }
+
+    return valorTratado
+        .replace(
+            new RegExp(
+                `^${BUCKET_FOTOS_USUARIOS_SIDEBAR}/`,
+                "i"
+            ),
+            ""
+        )
+        .replace(
+            /^\/+/,
+            ""
+        )
+        .trim();
+}
+
+async function resolverUrlFotoSidebar(
+    valor = ""
+) {
+    const foto =
+        normalizarCaminhoFotoSidebar(
+            valor
+        );
+
+    if (!foto) {
+        return {
+            url:
+                "",
+            revogar:
+                false,
+        };
+    }
+
+    if (
+        valorFotoSidebarEhUrlFinal(
+            foto
+        ) &&
+        !foto.includes(
+            "/storage/v1/object/"
+        )
+    ) {
+        return {
+            url:
+                foto,
+            revogar:
+                false,
+        };
+    }
+
+    try {
+        const {
+            data,
+            error,
+        } =
+            await supabase.storage
+                .from(
+                    BUCKET_FOTOS_USUARIOS_SIDEBAR
+                )
+                .createSignedUrl(
+                    foto,
+                    60 * 60 * 6
+                );
+
+        if (
+            !error &&
+            data?.signedUrl
+        ) {
+            return {
+                url:
+                    data.signedUrl,
+                revogar:
+                    false,
+            };
+        }
+    }
+    catch {
+        // Tentar download autenticado abaixo.
+    }
+
+    try {
+        const {
+            data,
+            error,
+        } =
+            await supabase.storage
+                .from(
+                    BUCKET_FOTOS_USUARIOS_SIDEBAR
+                )
+                .download(
+                    foto
+                );
+
+        if (
+            !error &&
+            data &&
+            typeof URL !==
+                "undefined"
+        ) {
+            return {
+                url:
+                    URL.createObjectURL(
+                        data
+                    ),
+                revogar:
+                    true,
+            };
+        }
+    }
+    catch {
+        // Fallback final continuará sendo as iniciais.
+    }
+
+    return {
+        url:
+            "",
+        revogar:
+            false,
+    };
+}
+
+async function buscarFotoUsuarioSidebarPorEmail(
+    email = ""
+) {
+    const emailTratado =
+        String(
+            email || ""
+        )
+            .trim()
+            .toLowerCase();
+
+    if (
+        !emailTratado ||
+        !emailTratado.includes(
+            "@"
+        )
+    ) {
+        return "";
+    }
+
+    try {
+        const {
+            data,
+            error,
+        } =
+            await supabase.rpc(
+                "admin_listar_usuarios_permissoes_sistema"
+            );
+
+        if (
+            !error &&
+            Array.isArray(
+                data
+            )
+        ) {
+            const usuarioComFoto =
+                data.find(
+                    (item) =>
+                        String(
+                            item?.email || ""
+                        )
+                            .trim()
+                            .toLowerCase() ===
+                            emailTratado &&
+                        Boolean(
+                            obterFoto(
+                                item
+                            )
+                        )
+                );
+
+            const foto =
+                obterFoto(
+                    usuarioComFoto
+                );
+
+            if (foto) {
+                return foto;
+            }
+        }
+    }
+    catch {
+        // Tentar leitura direta abaixo.
+    }
+
+    try {
+        const {
+            data,
+            error,
+        } =
+            await supabase
+                .from(
+                    "usuarios_permissoes_sistema"
+                )
+                .select("*")
+                .eq(
+                    "email",
+                    emailTratado
+                )
+                .maybeSingle();
+
+        if (!error) {
+            return obterFoto(
+                data
+            );
+        }
+    }
+    catch {
+        // Fallback final continuará sendo as iniciais.
+    }
+
+    return "";
+}
 
 const CHAVE_GRUPOS_ADMIN =
     "safescan:tenant-admin:grupos-fechados";
@@ -89,7 +391,7 @@ const grupos =
                         Icone:
                             Globe2,
                         habilitado:
-                            false,
+                            true,
                     },
                     {
                         chave:
@@ -329,6 +631,18 @@ export function TenantAdminSidebar({
             lerGruposFechados
         );
 
+    const [
+        fotoUsuarioUrl,
+        setFotoUsuarioUrl,
+    ] =
+        useState("");
+
+    const [
+        fotoUsuarioComErro,
+        setFotoUsuarioComErro,
+    ] =
+        useState(false);
+
     const menuExpandido =
         menuLateralAberto ||
         expandidoPorHover;
@@ -354,6 +668,107 @@ export function TenantAdminSidebar({
         obterFoto(
             usuario
         );
+
+    const mostrarFotoUsuario =
+        Boolean(
+            fotoUsuarioUrl &&
+            !fotoUsuarioComErro
+        );
+
+    useEffect(
+        () => {
+            let cancelado =
+                false;
+
+            let objectUrl =
+                "";
+
+            async function carregarFotoUsuario() {
+                await Promise.resolve();
+
+                if (cancelado) {
+                    return;
+                }
+
+                setFotoUsuarioComErro(
+                    false
+                );
+
+                let fotoParaResolver =
+                    foto;
+
+                if (!fotoParaResolver) {
+                    fotoParaResolver =
+                        await buscarFotoUsuarioSidebarPorEmail(
+                            email
+                        );
+                }
+
+                if (cancelado) {
+                    return;
+                }
+
+                if (!fotoParaResolver) {
+                    setFotoUsuarioUrl(
+                        ""
+                    );
+
+                    return;
+                }
+
+                const resultado =
+                    await resolverUrlFotoSidebar(
+                        fotoParaResolver
+                    );
+
+                if (cancelado) {
+                    if (
+                        resultado.revogar &&
+                        resultado.url &&
+                        typeof URL !==
+                            "undefined"
+                    ) {
+                        URL.revokeObjectURL(
+                            resultado.url
+                        );
+                    }
+
+                    return;
+                }
+
+                objectUrl =
+                    resultado.revogar
+                        ? resultado.url
+                        : "";
+
+                setFotoUsuarioUrl(
+                    resultado.url ||
+                    ""
+                );
+            }
+
+            void carregarFotoUsuario();
+
+            return () => {
+                cancelado =
+                    true;
+
+                if (
+                    objectUrl &&
+                    typeof URL !==
+                        "undefined"
+                ) {
+                    URL.revokeObjectURL(
+                        objectUrl
+                    );
+                }
+            };
+        },
+        [
+            email,
+            foto,
+        ]
+    );
 
     function abrirTemporariamente() {
         if (
@@ -682,14 +1097,11 @@ export function TenantAdminSidebar({
                             }
                         >
                             <div className="flex min-w-0 flex-1 items-center gap-2">
-                                {foto ? (
+                                {mostrarFotoUsuario ? (
                                     <img
-                                        src={
-                                            foto
-                                        }
-                                        alt={
-                                            nome
-                                        }
+                                        src={fotoUsuarioUrl}
+                                        alt={nome}
+                                    onError={() => setFotoUsuarioComErro(true)}
                                         className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-white/15"
                                     />
                                 ) : (
@@ -765,14 +1177,11 @@ export function TenantAdminSidebar({
                     </div>
                 ) : (
                     <div className="mt-4 flex justify-center">
-                        {foto ? (
+                        {mostrarFotoUsuario ? (
                             <img
-                                src={
-                                    foto
-                                }
-                                alt={
-                                    nome
-                                }
+                                src={fotoUsuarioUrl}
+                                alt={nome}
+                                    onError={() => setFotoUsuarioComErro(true)}
                                 className="h-9 w-9 rounded-full object-cover ring-2 ring-white/15"
                                 title={`${nome} — Administrador global`}
                             />

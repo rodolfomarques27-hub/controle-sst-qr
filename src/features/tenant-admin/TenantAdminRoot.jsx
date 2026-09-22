@@ -32,12 +32,17 @@ import {
     TenantAdminInfrastructurePage,
 } from "./pages/TenantAdminInfrastructurePage.jsx";
 
+import {
+    TenantAdminDomainsPage,
+} from "./pages/TenantAdminDomainsPage.jsx";
+
 const SECOES_ADMIN =
     new Set([
         "painel",
         "clientes",
         "novo-cliente",
         "infraestrutura",
+        "dominios",
     ]);
 
 function obterSecaoAdminAtual() {
@@ -169,6 +174,15 @@ export default function TenantAdminRoot() {
         ) {
             return (
                 <TenantAdminInfrastructurePage />
+            );
+        }
+
+        if (
+            secaoAtiva ===
+            "dominios"
+        ) {
+            return (
+                <TenantAdminDomainsPage />
             );
         }
 
