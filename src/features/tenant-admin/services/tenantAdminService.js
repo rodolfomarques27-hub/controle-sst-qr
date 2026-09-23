@@ -1,4 +1,4 @@
-export async function verificarAdministradorGlobalService({
+export async function verificarIdentidadeContaMestreService({
     supabase,
 } = {}) {
     if (!supabase) {
@@ -12,13 +12,13 @@ export async function verificarAdministradorGlobalService({
         error,
     } =
         await supabase.rpc(
-            "usuario_admin_global"
+            "usuario_conta_mestre_identidade"
         );
 
     if (error) {
         throw new Error(
             error.message ||
-            "Não foi possível validar o administrador global."
+            "Não foi possível validar a identidade da Conta Mestre."
         );
     }
 
@@ -29,6 +29,122 @@ export async function verificarAdministradorGlobalService({
 
     return resultado === true;
 }
+export async function obterStatusRotacaoSenhaContaMestreService({
+    supabase,
+} = {}) {
+    if (!supabase) {
+        throw new Error(
+            "Cliente Supabase não informado."
+        );
+    }
+
+    const {
+        data,
+        error,
+    } =
+        await supabase.rpc(
+            "admin_status_rotacao_senha_conta_mestre"
+        );
+
+    if (error) {
+        throw new Error(
+            error.message ||
+            "Não foi possível validar o estado de segurança da Conta Mestre."
+        );
+    }
+
+    const resultado =
+        Array.isArray(data)
+            ? data[0]
+            : data;
+
+    if (
+        !resultado ||
+        typeof resultado !==
+            "object"
+    ) {
+        return {
+            obrigatoria:
+                false,
+            motivo:
+                null,
+            emailReferencia:
+                null,
+            marcadaEm:
+                null,
+            senhaRotacionadaEm:
+                null,
+            concluidaEm:
+                null,
+        };
+    }
+
+    return {
+        obrigatoria:
+            resultado.rotacao_senha_obrigatoria ===
+            true,
+        motivo:
+            String(
+                resultado.motivo_rotacao ||
+                ""
+            ).trim() ||
+            null,
+        emailReferencia:
+            String(
+                resultado.email_referencia ||
+                ""
+            ).trim() ||
+            null,
+        marcadaEm:
+            resultado.marcada_em ||
+            null,
+        senhaRotacionadaEm:
+            resultado.senha_rotacionada_em ||
+            null,
+        concluidaEm:
+            resultado.concluida_em ||
+            null,
+    };
+}
+
+export async function concluirRotacaoSenhaContaMestreService({
+    supabase,
+} = {}) {
+    if (!supabase) {
+        throw new Error(
+            "Cliente Supabase não informado."
+        );
+    }
+
+    const {
+        data,
+        error,
+    } =
+        await supabase.rpc(
+            "admin_concluir_rotacao_senha_conta_mestre"
+        );
+
+    if (error) {
+        throw new Error(
+            error.message ||
+            "Não foi possível concluir a atualização de segurança da Conta Mestre."
+        );
+    }
+
+    const resultado =
+        Array.isArray(data)
+            ? data[0]
+            : data;
+
+    if (resultado !== true) {
+        throw new Error(
+            "A atualização de segurança da Conta Mestre não foi concluída."
+        );
+    }
+
+    return true;
+}
+
 export async function listarTenantsPlataformaService({
     supabase,
 } = {}) {

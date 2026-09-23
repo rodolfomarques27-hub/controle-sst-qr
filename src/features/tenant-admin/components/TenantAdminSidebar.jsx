@@ -411,7 +411,7 @@ const grupos =
                         Icone:
                             Settings,
                         habilitado:
-                            false,
+                            true,
                     },
                 ],
         },
