@@ -22,8 +22,11 @@ import {
 
 import {
     concluirRotacaoSenhaContaMestreService,
+    iniciarCadastroMfaTotpContaMestreService,
+    obterEstadoMfaContaMestreService,
     obterStatusRotacaoSenhaContaMestreService,
     verificarIdentidadeContaMestreService,
+    verificarMfaTotpContaMestreService,
 } from "../services/tenantAdminService.js";
 
 function LoginAdmin({
@@ -1194,6 +1197,417 @@ function RotacaoSenhaObrigatoriaAdmin({
     );
 }
 
+
+function MfaObrigatorioAdmin({
+    supabase,
+    usuario,
+    onSair,
+    children,
+}) {
+    const [
+        estadoMfa,
+        setEstadoMfa,
+    ] =
+        useState(null);
+
+    const [
+        cadastro,
+        setCadastro,
+    ] =
+        useState(null);
+
+    const [
+        codigo,
+        setCodigo,
+    ] =
+        useState("");
+
+    const [
+        carregando,
+        setCarregando,
+    ] =
+        useState(true);
+
+    const [
+        processando,
+        setProcessando,
+    ] =
+        useState(false);
+
+    const [
+        erro,
+        setErro,
+    ] =
+        useState("");
+
+    useEffect(() => {
+        let ativo =
+            true;
+
+        async function carregar() {
+            setCarregando(
+                true
+            );
+
+            try {
+                const estado =
+                    await obterEstadoMfaContaMestreService({
+                        supabase,
+                    });
+
+                if (!ativo) {
+                    return;
+                }
+
+                setEstadoMfa(
+                    estado
+                );
+
+                setErro(
+                    ""
+                );
+            }
+            catch (error) {
+                if (!ativo) {
+                    return;
+                }
+
+                setErro(
+                    error?.message ||
+                    "Não foi possível validar o MFA da Conta Mestre."
+                );
+            }
+            finally {
+                if (ativo) {
+                    setCarregando(
+                        false
+                    );
+                }
+            }
+        }
+
+        carregar();
+
+        return () => {
+            ativo =
+                false;
+        };
+    }, [
+        supabase,
+        usuario?.id,
+    ]);
+
+    const fatoresVerificados =
+        estadoMfa
+            ?.fatoresTotpVerificados ||
+        [];
+
+    const mfaLiberado =
+        estadoMfa
+            ?.currentLevel ===
+            "aal2" &&
+        fatoresVerificados.length >
+            0;
+
+    async function iniciarCadastro() {
+        setErro(
+            ""
+        );
+
+        setProcessando(
+            true
+        );
+
+        try {
+            const novoCadastro =
+                await iniciarCadastroMfaTotpContaMestreService({
+                    supabase,
+                });
+
+            setCadastro(
+                novoCadastro
+            );
+
+            setCodigo(
+                ""
+            );
+        }
+        catch (error) {
+            setErro(
+                error?.message ||
+                "Não foi possível iniciar o cadastro MFA."
+            );
+        }
+        finally {
+            setProcessando(
+                false
+            );
+        }
+    }
+
+    async function confirmarCodigo(
+        event
+    ) {
+        event.preventDefault();
+
+        const factorId =
+            cadastro
+                ?.factorId ||
+            fatoresVerificados[0]
+                ?.id ||
+            null;
+
+        setErro(
+            ""
+        );
+
+        setProcessando(
+            true
+        );
+
+        try {
+            const novoEstado =
+                await verificarMfaTotpContaMestreService({
+                    supabase,
+                    factorId,
+                    codigo,
+                });
+
+            setEstadoMfa(
+                novoEstado
+            );
+
+            setCadastro(
+                null
+            );
+
+            setCodigo(
+                ""
+            );
+        }
+        catch (error) {
+            setErro(
+                error?.message ||
+                "Código inválido ou expirado."
+            );
+        }
+        finally {
+            setProcessando(
+                false
+            );
+        }
+    }
+
+    if (carregando) {
+        return (
+            <EstadoAdmin
+                tipo="carregando"
+                usuario={
+                    usuario
+                }
+                onSair={
+                    onSair
+                }
+            />
+        );
+    }
+
+    if (mfaLiberado) {
+        return children;
+    }
+
+    const possuiTotpVerificado =
+        fatoresVerificados.length >
+        0;
+
+    return (
+        <AccessEntryShell
+            titulo={
+                possuiTotpVerificado
+                    ? "Confirme o segundo fator"
+                    : "Proteção MFA obrigatória"
+            }
+            descricao={
+                possuiTotpVerificado
+                    ? "Digite o código atual do seu aplicativo autenticador para liberar o Painel Mestre."
+                    : "Cadastre um aplicativo autenticador para proteger a Conta Mestre antes de acessar funções administrativas."
+            }
+            lateralRotulo="Segurança"
+            lateralTexto="Conta Mestre protegida por MFA"
+            rodape="O acesso administrativo somente é liberado após a sessão atingir o nível AAL2."
+        >
+            <div className="space-y-4">
+                <div className="rounded-lg border border-white/10 bg-white/[0.035] px-3.5 py-3">
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                        Conta Mestre
+                    </p>
+
+                    <p className="mt-1 break-all text-xs font-semibold text-slate-100">
+                        {usuario?.email || "Conta Mestre autenticada"}
+                    </p>
+                </div>
+
+                {!possuiTotpVerificado && !cadastro ? (
+                    <div className="rounded-lg border border-emerald-400/20 bg-emerald-400/[0.07] px-4 py-4">
+                        <p className="text-sm font-bold text-emerald-100">
+                            Configure seu autenticador
+                        </p>
+
+                        <p className="mt-1 text-xs font-medium leading-5 text-emerald-100/70">
+                            Use Google Authenticator, Microsoft Authenticator, 1Password ou outro aplicativo compatível com TOTP.
+                        </p>
+
+                        <button
+                            type="button"
+                            onClick={
+                                iniciarCadastro
+                            }
+                            disabled={
+                                processando
+                            }
+                            className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-500 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {processando ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <LockKeyhole className="h-4 w-4" />
+                            )}
+
+                            {processando
+                                ? "Preparando MFA..."
+                                : "Configurar MFA agora"}
+                        </button>
+                    </div>
+                ) : null}
+
+                {cadastro ? (
+                    <div className="space-y-4 rounded-lg border border-white/10 bg-white/[0.035] px-4 py-4">
+                        <div>
+                            <p className="text-sm font-bold text-slate-100">
+                                1. Escaneie o QR Code
+                            </p>
+
+                            <p className="mt-1 text-xs font-medium leading-5 text-slate-400">
+                                Depois, informe abaixo o código de 6 dígitos gerado pelo aplicativo.
+                            </p>
+                        </div>
+
+                        {cadastro.qrCode ? (
+                            <div className="flex justify-center rounded-xl bg-white p-4">
+                                <img
+                                    src={
+                                        cadastro.qrCode
+                                    }
+                                    alt="QR Code para configurar MFA da Conta Mestre"
+                                    className="h-44 w-44"
+                                />
+                            </div>
+                        ) : null}
+
+                        <div className="rounded-lg border border-white/10 bg-slate-950/35 px-3.5 py-3">
+                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                                Chave manual
+                            </p>
+
+                            <p className="mt-1 break-all font-mono text-xs font-semibold text-slate-100">
+                                {cadastro.secret}
+                            </p>
+                        </div>
+                    </div>
+                ) : null}
+
+                {(possuiTotpVerificado || cadastro) ? (
+                    <form
+                        className="space-y-3"
+                        onSubmit={
+                            confirmarCodigo
+                        }
+                    >
+                        <div>
+                            <label className="block text-xs font-medium text-slate-200/85">
+                                Código do autenticador
+                            </label>
+
+                            <input
+                                value={
+                                    codigo
+                                }
+                                onChange={
+                                    (event) =>
+                                        setCodigo(
+                                            event.target.value
+                                                .replace(
+                                                    /\D/g,
+                                                    ""
+                                                )
+                                                .slice(
+                                                    0,
+                                                    6
+                                                )
+                                        )
+                                }
+                                inputMode="numeric"
+                                autoComplete="one-time-code"
+                                placeholder="000000"
+                                className="mt-2 w-full rounded-lg border border-white/10 bg-white/[0.035] px-3.5 py-3 text-center font-mono text-lg font-black tracking-[0.35em] text-slate-100 outline-none transition placeholder:text-slate-500/60 focus:border-emerald-400/40 focus:ring-2 focus:ring-emerald-400/10"
+                            />
+                        </div>
+
+                        {erro ? (
+                            <div
+                                role="alert"
+                                className="rounded-lg border border-red-400/20 bg-red-400/[0.08] px-4 py-3 text-xs font-bold leading-5 text-red-100"
+                            >
+                                {erro}
+                            </div>
+                        ) : null}
+
+                        <button
+                            type="submit"
+                            disabled={
+                                processando ||
+                                codigo.length !==
+                                    6
+                            }
+                            className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-500 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {processando ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <LockKeyhole className="h-4 w-4" />
+                            )}
+
+                            {processando
+                                ? "Validando código..."
+                                : "Validar e liberar Painel Mestre"}
+                        </button>
+                    </form>
+                ) : null}
+
+                {erro && !possuiTotpVerificado && !cadastro ? (
+                    <div
+                        role="alert"
+                        className="rounded-lg border border-red-400/20 bg-red-400/[0.08] px-4 py-3 text-xs font-bold leading-5 text-red-100"
+                    >
+                        {erro}
+                    </div>
+                ) : null}
+
+                <button
+                    type="button"
+                    onClick={
+                        onSair
+                    }
+                    className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs font-bold text-slate-100 transition hover:bg-white/[0.08]"
+                >
+                    <LogOut className="h-4 w-4" />
+                    Sair com segurança
+                </button>
+            </div>
+        </AccessEntryShell>
+    );
+}
+
 export function TenantAdminAuthGate({
     supabase,
     children,
@@ -1535,7 +1949,10 @@ export function TenantAdminAuthGate({
     ]);
     async function sair() {
         await supabase.auth
-            .signOut();
+            .signOut({
+                scope:
+                    "local",
+            });
     }
 
     if (carregandoSessao) {
@@ -1691,7 +2108,19 @@ export function TenantAdminAuthGate({
                 </div>
             ) : null}
 
-            {conteudo}
+            <MfaObrigatorioAdmin
+                supabase={
+                    supabase
+                }
+                usuario={
+                    usuario
+                }
+                onSair={
+                    sair
+                }
+            >
+                {conteudo}
+            </MfaObrigatorioAdmin>
         </>
     );
 }

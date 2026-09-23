@@ -1,4 +1,5 @@
 import {
+    useEffect,
     useState,
 } from "react";
 
@@ -22,6 +23,12 @@ import {
 import {
     TenantAdminHero,
 } from "../components/TenantAdminHero.jsx";
+
+import {
+    obterEstadoMfaContaMestreService,
+    obterEstadoSessaoContaMestreService,
+    revogarSessoesContaMestreService,
+} from "../services/tenantAdminService.js";
 
 function formatarCapacidadeStorage(
     megabytes
@@ -137,6 +144,462 @@ function CardArea({
     );
 }
 
+
+function formatarDataSessao(
+    epoch
+) {
+    const valor =
+        Number(
+            epoch
+        );
+
+    if (
+        !Number.isFinite(
+            valor
+        ) ||
+        valor <= 0
+    ) {
+        return "—";
+    }
+
+    return new Date(
+        valor *
+        1000
+    ).toLocaleString(
+        "pt-BR"
+    );
+}
+
+function resumirSessionId(
+    sessionId
+) {
+    const valor =
+        String(
+            sessionId ||
+            ""
+        );
+
+    if (
+        valor.length <=
+        16
+    ) {
+        return valor ||
+            "—";
+    }
+
+    return `${valor.slice(
+        0,
+        8
+    )}…${valor.slice(
+        -6
+    )}`;
+}
+
+function SessaoContaMestreCard({
+    supabase,
+    usuario,
+}) {
+    const [
+        estado,
+        setEstado,
+    ] =
+        useState({
+            carregando:
+                true,
+            erro:
+                "",
+            dados:
+                null,
+        });
+
+    const [
+        processando,
+        setProcessando,
+    ] =
+        useState("");
+
+    const [
+        confirmacao,
+        setConfirmacao,
+    ] =
+        useState("");
+
+    const [
+        feedback,
+        setFeedback,
+    ] =
+        useState("");
+
+    async function carregar() {
+        if (
+            !supabase ||
+            !usuario?.id
+        ) {
+            setEstado({
+                carregando:
+                    false,
+                erro:
+                    "Sessão da Conta Mestre indisponível.",
+                dados:
+                    null,
+            });
+
+            return;
+        }
+
+        setEstado(
+            (atual) => ({
+                ...atual,
+                carregando:
+                    true,
+                erro:
+                    "",
+            })
+        );
+
+        try {
+            const dados =
+                await obterEstadoSessaoContaMestreService({
+                    supabase,
+                });
+
+            setEstado({
+                carregando:
+                    false,
+                erro:
+                    "",
+                dados,
+            });
+        }
+        catch (error) {
+            setEstado({
+                carregando:
+                    false,
+                erro:
+                    error?.message ||
+                    "Não foi possível consultar a sessão atual.",
+                dados:
+                    null,
+            });
+        }
+    }
+
+    useEffect(() => {
+        let ativo =
+            true;
+
+        async function carregarInicial() {
+            try {
+                const dados =
+                    await obterEstadoSessaoContaMestreService({
+                        supabase,
+                    });
+
+                if (!ativo) {
+                    return;
+                }
+
+                setEstado({
+                    carregando:
+                        false,
+                    erro:
+                        "",
+                    dados,
+                });
+            }
+            catch (error) {
+                if (!ativo) {
+                    return;
+                }
+
+                setEstado({
+                    carregando:
+                        false,
+                    erro:
+                        error?.message ||
+                        "Não foi possível consultar a sessão atual.",
+                    dados:
+                        null,
+                });
+            }
+        }
+
+        void carregarInicial();
+
+        return () => {
+            ativo =
+                false;
+        };
+    }, [
+        supabase,
+        usuario?.id,
+    ]);
+
+    async function executarRevogacao(
+        scope
+    ) {
+        setProcessando(
+            scope
+        );
+
+        setFeedback(
+            ""
+        );
+
+        try {
+            const resultado =
+                await revogarSessoesContaMestreService({
+                    supabase,
+                    escopo:
+                        scope,
+                });
+
+            setConfirmacao(
+                ""
+            );
+
+            if (
+                scope ===
+                "global"
+            ) {
+                window.location.assign(
+                    "/admin"
+                );
+
+                return;
+            }
+
+            setFeedback(
+                "As outras sessões foram encerradas. Esta sessão AAL2 permaneceu ativa."
+            );
+
+            await carregar();
+
+            return resultado;
+        }
+        catch (error) {
+            setFeedback(
+                error?.message ||
+                "Não foi possível concluir a revogação de sessões."
+            );
+        }
+        finally {
+            setProcessando(
+                ""
+            );
+        }
+    }
+
+    const dados =
+        estado.dados;
+
+    const aal2 =
+        dados?.aal ===
+        "aal2";
+
+    return (
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">
+                        Sessões da Conta Mestre
+                    </p>
+
+                    <h2 className="mt-1 text-lg font-black text-slate-950">
+                        Controle de sessões autenticadas
+                    </h2>
+
+                    <p className="mt-1 max-w-3xl text-xs font-medium leading-5 text-slate-500">
+                        Controle a sessão atual e invalide acessos antigos sem expor credenciais administrativas no navegador.
+                    </p>
+                </div>
+
+                <span
+                    className={
+                        "inline-flex w-fit rounded-full px-3 py-1.5 text-[11px] font-black " +
+                        (
+                            estado.carregando
+                                ? "bg-slate-100 text-slate-600"
+                                : estado.erro
+                                    ? "bg-red-50 text-red-700"
+                                    : aal2
+                                        ? "bg-emerald-50 text-emerald-700"
+                                        : "bg-amber-50 text-amber-700"
+                        )
+                    }
+                >
+                    {estado.carregando
+                        ? "Validando"
+                        : estado.erro
+                            ? "Indisponível"
+                            : aal2
+                                ? "Sessão AAL2 ativa"
+                                : "AAL2 necessário"}
+                </span>
+            </div>
+
+            <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                        Conta autenticada
+                    </p>
+
+                    <p className="mt-1 break-all text-xs font-black text-slate-950">
+                        {dados?.email || usuario?.email || "—"}
+                    </p>
+                </div>
+
+                <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                        Nível da sessão
+                    </p>
+
+                    <p className="mt-1 text-sm font-black uppercase text-slate-950">
+                        {dados?.aal || "—"}
+                    </p>
+                </div>
+
+                <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                        Sessão atual
+                    </p>
+
+                    <p className="mt-1 font-mono text-xs font-black text-slate-950">
+                        {resumirSessionId(
+                            dados?.sessionId
+                        )}
+                    </p>
+                </div>
+
+                <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-4">
+                    <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                        Expira em
+                    </p>
+
+                    <p className="mt-1 text-xs font-black text-slate-950">
+                        {formatarDataSessao(
+                            dados?.expiresAt
+                        )}
+                    </p>
+                </div>
+            </div>
+
+            <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-xs font-medium leading-5 text-slate-600">
+                Emitida em:{" "}
+                <strong>
+                    {formatarDataSessao(
+                        dados?.issuedAt
+                    )}
+                </strong>
+            </div>
+
+            {estado.erro ? (
+                <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs font-bold leading-5 text-red-700">
+                    {estado.erro}
+                </div>
+            ) : null}
+
+            {feedback ? (
+                <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs font-bold leading-5 text-emerald-700">
+                    {feedback}
+                </div>
+            ) : null}
+
+            {!confirmacao ? (
+                <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                    <button
+                        type="button"
+                        disabled={
+                            !aal2 ||
+                            estado.carregando ||
+                            Boolean(
+                                processando
+                            )
+                        }
+                        onClick={() =>
+                            setConfirmacao(
+                                "others"
+                            )
+                        }
+                        className="inline-flex flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Encerrar outras sessões
+                    </button>
+
+                    <button
+                        type="button"
+                        disabled={
+                            !aal2 ||
+                            estado.carregando ||
+                            Boolean(
+                                processando
+                            )
+                        }
+                        onClick={() =>
+                            setConfirmacao(
+                                "global"
+                            )
+                        }
+                        className="inline-flex flex-1 items-center justify-center rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-black text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        Encerrar todas as sessões
+                    </button>
+                </div>
+            ) : (
+                <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-4">
+                    <p className="text-xs font-black text-amber-900">
+                        {confirmacao === "global"
+                            ? "Confirma encerrar todas as sessões, inclusive esta?"
+                            : "Confirma encerrar todas as outras sessões e manter somente esta sessão atual?"}
+                    </p>
+
+                    <p className="mt-1 text-xs font-medium leading-5 text-amber-800">
+                        JWTs administrativos antigos também serão bloqueados pelo cutoff de segurança.
+                    </p>
+
+                    <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                        <button
+                            type="button"
+                            disabled={
+                                Boolean(
+                                    processando
+                                )
+                            }
+                            onClick={() =>
+                                void executarRevogacao(
+                                    confirmacao
+                                )
+                            }
+                            className="inline-flex flex-1 items-center justify-center rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {processando
+                                ? "Processando..."
+                                : "Confirmar revogação"}
+                        </button>
+
+                        <button
+                            type="button"
+                            disabled={
+                                Boolean(
+                                    processando
+                                )
+                            }
+                            onClick={() =>
+                                setConfirmacao(
+                                    ""
+                                )
+                            }
+                            className="inline-flex flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            )}
+        </section>
+    );
+}
+
 export function TenantAdminSettingsPage({
     supabase,
     usuario,
@@ -244,6 +707,88 @@ export function TenantAdminSettingsPage({
         formatarCapacidadeStorage(
             LIMITE_STORAGE_MB
         );
+
+    const [
+        mfaContaMestre,
+        setMfaContaMestre,
+    ] =
+        useState({
+            carregando:
+                true,
+            erro:
+                "",
+            estado:
+                null,
+        });
+
+    useEffect(() => {
+        let ativo =
+            true;
+
+        async function carregarMfa() {
+            if (
+                !supabase ||
+                !usuario?.id
+            ) {
+                if (ativo) {
+                    setMfaContaMestre({
+                        carregando:
+                            false,
+                        erro:
+                            "Conta Mestre não disponível para validar MFA.",
+                        estado:
+                            null,
+                    });
+                }
+
+                return;
+            }
+
+            try {
+                const estado =
+                    await obterEstadoMfaContaMestreService({
+                        supabase,
+                    });
+
+                if (!ativo) {
+                    return;
+                }
+
+                setMfaContaMestre({
+                    carregando:
+                        false,
+                    erro:
+                        "",
+                    estado,
+                });
+            }
+            catch (error) {
+                if (!ativo) {
+                    return;
+                }
+
+                setMfaContaMestre({
+                    carregando:
+                        false,
+                    erro:
+                        error?.message ||
+                        "Não foi possível consultar o MFA da Conta Mestre.",
+                    estado:
+                        null,
+                });
+            }
+        }
+
+        carregarMfa();
+
+        return () => {
+            ativo =
+                false;
+        };
+    }, [
+        supabase,
+        usuario?.id,
+    ]);
 
     function abrir(
         secao
@@ -1213,6 +1758,119 @@ export function TenantAdminSettingsPage({
                 </div>
             </section>
 
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">
+                            Segurança da Conta Mestre
+                        </p>
+
+                        <h2 className="mt-1 text-lg font-black text-slate-950">
+                            Autenticação em dois fatores (MFA)
+                        </h2>
+
+                        <p className="mt-1 max-w-3xl text-xs font-medium leading-5 text-slate-500">
+                            O Painel Mestre exige TOTP e sessão AAL2. Esta tela exibe o estado da proteção, mas não oferece desativação simples do segundo fator.
+                        </p>
+                    </div>
+
+                    <span className={
+                        "inline-flex w-fit rounded-full px-3 py-1.5 text-[11px] font-black " +
+                        (
+                            mfaContaMestre.carregando
+                                ? "bg-slate-100 text-slate-600"
+                                : mfaContaMestre.erro
+                                    ? "bg-red-50 text-red-700"
+                                    : mfaContaMestre.estado?.currentLevel === "aal2" &&
+                                        mfaContaMestre.estado?.fatoresTotpVerificados?.length > 0
+                                        ? "bg-emerald-50 text-emerald-700"
+                                        : "bg-amber-50 text-amber-700"
+                        )
+                    }>
+                        {mfaContaMestre.carregando
+                            ? "Validando"
+                            : mfaContaMestre.erro
+                                ? "Indisponível"
+                                : mfaContaMestre.estado?.currentLevel === "aal2" &&
+                                    mfaContaMestre.estado?.fatoresTotpVerificados?.length > 0
+                                    ? "Proteção ativa"
+                                    : "Verificação necessária"}
+                    </span>
+                </div>
+
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                    <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-4">
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                            Nível da sessão
+                        </p>
+
+                        <p className="mt-1 text-sm font-black uppercase text-slate-950">
+                            {mfaContaMestre.estado?.currentLevel || "—"}
+                        </p>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-4">
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">
+                            Fatores TOTP verificados
+                        </p>
+
+                        <p className="mt-1 text-sm font-black text-slate-950">
+                            {mfaContaMestre.estado?.fatoresTotpVerificados?.length ?? "—"}
+                        </p>
+                    </div>
+                </div>
+
+                {mfaContaMestre.erro ? (
+                    <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-xs font-bold leading-5 text-red-700">
+                        {mfaContaMestre.erro}
+                    </div>
+                ) : null}
+
+                {mfaContaMestre.estado?.fatoresTotpVerificados?.length ? (
+                    <div className="mt-4 space-y-2">
+                        {mfaContaMestre.estado.fatoresTotpVerificados.map(
+                            (fator) => (
+                                <div
+                                    key={
+                                        fator.id
+                                    }
+                                    className="flex items-center justify-between gap-4 rounded-xl border border-slate-100 px-4 py-3"
+                                >
+                                    <div>
+                                        <p className="text-xs font-black text-slate-900">
+                                            {fator.friendly_name || "Aplicativo autenticador"}
+                                        </p>
+
+                                        <p className="mt-0.5 text-[11px] font-medium text-slate-500">
+                                            TOTP verificado
+                                        </p>
+                                    </div>
+
+                                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-700">
+                                        Ativo
+                                    </span>
+                                </div>
+                            )
+                        )}
+                    </div>
+                ) : null}
+
+                <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
+                    <p className="text-xs font-bold leading-5 text-amber-800">
+                        Remoção ou substituição do segundo fator não é disponibilizada como ação comum. Recuperação de MFA deverá seguir fluxo administrativo de contingência próprio.
+                    </p>
+                </div>
+            </section>
+
+            <SessaoContaMestreCard
+                supabase={
+                    supabase
+                }
+                usuario={
+                    usuario
+                }
+            />
+
             <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <CardStatus
                     titulo="Ativação real"
@@ -1231,6 +1889,24 @@ export function TenantAdminSettingsPage({
                     descricao="Capacidade global configurada para o ambiente atual."
                     Icone={
                         Database
+                    }
+                />
+
+                <CardStatus
+                    titulo="MFA Conta Mestre"
+                    valor={
+                        mfaContaMestre.carregando
+                            ? "Validando"
+                            : mfaContaMestre.erro
+                                ? "Indisponível"
+                                : mfaContaMestre.estado?.currentLevel === "aal2" &&
+                                    mfaContaMestre.estado?.fatoresTotpVerificados?.length > 0
+                                    ? "AAL2"
+                                    : "Pendente"
+                    }
+                    descricao="Segundo fator TOTP obrigatório para privilégios administrativos globais."
+                    Icone={
+                        LockKeyhole
                     }
                 />
 
@@ -1289,7 +1965,6 @@ export function TenantAdminSettingsPage({
                                 )
                         }
                     />
-
 
                     <CardArea
                         titulo="Clientes"
