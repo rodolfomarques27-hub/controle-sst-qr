@@ -31,6 +31,12 @@ const PARAMETROS_PUBLICOS_OPERACIONAIS =
         "tokenDds",
     ]);
 
+const PARAMETROS_FLUXO_PRIMEIRO_ACESSO =
+    Object.freeze([
+        "primeiro_acesso_confirmar",
+        "primeiro_acesso",
+    ]);
+
 const ROTAS_PUBLICAS_OPERACIONAIS =
     Object.freeze([
         "/consulta-ponto",
@@ -139,6 +145,37 @@ function possuiParametroPublicoOperacional(
                             ) || ""
                         ).trim()
                     )
+            );
+        }
+    );
+}
+
+function possuiParametroFluxoPrimeiroAcesso(
+    alvo = {}
+) {
+    const buscas =
+        obterBuscasLocalizacao(
+            alvo
+        );
+
+    return buscas.some(
+        (busca) => {
+            const query =
+                busca.startsWith("?")
+                    ? busca.slice(1)
+                    : busca;
+
+            const parametros =
+                new URLSearchParams(
+                    query
+                );
+
+            return PARAMETROS_FLUXO_PRIMEIRO_ACESSO.some(
+                (chave) =>
+                    parametros.get(
+                        chave
+                    ) ===
+                    "1"
             );
         }
     );
@@ -401,6 +438,26 @@ export function deveRenderizarSiteInstitucional(
     if (
         ehRotaAppCompatibilidade(
             pathname
+        )
+    ) {
+        return false;
+    }
+
+    /*
+     * O fluxo seguro de primeiro acesso precisa
+     * alcançar o App antes da landing institucional.
+     *
+     * A exceção fica restrita a WWW, DEV e Preview.
+     * O host apex continua no comportamento institucional.
+     */
+    if (
+        possuiParametroFluxoPrimeiroAcesso(
+            alvo
+        ) &&
+        (
+            classificacao.hostname ===
+                HOST_COMPATIBILIDADE_SAFE_SCAN ||
+            ambienteDevOuPreview
         )
     ) {
         return false;

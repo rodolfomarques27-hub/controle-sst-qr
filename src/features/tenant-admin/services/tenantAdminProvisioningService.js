@@ -862,7 +862,6 @@ export async function criarResponsavelTenantProvisionamentoService({
     nome,
     email,
     funcao,
-    senhaTemporaria,
 } = {}) {
     if (!supabase) {
         throw new Error(
@@ -870,10 +869,6 @@ export async function criarResponsavelTenantProvisionamentoService({
         );
     }
 
-    const senha =
-        validarSenhaTemporariaProvisionamentoService(
-            senhaTemporaria
-        );
 
     const {
         data,
@@ -921,8 +916,6 @@ export async function criarResponsavelTenantProvisionamentoService({
                         acessoGlobal:
                             false,
 
-                        senhaTemporaria:
-                            senha,
 
                         resetarSenhaTemporaria:
                             false,
@@ -992,7 +985,6 @@ export async function executarOnboardingOperacionalService({
     formulario,
     arquivoLogo,
     consultaCnpj,
-    senhaTemporaria,
     onEtapa,
 } = {}) {
     if (!supabase) {
@@ -1001,9 +993,6 @@ export async function executarOnboardingOperacionalService({
         );
     }
 
-    validarSenhaTemporariaProvisionamentoService(
-        senhaTemporaria
-    );
 
     onEtapa?.(
         "Validando dados..."
@@ -1119,7 +1108,6 @@ export async function executarOnboardingOperacionalService({
                     formulario.adminEmail,
                 funcao:
                     formulario.adminFuncao,
-                senhaTemporaria,
             });
     }
     catch (error) {
@@ -1172,20 +1160,13 @@ export async function executarOnboardingOperacionalService({
                     false,
 
                 motivo:
-                    "A comunicação automática atual ainda não é tenant-aware.",
+                    "O convite seguro de primeiro acesso será enviado após a ativação do tenant.",
 
                 destinatario:
                     formulario.adminEmail,
 
-                senhaTemporariaDisponivel:
-                    acesso?.senhaTemporariaDefinida ===
-                    true,
-
                 orientacao:
-                    acesso?.senhaTemporariaDefinida ===
-                    true
-                        ? "Comunicar a senha temporária ao responsável por canal seguro até a Edge tenant-aware ser concluída."
-                        : "O usuário já possuía login. Não foi criada nova senha temporária.",
+                    "Após ativar o cliente, use Enviar convite no Painel Mestre para que o Administrador do Cliente defina a própria senha.",
             },
     };
 }

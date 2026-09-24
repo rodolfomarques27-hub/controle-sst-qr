@@ -3,6 +3,7 @@ import {
     useState,
 } from "react";
 
+
 import {
     AlertTriangle,
     ArrowLeft,
@@ -32,8 +33,6 @@ import {
 
 import {
     executarOnboardingOperacionalService,
-    gerarSenhaTemporariaProvisionamentoService,
-    validarSenhaTemporariaProvisionamentoService,
 } from "../services/tenantAdminProvisioningService.js";
 
 import {
@@ -391,8 +390,6 @@ export function TenantAdminNewClientPage({
             adminFuncao:
                 "Responsável pelo SafeScan",
 
-            adminSenhaTemporaria:
-                "",
 
             modeloCobranca:
                 "base_mais_colaborador",
@@ -676,24 +673,6 @@ export function TenantAdminNewClientPage({
         setErro("");
     }
 
-    function gerarNovaSenhaTemporaria() {
-        try {
-            const senha =
-                gerarSenhaTemporariaProvisionamentoService();
-
-            atualizarCampo(
-                "adminSenhaTemporaria",
-                senha
-            );
-        }
-        catch (error) {
-            setErro(
-                error?.message ||
-                "Não foi possível gerar a senha temporária."
-            );
-        }
-    }
-
     function abrirConfirmacaoCriacaoReal() {
         if (
             !previewCompleto ||
@@ -758,8 +737,6 @@ export function TenantAdminNewClientPage({
                     formulario,
                     arquivoLogo,
                     consultaCnpj,
-                    senhaTemporaria:
-                        formulario.adminSenhaTemporaria,
 
                     onEtapa:
                         setEtapaCriacao,
@@ -880,9 +857,6 @@ export function TenantAdminNewClientPage({
                 formulario
             );
 
-            validarSenhaTemporariaProvisionamentoService(
-                formulario.adminSenhaTemporaria
-            );
 
             return;
         }
@@ -957,9 +931,6 @@ export function TenantAdminNewClientPage({
 
     function validarOnboardingCompleto() {
         try {
-            validarSenhaTemporariaProvisionamentoService(
-                formulario.adminSenhaTemporaria
-            );
 
             const cnpjAtual =
                 normalizarCnpjOnboarding(
@@ -1765,48 +1736,18 @@ export function TenantAdminNewClientPage({
                                 />
                             </Campo>
 
-                            <Campo
-                                label="Senha temporária"
-                                ajuda="Será exigida a troca no primeiro acesso quando um novo login for criado."
-                            >
-                                <div className="flex flex-col gap-2 sm:flex-row">
-                                    <input
-                                        type="text"
-                                        value={
-                                            formulario.adminSenhaTemporaria
-                                        }
-                                        onChange={
-                                            (event) =>
-                                                atualizarCampo(
-                                                    "adminSenhaTemporaria",
-                                                    event.target.value
-                                                )
-                                        }
-                                        placeholder="Gere uma senha segura"
-                                        autoComplete="new-password"
-                                        className={
-                                            INPUT_CLASS +
-                                            " font-mono"
-                                        }
-                                    />
-
-                                    <button
-                                        type="button"
-                                        onClick={
-                                            gerarNovaSenhaTemporaria
-                                        }
-                                        className="h-11 shrink-0 rounded-xl border border-emerald-200 bg-emerald-50 px-4 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100"
-                                    >
-                                        Gerar senha
-                                    </button>
-                                </div>
-
-                                <p className="mt-2 text-[11px] leading-5 text-slate-500">
-                                    A senha temporária fica somente nesta tela
-                                    durante o onboarding e não será salva em texto
-                                    no cadastro SafeScan.
+                            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                                <p className="text-xs font-bold text-emerald-900">
+                                    Primeiro acesso seguro
                                 </p>
-                            </Campo>
+
+                                <p className="mt-1 text-xs leading-5 text-emerald-800">
+                                    Nenhuma senha é criada ou exibida nesta tela.
+                                    O acesso inicial é preparado no servidor e,
+                                    após a ativação do cliente, o Administrador recebe
+                                    um convite individual para definir a própria senha.
+                                </p>
+                            </div>
                         </div>
 
                         <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50 p-4">
@@ -2401,34 +2342,17 @@ export function TenantAdminNewClientPage({
                                     </p>
                                 </div>
 
-                                {resultadoCriacao.acesso?.senhaTemporariaDefinida ? (
-                                    <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
-                                        <p className="text-xs font-bold text-amber-900">
-                                            Senha temporária
-                                        </p>
+                                <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                                    <p className="text-xs font-bold text-emerald-900">
+                                        Acesso administrativo preparado
+                                    </p>
 
-                                        <p className="mt-1 break-all font-mono text-sm font-bold text-amber-900">
-                                            {formulario.adminSenhaTemporaria}
-                                        </p>
-
-                                        <p className="mt-2 text-[11px] leading-5 text-amber-700">
-                                            O envio automático ainda não será realizado
-                                            porque a comunicação atual não é tenant-aware.
-                                            Comunique esta senha por canal seguro.
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
-                                        <p className="text-xs font-bold text-blue-900">
-                                            Usuário já possuía login
-                                        </p>
-
-                                        <p className="mt-1 text-[11px] leading-5 text-blue-700">
-                                            Nenhuma nova senha temporária foi aplicada.
-                                            O usuário continua utilizando seu login existente.
-                                        </p>
-                                    </div>
-                                )}
+                                    <p className="mt-1 text-[11px] leading-5 text-emerald-800">
+                                        O Administrador foi vinculado ao tenant.
+                                        Após a ativação do cliente, abra o detalhe do ambiente
+                                        e use Enviar convite para que ele defina a própria senha.
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>

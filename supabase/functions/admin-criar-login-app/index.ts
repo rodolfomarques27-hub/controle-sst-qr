@@ -463,6 +463,34 @@ function montarMetadataTenantAtualizacao({
 }
 // SAFE_SCAN_I4C_C2_TENANT_METADATA_END
 
+function gerarSenhaBootstrapTenant() {
+  const bytes = new Uint8Array(
+    24,
+  );
+
+  crypto.getRandomValues(
+    bytes,
+  );
+
+  const base = Array.from(
+    bytes,
+  )
+    .map(
+      (byte) =>
+        byte
+          .toString(
+            16,
+          )
+          .padStart(
+            2,
+            "0",
+          ),
+    )
+    .join("");
+
+  return `${base}Aa1!`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(
@@ -763,12 +791,16 @@ Deno.serve(async (req) => {
       body?.perfil
     );
 
-  const senhaTemporaria =
-    String(
-      body?.senhaTemporaria ??
+  const senhaTemporariaRecebida = String(
+    body?.senhaTemporaria ??
       body?.senha_temporaria ??
-      ""
-    );
+      "",
+  );
+
+  const senhaTemporaria = modoTenant &&
+      !senhaTemporariaRecebida
+    ? gerarSenhaBootstrapTenant()
+    : senhaTemporariaRecebida;
 
   const ativo =
     perfil === "bloqueado"

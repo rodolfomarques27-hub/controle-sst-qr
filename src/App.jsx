@@ -55,6 +55,8 @@ import {
 } from "lucide-react";
 
 const LoginScreen = React.lazy(() => import("./components/LoginScreen").then((modulo) => ({ default: modulo.LoginScreen })));
+const PrimeiroAcessoClientePage = React.lazy(() => import("./features/tenant-admin/pages/PrimeiroAcessoClientePage.jsx").then((modulo) => ({ default: modulo.PrimeiroAcessoClientePage })));
+const PrimeiroAcessoConfirmarPage = React.lazy(() => import("./features/tenant-admin/pages/PrimeiroAcessoConfirmarPage.jsx").then((modulo) => ({ default: modulo.PrimeiroAcessoConfirmarPage })));
 const ConsultaQRPublica = React.lazy(() => import("./components/qr/ConsultaQRPublica").then((modulo) => ({ default: modulo.ConsultaQRPublica })));
 const ConsultaDdsPublica = React.lazy(() => import("./components/dds/ConsultaDdsPublica").then((modulo) => ({ default: modulo.ConsultaDdsPublica })));
 const VistoriaExtintorPublica = React.lazy(() => import("./components/extintores/VistoriaExtintorPublica").then((modulo) => ({ default: modulo.VistoriaExtintorPublica })));
@@ -1731,6 +1733,59 @@ export default function App() {
         return (
             <React.Suspense fallback={<CarregandoTela mensagem="Carregando consulta pública..." />}>
                 <ConsultaQRPublica dados={consultaPublica} />
+            </React.Suspense>
+        );
+    }
+
+    const parametrosPrimeiroAcessoCliente =
+        typeof window !== "undefined"
+            ? new URLSearchParams(
+                window.location.search
+            )
+            : null;
+
+    const rotaPrimeiroAcessoConfirmarAtiva =
+        Boolean(
+            parametrosPrimeiroAcessoCliente
+            && parametrosPrimeiroAcessoCliente.get(
+                "primeiro_acesso_confirmar"
+            ) === "1"
+        );
+
+    const rotaPrimeiroAcessoClienteAtiva =
+        Boolean(
+            parametrosPrimeiroAcessoCliente
+            && parametrosPrimeiroAcessoCliente.get(
+                "primeiro_acesso"
+            ) === "1"
+        );
+    if (rotaPrimeiroAcessoConfirmarAtiva) {
+        return (
+            <React.Suspense
+                fallback={
+                    <CarregandoTela
+                        mensagem="Preparando primeiro acesso..."
+                        subtitulo="Validando seu convite com segurança."
+                        telaCheia
+                    />
+                }
+            >
+                <PrimeiroAcessoConfirmarPage />
+            </React.Suspense>
+        );
+    }
+    if (rotaPrimeiroAcessoClienteAtiva) {
+        return (
+            <React.Suspense
+                fallback={
+                    <CarregandoTela
+                        mensagem="Preparando primeiro acesso..."
+                        subtitulo="Validando o acesso seguro do cliente."
+                        telaCheia
+                    />
+                }
+            >
+                <PrimeiroAcessoClientePage />
             </React.Suspense>
         );
     }
