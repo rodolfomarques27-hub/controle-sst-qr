@@ -21,7 +21,13 @@ import { Header } from "../commonComponents";
 import { useTenantRuntimeContext } from "../layout/TenantRuntimeContext.js";
 import { obterOrigemPublicaSistema } from "../../utils/urlPublicaUtils.js";
 import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
-import { calcularUsoStorageRealSistema } from "../../services/storageSegurancaService";
+import {
+    calcularUsoStorageRealSistema,
+    calcularUsoStorageRealTenant,
+} from "../../services/storageSegurancaService";
+import {
+    moduloDisponivelTenantRuntime,
+} from "../../services/tenantModulesRuntimeService.js";
 import { DashboardBlocosGrid } from "./DashboardBlocosGrid";
 import { DashboardHeaderAcoes } from "./DashboardHeaderAcoes";
 import { DashboardPreviewFiltro } from "./DashboardPreviewFiltro";
@@ -230,6 +236,8 @@ export function Dashboard({
     documentosEmpresas = [],
     auditoria = [],
     auditoriasCampo = [],
+    modulosTenantRuntime = [],
+    aplicarGateModulosTenantRuntime = false,
     onSelectColab,
     onVisualizarDocumentoEmpresa,
     onVisualizarCertificado,
@@ -239,6 +247,57 @@ export function Dashboard({
 }) {
     const contextoTenantRuntime =
         useTenantRuntimeContext();
+
+    const tenantIdRuntime =
+        String(
+            contextoTenantRuntime?.tenant?.id ||
+            ""
+        ).trim();
+
+    const moduloDisponivelDashboard =
+        useCallback(
+            (chaveModulo) =>
+                !aplicarGateModulosTenantRuntime
+                || moduloDisponivelTenantRuntime(
+                    modulosTenantRuntime,
+                    chaveModulo
+                ),
+            [
+                aplicarGateModulosTenantRuntime,
+                modulosTenantRuntime,
+            ]
+        );
+
+    const ddsDisponivelDashboard =
+        moduloDisponivelDashboard(
+            "dds"
+        );
+
+    const certidaoDisponivelDashboard =
+        moduloDisponivelDashboard(
+            "certidao_mensal_documental"
+        );
+
+    const extintoresDisponivelDashboard =
+        moduloDisponivelDashboard(
+            "extintores"
+        );
+
+    const auditoriaCampoDisponivelDashboard =
+        moduloDisponivelDashboard(
+            "auditoria_campo"
+        );
+
+    const obrasDisponivelDashboard =
+        moduloDisponivelDashboard(
+            "mapa_obra"
+        );
+
+    const chaveCacheUsoStorageDashboard =
+        aplicarGateModulosTenantRuntime
+        && tenantIdRuntime
+            ? `${CACHE_USO_STORAGE_DASHBOARD}:${tenantIdRuntime}`
+            : CACHE_USO_STORAGE_DASHBOARD;
 
     const configuracaoUrlSistemaEmail =
         obterConfiguracaoUrlSistemaEmailDashboard(
@@ -292,7 +351,11 @@ export function Dashboard({
         }
 
         try {
-            const salvo = JSON.parse(window.localStorage.getItem(CACHE_USO_STORAGE_DASHBOARD) || "null");
+            const salvo = JSON.parse(
+                window.localStorage.getItem(
+                    chaveCacheUsoStorageDashboard
+                ) || "null"
+            );
 
             if (salvo && typeof salvo === "object") {
                 return {
@@ -309,6 +372,7 @@ export function Dashboard({
         return { totalBytes: 0, arquivos: 0, buckets: [], atualizadoEm: "" };
     });
     const [carregandoStorageDashboard, setCarregandoStorageDashboard] = useState(false);
+    const [erroStorageDashboard, setErroStorageDashboard] = useState("");
     const [historicoStorageDashboard, setHistoricoStorageDashboard] = useState([]);
     const [horasDdsMes, setHorasDdsMes] = useState({
         totalMinutos: 0,
@@ -520,27 +584,83 @@ export function Dashboard({
 
     const carregarUsoStorageDashboard = useCallback(async () => {
         setCarregandoStorageDashboard(true);
+        setErroStorageDashboard("");
 
         try {
-            const resumoStorage = await calcularUsoStorageRealSistema({ supabase });
+            const resumoStorage =
+                aplicarGateModulosTenantRuntime
+                    ? await calcularUsoStorageRealTenant({
+                        supabase,
+                        tenantId:
+                            tenantIdRuntime,
+                    })
+                    : await calcularUsoStorageRealSistema({
+                        supabase,
+                    });
 
-            setUsoStorageDashboard(resumoStorage);
-            const historicoStorage = await carregarHistoricoStorageDashboard({
-                supabase,
-                resumoStorage,
-            });
-            setHistoricoStorageDashboard(historicoStorage);
+            setUsoStorageDashboard(
+                resumoStorage
+            );
+
+            if (
+                aplicarGateModulosTenantRuntime
+            ) {
+                setHistoricoStorageDashboard(
+                    []
+                );
+            } else {
+                const historicoStorage =
+                    await carregarHistoricoStorageDashboard({
+                        supabase,
+                        resumoStorage,
+                    });
+
+                setHistoricoStorageDashboard(
+                    historicoStorage
+                );
+            }
 
             if (typeof window !== "undefined") {
-                window.localStorage.setItem(CACHE_USO_STORAGE_DASHBOARD, JSON.stringify(resumoStorage));
+                window.localStorage.setItem(
+                    chaveCacheUsoStorageDashboard,
+                    JSON.stringify(
+                        resumoStorage
+                    )
+                );
             }
         } catch (error) {
-            console.warn("Erro ao carregar uso real do Storage:", error?.message || error);
-            setUsoStorageDashboard((atual) => ({ ...atual, totalBytes: 0, arquivos: 0, buckets: [] }));
+            console.warn(
+                "Erro ao carregar uso real do Storage:",
+                error?.message || error
+            );
+
+            setErroStorageDashboard(
+                error?.message ||
+                "Não foi possível calcular o armazenamento deste ambiente."
+            );
+
+            setUsoStorageDashboard({
+                totalBytes: 0,
+                arquivos: 0,
+                buckets: [],
+                atualizadoEm: "",
+                origem:
+                    aplicarGateModulosTenantRuntime
+                        ? "tenant-error"
+                        : "global-error",
+            });
+
+            setHistoricoStorageDashboard(
+                []
+            );
         } finally {
             setCarregandoStorageDashboard(false);
         }
-    }, []);
+    }, [
+        aplicarGateModulosTenantRuntime,
+        chaveCacheUsoStorageDashboard,
+        tenantIdRuntime,
+    ]);
 
     useEffect(() => {
         if (storageAutoCarregadoDashboardRef.current) return;
@@ -561,6 +681,19 @@ export function Dashboard({
     }, [carregarUsoStorageDashboard, usoStorageDashboard?.arquivos, usoStorageDashboard?.origem, usoStorageDashboard?.totalBytes]);
 
     const carregarHorasDdsDashboard = useCallback(async () => {
+        if (!ddsDisponivelDashboard) {
+            setHorasDdsMes({
+                totalMinutos: 0,
+                totalHorasFormatado: "0",
+                totalPresencas: 0,
+                totalDias: 0,
+                itens: [],
+                carregando: false,
+                erro: "",
+            });
+            return;
+        }
+
         setHorasDdsMes((atual) => ({ ...atual, carregando: true, erro: "" }));
 
         try {
@@ -577,7 +710,9 @@ export function Dashboard({
                 erro: error?.message || "Não foi possível carregar as horas do DDS.",
             }));
         }
-    }, []);
+    }, [
+        ddsDisponivelDashboard,
+    ]);
 
     useEffect(() => {
         carregarHorasDdsDashboard();
@@ -595,6 +730,13 @@ export function Dashboard({
                 await carregarIndicadoresOperacionaisDashboard({
                     supabase,
                     dataReferencia: new Date(),
+                    carregarObras:
+                        obrasDisponivelDashboard
+                        || extintoresDisponivelDashboard,
+                    carregarExtintores:
+                        extintoresDisponivelDashboard,
+                    carregarCertidao:
+                        certidaoDisponivelDashboard,
                 });
 
             setIndicadoresOperacionais({
@@ -616,7 +758,11 @@ export function Dashboard({
                     "Não foi possível carregar os indicadores operacionais.",
             }));
         }
-    }, []);
+    }, [
+        certidaoDisponivelDashboard,
+        extintoresDisponivelDashboard,
+        obrasDisponivelDashboard,
+    ]);
 
     useEffect(() => {
         carregarIndicadoresOperacionais();
@@ -761,7 +907,7 @@ export function Dashboard({
                 : `${horasDdsMes.totalDias} dia(s) validado(s) no DDS`,
         },
         { chave: "colaboradoresBloqueados", label: "Colaboradores bloqueados", valor: colaboradoresBloqueados, icon: Lock, detalhe: "Pendência bloqueante" },
-        { chave: "desviosAbertos", label: "Desvios abertos", valor: desviosAbertos, icon: AlertTriangle, detalhe: "Registros não concluídos" },
+        { chave: "desviosAbertos", label: "Desvios abertos", valor: desviosCampoAbertos, icon: AlertTriangle, detalhe: "Auditorias de campo com desvio em aberto" },
         { chave: "aniversariantesMes", label: "Aniversariantes do mês", valor: aniversariantesMes.length, icon: UserRound, detalhe: aniversariantesMes.length > 0 ? `${aniversariantesMes.length} no mês atual` : "Nenhum no mês atual" },
         {
             chave: "obrasAtivas",
@@ -834,14 +980,78 @@ export function Dashboard({
             icon: Eye,
             detalhe: detalheCompetenciaInspecao,
         },
-        { chave: "armazenamentoUtilizado", label: "Armazenamento", valor: `${storagePercentual}%`, icon: Upload, detalhe: `${totalStorageLabel} / ${storageLimiteLabelDashboard}` },
+        {
+            chave: "armazenamentoUtilizado",
+            label: "Armazenamento",
+            valor:
+                carregandoStorageDashboard ||
+                erroStorageDashboard
+                    ? "—"
+                    : `${storagePercentual}%`,
+            icon: Upload,
+            detalhe:
+                erroStorageDashboard
+                    ? "Falha ao consultar armazenamento do cliente"
+                    : `${totalStorageLabel} / ${storageLimiteLabelDashboard}`,
+        },
     ];
+
+    const moduloPorCartaTenant = {
+        horasTrabalhadasMes:
+            "dds",
+        ddsRealizadosMes:
+            "dds",
+        participacoesDdsMes:
+            "dds",
+        competenciasDocumentaisAbertas:
+            "certidao_mensal_documental",
+        pendenciasDocumentaisMensais:
+            "certidao_mensal_documental",
+        extintoresForaOperacao:
+            "extintores",
+        inspecoesExtintoresPendentes:
+            "extintores",
+        desviosAbertos:
+            "auditoria_campo",
+        obrasAtivas:
+            "mapa_obra",
+    };
+
+    const cardsDisponiveisRuntime =
+        cards.filter(
+            (item) => {
+                if (
+                    !aplicarGateModulosTenantRuntime
+                ) {
+                    return true;
+                }
+
+                if (
+                    item.chave ===
+                    "aniversariantesMes"
+                ) {
+                    return false;
+                }
+
+                const chaveModulo =
+                    moduloPorCartaTenant[
+                        item.chave
+                    ];
+
+                return (
+                    !chaveModulo
+                    || moduloDisponivelDashboard(
+                        chaveModulo
+                    )
+                );
+            }
+        );
 
     const cardsOrdenados = [
         ...ordemCartasDashboard
-            .map((chave) => cards.find((item) => item.chave === chave))
+            .map((chave) => cardsDisponiveisRuntime.find((item) => item.chave === chave))
             .filter(Boolean),
-        ...cards.filter((item) => !ordemCartasDashboard.includes(item.chave)),
+        ...cardsDisponiveisRuntime.filter((item) => !ordemCartasDashboard.includes(item.chave)),
     ];
 
     const cardsVisiveis = cardsOrdenados.filter((item) => cartasVisiveisDashboard[item.chave] !== false);
@@ -1040,16 +1250,10 @@ export function Dashboard({
             `${composicaoMobilizados["Com pendência"] || 0} com pendência`,
             `${colaboradoresComAlertaAVencer} com alerta preventivo de vencimento`,
         ].join(" · ");
-        const desviosAbertosLista = auditoria.filter((item) => {
-            const texto = normalizarTextoBusca(
-                `${item.acao || ""} ${item.tabela || ""} ${item.descricao || ""}`
+        const desviosAbertosLista =
+            auditoriasCampoNormalizadas.filter(
+                auditoriaCampoAberta
             );
-
-            return texto.includes("desvio") &&
-                !texto.includes("fechado") &&
-                !texto.includes("concluido") &&
-                !texto.includes("concluído");
-        });
         const formatarStatusResumoOperacional = (valor = "") => {
             const texto = String(valor || "")
                 .trim()
@@ -1176,13 +1380,30 @@ export function Dashboard({
                 subtitulo: "Registros de desvio ainda sem fechamento ou conclusão.",
                 itens: desviosAbertosLista.map((item, indice) => ({
                     id: item.id || `desvio-${indice}`,
-                    principal: item.acao || "Desvio registrado",
-                    titulo: item.descricao || item.tabela || "Descrição não informada",
-                    apoio: item.usuario_nome || item.usuario || "Responsável não informado",
+                    principal:
+                        item.numeroAuditoria ||
+                        item.titulo ||
+                        "Auditoria de campo",
+                    titulo:
+                        item.situacaoEncontrada ||
+                        item.categoriaDesvioPrincipal ||
+                        "Desvio registrado",
+                    apoio:
+                        item.empresaNome ||
+                        item.responsavelTratativa ||
+                        "Responsável não informado",
                     dataRotulo: "Registro",
-                    dataValor: item.created_at ? formatDate(item.created_at) : "",
+                    dataValor:
+                        item.createdAt
+                            ? formatDate(
+                                item.createdAt
+                            )
+                            : "",
                     status: "Aberto",
-                    detalhe: item.tabela || "",
+                    detalhe:
+                        item.statusDesvio ||
+                        item.statusAuditoria ||
+                        "",
                 })),
             },
             aniversariantesMes: {

@@ -61,6 +61,9 @@ function dadosConsultaDashboard(
 export async function carregarIndicadoresOperacionaisDashboard({
     supabase,
     dataReferencia = new Date(),
+    carregarObras = true,
+    carregarExtintores = true,
+    carregarCertidao = true,
 } = {}) {
     if (!supabase) {
         throw new Error(
@@ -80,44 +83,64 @@ export async function carregarIndicadoresOperacionaisDashboard({
         competenciaRecenteResultado,
     ] =
         await Promise.all([
-            supabase
-                .from("obras")
-                .select(
-                    "id,nome,cidade,uf,numero_obra,status",
-                ),
+            carregarObras
+                ? supabase
+                    .from("obras")
+                    .select(
+                        "id,nome,cidade,uf,numero_obra,status",
+                    )
+                : Promise.resolve({
+                    data: [],
+                    error: null,
+                }),
 
-            supabase
-                .from("extintores")
-                .select(
-                    "id,obra_id,codigo,localizacao,ponto_nome,tipo,capacidade,status,situacao_operacional",
-                ),
+            carregarExtintores
+                ? supabase
+                    .from("extintores")
+                    .select(
+                        "id,obra_id,codigo,localizacao,ponto_nome,tipo,capacidade,status,situacao_operacional",
+                    )
+                : Promise.resolve({
+                    data: [],
+                    error: null,
+                }),
 
-            supabase
-                .from("extintores_inspecoes")
-                .select(
-                    "extintor_id,competencia",
-                )
-                .eq(
-                    "competencia",
-                    competenciaAtual,
-                ),
+            carregarExtintores
+                ? supabase
+                    .from("extintores_inspecoes")
+                    .select(
+                        "extintor_id,competencia",
+                    )
+                    .eq(
+                        "competencia",
+                        competenciaAtual,
+                    )
+                : Promise.resolve({
+                    data: [],
+                    error: null,
+                }),
 
-            supabase
-                .from(
-                    "certidao_mensal_competencias",
-                )
-                .select("competencia")
-                .lte(
-                    "competencia",
-                    competenciaAtual,
-                )
-                .order(
-                    "competencia",
-                    {
-                        ascending: false,
-                    },
-                )
-                .limit(1),
+            carregarCertidao
+                ? supabase
+                    .from(
+                        "certidao_mensal_competencias",
+                    )
+                    .select("competencia")
+                    .lte(
+                        "competencia",
+                        competenciaAtual,
+                    )
+                    .order(
+                        "competencia",
+                        {
+                            ascending: false,
+                        },
+                    )
+                    .limit(1)
+                : Promise.resolve({
+                    data: [],
+                    error: null,
+                }),
         ]);
 
     const obras =
@@ -224,7 +247,10 @@ export async function carregarIndicadoresOperacionaisDashboard({
     let pendenciasDocumentaisMensaisItens =
         [];
 
-    if (competenciaDocumentalIso) {
+    if (
+        carregarCertidao
+        && competenciaDocumentalIso
+    ) {
         const competenciasResultado =
             await supabase
                 .from(

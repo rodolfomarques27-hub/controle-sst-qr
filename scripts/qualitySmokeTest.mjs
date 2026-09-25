@@ -616,6 +616,18 @@ const codigoTenantModulesRuntimeService = readFileSync(
     new URL("../src/services/tenantModulesRuntimeService.js", import.meta.url),
     "utf8"
 );
+const codigoDashboardIndicadoresOperacionaisService = readFileSync(
+    new URL("../src/services/dashboardIndicadoresOperacionaisService.js", import.meta.url),
+    "utf8"
+);
+const codigoStorageSegurancaService = readFileSync(
+    new URL("../src/services/storageSegurancaService.js", import.meta.url),
+    "utf8"
+);
+const migracaoResumoStorageTenant = readFileSync(
+    new URL("../supabase/migrations/20260925103000_tenant_storage_dashboard_scope.sql", import.meta.url),
+    "utf8"
+);
 const migracaoFundoLoginPublico = readFileSync(
     new URL("../supabase/migrations/20260717115604_obter_estado_fundo_login_publico.sql", import.meta.url),
     "utf8"
@@ -657,6 +669,36 @@ assert.match(
     codigoApp,
     /montarPermissaoMembershipTenantRuntime[\s\S]*acessoTenantRuntime\.membership[\s\S]*telaDisponivelTenantRuntime/,
     "O runtime do tenant deve combinar membership ativa e disponibilidade comercial."
+);
+assert.match(
+    codigoTenantModulesRuntimeService,
+    /TELAS_OCULTAS_RUNTIME_TENANT[\s\S]*"aniversariantes"[\s\S]*return false;/,
+    "Aniversariantes deve permanecer fora da navegação operacional do tenant."
+);
+assert.match(
+    codigoDashboard,
+    /moduloPorCartaTenant[\s\S]*participacoesDdsMes[\s\S]*certidao_mensal_documental[\s\S]*extintoresForaOperacao[\s\S]*auditoria_campo[\s\S]*mapa_obra/,
+    "Os cards do Dashboard tenant devem respeitar os módulos comerciais contratados."
+);
+assert.match(
+    codigoDashboard,
+    /calcularUsoStorageRealTenant[\s\S]*tenantIdRuntime[\s\S]*Falha ao consultar armazenamento do cliente/,
+    "O Dashboard do tenant deve usar armazenamento isolado e falhar fechado sem total global."
+);
+assert.match(
+    codigoDashboardIndicadoresOperacionaisService,
+    /carregarObras = true[\s\S]*carregarExtintores = true[\s\S]*carregarCertidao = true[\s\S]*Promise\.resolve/,
+    "Indicadores operacionais devem evitar consultas de módulos não contratados."
+);
+assert.match(
+    codigoStorageSegurancaService,
+    /resumo_storage_sst_tenant[\s\S]*rpc-resumo_storage_sst_tenant/,
+    "O serviço de Storage deve possuir leitura tenant-scoped sem fallback global."
+);
+assert.match(
+    migracaoResumoStorageTenant,
+    /usuario_tem_acesso_tenant[\s\S]*storage\.objects[\s\S]*grant execute[\s\S]*to authenticated/,
+    "A RPC de Storage tenant deve autorizar o tenant e expor somente o agregado autenticado."
 );
 assert.match(
     codigoAppLayout,

@@ -379,6 +379,170 @@ export async function calcularUsoStorageRealSistema({ supabase } = {}) {
     return montarResumoVazioStorageReal();
 }
 
+export async function calcularUsoStorageRealTenant({
+    supabase,
+    tenantId,
+} = {}) {
+    const tenantIdNormalizado =
+        String(
+            tenantId || ""
+        ).trim();
+
+    if (!supabase) {
+        throw new Error(
+            "Cliente Supabase não informado para calcular o armazenamento do tenant."
+        );
+    }
+
+    if (!tenantIdNormalizado) {
+        throw new Error(
+            "Tenant não informado para calcular o armazenamento."
+        );
+    }
+
+    const {
+        data,
+        error,
+    } =
+        await supabase.rpc(
+            "resumo_storage_sst_tenant",
+            {
+                p_tenant_id:
+                    tenantIdNormalizado,
+            }
+        );
+
+    if (error) {
+        throw new Error(
+            error.message ||
+            "Não foi possível calcular o armazenamento do tenant."
+        );
+    }
+
+    const registros =
+        Array.isArray(
+            data
+        )
+            ? data
+            : [];
+
+    const buckets =
+        registros
+            .map(
+                (item) => {
+                    const bucket =
+                        String(
+                            item?.bucket_id ||
+                            item?.bucket ||
+                            ""
+                        ).trim();
+
+                    const bytes =
+                        Number(
+                            item?.tamanho_bytes ??
+                            item?.bytes ??
+                            0
+                        ) || 0;
+
+                    const arquivos =
+                        Number(
+                            item?.total_arquivos ??
+                            item?.arquivos ??
+                            0
+                        ) || 0;
+
+                    const mimeTypes =
+                        Array.isArray(
+                            item?.mime_types
+                        )
+                            ? item.mime_types
+                                .filter(Boolean)
+                                .map(
+                                    (tipo) =>
+                                        String(
+                                            tipo
+                                        )
+                                )
+                            : [];
+
+                    return {
+                        bucket,
+                        bytes,
+                        mb:
+                            Math.round(
+                                (
+                                    bytes /
+                                    BYTES_MB
+                                ) *
+                                100
+                            ) /
+                            100,
+                        arquivos,
+                        mimeTypes:
+                            [
+                                ...new Set(
+                                    mimeTypes
+                                ),
+                            ].sort(
+                                (a, b) =>
+                                    a.localeCompare(b)
+                            ),
+                    };
+                }
+            )
+            .filter(
+                (item) =>
+                    item.bucket &&
+                    STORAGE_BUCKETS_RESUMO_REAL.includes(
+                        item.bucket
+                    )
+            )
+            .sort(
+                (a, b) =>
+                    b.bytes -
+                    a.bytes
+            );
+
+    const totalBytes =
+        buckets.reduce(
+            (total, bucket) =>
+                total +
+                bucket.bytes,
+            0
+        );
+
+    const arquivos =
+        buckets.reduce(
+            (total, bucket) =>
+                total +
+                bucket.arquivos,
+            0
+        );
+
+    return {
+        totalBytes,
+        totalMb:
+            Math.round(
+                (
+                    totalBytes /
+                    BYTES_MB
+                ) *
+                100
+            ) /
+            100,
+        arquivos,
+        buckets,
+        atualizadoEm:
+            new Date().toISOString(),
+        origem:
+            "rpc-resumo_storage_sst_tenant",
+        completo:
+            true,
+        tenantId:
+            tenantIdNormalizado,
+    };
+}
+
 export function calcularResumoSegurancaStorageSistema(avaliacoes = []) {
     const criticos = avaliacoes.filter((item) => item.nivel === "critico").length;
     const alertas = avaliacoes.filter((item) => item.nivel === "alerta").length;
