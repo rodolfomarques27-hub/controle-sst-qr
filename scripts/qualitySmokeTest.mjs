@@ -612,6 +612,10 @@ const codigoAppColaboradoresHandlersService = readFileSync(
     new URL("../src/services/appColaboradoresHandlersService.js", import.meta.url),
     "utf8"
 );
+const codigoTenantModulesRuntimeService = readFileSync(
+    new URL("../src/services/tenantModulesRuntimeService.js", import.meta.url),
+    "utf8"
+);
 const migracaoFundoLoginPublico = readFileSync(
     new URL("../supabase/migrations/20260717115604_obter_estado_fundo_login_publico.sql", import.meta.url),
     "utf8"
@@ -636,8 +640,23 @@ assert.match(
 );
 assert.match(
     codigoApp,
-    /permissaoSistemaUsuario=\{permissaoSistemaUsuario\}[\s\S]*carregandoPermissaoSistemaUsuario=\{carregandoPermissaoSistemaUsuario\}[\s\S]*erroPermissaoSistemaUsuario=\{erroPermissaoSistemaUsuario\}/,
-    "O App deve entregar ao layout o estado central de permissões."
+    /permissaoSistemaUsuario=\{permissaoSistemaRuntimeUsuario\}[\s\S]*carregandoPermissaoSistemaUsuario=\{carregandoPermissaoRuntimeUsuario\}[\s\S]*erroPermissaoSistemaUsuario=\{erroPermissaoRuntimeUsuario\}/,
+    "O App deve entregar ao layout a permissão efetiva do runtime."
+);
+assert.match(
+    codigoTenantModulesRuntimeService,
+    /from\([\s\S]*"modulos_sistema"[\s\S]*from\([\s\S]*"tenant_modulos"/,
+    "O runtime tenant deve cruzar catálogo de módulos e entitlements do tenant."
+);
+assert.match(
+    codigoTenantModulesRuntimeService,
+    /normalizarTelasModulo[\s\S]*metadados[\s\S]*telaDisponivelTenantRuntime/,
+    "O gate comercial deve usar a matriz canônica de telas do catálogo."
+);
+assert.match(
+    codigoApp,
+    /montarPermissaoMembershipTenantRuntime[\s\S]*acessoTenantRuntime\.membership[\s\S]*telaDisponivelTenantRuntime/,
+    "O runtime do tenant deve combinar membership ativa e disponibilidade comercial."
 );
 assert.match(
     codigoAppLayout,
