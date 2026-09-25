@@ -624,7 +624,11 @@ const codigoStorageSegurancaService = readFileSync(
     new URL("../src/services/storageSegurancaService.js", import.meta.url),
     "utf8"
 );
-const migracaoResumoStorageTenant = readFileSync(
+const migracaoResumoStorageTenantBase = readFileSync(
+    new URL("../supabase/migrations/20260925113259_tenant_storage_dashboard_scope.sql", import.meta.url),
+    "utf8"
+);
+const migracaoResumoStorageTenantCorrecao = readFileSync(
     new URL("../supabase/migrations/20260925113604_fix_resumo_storage_sst_tenant_bucket_ambiguous.sql", import.meta.url),
     "utf8"
 );
@@ -696,14 +700,14 @@ assert.match(
     "O serviço de Storage deve possuir leitura tenant-scoped sem fallback global."
 );
 assert.match(
-    migracaoResumoStorageTenant,
+    migracaoResumoStorageTenantBase,
     /usuario_tem_acesso_tenant[\s\S]*storage\.objects[\s\S]*grant execute[\s\S]*to authenticated/,
     "A RPC de Storage tenant deve autorizar o tenant e expor somente o agregado autenticado."
 );
 assert.match(
-    migracaoResumoStorageTenant,
-    /#variable_conflict use_column/,
-    "A RPC de Storage tenant deve resolver explicitamente o conflito entre colunas de retorno e identificadores internos."
+    migracaoResumoStorageTenantCorrecao,
+    /pg_get_functiondef[\s\S]*#variable_conflict use_column[\s\S]*execute v_definicao/,
+    "A migration corretiva deve inserir a diretiva de conflito na definição existente sem duplicar o corpo da RPC."
 );
 assert.match(
     codigoAppLayout,
