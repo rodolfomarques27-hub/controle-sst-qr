@@ -24,6 +24,11 @@ function normalizarTelasModulo(metadados = null) {
     ];
 }
 
+const TELAS_OCULTAS_RUNTIME_TENANT =
+    new Set([
+        "aniversariantes",
+    ]);
+
 export function montarPermissaoMembershipTenantRuntime({
     membership = null,
     permissaoLegada = null,
@@ -219,6 +224,35 @@ export async function carregarModulosTenantRuntimeService({
         );
 }
 
+export function moduloDisponivelTenantRuntime(
+    modulos = [],
+    chaveModulo = ""
+) {
+    const chaveNormalizada =
+        textoSeguro(
+            chaveModulo
+        ).toLowerCase();
+
+    if (!chaveNormalizada) {
+        return false;
+    }
+
+    return (
+        Array.isArray(
+            modulos
+        )
+        && modulos.some(
+            (modulo) =>
+                textoSeguro(
+                    modulo?.chave
+                ).toLowerCase() ===
+                    chaveNormalizada
+                && modulo?.disponivel ===
+                    true
+        )
+    );
+}
+
 export function telaTemMapeamentoModuloTenantRuntime(
     modulos = [],
     tela = ""
@@ -230,6 +264,14 @@ export function telaTemMapeamentoModuloTenantRuntime(
 
     if (!telaNormalizada) {
         return false;
+    }
+
+    if (
+        TELAS_OCULTAS_RUNTIME_TENANT.has(
+            telaNormalizada
+        )
+    ) {
+        return true;
     }
 
     return (
@@ -259,6 +301,14 @@ export function telaDisponivelTenantRuntime(
 
     if (!telaNormalizada) {
         return true;
+    }
+
+    if (
+        TELAS_OCULTAS_RUNTIME_TENANT.has(
+            telaNormalizada
+        )
+    ) {
+        return false;
     }
 
     const modulosDaTela =

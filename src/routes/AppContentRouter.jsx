@@ -822,12 +822,14 @@ export function AppContentRouter({
         <React.Suspense fallback={null}>
             {tela === "dashboard" && (
                 <Dashboard
-                            usuario={usuario}
+                    usuario={usuario}
                     colaboradores={colaboradores}
                     empresasBanco={empresasBanco}
                     documentosEmpresas={documentosEmpresas}
                     auditoria={auditoria}
                     auditoriasCampo={auditoriasCampo}
+                    modulosTenantRuntime={modulosTenantRuntime}
+                    aplicarGateModulosTenantRuntime={aplicarGateModulosTenantRuntime}
                     onSelectColab={onSelectColab}
                     onVisualizarDocumentoEmpresa={onVisualizarDocumentoEmpresa}
                     onVisualizarCertificado={onVisualizarCertificado}

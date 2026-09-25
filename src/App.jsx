@@ -2,6 +2,7 @@ import { useTenantRuntimeContext } from "./components/layout/TenantRuntimeContex
 import { carregarAcessoTenantAtualService } from "./services/tenantMembershipService.js";
 import {
     carregarModulosTenantRuntimeService,
+    moduloDisponivelTenantRuntime,
     montarPermissaoMembershipTenantRuntime,
     telaDisponivelTenantRuntime,
 } from "./services/tenantModulesRuntimeService.js";
@@ -228,6 +229,46 @@ export default function App() {
     const [modulosTenantRuntime, setModulosTenantRuntime] = useState([]);
     const [carregandoModulosTenantRuntime, setCarregandoModulosTenantRuntime] = useState(false);
     const [erroModulosTenantRuntime, setErroModulosTenantRuntime] = useState("");
+
+    const aplicarGateModulosTenantRuntime = Boolean(
+        tenantResolvido
+        && tenant?.id
+        && acessoTenantRuntime.estado === "autorizado"
+    );
+
+    const modulosTenantRuntimeProntos = Boolean(
+        !aplicarGateModulosTenantRuntime
+        || (
+            modulosTenantRuntime.length > 0
+            && !carregandoModulosTenantRuntime
+            && !erroModulosTenantRuntime
+        )
+    );
+
+    const auditoriaCampoDisponivelRuntime =
+        !aplicarGateModulosTenantRuntime
+        || moduloDisponivelTenantRuntime(
+            modulosTenantRuntime,
+            "auditoria_campo"
+        );
+
+    const mapaObraDisponivelRuntime =
+        !aplicarGateModulosTenantRuntime
+        || moduloDisponivelTenantRuntime(
+            modulosTenantRuntime,
+            "mapa_obra"
+        );
+
+    const extintoresDisponivelRuntime =
+        !aplicarGateModulosTenantRuntime
+        || moduloDisponivelTenantRuntime(
+            modulosTenantRuntime,
+            "extintores"
+        );
+
+    const dadosObrasDisponiveisRuntime =
+        mapaObraDisponivelRuntime
+        || extintoresDisponivelRuntime;
 
     useEffect(() => {
         if (!SUPABASE_CONFIGURADO) return undefined;
@@ -1289,6 +1330,10 @@ export default function App() {
             return;
         }
 
+        if (!modulosTenantRuntimeProntos) {
+            return;
+        }
+
         if (
             chaveCargaInicialUsuarioRef.current ===
             chaveUsuarioSessao
@@ -1301,7 +1346,13 @@ export default function App() {
                 chaveUsuarioSessao;
 
             carregarColaboradores();
-            carregarObrasEmpresas();
+
+            if (dadosObrasDisponiveisRuntime) {
+                carregarObrasEmpresas();
+            } else {
+                setObrasEmpresasBanco([]);
+            }
+
             registrarAuditoria("ACESSO", "sistema", "Usuário acessou o sistema");
             await verificarAcessoAuditoria();
         }, 0);
@@ -1311,6 +1362,8 @@ export default function App() {
         chaveUsuarioSessao,
         carregarColaboradores,
         carregarObrasEmpresas,
+        dadosObrasDisponiveisRuntime,
+        modulosTenantRuntimeProntos,
         registrarAuditoria,
         verificarAcessoAuditoria,
     ]);
@@ -1319,7 +1372,14 @@ export default function App() {
         if (!usuario) return undefined;
 
         const timer = window.setTimeout(() => {
-            const telaAuditoriaCampoAberta = tela === "auditoriaCampo" || tela === "mapaObraVisualizacao" || tela === "mapaObra";
+            const telaAuditoriaCampoAberta =
+                auditoriaCampoDisponivelRuntime
+                && (
+                    tela === "dashboard"
+                    || tela === "auditoriaCampo"
+                    || tela === "novaAuditoriaCampo"
+                );
+
             const telaAuditoriaSistemaAberta = tela === "auditoria" && podeAcessarAuditoria && auditoriaLiberada;
 
             if (telaAuditoriaCampoAberta && !auditoriasCampoCarregadas && !carregandoAuditoriasCampo) {
@@ -1345,6 +1405,7 @@ export default function App() {
     }, [
         usuario,
         tela,
+        auditoriaCampoDisponivelRuntime,
         podeAcessarAuditoria,
         auditoriaLiberada,
         auditoriaCarregada,
@@ -1394,12 +1455,6 @@ export default function App() {
         && String(
             acessoTenantRuntime.membership?.papel || ""
         ).trim().toLowerCase() === "administrador"
-    );
-
-    const aplicarGateModulosTenantRuntime = Boolean(
-        tenantResolvido
-        && tenant?.id
-        && acessoTenantRuntime.estado === "autorizado"
     );
 
     const permissaoSistemaRuntimeUsuario = useMemo(
