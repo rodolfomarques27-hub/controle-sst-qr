@@ -94,7 +94,22 @@ const CARREGADORES_MODULOS_TELAS = Object.freeze({
     roteiro: () => import("../components/Requisitos"),
 });
 
-export function precarregarModuloTelaSistema(tela = "") {
+const CARREGADOR_CONFIGURACOES_TENANT = () =>
+    import("../components/configuracoes/ConfiguracoesTenant");
+
+export function precarregarModuloTelaSistema(
+    tela = "",
+    {
+        tenant = false,
+    } = {}
+) {
+    if (
+        tela === "configuracoes"
+        && tenant
+    ) {
+        return CARREGADOR_CONFIGURACOES_TENANT();
+    }
+
     const carregador = CARREGADORES_MODULOS_TELAS[tela];
 
     return carregador ? carregador() : Promise.resolve();

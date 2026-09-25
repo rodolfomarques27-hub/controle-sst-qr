@@ -488,6 +488,14 @@ const codigoAppContentRouter = readFileSync(
     new URL("../src/routes/AppContentRouter.jsx", import.meta.url),
     "utf8"
 );
+const codigoAppScreensConfig = readFileSync(
+    new URL("../src/routes/appScreensConfig.js", import.meta.url),
+    "utf8"
+);
+const codigoConfiguracoesTenant = readFileSync(
+    new URL("../src/components/configuracoes/ConfiguracoesTenant.jsx", import.meta.url),
+    "utf8"
+);
 const codigoConfiguracoesSistema = readFileSync(
     new URL("../src/components/configuracoes/ConfiguracoesSistema.jsx", import.meta.url),
     "utf8"
@@ -1171,6 +1179,42 @@ assert.match(
     codigoAppContentRouter,
     /<ConfiguracoesSistema[\s\S]*permissaoSistemaUsuario=\{permissaoSistemaTela\}/,
     "O roteador deve repassar a permissão central para Configurações."
+);
+
+assert.match(
+    codigoAppContentRouter,
+    /tela === "configuracoes"[\s\S]*aplicarGateModulosTenantRuntime \? \([\s\S]*<ConfiguracoesTenant[\s\S]*<ConfiguracoesSistema/,
+    "Configurações deve bifurcar explicitamente tenant e Conta Mestre no roteador."
+);
+
+assert.match(
+    codigoAppContentRouter,
+    /precarregarModuloTelaSistema\([\s\S]*telaDestino,[\s\S]*tenant:\s*aplicarGateModulosTenantRuntime/,
+    "O preload deve receber explicitamente o contexto tenant do runtime."
+);
+
+assert.match(
+    codigoAppScreensConfig,
+    /configuracoes:\s*\(\)\s*=>[\s\S]*ConfiguracoesSistema/,
+    "O loader global de Configurações deve continuar preservado para a Conta Mestre."
+);
+
+assert.match(
+    codigoAppScreensConfig,
+    /CARREGADOR_CONFIGURACOES_TENANT[\s\S]*ConfiguracoesTenant[\s\S]*tela === "configuracoes"[\s\S]*&& tenant[\s\S]*CARREGADOR_CONFIGURACOES_TENANT\(\)/,
+    "O preload tenant deve carregar exclusivamente ConfiguracoesTenant."
+);
+
+assert.match(
+    codigoConfiguracoesTenant,
+    /useTenantRuntimeContext[\s\S]*empresasBanco[\s\S]*permissaoSistemaUsuario[\s\S]*modulosTenantRuntime/,
+    "ConfiguracoesTenant deve consumir apenas contexto e dados já resolvidos pelo runtime."
+);
+
+assert.doesNotMatch(
+    codigoConfiguracoesTenant,
+    /lib\/supabaseClient|\.rpc\(|\.from\(|\.storage\b|auditoriaPublica|storageAuditoria|ProvedorEmail|obrasService|fundoLogin|carregarConfiguracao/i,
+    "ConfiguracoesTenant não pode importar ou executar serviços globais, Supabase direto, RPC ou Storage administrativo."
 );
 assert.match(
     codigoConfiguracoesSistema,

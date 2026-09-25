@@ -40,6 +40,7 @@ const RelatorioAuditoria = React.lazy(() => import("../components/auditoria/Rela
 const DashboardAuditoriaCampo = React.lazy(() => import("../components/auditoria/DashboardAuditoriaCampo").then((modulo) => ({ default: modulo.DashboardAuditoriaCampo })));
 const NovaAuditoriaCampoDireta = React.lazy(() => import("../components/auditoria/NovaAuditoriaCampoDireta").then((modulo) => ({ default: modulo.NovaAuditoriaCampoDireta })));
 const ConfiguracoesSistema = React.lazy(() => import("../components/configuracoes/ConfiguracoesSistema").then((modulo) => ({ default: modulo.ConfiguracoesSistema })));
+const ConfiguracoesTenant = React.lazy(() => import("../components/configuracoes/ConfiguracoesTenant").then((modulo) => ({ default: modulo.ConfiguracoesTenant })));
 
 
 const AcessosAppPage = React.lazy(() => import("../components/acessos/AcessosAppPage").then((modulo) => ({ default: modulo.AcessosAppPage })));
@@ -718,7 +719,14 @@ export function AppContentRouter({
         let ativo = true;
         setPreparandoTelaPermitida(true);
 
-        Promise.resolve(precarregarModuloTelaSistema(telaDestino))
+        Promise.resolve(
+            precarregarModuloTelaSistema(
+                telaDestino,
+                {
+                    tenant: aplicarGateModulosTenantRuntime,
+                }
+            )
+        )
             .catch(() => {
                 // Se o preload falhar, o React.lazy ainda tentará carregar o módulo na renderização.
             })
@@ -990,21 +998,30 @@ export function AppContentRouter({
             )}
 
             {tela === "configuracoes" && (
-                <ConfiguracoesSistema
-                    empresasBanco={empresasBanco}
-                    usuario={usuario}
-                    podeAcessarAuditoria={podeAcessarAuditoria}
-                    permissaoSistemaUsuario={permissaoSistemaTela}
-                    limites={{
-                        ...limitesCarregamentoSistema,
-                        storageMb: LIMITE_STORAGE_MB,
-                    }}
-                    onSalvarLimites={onSalvarLimites}
-                    onListarArquivosStorage={onListarArquivosStorage}
-                    onExcluirArquivoStorage={onExcluirArquivoStorage}
-                    onAtualizarAuditoria={onAtualizarAuditoria}
-                    onRegistrarAuditoria={onRegistrarAuditoria}
-                />
+                aplicarGateModulosTenantRuntime ? (
+                    <ConfiguracoesTenant
+                        empresasBanco={empresasBanco}
+                        usuario={usuario}
+                        permissaoSistemaUsuario={permissaoSistemaTela}
+                        modulosTenantRuntime={modulosTenantRuntime}
+                    />
+                ) : (
+                    <ConfiguracoesSistema
+                        empresasBanco={empresasBanco}
+                        usuario={usuario}
+                        podeAcessarAuditoria={podeAcessarAuditoria}
+                        permissaoSistemaUsuario={permissaoSistemaTela}
+                        limites={{
+                            ...limitesCarregamentoSistema,
+                            storageMb: LIMITE_STORAGE_MB,
+                        }}
+                        onSalvarLimites={onSalvarLimites}
+                        onListarArquivosStorage={onListarArquivosStorage}
+                        onExcluirArquivoStorage={onExcluirArquivoStorage}
+                        onAtualizarAuditoria={onAtualizarAuditoria}
+                        onRegistrarAuditoria={onRegistrarAuditoria}
+                    />
+                )
             )}
 
             {tela === "roteiro" && <Requisitos />}
