@@ -401,7 +401,7 @@ const grupos =
                         Icone:
                             ScrollText,
                         habilitado:
-                            false,
+                            true,
                     },
                     {
                         chave:

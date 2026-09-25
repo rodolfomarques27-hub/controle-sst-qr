@@ -210,7 +210,11 @@ async function consultarDns({
                         googleError?.message ||
                         ""
                     )
-                ).trim()
+                ).trim(),
+                {
+                    cause:
+                        cloudflareError,
+                }
             );
         }
     }
@@ -377,9 +381,14 @@ export async function testarProntidaoDominioTenantService({
             ehIpv4Vercel
         );
 
+    const dnsResolvido =
+        cnameTargets.length >
+            0 ||
+        ipv4Targets.length >
+            0;
+
     const dnsOk =
-        cnameVercel ||
-        ipv4Vercel;
+        dnsResolvido;
 
     const https =
         dnsOk
@@ -397,7 +406,7 @@ export async function testarProntidaoDominioTenantService({
                     `https://${hostnameNormalizado}/`,
 
                 erro:
-                    "O teste HTTPS foi ignorado porque o DNS ainda não aponta para a infraestrutura esperada.",
+                    "O teste HTTPS foi ignorado porque o domínio ainda não está resolvendo publicamente.",
             };
 
     return {
@@ -416,6 +425,8 @@ export async function testarProntidaoDominioTenantService({
             {
                 ok:
                     dnsOk,
+
+                dnsResolvido,
 
                 cnameVercel,
 
@@ -443,11 +454,10 @@ export async function testarProntidaoDominioTenantService({
             https.ok
                 ? (
                     "A pré-checagem DNS/HTTPS passou. " +
-                    "Ainda é necessário abrir o ambiente e confirmar visualmente que o SafeScan correto responde antes de registrar a verificação no banco."
+                    "A validação autoritativa de Worker e assinatura SafeScan é realizada pelo diagnóstico server-side."
                 )
                 : (
-                    "O domínio ainda não passou pela pré-checagem externa. " +
-                    "Nenhuma verificação deve ser registrada no banco."
+                    "O domínio ainda não passou pela pré-checagem externa de resolução DNS/HTTPS."
                 ),
     };
 }

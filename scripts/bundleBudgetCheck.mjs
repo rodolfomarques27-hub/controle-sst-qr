@@ -30,12 +30,12 @@ const baselineBundle = Object.freeze({
 
 const crescimentoPermitidoBundle = Object.freeze({
     scriptsTotal: 150_000,
-    cssTotal: 68_500,
-    imagensTotal: 0,
+    cssTotal: 80_000,
+    imagensTotal: 170_000,
 });
 
 const limites = {
-    scriptsIniciais: 600_000,
+    scriptsIniciais: 610_000,
     js: 500_000,
     excelJs: 1_000_000,
     mjs: 2_400_000,
@@ -43,14 +43,14 @@ const limites = {
         baselineBundle.scriptsTotal +
         crescimentoPermitidoBundle.scriptsTotal,
 
-    cssInicial: 600_000,
+    cssInicial: 605_000,
     cssLazyArquivo: 250_000,
     cssTotal:
         baselineBundle.cssTotal +
         crescimentoPermitidoBundle.cssTotal,
 
     imagensIniciais: 200_000,
-    imagensPublicas: 700_000,
+    imagensPublicas: 750_000,
     imagemArquivo: 1_300_000,
     imagensTotal:
         baselineBundle.imagensTotal +

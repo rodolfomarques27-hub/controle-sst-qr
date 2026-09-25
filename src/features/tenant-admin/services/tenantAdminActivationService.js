@@ -189,3 +189,98 @@ export async function ativarTenantOrquestradoService({
             "ativar",
     });
 }
+
+export async function obterLiberacaoAtivacaoTenantService({
+    supabase,
+    tenantId,
+} = {}) {
+    if (!supabase) {
+        throw new Error(
+            "Cliente Supabase não informado."
+        );
+    }
+
+    const tenant =
+        validarTenantId(
+            tenantId
+        );
+
+    const {
+        data,
+        error,
+    } =
+        await supabase.rpc(
+            "admin_obter_liberacao_ativacao_tenant",
+            {
+                p_tenant_id:
+                    tenant,
+            }
+        );
+
+    if (error) {
+        throw new Error(
+            error.message ||
+            "Não foi possível consultar a liberação piloto do tenant."
+        );
+    }
+
+    return (
+        data ||
+        {
+            tenantId:
+                tenant,
+            habilitada:
+                false,
+        }
+    );
+}
+
+export async function definirLiberacaoAtivacaoTenantService({
+    supabase,
+    tenantId,
+    habilitada,
+} = {}) {
+    if (!supabase) {
+        throw new Error(
+            "Cliente Supabase não informado."
+        );
+    }
+
+    if (
+        typeof habilitada !==
+        "boolean"
+    ) {
+        throw new Error(
+            "Estado da liberação piloto inválido."
+        );
+    }
+
+    const tenant =
+        validarTenantId(
+            tenantId
+        );
+
+    const {
+        data,
+        error,
+    } =
+        await supabase.rpc(
+            "admin_definir_liberacao_ativacao_tenant",
+            {
+                p_tenant_id:
+                    tenant,
+
+                p_habilitada:
+                    habilitada,
+            }
+        );
+
+    if (error) {
+        throw new Error(
+            error.message ||
+            "Não foi possível alterar a liberação piloto do tenant."
+        );
+    }
+
+    return data ?? null;
+}

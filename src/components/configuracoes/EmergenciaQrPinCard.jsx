@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
-import { Building2, Eye, EyeOff, KeyRound, Save, ShieldCheck } from "lucide-react";
+import { Building2, KeyRound, Save, ShieldCheck } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
-import { Card } from "../commonComponents";
+import { Card, PasswordInput } from "../commonComponents";
 
 function textoSeguro(valor = "") {
     return String(valor || "").trim();
@@ -31,7 +31,7 @@ export function EmergenciaQrPinCard({
     const [ativo, setAtivo] = useState(true);
     const [pin, setPin] = useState("");
     const [confirmarPin, setConfirmarPin] = useState("");
-    const [mostrarPin, setMostrarPin] = useState(false);
+
     const [salvando, setSalvando] = useState(false);
     const [mensagem, setMensagem] = useState("");
     const [erro, setErro] = useState("");
@@ -189,39 +189,38 @@ export function EmergenciaQrPinCard({
                             <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
                                 PIN
                             </span>
-                            <div className="flex overflow-hidden rounded-2xl border border-slate-200 bg-white focus-within:border-slate-400 focus-within:ring-4 focus-within:ring-slate-100">
-                                <input
-                                    type={mostrarPin ? "text" : "password"}
-                                    value={pin}
-                                    onChange={(event) => setPin(event.target.value)}
-                                    disabled={!ativo}
-                                    placeholder="Novo PIN · mín. 4 caracteres"
-                                    className="min-w-0 flex-1 px-4 py-3 text-sm font-bold text-slate-800 outline-none disabled:bg-slate-50 disabled:text-slate-400"
-                                    autoComplete="new-password"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setMostrarPin((valor) => !valor)}
-                                    className="px-3 text-slate-500 hover:text-slate-800"
-                                >
-                                    {mostrarPin ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                </button>
-                            </div>
+                            <PasswordInput
+                        value={pin}
+                        onChange={(event) =>
+                            setPin(
+                                event.target.value
+                            )
+                        }
+                        disabled={!ativo}
+                        placeholder="Novo PIN · mín. 4 caracteres"
+                        autoComplete="new-password"
+                        visibilityLabel="PIN"
+                        inputClassName="!rounded-2xl !border-slate-200 !bg-white py-3 text-sm font-bold text-slate-800 focus:!border-slate-400 focus:!ring-4 focus:!ring-slate-100 disabled:!bg-slate-50 disabled:!text-slate-400"
+                    />
                         </label>
 
                         <label className="block">
                             <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
                                 Confirmar PIN
                             </span>
-                            <input
-                                type={mostrarPin ? "text" : "password"}
-                                value={confirmarPin}
-                                onChange={(event) => setConfirmarPin(event.target.value)}
-                                disabled={!ativo}
-                                placeholder="Repita o PIN"
-                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-800 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100 disabled:bg-slate-50 disabled:text-slate-400"
-                                autoComplete="new-password"
-                            />
+                            <PasswordInput
+                    value={confirmarPin}
+                    onChange={(event) =>
+                        setConfirmarPin(
+                            event.target.value
+                        )
+                    }
+                    disabled={!ativo}
+                    placeholder="Repita o PIN"
+                    autoComplete="new-password"
+                    visibilityLabel="PIN"
+                    inputClassName="!rounded-2xl !border-slate-200 !bg-white py-3 text-sm font-bold text-slate-800 focus:!border-slate-400 focus:!ring-4 focus:!ring-slate-100 disabled:!bg-slate-50 disabled:!text-slate-400"
+                />
                         </label>
                     </div>
 

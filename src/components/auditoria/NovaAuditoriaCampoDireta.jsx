@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
-import { Card } from "../commonComponents";
+import { Card, PasswordInput } from "../commonComponents";
 import { FileUploadAviso, validarArquivoAntesUpload } from "../FileUploadAviso";
 import dashboardHeroBackground from "../../assets/nova-auditoria-hero-bg.webp";
 import {
@@ -1104,14 +1104,16 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                                 <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
                                     Senha da auditoria
                                 </label>
-                                <input
-                                    type="password"
-                                    value={senhaAcessoAuditoria}
-                                    onChange={(e) => setSenhaAcessoAuditoria(e.target.value)}
-                                    placeholder="Digite a senha de acesso"
-                                    autoComplete="current-password"
-                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                />
+                                <PasswordInput
+                            value={senhaAcessoAuditoria}
+                            onChange={(e) =>
+                                setSenhaAcessoAuditoria(
+                                    e.target.value
+                                )
+                            }
+                            placeholder="Digite a senha de acesso"
+                            autoComplete="current-password"
+                        />
                             </div>
 
                             {mensagemAcessoAuditoria && (

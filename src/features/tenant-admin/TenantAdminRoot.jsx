@@ -36,6 +36,9 @@ import {
     TenantAdminDomainsPage,
 } from "./pages/TenantAdminDomainsPage.jsx";
 
+import {
+    TenantAdminAuditPage,
+} from "./pages/TenantAdminAuditPage.jsx";
 
 import {
     TenantAdminSettingsPage,
@@ -48,7 +51,7 @@ const SECOES_ADMIN =
         "novo-cliente",
         "infraestrutura",
         "dominios",
-
+        "auditoria",
         "configuracoes",
     ]);
 
@@ -195,6 +198,14 @@ export default function TenantAdminRoot() {
             );
         }
 
+        if (
+            secaoAtiva ===
+            "auditoria"
+        ) {
+            return (
+                <TenantAdminAuditPage />
+            );
+        }
 
         if (
             secaoAtiva ===

@@ -962,6 +962,28 @@ export async function verificarMfaTotpContaMestreService({
         );
     }
 
+    /*
+     * A3-A12:
+     * challengeAndVerify e confirmação AAL2
+     * já ocorreram antes deste ponto.
+     *
+     * Nenhum fator, código ou segredo é enviado
+     * para a auditoria.
+     */
+    const {
+        error:
+            auditoriaError,
+    } =
+        await supabase.rpc(
+            "registrar_auditoria_mfa_conta_mestre"
+        );
+
+    if (auditoriaError) {
+        console.error(
+            "MASTER_MFA_AUDIT_FAILED"
+        );
+    }
+
     return estado;
 }
 

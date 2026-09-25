@@ -8,6 +8,7 @@ import {
     Database,
     Globe2,
     LockKeyhole,
+    ScrollText,
     ServerCog,
     ShieldCheck,
 } from "lucide-react";
@@ -1911,6 +1912,15 @@ export function TenantAdminSettingsPage({
                 />
 
                 <CardStatus
+                    titulo="Auditoria"
+                    valor="Disponível"
+                    descricao="Auditoria do sistema e inventário administrativo de armazenamento."
+                    Icone={
+                        ScrollText
+                    }
+                />
+
+                <CardStatus
                     titulo="Governança"
                     valor="Global"
                     descricao="Configurações desta área pertencem ao Painel Mestre da plataforma."
@@ -1962,6 +1972,21 @@ export function TenantAdminSettingsPage({
                             () =>
                                 abrir(
                                     "dominios"
+                                )
+                        }
+                    />
+
+                    <CardArea
+                        titulo="Auditoria"
+                        descricao="Revise eventos administrativos e o inventário de Storage."
+                        detalhe="Inclui segregação por cliente, integridade da análise e controles seguros de limpeza."
+                        Icone={
+                            ScrollText
+                        }
+                        onAbrir={
+                            () =>
+                                abrir(
+                                    "auditoria"
                                 )
                         }
                     />

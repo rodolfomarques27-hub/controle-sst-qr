@@ -17,7 +17,7 @@ import {
     X,
 } from "lucide-react";
 import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
-import { Card } from "../commonComponents";
+import { Card, PasswordInput } from "../commonComponents";
 import {
     ACOES_USUARIOS_PERMISSOES,
     ACOES_USUARIOS_PERMISSOES_PLANEJADAS,
@@ -2915,25 +2915,35 @@ function UsuariosCadastradosApp({
                             <div className="grid gap-3 md:grid-cols-3">
                                 <label className="block">
                                     <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Senha temporária</span>
-                                    <input
-                                        type="password"
-                                        value={formulario.senhaTemporaria}
-                                        onChange={(evento) => atualizarCampoFormulario("senhaTemporaria", evento.target.value)}
-                                        className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                        placeholder="Mínimo 6 caracteres"
-                                        autoComplete="new-password"
-                                    />
+                                    <PasswordInput
+                    value={formulario.senhaTemporaria}
+                    onChange={(evento) =>
+                        atualizarCampoFormulario(
+                            "senhaTemporaria",
+                            evento.target.value
+                        )
+                    }
+                    className="mt-1"
+                    placeholder="Mínimo 6 caracteres"
+                    autoComplete="new-password"
+                    inputClassName="text-xs font-semibold text-slate-700 focus:!border-blue-400 focus:!ring-blue-100"
+                />
                                 </label>
                                 <label className="block">
                                     <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Confirmar senha</span>
-                                    <input
-                                        type="password"
-                                        value={formulario.confirmarSenhaTemporaria}
-                                        onChange={(evento) => atualizarCampoFormulario("confirmarSenhaTemporaria", evento.target.value)}
-                                        className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                        placeholder="Repita a senha"
-                                        autoComplete="new-password"
-                                    />
+                                    <PasswordInput
+                    value={formulario.confirmarSenhaTemporaria}
+                    onChange={(evento) =>
+                        atualizarCampoFormulario(
+                            "confirmarSenhaTemporaria",
+                            evento.target.value
+                        )
+                    }
+                    className="mt-1"
+                    placeholder="Repita a senha"
+                    autoComplete="new-password"
+                    inputClassName="text-xs font-semibold text-slate-700 focus:!border-blue-400 focus:!ring-blue-100"
+                />
                                 </label>
                                 <label className="flex items-start gap-3 rounded-2xl bg-white p-3 ring-1 ring-slate-200">
                                     <input

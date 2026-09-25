@@ -878,10 +878,59 @@ Deno.serve(
                 );
             }
 
+            let liberacaoPiloto:
+                Record<string, unknown> |
+                null =
+                    null;
+
+            let liberacaoPilotoAtiva =
+                false;
+
+            if (
+                !ATIVACAO_REAL_HABILITADA
+            ) {
+                const {
+                    data:
+                        liberacaoData,
+                    error:
+                        liberacaoError,
+                } =
+                    await supabase.rpc(
+                        "admin_obter_liberacao_ativacao_tenant",
+                        {
+                            p_tenant_id:
+                                tenantId,
+                        }
+                    );
+
+                if (liberacaoError) {
+                    throw new Error(
+                        liberacaoError.message ||
+                        "Não foi possível consultar a liberação piloto do tenant."
+                    );
+                }
+
+                liberacaoPiloto =
+                    liberacaoData &&
+                    typeof liberacaoData ===
+                        "object"
+                        ? liberacaoData as Record<string, unknown>
+                        : null;
+
+                liberacaoPilotoAtiva =
+                    liberacaoPiloto
+                        ?.habilitada ===
+                    true;
+            }
+
+            const ativacaoPermitida =
+                ATIVACAO_REAL_HABILITADA ||
+                liberacaoPilotoAtiva;
+
             if (
                 modo ===
                     "ativar" &&
-                !ATIVACAO_REAL_HABILITADA
+                !ativacaoPermitida
             ) {
                 return jsonResponse(
                     403,
@@ -899,11 +948,18 @@ Deno.serve(
 
                         tenantId,
 
+                        ativacaoRealHabilitada:
+                            ATIVACAO_REAL_HABILITADA,
+
+                        liberacaoPilotoAtiva,
+
+                        ativacaoPermitida,
+
                         prontoParaAtivar:
                             false,
 
                         mensagem:
-                            "A ativação real está desabilitada no servidor. Somente o diagnóstico está autorizado nesta publicação.",
+                            "A ativação real permanece fechada globalmente e este tenant não possui liberação piloto ativa.",
                     }
                 );
             }
@@ -1152,6 +1208,13 @@ Deno.serve(
                 https,
 
                 prontoParaAtivar,
+
+                ativacaoRealHabilitada:
+                    ATIVACAO_REAL_HABILITADA,
+
+                liberacaoPilotoAtiva,
+
+                ativacaoPermitida,
 
                 consultadoEm:
                     new Date().toISOString(),

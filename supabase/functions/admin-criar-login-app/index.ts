@@ -346,6 +346,31 @@ async function usuarioAlvoEhGlobal(
   );
 }
 
+function extrairMensagemErroSeguro(
+  error: unknown,
+  fallback: string
+) {
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error
+  ) {
+    const mensagem =
+      (error as {
+        message?: unknown;
+      }).message;
+
+    if (
+      typeof mensagem === "string" &&
+      mensagem.trim()
+    ) {
+      return mensagem.trim();
+    }
+  }
+
+  return fallback;
+}
+
 async function carregarEmpresaTenant(
   adminClient: any,
   tenantId: string,
@@ -979,8 +1004,10 @@ Deno.serve(async (req) => {
         {
           ok: false,
           erro:
-            error?.message ||
-            "Não foi possível validar a empresa do tenant.",
+            extrairMensagemErroSeguro(
+              error,
+              "Não foi possível validar a empresa do tenant."
+            ),
         }
       );
     }
@@ -1667,8 +1694,10 @@ Deno.serve(async (req) => {
           persistenciaPrincipalConcluida,
         compensacaoAuthFalhou,
         erro:
-          error?.message ||
-          "Não foi possível criar o login do app.",
+          extrairMensagemErroSeguro(
+            error,
+            "Não foi possível criar o login do app."
+          ),
       }
     );
   }

@@ -594,6 +594,54 @@ Deno.serve(
       );
     }
 
+    /*
+     * A3-A12:
+     * a revogação Auth já foi concluída com sucesso.
+     * O único dado operacional adicional persistido
+     * é o scope: others ou global.
+     */
+    const {
+      error:
+        auditError,
+    } =
+      await admin
+        .from(
+          "auditoria_sistema",
+        )
+        .insert({
+          usuario_id:
+            userData.user.id,
+
+          usuario_email:
+            userData.user.email ||
+            null,
+
+          acao:
+            "MASTER_SESSIONS_REVOKED",
+
+          tabela:
+            "conta_mestre_seguranca",
+
+          registro_id:
+            userData.user.id,
+
+          descricao:
+            scope ===
+              "others"
+              ? "Conta Mestre encerrou as outras sessões autenticadas."
+              : "Conta Mestre encerrou todas as sessões autenticadas.",
+
+          dados: {
+            scope,
+          },
+        });
+
+    if (auditError) {
+      console.error(
+        "MASTER_SESSION_AUDIT_FAILED",
+      );
+    }
+
     return resposta(
       origin,
       200,
