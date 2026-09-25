@@ -42,11 +42,34 @@ begin
         select
             c.id,
             c.empresa_id,
-            c.foto_url
+            c.foto_url,
+            lower(
+                nullif(
+                    btrim(
+                        c.codigo_funcionario
+                    ),
+                    ''
+                )
+            ) as codigo_funcionario
         from public.colaboradores as c
         join empresas_tenant as e
             on e.id =
                 c.empresa_id
+    ),
+    obras_tenant as (
+        select
+            o.id
+        from public.obras as o
+        where o.tenant_id =
+            p_tenant_id
+    ),
+    dds_tenant as (
+        select
+            d.id
+        from public.dds_registros as d
+        join empresas_tenant as e
+            on e.id =
+                d.empresa_id
     ),
     referencias_brutas(
         bucket_id,
@@ -314,7 +337,7 @@ begin
             ''
         ) is not null
     ),
-    objetos_tenant as (
+    objetos_referenciados as (
         select
             o.id,
             o.bucket_id,
@@ -330,6 +353,138 @@ begin
                 o.is_delete_marker,
                 false
             ) = false
+    ),
+    objetos_por_estrutura as (
+        select
+            o.id,
+            o.bucket_id,
+            o.name,
+            o.metadata
+        from storage.objects as o
+        where
+            o.archived_at is null
+            and coalesce(
+                o.is_delete_marker,
+                false
+            ) = false
+            and (
+                (
+                    o.bucket_id in (
+                        'documentos-empresas',
+                        'contratos-empresas',
+                        'certidao-mensal-documentos'
+                    )
+                    and exists (
+                        select 1
+                        from empresas_tenant as e
+                        where e.id::text =
+                            split_part(
+                                o.name,
+                                '/',
+                                1
+                            )
+                    )
+                )
+                or (
+                    o.bucket_id =
+                        'logos-empresas'
+                    and (
+                        split_part(
+                            o.name,
+                            '/',
+                            1
+                        ) =
+                            p_tenant_id::text
+                        or exists (
+                            select 1
+                            from empresas_tenant as e
+                            where e.id::text =
+                                split_part(
+                                    o.name,
+                                    '/',
+                                    1
+                                )
+                        )
+                    )
+                )
+                or (
+                    o.bucket_id =
+                        'fotos-colaboradores'
+                    and exists (
+                        select 1
+                        from colaboradores_tenant as c
+                        where c.id::text =
+                            split_part(
+                                o.name,
+                                '/',
+                                1
+                            )
+                    )
+                )
+                or (
+                    o.bucket_id =
+                        'certificados-treinamentos'
+                    and exists (
+                        select 1
+                        from colaboradores_tenant as c
+                        where
+                            c.codigo_funcionario is not null
+                            and c.codigo_funcionario =
+                                lower(
+                                    split_part(
+                                        o.name,
+                                        '/',
+                                        1
+                                    )
+                                )
+                    )
+                )
+                or (
+                    o.bucket_id =
+                        'dds-assinados'
+                    and exists (
+                        select 1
+                        from dds_tenant as d
+                        where d.id::text =
+                            split_part(
+                                o.name,
+                                '/',
+                                1
+                            )
+                    )
+                )
+                or (
+                    o.bucket_id =
+                        'mapas-obras'
+                    and exists (
+                        select 1
+                        from obras_tenant as obra
+                        where obra.id::text =
+                            split_part(
+                                o.name,
+                                '/',
+                                1
+                            )
+                    )
+                )
+            )
+    ),
+    objetos_tenant as (
+        select
+            id,
+            bucket_id,
+            name,
+            metadata
+        from objetos_referenciados
+
+        union
+
+        select
+            id,
+            bucket_id,
+            name,
+            metadata
+        from objetos_por_estrutura
     ),
     buckets_sst(bucket_id) as (
         values
@@ -426,4 +581,4 @@ comment on function public.resumo_storage_sst_tenant(
     uuid
 )
 is
-    'Retorna somente o uso de Storage atribuível a registros de empresas do tenant autorizado. Não inclui ativos globais nem objetos sem vínculo estrutural confirmado e não possui fallback para o total global da plataforma.';
+    'Retorna somente o uso de Storage atribuível ao tenant autorizado por vínculos de banco ou estrutura de caminho comprovadamente tenant-scoped. Inclui arquivos físicos atribuíveis mesmo quando a referência documental foi substituída; não inclui ativos globais nem objetos sem vínculo seguro e não possui fallback para o total global da plataforma.';
