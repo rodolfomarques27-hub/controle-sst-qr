@@ -9,6 +9,10 @@ import {
     precarregarModuloTelaSistema,
 } from "./appScreensConfig";
 import {
+    telaDisponivelTenantRuntime,
+    telaTemMapeamentoModuloTenantRuntime,
+} from "../services/tenantModulesRuntimeService.js";
+import {
     carregarPermissaoSistemaAtualService,
     normalizarPermissaoSistema,
     registrarSolicitacaoAcessoSistemaService,
@@ -41,9 +45,26 @@ const ConfiguracoesSistema = React.lazy(() => import("../components/configuracoe
 const AcessosAppPage = React.lazy(() => import("../components/acessos/AcessosAppPage").then((modulo) => ({ default: modulo.AcessosAppPage })));
 
 
-function obterPrimeiraTelaPermitidaParaUsuario(permissao = null) {
-    return ORDEM_REDIRECIONAMENTO_TELAS_PERMITIDAS.find((telaCandidata) =>
-        usuarioPodeAcessarTelaSistema(permissao, telaCandidata)
+function obterPrimeiraTelaPermitidaParaUsuario(
+    permissao = null,
+    {
+        modulosTenantRuntime = [],
+        aplicarGateModulosTenantRuntime = false,
+    } = {}
+) {
+    return ORDEM_REDIRECIONAMENTO_TELAS_PERMITIDAS.find(
+        (telaCandidata) =>
+            (
+                !aplicarGateModulosTenantRuntime
+                || telaDisponivelTenantRuntime(
+                    modulosTenantRuntime,
+                    telaCandidata
+                )
+            )
+            && usuarioPodeAcessarTelaSistema(
+                permissao,
+                telaCandidata
+            )
     ) || "";
 }
 
@@ -419,6 +440,10 @@ export function AppContentRouter({
     permissaoSistemaUsuario = null,
     carregandoPermissaoSistemaUsuario = false,
     erroPermissaoSistemaUsuario = "",
+    modulosTenantRuntime = [],
+    carregandoModulosTenantRuntime = false,
+    erroModulosTenantRuntime = "",
+    aplicarGateModulosTenantRuntime = false,
     onPermissaoSistemaAtualizada,
     onRedirecionarTelaPermitida,
 }) {
@@ -542,6 +567,31 @@ export function AppContentRouter({
         && Boolean(permissaoSistemaTela)
         && !erroPermissaoSistemaTela;
 
+    const telaControladaPorContrato =
+        Boolean(
+            aplicarGateModulosTenantRuntime
+            && telaTemMapeamentoModuloTenantRuntime(
+                modulosTenantRuntime,
+                tela
+            )
+        );
+
+    const telaBloqueadaPorContrato =
+        Boolean(
+            aplicarGateModulosTenantRuntime
+            && !carregandoModulosTenantRuntime
+            && (
+                erroModulosTenantRuntime
+                || (
+                    telaControladaPorContrato
+                    && !telaDisponivelTenantRuntime(
+                        modulosTenantRuntime,
+                        tela
+                    )
+                )
+            )
+        );
+
     const trocaSenhaTemporariaObrigatoria =
         permissaoProntaParaDecisao
         && permissaoSistemaTela?.precisa_trocar_senha === true;
@@ -557,6 +607,10 @@ export function AppContentRouter({
             || bloqueioTelaSistema.bloqueado
         );
 
+    const telaBloqueadaRuntime =
+        telaBloqueadaPorPermissao
+        || telaBloqueadaPorContrato;
+
     const primeiraTelaPermitidaSistema = useMemo(() => {
         if (
             trocaSenhaTemporariaObrigatoria
@@ -567,7 +621,11 @@ export function AppContentRouter({
         const primeiraTelaLegada =
             permissaoProntaParaDecisao
                 ? obterPrimeiraTelaPermitidaParaUsuario(
-                    permissaoSistemaTela
+                    permissaoSistemaTela,
+                    {
+                        modulosTenantRuntime,
+                        aplicarGateModulosTenantRuntime,
+                    }
                 )
                 : "";
 
@@ -580,6 +638,8 @@ export function AppContentRouter({
             )
         );
     }, [
+        aplicarGateModulosTenantRuntime,
+        modulosTenantRuntime,
         permissaoProntaParaDecisao,
         permissaoSistemaTela,
         tenantAdminPodeGerenciarAcessos,
@@ -588,8 +648,11 @@ export function AppContentRouter({
 
     const deveRedirecionarParaTelaPermitida = Boolean(
         onRedirecionarTelaPermitida
-        && telaControladaPorPermissao
-        && telaBloqueadaPorPermissao
+        && (
+            telaControladaPorPermissao
+            || telaControladaPorContrato
+        )
+        && telaBloqueadaRuntime
         && primeiraTelaPermitidaSistema
         && primeiraTelaPermitidaSistema !== tela
         && !trocaSenhaTemporariaObrigatoria
@@ -608,7 +671,18 @@ export function AppContentRouter({
             return undefined;
         }
 
-        if (erroPermissaoSistemaTela) {
+        if (
+            aplicarGateModulosTenantRuntime
+            && carregandoModulosTenantRuntime
+        ) {
+            setPreparandoTelaPermitida(true);
+            return undefined;
+        }
+
+        if (
+            erroPermissaoSistemaTela
+            || erroModulosTenantRuntime
+        ) {
             setPreparandoTelaPermitida(false);
             setTelaComModuloPronto(tela);
             return undefined;
@@ -667,8 +741,11 @@ export function AppContentRouter({
             ativo = false;
         };
     }, [
+        aplicarGateModulosTenantRuntime,
+        carregandoModulosTenantRuntime,
         deveRedirecionarParaTelaPermitida,
         onRedirecionarTelaPermitida,
+        erroModulosTenantRuntime,
         erroPermissaoSistemaTela,
         permissaoProntaParaDecisao,
         primeiraTelaPermitidaSistema,
@@ -679,10 +756,14 @@ export function AppContentRouter({
     ]);
 
     const aguardandoTelaPermitida = Boolean(
-        telaControladaPorPermissao
+        (
+            telaControladaPorPermissao
+            || telaControladaPorContrato
+        )
         && !trocaSenhaTemporariaObrigatoria
         && (
             carregandoPermissaoSistemaTela
+            || carregandoModulosTenantRuntime
             || preparandoTelaPermitida
             || deveRedirecionarParaTelaPermitida
             || telaComModuloPronto !== tela
@@ -709,13 +790,22 @@ export function AppContentRouter({
         );
     }
 
-    if (telaBloqueadaPorPermissao) {
+    if (telaBloqueadaRuntime) {
+        const erroRuntime =
+            erroModulosTenantRuntime
+            || erroPermissaoSistemaTela
+            || (
+                telaBloqueadaPorContrato
+                    ? "Módulo não contratado ou indisponível para este ambiente."
+                    : ""
+            );
+
         return (
             <AcessoModuloSistemaBloqueado
                 tela={tela}
                 bloqueio={bloqueioTelaSistema}
                 permissao={permissaoSistemaTela}
-                erro={erroPermissaoSistemaTela}
+                erro={erroRuntime}
                 usuario={usuario}
             />
         );

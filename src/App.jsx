@@ -1,5 +1,10 @@
 import { useTenantRuntimeContext } from "./components/layout/TenantRuntimeContext.js";
 import { carregarAcessoTenantAtualService } from "./services/tenantMembershipService.js";
+import {
+    carregarModulosTenantRuntimeService,
+    montarPermissaoMembershipTenantRuntime,
+    telaDisponivelTenantRuntime,
+} from "./services/tenantModulesRuntimeService.js";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     supabase,
@@ -126,9 +131,26 @@ function obterEstadoInicialMenuLateral() {
     return true;
 }
 
-function obterPrimeiraTelaPermitidaApp(permissao = null) {
-    return ORDEM_TELAS_INICIAIS_PERMITIDAS_APP.find((telaCandidata) =>
-        usuarioPodeAcessarTelaSistema(permissao, telaCandidata)
+function obterPrimeiraTelaPermitidaApp(
+    permissao = null,
+    {
+        modulosTenantRuntime = [],
+        aplicarGateModulosTenant = false,
+    } = {}
+) {
+    return ORDEM_TELAS_INICIAIS_PERMITIDAS_APP.find(
+        (telaCandidata) =>
+            (
+                !aplicarGateModulosTenant
+                || telaDisponivelTenantRuntime(
+                    modulosTenantRuntime,
+                    telaCandidata
+                )
+            )
+            && usuarioPodeAcessarTelaSistema(
+                permissao,
+                telaCandidata
+            )
     ) || "";
 }
 
@@ -203,6 +225,9 @@ export default function App() {
     const [permissaoSistemaUsuario, setPermissaoSistemaUsuario] = useState(null);
     const [carregandoPermissaoSistemaUsuario, setCarregandoPermissaoSistemaUsuario] = useState(false);
     const [erroPermissaoSistemaUsuario, setErroPermissaoSistemaUsuario] = useState("");
+    const [modulosTenantRuntime, setModulosTenantRuntime] = useState([]);
+    const [carregandoModulosTenantRuntime, setCarregandoModulosTenantRuntime] = useState(false);
+    const [erroModulosTenantRuntime, setErroModulosTenantRuntime] = useState("");
 
     useEffect(() => {
         if (!SUPABASE_CONFIGURADO) return undefined;
@@ -1012,6 +1037,73 @@ export default function App() {
         usuario?.id,
     ]);
     useEffect(() => {
+        if (
+            !SUPABASE_CONFIGURADO
+            || !tenantResolvido
+            || !tenant?.id
+            || acessoTenantRuntime.estado !== "autorizado"
+        ) {
+            setModulosTenantRuntime([]);
+            setCarregandoModulosTenantRuntime(false);
+            setErroModulosTenantRuntime("");
+            return undefined;
+        }
+
+        let componenteAtivo = true;
+
+        setCarregandoModulosTenantRuntime(true);
+        setErroModulosTenantRuntime("");
+
+        async function carregarModulosTenantRuntime() {
+            try {
+                const modulos =
+                    await carregarModulosTenantRuntimeService({
+                        supabase,
+                        tenantId:
+                            tenant.id,
+                    });
+
+                if (!componenteAtivo) {
+                    return;
+                }
+
+                setModulosTenantRuntime(
+                    modulos
+                );
+            } catch (error) {
+                if (!componenteAtivo) {
+                    return;
+                }
+
+                console.error(
+                    "Não foi possível carregar os módulos do tenant:",
+                    error
+                );
+
+                setModulosTenantRuntime([]);
+                setErroModulosTenantRuntime(
+                    error?.message
+                    || "Não foi possível validar os módulos contratados deste ambiente."
+                );
+            } finally {
+                if (componenteAtivo) {
+                    setCarregandoModulosTenantRuntime(false);
+                }
+            }
+        }
+
+        carregarModulosTenantRuntime();
+
+        return () => {
+            componenteAtivo = false;
+        };
+    }, [
+        acessoTenantRuntime.estado,
+        tenantResolvido,
+        tenant?.id,
+    ]);
+
+    useEffect(() => {
         if (!SUPABASE_CONFIGURADO) return undefined;
 
         let componenteAtivo = true;
@@ -1304,6 +1396,69 @@ export default function App() {
         ).trim().toLowerCase() === "administrador"
     );
 
+    const aplicarGateModulosTenantRuntime = Boolean(
+        tenantResolvido
+        && tenant?.id
+        && acessoTenantRuntime.estado === "autorizado"
+    );
+
+    const permissaoSistemaRuntimeUsuario = useMemo(
+        () =>
+            aplicarGateModulosTenantRuntime
+                ? montarPermissaoMembershipTenantRuntime({
+                    membership:
+                        acessoTenantRuntime.membership,
+                    permissaoLegada:
+                        permissaoSistemaUsuario,
+                })
+                : permissaoSistemaUsuario,
+        [
+            acessoTenantRuntime.membership,
+            aplicarGateModulosTenantRuntime,
+            permissaoSistemaUsuario,
+        ]
+    );
+
+    const carregandoPermissaoRuntimeUsuario =
+        aplicarGateModulosTenantRuntime
+            ? carregandoModulosTenantRuntime
+            : carregandoPermissaoSistemaUsuario;
+
+    const erroPermissaoRuntimeUsuario =
+        aplicarGateModulosTenantRuntime
+            ? erroModulosTenantRuntime
+            : erroPermissaoSistemaUsuario;
+
+    const usuarioRuntime = useMemo(
+        () => {
+            if (
+                !aplicarGateModulosTenantRuntime
+                || !permissaoSistemaRuntimeUsuario
+                || !usuario
+            ) {
+                return usuario;
+            }
+
+            return {
+                ...usuario,
+                perfil:
+                    permissaoSistemaRuntimeUsuario.perfil
+                    || usuario.perfil,
+                ativo:
+                    permissaoSistemaRuntimeUsuario.ativo,
+                bloqueado:
+                    permissaoSistemaRuntimeUsuario.bloqueado,
+                acesso_global:
+                    false,
+            };
+        },
+        [
+            aplicarGateModulosTenantRuntime,
+            permissaoSistemaRuntimeUsuario,
+            usuario,
+        ]
+    );
+
     const navCompleta = useMemo(() => [
         { id: "dashboard", label: "Dashboard SST", icon: LayoutDashboard, grupo: "VISÃO GERAL" },
 
@@ -1335,7 +1490,7 @@ export default function App() {
         }
 
         if (
-            carregandoPermissaoSistemaUsuario
+            carregandoPermissaoRuntimeUsuario
             && !tenantAdminPodeGerenciarAcessos
         ) {
             return [];
@@ -1343,8 +1498,8 @@ export default function App() {
 
         if (
             (
-                !permissaoSistemaUsuario
-                || erroPermissaoSistemaUsuario
+                !permissaoSistemaRuntimeUsuario
+                || erroPermissaoRuntimeUsuario
             )
             && !tenantAdminPodeGerenciarAcessos
         ) {
@@ -1360,6 +1515,16 @@ export default function App() {
             }
 
             if (
+                aplicarGateModulosTenantRuntime
+                && !telaDisponivelTenantRuntime(
+                    modulosTenantRuntime,
+                    item.id
+                )
+            ) {
+                return false;
+            }
+
+            if (
                 item.id === "acessosApp"
                 && tenantAdminPodeGerenciarAcessos
             ) {
@@ -1367,15 +1532,17 @@ export default function App() {
             }
 
             return usuarioPodeAcessarTelaSistema(
-                permissaoSistemaUsuario,
+                permissaoSistemaRuntimeUsuario,
                 item.id
             );
         });
     }, [
-        carregandoPermissaoSistemaUsuario,
-        erroPermissaoSistemaUsuario,
+        aplicarGateModulosTenantRuntime,
+        carregandoPermissaoRuntimeUsuario,
+        erroPermissaoRuntimeUsuario,
+        modulosTenantRuntime,
         navCompleta,
-        permissaoSistemaUsuario,
+        permissaoSistemaRuntimeUsuario,
         podeAcessarAuditoria,
         tenantAdminPodeGerenciarAcessos,
         usuario?.email,
@@ -1387,7 +1554,7 @@ export default function App() {
         }
 
         if (
-            carregandoPermissaoSistemaUsuario
+            carregandoPermissaoRuntimeUsuario
             && !tenantAdminPodeGerenciarAcessos
         ) {
             return "";
@@ -1395,23 +1562,28 @@ export default function App() {
 
         if (
             (
-                !permissaoSistemaUsuario
-                || erroPermissaoSistemaUsuario
+                !permissaoSistemaRuntimeUsuario
+                || erroPermissaoRuntimeUsuario
             )
             && !tenantAdminPodeGerenciarAcessos
         ) {
             return "";
         }
 
-        const primeiraTelaLegada =
-            permissaoSistemaUsuario
+        const primeiraTelaPermitida =
+            permissaoSistemaRuntimeUsuario
                 ? obterPrimeiraTelaPermitidaApp(
-                    permissaoSistemaUsuario
+                    permissaoSistemaRuntimeUsuario,
+                    {
+                        modulosTenantRuntime,
+                        aplicarGateModulosTenant:
+                            aplicarGateModulosTenantRuntime,
+                    }
                 )
                 : "";
 
         return (
-            primeiraTelaLegada
+            primeiraTelaPermitida
             || (
                 tenantAdminPodeGerenciarAcessos
                     ? "acessosApp"
@@ -1419,40 +1591,54 @@ export default function App() {
             )
         );
     }, [
-        carregandoPermissaoSistemaUsuario,
-        erroPermissaoSistemaUsuario,
-        permissaoSistemaUsuario,
+        aplicarGateModulosTenantRuntime,
+        carregandoPermissaoRuntimeUsuario,
+        erroPermissaoRuntimeUsuario,
+        modulosTenantRuntime,
+        permissaoSistemaRuntimeUsuario,
         tenantAdminPodeGerenciarAcessos,
         usuario?.email,
     ]);
 
     const trocaSenhaTemporariaPendenteApp =
         Boolean(
-            permissaoSistemaUsuario?.precisa_trocar_senha === true
+            permissaoSistemaRuntimeUsuario?.precisa_trocar_senha === true
+        );
+
+    const telaAtualDisponivelNoContrato =
+        !aplicarGateModulosTenantRuntime
+        || telaDisponivelTenantRuntime(
+            modulosTenantRuntime,
+            tela
         );
 
     const telaAtualPermitidaApp =
         Boolean(
             !usuario?.email
-            || !permissaoSistemaUsuario
+            || !permissaoSistemaRuntimeUsuario
             || (
-                tenantAdminPodeGerenciarAcessos
-                && tela === "acessosApp"
-            )
-            || usuarioPodeAcessarTelaSistema(
-                permissaoSistemaUsuario,
-                tela
+                telaAtualDisponivelNoContrato
+                && (
+                    (
+                        tenantAdminPodeGerenciarAcessos
+                        && tela === "acessosApp"
+                    )
+                    || usuarioPodeAcessarTelaSistema(
+                        permissaoSistemaRuntimeUsuario,
+                        tela
+                    )
+                )
             )
         );
 
     const contextoPermissaoProntoApp =
         Boolean(
-            !carregandoPermissaoSistemaUsuario
+            !carregandoPermissaoRuntimeUsuario
             && (
                 tenantAdminPodeGerenciarAcessos
                 || (
-                    permissaoSistemaUsuario
-                    && !erroPermissaoSistemaUsuario
+                    permissaoSistemaRuntimeUsuario
+                    && !erroPermissaoRuntimeUsuario
                 )
             )
         );
@@ -1830,10 +2016,10 @@ export default function App() {
                 tela={tela}
                 menuLateralAberto={menuLateralAberto}
                 setMenuLateralAberto={setMenuLateralAberto}
-                usuario={usuario}
-                permissaoSistemaUsuario={permissaoSistemaUsuario}
-                carregandoPermissaoSistemaUsuario={carregandoPermissaoSistemaUsuario}
-                erroPermissaoSistemaUsuario={erroPermissaoSistemaUsuario}
+                usuario={usuarioRuntime}
+                permissaoSistemaUsuario={permissaoSistemaRuntimeUsuario}
+                carregandoPermissaoSistemaUsuario={carregandoPermissaoRuntimeUsuario}
+                erroPermissaoSistemaUsuario={erroPermissaoRuntimeUsuario}
                 sair={sair}
                 onSelecionarTela={selecionarTelaSistema}
             >
@@ -1849,7 +2035,7 @@ export default function App() {
                         auditoria={auditoria}
                         auditoriasCampo={auditoriasCampo}
                         emailsEnviados={emailsEnviados}
-                        usuario={usuario}
+                        usuario={usuarioRuntime}
                         colaboradorSelecionado={colaboradorSelecionado}
                         carregandoBanco={carregandoBanco}
                         erroBanco={erroBanco}
@@ -1914,9 +2100,13 @@ export default function App() {
                         onBloquearAuditoria={bloquearAuditoria}
                         onSalvarLimites={atualizarLimitesCarregamentoSistema}
                         onRegistrarAuditoria={registrarAuditoria}
-                        permissaoSistemaUsuario={permissaoSistemaUsuario}
-                        carregandoPermissaoSistemaUsuario={carregandoPermissaoSistemaUsuario}
-                        erroPermissaoSistemaUsuario={erroPermissaoSistemaUsuario}
+                        permissaoSistemaUsuario={permissaoSistemaRuntimeUsuario}
+                        carregandoPermissaoSistemaUsuario={carregandoPermissaoRuntimeUsuario}
+                        erroPermissaoSistemaUsuario={erroPermissaoRuntimeUsuario}
+                        modulosTenantRuntime={modulosTenantRuntime}
+                        carregandoModulosTenantRuntime={carregandoModulosTenantRuntime}
+                        erroModulosTenantRuntime={erroModulosTenantRuntime}
+                        aplicarGateModulosTenantRuntime={aplicarGateModulosTenantRuntime}
                         onPermissaoSistemaAtualizada={setPermissaoSistemaUsuario}
                         onRedirecionarTelaPermitida={setTela}
                     />
