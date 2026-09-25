@@ -230,40 +230,54 @@ export default function App() {
     const [carregandoModulosTenantRuntime, setCarregandoModulosTenantRuntime] = useState(false);
     const [erroModulosTenantRuntime, setErroModulosTenantRuntime] = useState("");
 
-    const aplicarGateModulosTenantRuntime = Boolean(
+    const ambienteTenantRuntime = Boolean(
         tenantResolvido
         && tenant?.id
+    );
+
+    const aplicarGateModulosTenantRuntime = Boolean(
+        ambienteTenantRuntime
         && acessoTenantRuntime.estado === "autorizado"
     );
 
     const modulosTenantRuntimeProntos = Boolean(
-        !aplicarGateModulosTenantRuntime
+        !ambienteTenantRuntime
         || (
-            modulosTenantRuntime.length > 0
+            aplicarGateModulosTenantRuntime
+            && modulosTenantRuntime.length > 0
             && !carregandoModulosTenantRuntime
             && !erroModulosTenantRuntime
         )
     );
 
     const auditoriaCampoDisponivelRuntime =
-        !aplicarGateModulosTenantRuntime
-        || moduloDisponivelTenantRuntime(
-            modulosTenantRuntime,
-            "auditoria_campo"
+        !ambienteTenantRuntime
+        || (
+            aplicarGateModulosTenantRuntime
+            && moduloDisponivelTenantRuntime(
+                modulosTenantRuntime,
+                "auditoria_campo"
+            )
         );
 
     const mapaObraDisponivelRuntime =
-        !aplicarGateModulosTenantRuntime
-        || moduloDisponivelTenantRuntime(
-            modulosTenantRuntime,
-            "mapa_obra"
+        !ambienteTenantRuntime
+        || (
+            aplicarGateModulosTenantRuntime
+            && moduloDisponivelTenantRuntime(
+                modulosTenantRuntime,
+                "mapa_obra"
+            )
         );
 
     const extintoresDisponivelRuntime =
-        !aplicarGateModulosTenantRuntime
-        || moduloDisponivelTenantRuntime(
-            modulosTenantRuntime,
-            "extintores"
+        !ambienteTenantRuntime
+        || (
+            aplicarGateModulosTenantRuntime
+            && moduloDisponivelTenantRuntime(
+                modulosTenantRuntime,
+                "extintores"
+            )
         );
 
     const dadosObrasDisponiveisRuntime =
