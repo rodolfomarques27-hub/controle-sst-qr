@@ -7,6 +7,8 @@ import {
 import {
     ArrowRight,
     CheckCircle2,
+    Eye,
+    EyeOff,
     KeyRound,
     LockKeyhole,
     ShieldCheck,
@@ -162,13 +164,18 @@ const estilos = {
             800,
     },
 
+    inputWrapper: {
+        position:
+            "relative",
+    },
+
     input: {
         width:
             "100%",
         boxSizing:
             "border-box",
         padding:
-            "13px 14px",
+            "13px 48px 13px 14px",
         border:
             "1px solid #cfdbd5",
         borderRadius:
@@ -181,6 +188,37 @@ const estilos = {
             "15px",
         outline:
             "none",
+    },
+
+    botaoVisibilidade: {
+        position:
+            "absolute",
+        top:
+            "50%",
+        right:
+            "10px",
+        width:
+            "34px",
+        height:
+            "34px",
+        display:
+            "inline-flex",
+        alignItems:
+            "center",
+        justifyContent:
+            "center",
+        transform:
+            "translateY(-50%)",
+        border:
+            0,
+        borderRadius:
+            "9px",
+        background:
+            "transparent",
+        color:
+            "#64756c",
+        cursor:
+            "pointer",
     },
 
     ajuda: {
@@ -359,6 +397,22 @@ export function PrimeiroAcessoClientePage() {
     ] =
         useState(
             ""
+        );
+
+    const [
+        mostrarSenha,
+        setMostrarSenha,
+    ] =
+        useState(
+            false
+        );
+
+    const [
+        mostrarConfirmacaoSenha,
+        setMostrarConfirmacaoSenha,
+    ] =
+        useState(
+            false
         );
 
     const [
@@ -710,31 +764,83 @@ export function PrimeiroAcessoClientePage() {
                                     Nova senha
                                 </label>
 
-                                <input
-                                    id="primeiro-acesso-senha"
-                                    type="password"
-                                    autoComplete="new-password"
-                                    value={
-                                        senha
-                                    }
-                                    onChange={
-                                        (
-                                            evento
-                                        ) =>
-                                            setSenha(
-                                                evento
-                                                    .target
-                                                    .value
-                                            )
-                                    }
-                                    disabled={
-                                        processando ||
-                                        concluido
-                                    }
+                                <div
                                     style={
-                                        estilos.input
+                                        estilos.inputWrapper
                                     }
-                                />
+                                >
+                                    <input
+                                        id="primeiro-acesso-senha"
+                                        type={
+                                            mostrarSenha
+                                                ? "text"
+                                                : "password"
+                                        }
+                                        autoComplete="new-password"
+                                        value={
+                                            senha
+                                        }
+                                        onChange={
+                                            (
+                                                evento
+                                            ) =>
+                                                setSenha(
+                                                    evento
+                                                        .target
+                                                        .value
+                                                )
+                                        }
+                                        disabled={
+                                            processando ||
+                                            concluido
+                                        }
+                                        style={
+                                            estilos.input
+                                        }
+                                    />
+
+                                    <button
+                                        type="button"
+                                        onClick={
+                                            () =>
+                                                setMostrarSenha(
+                                                    (
+                                                        atual
+                                                    ) =>
+                                                        !atual
+                                                )
+                                        }
+                                        disabled={
+                                            processando ||
+                                            concluido
+                                        }
+                                        aria-label={
+                                            mostrarSenha
+                                                ? "Ocultar nova senha"
+                                                : "Visualizar nova senha"
+                                        }
+                                        title={
+                                            mostrarSenha
+                                                ? "Ocultar nova senha"
+                                                : "Visualizar nova senha"
+                                        }
+                                        style={
+                                            estilos.botaoVisibilidade
+                                        }
+                                    >
+                                        {mostrarSenha ? (
+                                            <EyeOff
+                                                size={18}
+                                                aria-hidden="true"
+                                            />
+                                        ) : (
+                                            <Eye
+                                                size={18}
+                                                aria-hidden="true"
+                                            />
+                                        )}
+                                    </button>
+                                </div>
                             </div>
 
                             <div
@@ -751,31 +857,83 @@ export function PrimeiroAcessoClientePage() {
                                     Confirmar nova senha
                                 </label>
 
-                                <input
-                                    id="primeiro-acesso-confirmar-senha"
-                                    type="password"
-                                    autoComplete="new-password"
-                                    value={
-                                        confirmarSenha
-                                    }
-                                    onChange={
-                                        (
-                                            evento
-                                        ) =>
-                                            setConfirmarSenha(
-                                                evento
-                                                    .target
-                                                    .value
-                                            )
-                                    }
-                                    disabled={
-                                        processando ||
-                                        concluido
-                                    }
+                                <div
                                     style={
-                                        estilos.input
+                                        estilos.inputWrapper
                                     }
-                                />
+                                >
+                                    <input
+                                        id="primeiro-acesso-confirmar-senha"
+                                        type={
+                                            mostrarConfirmacaoSenha
+                                                ? "text"
+                                                : "password"
+                                        }
+                                        autoComplete="new-password"
+                                        value={
+                                            confirmarSenha
+                                        }
+                                        onChange={
+                                            (
+                                                evento
+                                            ) =>
+                                                setConfirmarSenha(
+                                                    evento
+                                                        .target
+                                                        .value
+                                                )
+                                        }
+                                        disabled={
+                                            processando ||
+                                            concluido
+                                        }
+                                        style={
+                                            estilos.input
+                                        }
+                                    />
+
+                                    <button
+                                        type="button"
+                                        onClick={
+                                            () =>
+                                                setMostrarConfirmacaoSenha(
+                                                    (
+                                                        atual
+                                                    ) =>
+                                                        !atual
+                                                )
+                                        }
+                                        disabled={
+                                            processando ||
+                                            concluido
+                                        }
+                                        aria-label={
+                                            mostrarConfirmacaoSenha
+                                                ? "Ocultar confirmação da senha"
+                                                : "Visualizar confirmação da senha"
+                                        }
+                                        title={
+                                            mostrarConfirmacaoSenha
+                                                ? "Ocultar confirmação da senha"
+                                                : "Visualizar confirmação da senha"
+                                        }
+                                        style={
+                                            estilos.botaoVisibilidade
+                                        }
+                                    >
+                                        {mostrarConfirmacaoSenha ? (
+                                            <EyeOff
+                                                size={18}
+                                                aria-hidden="true"
+                                            />
+                                        ) : (
+                                            <Eye
+                                                size={18}
+                                                aria-hidden="true"
+                                            />
+                                        )}
+                                    </button>
+                                </div>
 
                                 <p
                                     style={
