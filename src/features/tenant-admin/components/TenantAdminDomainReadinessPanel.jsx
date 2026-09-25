@@ -29,7 +29,9 @@ import {
 
 import {
     ativarTenantOrquestradoService,
+    definirLiberacaoAtivacaoTenantService,
     diagnosticarAtivacaoTenantService,
+    obterLiberacaoAtivacaoTenantService,
 } from "../services/tenantAdminActivationService.js";
 
 const MOTOR_DIAGNOSTICO_PUBLICADO =
@@ -237,6 +239,30 @@ export function TenantAdminDomainReadinessPanel({
         useState(null);
 
     const [
+        liberacaoPiloto,
+        setLiberacaoPiloto,
+    ] =
+        useState(null);
+
+    const [
+        carregandoLiberacaoPiloto,
+        setCarregandoLiberacaoPiloto,
+    ] =
+        useState(false);
+
+    const [
+        alterandoLiberacaoPiloto,
+        setAlterandoLiberacaoPiloto,
+    ] =
+        useState(false);
+
+    const [
+        erroLiberacaoPiloto,
+        setErroLiberacaoPiloto,
+    ] =
+        useState("");
+
+    const [
         confirmandoAtivacao,
         setConfirmandoAtivacao,
     ] =
@@ -268,6 +294,75 @@ export function TenantAdminDomainReadinessPanel({
         texto(
             tenant?.tenant_id
         );
+
+
+    useEffect(
+        () => {
+            let ativo =
+                true;
+
+            async function carregarLiberacaoPiloto() {
+                if (!tenantId) {
+                    setLiberacaoPiloto(
+                        null
+                    );
+
+                    setErroLiberacaoPiloto(
+                        ""
+                    );
+
+                    return;
+                }
+
+                setCarregandoLiberacaoPiloto(
+                    true
+                );
+
+                setErroLiberacaoPiloto(
+                    ""
+                );
+
+                try {
+                    const resposta =
+                        await obterLiberacaoAtivacaoTenantService({
+                            supabase,
+                            tenantId,
+                        });
+
+                    if (ativo) {
+                        setLiberacaoPiloto(
+                            resposta
+                        );
+                    }
+                }
+                catch (error) {
+                    if (ativo) {
+                        setErroLiberacaoPiloto(
+                            error?.message ||
+                            "Não foi possível consultar a liberação piloto."
+                        );
+                    }
+                }
+                finally {
+                    if (ativo) {
+                        setCarregandoLiberacaoPiloto(
+                            false
+                        );
+                    }
+                }
+            }
+
+            void carregarLiberacaoPiloto();
+
+            return () => {
+                ativo =
+                    false;
+            };
+        },
+        [
+            tenantId,
+        ]
+    );
 
     const tenantStatus =
         texto(
@@ -544,9 +639,22 @@ export function TenantAdminDomainReadinessPanel({
             ?.prontoParaAtivar ===
         true;
 
+    const liberacaoPilotoAtiva =
+        liberacaoPiloto?.habilitada ===
+            true ||
+        diagnosticoServidor
+            ?.liberacaoPilotoAtiva ===
+            true;
+
+    const ativacaoPermitidaServidor =
+        diagnosticoServidor
+            ?.ativacaoPermitida ===
+        true;
+
     const podeAtivar =
-        ATIVACAO_REAL_HABILITADA &&
+        MOTOR_DIAGNOSTICO_PUBLICADO &&
         prontoServidor &&
+        ativacaoPermitidaServidor &&
         !tenantAtivo &&
         !ativando;
 
@@ -659,6 +767,61 @@ export function TenantAdminDomainReadinessPanel({
         }
         finally {
             setDiagnosticandoServidor(
+                false
+            );
+        }
+    }
+
+    async function alternarLiberacaoPiloto() {
+        if (
+            !tenantId ||
+            alterandoLiberacaoPiloto
+        ) {
+            return;
+        }
+
+        const proximoEstado =
+            !liberacaoPilotoAtiva;
+
+        setAlterandoLiberacaoPiloto(
+            true
+        );
+
+        setErroLiberacaoPiloto(
+            ""
+        );
+
+        try {
+            const resposta =
+                await definirLiberacaoAtivacaoTenantService({
+                    supabase,
+                    tenantId,
+                    habilitada:
+                        proximoEstado,
+                });
+
+            setLiberacaoPiloto(
+                resposta
+            );
+
+            const diagnostico =
+                await diagnosticarAtivacaoTenantService({
+                    supabase,
+                    tenantId,
+                });
+
+            setDiagnosticoServidor(
+                diagnostico
+            );
+        }
+        catch (error) {
+            setErroLiberacaoPiloto(
+                error?.message ||
+                "Não foi possível alterar a liberação piloto."
+            );
+        }
+        finally {
+            setAlterandoLiberacaoPiloto(
                 false
             );
         }
@@ -1199,6 +1362,73 @@ export function TenantAdminDomainReadinessPanel({
                                 />
                             )
                         )}
+                    </div>
+
+                    <div
+                        className={
+                            liberacaoPilotoAtiva
+                                ? "mt-5 flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+                                : "mt-5 flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+                        }
+                    >
+                        <div>
+                            <p
+                                className={
+                                    liberacaoPilotoAtiva
+                                        ? "text-xs font-bold uppercase tracking-[0.08em] text-emerald-800"
+                                        : "text-xs font-bold uppercase tracking-[0.08em] text-amber-800"
+                                }
+                            >
+                                Liberação piloto por tenant
+                            </p>
+
+                            <p
+                                className={
+                                    liberacaoPilotoAtiva
+                                        ? "mt-1 text-xs leading-5 text-emerald-700"
+                                        : "mt-1 text-xs leading-5 text-amber-700"
+                                }
+                            >
+                                {carregandoLiberacaoPiloto
+                                    ? "Consultando gate individual..."
+                                    : liberacaoPilotoAtiva
+                                        ? "Este tenant está autorizado individualmente para a ativação piloto."
+                                        : "Este tenant ainda não possui autorização individual para ativação."}
+                            </p>
+
+                            <p className="mt-1 text-[11px] leading-5 text-slate-500">
+                                A proteção global continua desabilitada. Esta autorização vale somente para o tenant selecionado e pode ser revogada.
+                            </p>
+
+                            {erroLiberacaoPiloto ? (
+                                <p className="mt-2 text-[11px] font-semibold text-red-700">
+                                    {erroLiberacaoPiloto}
+                                </p>
+                            ) : null}
+                        </div>
+
+                        <button
+                            type="button"
+                            disabled={
+                                !tenantId ||
+                                carregandoLiberacaoPiloto ||
+                                alterandoLiberacaoPiloto
+                            }
+                            onClick={
+                                alternarLiberacaoPiloto
+                            }
+                            className={
+                                liberacaoPilotoAtiva
+                                    ? "inline-flex h-10 shrink-0 items-center justify-center rounded-xl border border-red-200 bg-white px-4 text-xs font-bold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                    : "inline-flex h-10 shrink-0 items-center justify-center rounded-xl bg-slate-950 px-4 text-xs font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                            }
+                        >
+                            {alterandoLiberacaoPiloto
+                                ? "Salvando..."
+                                : liberacaoPilotoAtiva
+                                    ? "Revogar liberação"
+                                    : "Liberar tenant piloto"}
+                        </button>
                     </div>
 
                     {erroServidor ? (

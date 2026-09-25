@@ -468,6 +468,8 @@ export function PasswordInput({
     className = "",
     inputClassName = "",
     disabled = false,
+    visibilityLabel = "senha",
+    ...inputProps
 }) {
     const [mostrarSenha, setMostrarSenha] = useState(false);
     const IconeVisibilidade = mostrarSenha ? EyeOff : Eye;
@@ -476,6 +478,7 @@ export function PasswordInput({
         <div className={classNames("relative", className)}>
             <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
+                {...inputProps}
                 id={id}
                 name={name}
                 type={mostrarSenha ? "text" : "password"}
@@ -495,8 +498,16 @@ export function PasswordInput({
                 type="button"
                 onClick={() => setMostrarSenha((atual) => !atual)}
                 disabled={disabled}
-                aria-label={mostrarSenha ? "Ocultar senha" : "Visualizar senha"}
-                title={mostrarSenha ? "Ocultar senha" : "Visualizar senha"}
+                aria-label={
+                    mostrarSenha
+                        ? `Ocultar ${visibilityLabel}`
+                        : `Visualizar ${visibilityLabel}`
+                }
+                title={
+                    mostrarSenha
+                        ? `Ocultar ${visibilityLabel}`
+                        : `Visualizar ${visibilityLabel}`
+                }
                 className="absolute right-3 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
             >
                 <IconeVisibilidade className="h-4 w-4" />

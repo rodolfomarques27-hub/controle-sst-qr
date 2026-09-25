@@ -181,6 +181,10 @@ export async function listarArquivosCertificadosStorageService({
         if (typeof onProgress === "function") onProgress(dados);
     };
     const coletados = [];
+
+    let falhasAuditoria =
+        0;
+
     const bucketsAuditados = [
         {
             bucket: "certificados-treinamentos",
@@ -234,13 +238,530 @@ export async function listarArquivosCertificadosStorageService({
         },
     ];
 
+    const MAX_TENTATIVAS_STORAGE_AUDITORIA =
+        3;
+
+    const TAMANHO_PAGINA_STORAGE_AUDITORIA =
+        100;
+
+    const CONCORRENCIA_SUBPASTAS_STORAGE_AUDITORIA =
+        3;
+
+    const ATRASO_BASE_RETRY_STORAGE_MS =
+        400;
+
+    /*
+     * SAFE_SCAN_STORAGE_INVENTARIO_RPC_ADMIN_V1
+     *
+     * Fonte primária da auditoria administrativa.
+     * O caminho recursivo via Storage API permanece como fallback.
+     */
+    const RPC_INVENTARIO_STORAGE_ADMIN =
+        "admin_storage_inventario";
+
+    const TAMANHO_PAGINA_INVENTARIO_STORAGE_ADMIN =
+        1000;
+
+    const aguardarRetryStorage =
+        (
+            milissegundos
+        ) =>
+            new Promise(
+                (
+                    resolve
+                ) => {
+                    setTimeout(
+                        resolve,
+                        milissegundos
+                    );
+                }
+            );
+
+    const erroStorageEhTransitorio =
+        (
+            error
+        ) => {
+            const status =
+                Number(
+                    error?.status ||
+                    error?.statusCode ||
+                    error?.context?.status ||
+                    0
+                );
+
+            const mensagem =
+                String(
+                    error?.message ||
+                    error?.error ||
+                    error ||
+                    ""
+                ).toLowerCase();
+
+            return (
+                status ===
+                    408 ||
+                status ===
+                    425 ||
+                status ===
+                    429 ||
+                (
+                    status >=
+                        500 &&
+                    status <=
+                        599
+                ) ||
+                /timeout|timed out|connection to the database|failed to fetch|network|gateway|temporar/.test(
+                    mensagem
+                )
+            );
+        };
+
+    const bucketsAuditadosPorId =
+        new Map(
+            bucketsAuditados.map(
+                (
+                    bucketInfo
+                ) => [
+                    bucketInfo.bucket,
+                    bucketInfo,
+                ]
+            )
+        );
+
+    const erroRpcInventarioEhPermissao =
+        (
+            error
+        ) => {
+            const codigo =
+                String(
+                    error?.code ||
+                    error?.cause?.code ||
+                    ""
+                ).trim();
+
+            const mensagem =
+                String(
+                    error?.message ||
+                    error?.cause?.message ||
+                    error ||
+                    ""
+                ).toLowerCase();
+
+            return (
+                codigo ===
+                    "42501" ||
+                /acesso negado|permission denied|not authorized|unauthorized/.test(
+                    mensagem
+                )
+            );
+        };
+
+    const listarInventarioStorageAdminViaRpc =
+        async (
+            totalEtapasProgresso
+        ) => {
+            const inicioRpc =
+                Date.now();
+
+            const arquivosRpc =
+                [];
+
+            let paginas =
+                0;
+
+            let objetosRecebidos =
+                0;
+
+            let cursorBucket =
+                null;
+
+            let cursorName =
+                null;
+
+            let cursorId =
+                null;
+
+            while (true) {
+                const {
+                    data,
+                    error,
+                } =
+                    await supabase.rpc(
+                        RPC_INVENTARIO_STORAGE_ADMIN,
+                        {
+                            p_limite:
+                                TAMANHO_PAGINA_INVENTARIO_STORAGE_ADMIN,
+
+                            p_cursor_bucket:
+                                cursorBucket,
+
+                            p_cursor_name:
+                                cursorName,
+
+                            p_cursor_id:
+                                cursorId,
+                        }
+                    );
+
+                if (error) {
+                    const erroRpc =
+                        new Error(
+                            `Falha ao consultar inventário server-side do Storage: ${error.message || "erro não informado"}`,
+                            {
+                                cause:
+                                    error,
+                            }
+                        );
+
+                    erroRpc.code =
+                        error?.code ||
+                        null;
+
+                    throw erroRpc;
+                }
+
+                if (
+                    !Array.isArray(
+                        data
+                    )
+                ) {
+                    throw new Error(
+                        "Resposta inválida da RPC admin_storage_inventario."
+                    );
+                }
+
+                paginas +=
+                    1;
+
+                objetosRecebidos +=
+                    data.length;
+
+                informarProgresso({
+                    etapa:
+                        "storage",
+
+                    atual:
+                        0,
+
+                    total:
+                        totalEtapasProgresso,
+
+                    mensagem:
+                        `Inventário server-side: página ${paginas} recebida (${objetosRecebidos} objeto(s))...`,
+
+                    falhas:
+                        falhasAuditoria,
+                });
+
+                for (
+                    const item of
+                    data
+                ) {
+                    const bucket =
+                        String(
+                            item?.bucket_id ||
+                            ""
+                        ).trim();
+
+                    /*
+                     * Mantém nesta primeira integração exatamente
+                     * o mesmo escopo de buckets auditado pela
+                     * implementação legada.
+                     *
+                     * A RPC pode enxergar outros buckets, mas eles
+                     * não entram silenciosamente na auditoria atual.
+                     */
+                    const bucketInfo =
+                        bucketsAuditadosPorId.get(
+                            bucket
+                        );
+
+                    if (
+                        !bucketInfo
+                    ) {
+                        continue;
+                    }
+
+                    const caminho =
+                        String(
+                            item?.name ||
+                            ""
+                        ).trim();
+
+                    if (
+                        !caminho
+                    ) {
+                        continue;
+                    }
+
+                    const partesCaminho =
+                        caminho.split(
+                            "/"
+                        );
+
+                    const nome =
+                        partesCaminho[
+                            partesCaminho.length -
+                            1
+                        ] ||
+                        caminho;
+
+                    /*
+                     * Mantém paridade com o inventário legado.
+                     *
+                     * .emptyFolderPlaceholder é um marcador técnico
+                     * usado apenas para materializar pasta vazia.
+                     * Não é documento, evidência ou arquivo de negócio.
+                     */
+                    if (
+                        nome ===
+                        ".emptyFolderPlaceholder"
+                    ) {
+                        continue;
+                    }
+
+                    const tamanho =
+                        Math.max(
+                            0,
+                            Number(
+                                item?.bytes
+                            ) || 0
+                        );
+
+                    arquivosRpc.push({
+                        bucket:
+                            bucketInfo.bucket,
+
+                        origemTipo:
+                            bucketInfo.origemTipo,
+
+                        tabelaOrigem:
+                            bucketInfo.tabelaOrigem,
+
+                        nome,
+
+                        caminho,
+
+                        tamanho:
+                            tamanho ||
+                            null,
+
+                        atualizadoEm:
+                            item?.updated_at ||
+                            item?.created_at ||
+                            null,
+                    });
+                }
+
+                if (
+                    data.length <
+                    TAMANHO_PAGINA_INVENTARIO_STORAGE_ADMIN
+                ) {
+                    break;
+                }
+
+                const ultimo =
+                    data[
+                        data.length -
+                        1
+                    ];
+
+                const proximoBucket =
+                    String(
+                        ultimo?.bucket_id ||
+                        ""
+                    ).trim();
+
+                const proximoNome =
+                    String(
+                        ultimo?.name ||
+                        ""
+                    ).trim();
+
+                const proximoId =
+                    String(
+                        ultimo?.id ||
+                        ""
+                    ).trim();
+
+                if (
+                    !proximoBucket ||
+                    !proximoNome ||
+                    !proximoId
+                ) {
+                    throw new Error(
+                        "Cursor inválido retornado por admin_storage_inventario."
+                    );
+                }
+
+                cursorBucket =
+                    proximoBucket;
+
+                cursorName =
+                    proximoNome;
+
+                cursorId =
+                    proximoId;
+            }
+
+            return {
+                arquivos:
+                    arquivosRpc,
+
+                paginas,
+
+                objetosRecebidos,
+
+                duracaoMs:
+                    Math.max(
+                        0,
+                        Date.now() -
+                        inicioRpc
+                    ),
+            };
+        };
+
+    const listarStorageComRetry =
+        async (
+            bucket,
+            prefixo
+        ) => {
+            let ultimoErro =
+                null;
+
+            for (
+                let tentativa = 1;
+                tentativa <=
+                    MAX_TENTATIVAS_STORAGE_AUDITORIA;
+                tentativa += 1
+            ) {
+                try {
+                    return await listarTodosArquivosStorage(
+                        bucket,
+                        prefixo,
+                        {
+                            tamanhoPagina:
+                                TAMANHO_PAGINA_STORAGE_AUDITORIA,
+                        }
+                    );
+                }
+                catch (error) {
+                    ultimoErro =
+                        error;
+
+                    const permiteRetry =
+                        erroStorageEhTransitorio(
+                            error
+                        );
+
+                    if (
+                        !permiteRetry ||
+                        tentativa >=
+                            MAX_TENTATIVAS_STORAGE_AUDITORIA
+                    ) {
+                        throw error;
+                    }
+
+                    const atrasoMs =
+                        Math.min(
+                            2000,
+                            ATRASO_BASE_RETRY_STORAGE_MS *
+                                (
+                                    2 **
+                                    (
+                                        tentativa -
+                                        1
+                                    )
+                                )
+                        );
+
+                    console.warn(
+                        `Nova tentativa de leitura do Storage: bucket=${bucket}, prefixo=${prefixo || "/"}, tentativa=${tentativa + 1}/${MAX_TENTATIVAS_STORAGE_AUDITORIA}, aguardando=${atrasoMs}ms`
+                    );
+
+                    await aguardarRetryStorage(
+                        atrasoMs
+                    );
+                }
+            }
+
+            throw (
+                ultimoErro ||
+                new Error(
+                    "Falha desconhecida ao listar o Storage."
+                )
+            );
+        };
+
+    let consultasStorageBucketAtual =
+        0;
+
     const listarNivel = async (bucketInfo, prefixo = "") => {
         let data;
 
         try {
-            data = await listarTodosArquivosStorage(bucketInfo.bucket, prefixo);
+            data =
+                await listarStorageComRetry(
+                    bucketInfo.bucket,
+                    prefixo
+                );
+
+            consultasStorageBucketAtual +=
+                1;
+
+            if (
+                consultasStorageBucketAtual ===
+                    1 ||
+                consultasStorageBucketAtual %
+                    10 ===
+                    0
+            ) {
+                informarProgresso({
+                    etapa:
+                        "storage",
+
+                    atual:
+                        bucketsConcluidos,
+
+                    total:
+                        totalEtapasProgresso,
+
+                    mensagem:
+                        `${bucketInfo.bucket}: ${consultasStorageBucketAtual} área(s) consultada(s)...`,
+
+                    falhas:
+                        falhasAuditoria,
+                });
+            }
         } catch (error) {
-            console.warn(`Erro ao listar bucket ${bucketInfo.bucket}:`, error.message);
+            falhasAuditoria +=
+                1;
+
+            console.warn(
+                `Erro ao listar bucket ${bucketInfo.bucket}:`,
+                error.message
+            );
+
+            informarProgresso({
+                etapa:
+                    "storage",
+
+                atual:
+                    bucketsConcluidos,
+
+                total:
+                    totalEtapasProgresso,
+
+                mensagem:
+                    `${bucketInfo.bucket}: falha na leitura`,
+
+                erro:
+                    true,
+
+                falhas:
+                    falhasAuditoria,
+            });
+
             return;
         }
 
@@ -335,24 +856,225 @@ export async function listarArquivosCertificadosStorageService({
             }
         }
 
-        for (let inicio = 0; inicio < subpastas.length; inicio += 8) {
-            await Promise.all(subpastas.slice(inicio, inicio + 8).map((listarSubpasta) => listarSubpasta()));
+        for (
+            let inicio = 0;
+            inicio <
+                subpastas.length;
+            inicio +=
+                CONCORRENCIA_SUBPASTAS_STORAGE_AUDITORIA
+        ) {
+            await Promise.all(
+                subpastas
+                    .slice(
+                        inicio,
+                        inicio +
+                            CONCORRENCIA_SUBPASTAS_STORAGE_AUDITORIA
+                    )
+                    .map(
+                        (
+                            listarSubpasta
+                        ) =>
+                            listarSubpasta()
+                    )
+            );
         }
     };
 
-    const totalEtapasProgresso = bucketsAuditados.length + 18;
-    informarProgresso({ etapa: "storage", atual: 0, total: totalEtapasProgresso, mensagem: "Consultando áreas do Storage..." });
-    let bucketsConcluidos = 0;
-    await Promise.all(bucketsAuditados.map(async (bucketInfo) => {
-        await listarNivel(bucketInfo, "");
-        bucketsConcluidos += 1;
-        informarProgresso({
-            etapa: "storage",
-            atual: bucketsConcluidos,
-            total: totalEtapasProgresso,
-            mensagem: `${bucketInfo.bucket}: concluído (${coletados.length} arquivo(s) localizado(s))`,
-        });
-    }));
+    const totalEtapasProgresso =
+        bucketsAuditados.length +
+        18;
+
+    informarProgresso({
+        etapa:
+            "storage",
+
+        atual:
+            0,
+
+        total:
+            totalEtapasProgresso,
+
+        mensagem:
+            "Consultando inventário server-side do Storage...",
+
+        falhas:
+            falhasAuditoria,
+    });
+
+    let bucketsConcluidos =
+        0;
+
+    let fonteInventarioStorage =
+        "rpc-admin";
+
+    try {
+        const resultadoRpc =
+            await listarInventarioStorageAdminViaRpc(
+                totalEtapasProgresso
+            );
+
+        coletados.push(
+            ...resultadoRpc.arquivos
+        );
+
+        for (
+            const bucketInfo of
+            bucketsAuditados
+        ) {
+            bucketsConcluidos +=
+                1;
+
+            const arquivosBucket =
+                resultadoRpc.arquivos.filter(
+                    (
+                        arquivo
+                    ) =>
+                        arquivo.bucket ===
+                        bucketInfo.bucket
+                ).length;
+
+            informarProgresso({
+                etapa:
+                    "storage",
+
+                atual:
+                    bucketsConcluidos,
+
+                total:
+                    totalEtapasProgresso,
+
+                mensagem:
+                    `${bucketInfo.bucket}: concluído via RPC (${arquivosBucket} arquivo(s))`,
+
+                falhas:
+                    falhasAuditoria,
+            });
+        }
+
+        console.info(
+            "[StorageAudit] inventário concluído",
+            {
+                fonte:
+                    fonteInventarioStorage,
+
+                paginas:
+                    resultadoRpc.paginas,
+
+                objetosRecebidos:
+                    resultadoRpc.objetosRecebidos,
+
+                objetosConsiderados:
+                    resultadoRpc.arquivos.length,
+
+                duracaoMs:
+                    resultadoRpc.duracaoMs,
+            }
+        );
+    }
+    catch (error) {
+        /*
+         * Nunca contornar a autorização da RPC.
+         * Um 42501 deve permanecer como falha de segurança.
+         */
+        if (
+            erroRpcInventarioEhPermissao(
+                error
+            )
+        ) {
+            throw error;
+        }
+
+        fonteInventarioStorage =
+            "storage-list-fallback";
+
+        console.warn(
+            "[StorageAudit] RPC indisponível; usando fallback legado via Storage API.",
+            error
+        );
+
+        const inicioFallback =
+            Date.now();
+
+        coletados.length =
+            0;
+
+        bucketsConcluidos =
+            0;
+
+        for (
+            const bucketInfo of
+            bucketsAuditados
+        ) {
+            consultasStorageBucketAtual =
+                0;
+
+            informarProgresso({
+                etapa:
+                    "storage",
+
+                atual:
+                    bucketsConcluidos,
+
+                total:
+                    totalEtapasProgresso,
+
+                mensagem:
+                    `${bucketInfo.bucket}: fallback legado em análise...`,
+
+                falhas:
+                    falhasAuditoria,
+            });
+
+            await listarNivel(
+                bucketInfo,
+                ""
+            );
+
+            bucketsConcluidos +=
+                1;
+
+            informarProgresso({
+                etapa:
+                    "storage",
+
+                atual:
+                    bucketsConcluidos,
+
+                total:
+                    totalEtapasProgresso,
+
+                mensagem:
+                    `${bucketInfo.bucket}: fallback concluído (${coletados.length} arquivo(s) acumulado(s))`,
+
+                falhas:
+                    falhasAuditoria,
+            });
+        }
+
+        console.info(
+            "[StorageAudit] inventário concluído",
+            {
+                fonte:
+                    fonteInventarioStorage,
+
+                paginas:
+                    null,
+
+                objetosRecebidos:
+                    null,
+
+                objetosConsiderados:
+                    coletados.length,
+
+                duracaoMs:
+                    Math.max(
+                        0,
+                        Date.now() -
+                        inicioFallback
+                    ),
+            }
+        );
+    }
 
     informarProgresso({ etapa: "vinculos", atual: bucketsAuditados.length, total: totalEtapasProgresso, mensagem: "Cruzando arquivos com os registros do sistema..." });
     let consultasConcluidas = 0;
@@ -360,12 +1082,38 @@ export async function listarArquivosCertificadosStorageService({
         try {
             return await consulta();
         } catch (error) {
-            if (obrigatoria) throw error;
-            console.warn(`Erro ao consultar ${rotulo} para vínculos do Storage:`, error.message);
+            if (obrigatoria) {
+                throw error;
+            }
+
+            falhasAuditoria +=
+                1;
+
+            console.warn(
+                `Erro ao consultar ${rotulo} para vínculos do Storage:`,
+                error.message
+            );
+
             return [];
         } finally {
             consultasConcluidas += 1;
-            informarProgresso({ etapa: "vinculos", atual: bucketsAuditados.length + consultasConcluidas, total: totalEtapasProgresso, mensagem: `${rotulo}: conferido` });
+            informarProgresso({
+                etapa:
+                    "vinculos",
+
+                atual:
+                    bucketsAuditados.length +
+                    consultasConcluidas,
+
+                total:
+                    totalEtapasProgresso,
+
+                mensagem:
+                    `${rotulo}: conferido`,
+
+                falhas:
+                    falhasAuditoria,
+            });
         }
     };
 
@@ -577,7 +1325,22 @@ export async function listarArquivosCertificadosStorageService({
         ),
     ]);
 
-    informarProgresso({ etapa: "finalizando", atual: totalEtapasProgresso, total: totalEtapasProgresso, mensagem: `Organizando ${coletados.length} arquivo(s)...` });
+    informarProgresso({
+        etapa:
+            "finalizando",
+
+        atual:
+            totalEtapasProgresso,
+
+        total:
+            totalEtapasProgresso,
+
+        mensagem:
+            `Organizando ${coletados.length} arquivo(s)...`,
+
+        falhas:
+            falhasAuditoria,
+    });
 
     const colaboradoresPorId = (colaboradores || []).reduce((acc, colaborador) => {
         acc[colaborador.id] = colaborador;
@@ -600,6 +1363,82 @@ export async function listarArquivosCertificadosStorageService({
         acc[empresa.id] = empresa;
         return acc;
     }, {});
+
+    const normalizarChaveEmpresaStorage =
+        (
+            valor
+        ) =>
+            String(
+                valor || ""
+            )
+                .trim()
+                .toLowerCase()
+                .normalize("NFD")
+                .replace(
+                    /[\u0300-\u036f]/g,
+                    ""
+                );
+
+    const normalizarCnpjStorage =
+        (
+            valor
+        ) =>
+            String(
+                valor || ""
+            ).replace(
+                /\D/g,
+                ""
+            );
+
+    const empresasPorCnpjStorage =
+        (empresasBanco || []).reduce(
+            (
+                acc,
+                empresa
+            ) => {
+                const cnpj =
+                    normalizarCnpjStorage(
+                        empresa?.cnpj
+                    );
+
+                if (cnpj) {
+                    acc[cnpj] =
+                        empresa;
+                }
+
+                return acc;
+            },
+            {}
+        );
+
+    const empresasPorNomeStorage =
+        (empresasBanco || []).reduce(
+            (
+                acc,
+                empresa
+            ) => {
+                const nome =
+                    normalizarChaveEmpresaStorage(
+                        empresa?.nome
+                    );
+
+                if (!nome) {
+                    return acc;
+                }
+
+                if (!acc[nome]) {
+                    acc[nome] =
+                        [];
+                }
+
+                acc[nome].push(
+                    empresa
+                );
+
+                return acc;
+            },
+            {}
+        );
 
     const certificadosPorCaminho = (certificados || []).reduce((acc, item) => {
         const caminhoArquivo = extrairCaminhoStorage(
@@ -1153,6 +1992,10 @@ export async function listarArquivosCertificadosStorageService({
             let colaboradorEmpresa = "";
             let empresaNome = "";
             let empresaCnpj = "";
+
+            let empresaIdEstrutural =
+                "";
+
             let tipoDocumentoEmpresa = "";
             let treinamentoNome = "";
             let origemIdentificacao = "";
@@ -1200,6 +2043,13 @@ export async function listarArquivosCertificadosStorageService({
                     colaboradorVinculado ||
                     colaboradorPelaPasta ||
                     null;
+
+                empresaIdEstrutural =
+                    colaboradorArquivo
+                        ?.empresa_id ||
+                    certificadoReferencia
+                        ?.empresa_id ||
+                    "";
 
                 const treinamento =
                     obterTreinamento(
@@ -1280,6 +2130,12 @@ export async function listarArquivosCertificadosStorageService({
                             primeiraPasta
                         ];
 
+                empresaIdEstrutural =
+                    empresaVinculada?.id ||
+                    documentoReferencia
+                        ?.empresa_id ||
+                    "";
+
                 emUso =
                     Boolean(
                         documentoReferencia
@@ -1319,7 +2175,14 @@ export async function listarArquivosCertificadosStorageService({
             }
 
             if (arquivo.bucket === "contratos-empresas") {
-                const empresaContrato = contratosPorCaminho[chave] || empresasPorId[primeiraPasta];
+                const empresaContrato =
+                    contratosPorCaminho[chave] ||
+                    empresasPorId[primeiraPasta];
+
+                empresaIdEstrutural =
+                    empresaContrato?.id ||
+                    primeiraPasta ||
+                    "";
 
                 emUso = Boolean(contratosPorCaminho[chave]);
                 origemRegistro = contratosPorCaminho[chave] ? "Cadastro da empresa" : empresaContrato ? "Pasta do Storage" : "";
@@ -1340,7 +2203,14 @@ export async function listarArquivosCertificadosStorageService({
                     tipoDocumentoEmpresa = ativoSistemaStorage.tipo;
                     origemIdentificacao = origemRegistro;
                 } else {
-                    const empresaLogo = logosPorCaminho[chave] || empresasPorId[primeiraPasta];
+                    const empresaLogo =
+                        logosPorCaminho[chave] ||
+                        empresasPorId[primeiraPasta];
+
+                    empresaIdEstrutural =
+                        empresaLogo?.id ||
+                        primeiraPasta ||
+                        "";
 
                     emUso = Boolean(logosPorCaminho[chave]);
                     origemRegistro = logosPorCaminho[chave] ? "Cadastro da empresa" : empresaLogo ? "Pasta do Storage" : "";
@@ -1402,6 +2272,13 @@ export async function listarArquivosCertificadosStorageService({
                     colaboradorPelaPasta ||
                     null;
 
+                empresaIdEstrutural =
+                    colaboradorFoto
+                        ?.empresa_id ||
+                    usuarioAcessoVinculado
+                        ?.empresa_id ||
+                    "";
+
                 emUso = Boolean(registroFotoVinculado);
 
                 origemRegistro = usuarioAcessoVinculado
@@ -1445,7 +2322,18 @@ export async function listarArquivosCertificadosStorageService({
                 const auditoriaVinculada = auditoriasCampoPorCaminho[chave] || null;
                 const desvioVinculado = desviosAuditoriaPorCaminho[chave] || null;
                 const registroAuditoria = auditoriaVinculada || desvioVinculado || null;
-                const empresaAuditoria = registroAuditoria?.empresa_id ? empresasPorId[registroAuditoria.empresa_id] : null;
+                const empresaAuditoria =
+                    registroAuditoria?.empresa_id
+                        ? empresasPorId[
+                            registroAuditoria
+                                .empresa_id
+                        ]
+                        : null;
+
+                empresaIdEstrutural =
+                    registroAuditoria
+                        ?.empresa_id ||
+                    "";
 
                 emUso = Boolean(registroAuditoria);
                 origemRegistro = registroAuditoria?.origemAuditoriaStorage || (primeiraPasta ? "Pasta do Storage" : "");
@@ -1483,7 +2371,6 @@ export async function listarArquivosCertificadosStorageService({
                     origemRegistro;
             }
 
-
             if (
                 arquivo.bucket ===
                 "certidao-mensal-documentos"
@@ -1500,6 +2387,11 @@ export async function listarArquivosCertificadosStorageService({
                             registro.empresa_id
                         ]
                         : null;
+
+                empresaIdEstrutural =
+                    registro?.empresa_id ||
+                    "";
+
 
                 emUso =
                     Boolean(
@@ -1555,6 +2447,10 @@ export async function listarArquivosCertificadosStorageService({
                             registro.empresa_id
                         ]
                         : null;
+
+                empresaIdEstrutural =
+                    registro?.empresa_id ||
+                    "";
 
                 emUso =
                     Boolean(
@@ -1620,6 +2516,10 @@ export async function listarArquivosCertificadosStorageService({
                             registro.empresa_id
                         ]
                         : null;
+
+                empresaIdEstrutural =
+                    registro?.empresa_id ||
+                    "";
 
                 emUso =
                     Boolean(
@@ -1708,6 +2608,17 @@ export async function listarArquivosCertificadosStorageService({
                         ]
                         : null;
 
+                if (
+                    !empresaIdEstrutural
+                ) {
+                    empresaIdEstrutural =
+                        verificacao
+                            ?.empresa_id ||
+                        colaborador
+                            ?.empresa_id ||
+                        "";
+                }
+
                 emUso = true;
 
                 origemRegistro =
@@ -1747,6 +2658,88 @@ export async function listarArquivosCertificadosStorageService({
             }
 
 
+            const cnpjResolucao =
+                normalizarCnpjStorage(
+                    empresaCnpj
+                );
+
+            const nomeResolucao =
+                normalizarChaveEmpresaStorage(
+                    empresaNome ||
+                    colaboradorEmpresa
+                );
+
+            const empresasMesmoNome =
+                nomeResolucao
+                    ? (
+                        empresasPorNomeStorage[
+                            nomeResolucao
+                        ] ||
+                        []
+                    )
+                    : [];
+
+            const empresaResolvida =
+                (
+                    empresaIdEstrutural
+                        ? empresasPorId[
+                            empresaIdEstrutural
+                        ]
+                        : null
+                ) ||
+                empresasPorId[
+                    primeiraPasta
+                ] ||
+                empresasPorId[
+                    registroId
+                ] ||
+                (
+                    cnpjResolucao
+                        ? empresasPorCnpjStorage[
+                            cnpjResolucao
+                        ]
+                        : null
+                ) ||
+                (
+                    empresasMesmoNome.length ===
+                    1
+                        ? empresasMesmoNome[0]
+                        : null
+                ) ||
+                null;
+
+            const empresaId =
+                String(
+                    empresaResolvida?.id ||
+                    ""
+                ).trim();
+
+            const tenantId =
+                String(
+                    empresaResolvida?.tenant_id ||
+                    ""
+                ).trim();
+
+            const escopoStorage =
+                ativoSistema
+                    ? "global"
+                    : tenantId
+                        ? "tenant"
+                        : "unidentified";
+
+            const vinculoTenantOrigem =
+                ativoSistema
+                    ? "global"
+                    : (
+                        empresaIdEstrutural &&
+                        empresaId ===
+                            empresaIdEstrutural
+                    )
+                        ? "estrutural"
+                        : tenantId
+                            ? "fallback"
+                            : "unidentified";
+
             return {
                 ...arquivo,
                 origemTipo: ativoSistemaStorage?.origemTipo || arquivo.origemTipo,
@@ -1762,6 +2755,10 @@ export async function listarArquivosCertificadosStorageService({
                 colaboradorEmpresa,
                 empresaNome,
                 empresaCnpj,
+                empresaId,
+                tenantId,
+                escopoStorage,
+                vinculoTenantOrigem,
                 tipoDocumentoEmpresa,
                 origemColaborador: origemIdentificacao,
                 origemRegistro,
@@ -1783,6 +2780,24 @@ export async function excluirArquivoStorageAuditoriaService({ supabase, arquivo 
 
     if (!arquivo?.caminho) {
         throw new Error("Arquivo inválido para exclusão.");
+    }
+
+    const nomeArquivoStorage =
+        String(
+            arquivo?.nome ||
+            arquivo.caminho
+                .split("/")
+                .pop() ||
+            ""
+        ).trim();
+
+    if (
+        nomeArquivoStorage ===
+        ".emptyFolderPlaceholder"
+    ) {
+        throw new Error(
+            "Exclusão bloqueada: marcador técnico de pasta do Storage."
+        );
     }
 
     const ativoSistemaStorage = obterAtivoSistemaStorage(

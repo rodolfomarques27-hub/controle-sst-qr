@@ -13,6 +13,8 @@ import {
     UserCog,
 } from "lucide-react";
 
+import dashboardHero from "../../../assets/dashboard-hero-sst.webp";
+
 import {
     supabase,
 } from "../../../lib/supabaseClient.js";
@@ -242,11 +244,17 @@ export function TenantAdminUserScopeModal({
         );
 
     const empresas =
-        Array.isArray(
-            dados?.empresas
-        )
-            ? dados.empresas
-            : [];
+        useMemo(
+            () =>
+                Array.isArray(
+                    dados?.empresas
+                )
+                    ? dados.empresas
+                    : [],
+            [
+                dados,
+            ]
+        );
 
     const empresasFiltradas =
         useMemo(
@@ -414,33 +422,55 @@ export function TenantAdminUserScopeModal({
     return (
         <div className="fixed inset-0 z-[95] flex items-center justify-center bg-slate-950/55 p-4">
             <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
-                <header className="border-b border-slate-200 px-6 py-5">
-                    <div className="flex items-start gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                <header
+                    className="relative isolate min-h-[clamp(154px,9.8vw,178px)] overflow-hidden border-b border-emerald-950/20 bg-[#071b14] text-white"
+                    style={{
+                        backgroundImage:
+                            `linear-gradient(90deg, rgba(4, 22, 16, 0.96) 0%, rgba(4, 28, 19, 0.88) 42%, rgba(4, 27, 18, 0.42) 74%, rgba(4, 20, 15, 0.18) 100%), url(${dashboardHero})`,
+                        backgroundSize:
+                            "cover",
+                        backgroundPosition:
+                            "center 48%",
+                    }}
+                >
+                    <div className="relative z-10 flex min-h-[clamp(154px,9.8vw,178px)] items-center gap-4 px-6 py-5 sm:px-7">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-emerald-300/20 bg-emerald-300/10 text-emerald-200 backdrop-blur-sm">
                             <UserCog className="h-5 w-5" />
                         </div>
 
-                        <div>
-                            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-700">
-                                Escopo de acesso
+                        <div className="min-w-0">
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-300">
+                                SAFESCAN BRASIL
                             </p>
 
-                            <h3 className="mt-1 text-xl font-bold text-slate-950">
+                            <h3
+                                id="titulo-escopo-usuario"
+                                className="mt-2 text-[clamp(1.65rem,3vw,2.15rem)] font-black leading-none tracking-tight text-white"
+                            >
+                                Escopo de acesso
+                            </h3>
+
+                            <p className="mt-2 truncate text-sm font-semibold text-slate-100/95">
                                 {
                                     textoSeguro(
                                         usuario?.nome,
                                         "Usuário"
                                     )
                                 }
-                            </h3>
+                            </p>
 
-                            <p className="mt-1 text-xs text-slate-500">
+                            <p className="mt-1 break-all text-xs font-medium text-slate-200/80">
                                 {
                                     textoSeguro(
                                         usuario?.email
                                     )
                                 }
                             </p>
+
+                            <span
+                                aria-hidden="true"
+                                className="mt-4 block h-[3px] w-16 rounded-full bg-emerald-400"
+                            />
                         </div>
                     </div>
                 </header>

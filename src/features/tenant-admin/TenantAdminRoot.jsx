@@ -32,12 +32,27 @@ import {
     TenantAdminInfrastructurePage,
 } from "./pages/TenantAdminInfrastructurePage.jsx";
 
+import {
+    TenantAdminDomainsPage,
+} from "./pages/TenantAdminDomainsPage.jsx";
+
+import {
+    TenantAdminAuditPage,
+} from "./pages/TenantAdminAuditPage.jsx";
+
+import {
+    TenantAdminSettingsPage,
+} from "./pages/TenantAdminSettingsPage.jsx";
+
 const SECOES_ADMIN =
     new Set([
         "painel",
         "clientes",
         "novo-cliente",
         "infraestrutura",
+        "dominios",
+        "auditoria",
+        "configuracoes",
     ]);
 
 function obterSecaoAdminAtual() {
@@ -130,7 +145,9 @@ export default function TenantAdminRoot() {
             []
         );
 
-    function renderizarConteudo() {
+    function renderizarConteudo(
+        usuario
+    ) {
         if (
             secaoAtiva ===
             "clientes"
@@ -172,6 +189,43 @@ export default function TenantAdminRoot() {
             );
         }
 
+        if (
+            secaoAtiva ===
+            "dominios"
+        ) {
+            return (
+                <TenantAdminDomainsPage />
+            );
+        }
+
+        if (
+            secaoAtiva ===
+            "auditoria"
+        ) {
+            return (
+                <TenantAdminAuditPage />
+            );
+        }
+
+        if (
+            secaoAtiva ===
+            "configuracoes"
+        ) {
+            return (
+                <TenantAdminSettingsPage
+                    supabase={
+                        supabase
+                    }
+                    usuario={
+                        usuario
+                    }
+                    onNavegar={
+                        navegar
+                    }
+                />
+            );
+        }
+
         return (
             <TenantAdminDashboardPage
                 onNavegar={
@@ -199,7 +253,9 @@ export default function TenantAdminRoot() {
                         navegar
                     }
                 >
-                    {renderizarConteudo()}
+                    {renderizarConteudo(
+                        usuario
+                    )}
                 </TenantAdminLayout>
             )}
         </TenantAdminAuthGate>

@@ -3,7 +3,7 @@ import { CheckCircle2, Eye, EyeOff, Lock, Mail, MessageCircle, Plus, ShieldCheck
 import { supabase } from "../../lib/supabaseClient";
 import { FUNCAO_EMAIL_ALERTA_TST, statusDesvioAuditoriaCampo } from "../../constants/sstConstants";
 import { TIPOS_MODELO_EMAIL_SST } from "../../constants/modelosEmailSstConstants";
-import { FotoAuditoriaPreview } from "../commonComponents";
+import { FotoAuditoriaPreview, PasswordInput } from "../commonComponents";
 import { PreviaNotificacaoAuditoriaCampo } from "./PreviaNotificacaoAuditoriaCampo";
 import {
     fotosAuditoriaCampo,
@@ -34,7 +34,7 @@ export function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualiza
     const [exclusaoAberta, setExclusaoAberta] = useState(false);
     const [confirmacaoExclusao, setConfirmacaoExclusao] = useState("");
     const [senhaExclusao, setSenhaExclusao] = useState("");
-    const [mostrarSenhaExclusao, setMostrarSenhaExclusao] = useState(false);
+
     const [motivoExclusao, setMotivoExclusao] = useState("");
     const [excluindo, setExcluindo] = useState(false);
     const [enviandoEmailAuditoria, setEnviandoEmailAuditoria] = useState(false);
@@ -436,23 +436,19 @@ export function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualiza
                             placeholder="Digite EXCLUIR"
                             className="min-w-0 rounded-2xl border border-red-200 bg-white px-4 py-3 text-sm font-bold outline-none focus:ring-4 focus:ring-red-100"
                         />
-                        <div className="relative min-w-0">
-                            <input
-                                type={mostrarSenhaExclusao ? "text" : "password"}
-                                value={senhaExclusao}
-                                onChange={(e) => setSenhaExclusao(e.target.value)}
-                                placeholder="Senha do usuário"
-                                className="w-full rounded-2xl border border-red-200 bg-white px-4 py-3 pr-11 text-sm outline-none focus:ring-4 focus:ring-red-100"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setMostrarSenhaExclusao((valor) => !valor)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-red-500 hover:bg-red-50"
-                                title={mostrarSenhaExclusao ? "Ocultar senha" : "Mostrar senha"}
-                            >
-                                {mostrarSenhaExclusao ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                            </button>
-                        </div>
+                        <PasswordInput
+                            value={senhaExclusao}
+                            onChange={(e) =>
+                                setSenhaExclusao(
+                                    e.target.value
+                                )
+                            }
+                            placeholder="Senha do usuário"
+                            autoComplete="current-password"
+                            visibilityLabel="senha"
+                            className="min-w-0"
+                            inputClassName="!border-red-200 !bg-white py-3 text-sm focus:!border-red-300 focus:!ring-4 focus:!ring-red-100"
+                        />
                         <button
                             type="button"
                             disabled={excluindo}

@@ -13,7 +13,6 @@ import {
     Network,
     Plus,
     RefreshCw,
-    ShieldCheck,
     UsersRound,
 } from "lucide-react";
 
@@ -28,6 +27,10 @@ import {
 import {
     TenantAdminTenantDetailPage,
 } from "./TenantAdminTenantDetailPage.jsx";
+
+import {
+    TenantAdminHero,
+} from "../components/TenantAdminHero.jsx";
 
 function numeroSeguro(
     valor
@@ -414,30 +417,11 @@ export function TenantAdminDashboardPage({
     }
 
     return (
-        <div className="mx-auto max-w-[1500px]">
-            <section className="overflow-hidden rounded-[1.75rem] bg-gradient-to-r from-[#09271c] via-[#0b3324] to-[#0b3d2a] px-7 py-8 text-white shadow-sm">
-                <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-                    <div>
-                        <div className="inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-3 py-1.5">
-                            <ShieldCheck className="h-3.5 w-3.5 text-emerald-300" />
-
-                            <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-100">
-                                Administração global
-                            </span>
-                        </div>
-
-                        <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
-                            Painel Mestre SafeScan
-                        </h1>
-
-                        <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-                            Visão central dos clientes,
-                            ambientes, domínios e
-                            estruturas vinculadas à
-                            plataforma SafeScan.
-                        </p>
-                    </div>
-
+        <div className="mx-auto w-full max-w-[1500px]">
+            <TenantAdminHero
+                titulo="Painel Mestre"
+                subtitulo="Gerencie clientes, ambientes, domínios e acessos da plataforma SafeScan."
+                acoes={
                     <button
                         type="button"
                         onClick={
@@ -446,13 +430,13 @@ export function TenantAdminDashboardPage({
                                     "novo-cliente"
                                 )
                         }
-                        className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-400"
+                        className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-black/10 transition hover:bg-emerald-500"
                     >
                         <Plus className="h-4 w-4" />
                         Novo cliente
                     </button>
-                </div>
-            </section>
+                }
+            />
 
             <section className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {metricas.map(

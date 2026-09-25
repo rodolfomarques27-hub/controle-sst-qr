@@ -346,6 +346,31 @@ async function usuarioAlvoEhGlobal(
   );
 }
 
+function extrairMensagemErroSeguro(
+  error: unknown,
+  fallback: string
+) {
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error
+  ) {
+    const mensagem =
+      (error as {
+        message?: unknown;
+      }).message;
+
+    if (
+      typeof mensagem === "string" &&
+      mensagem.trim()
+    ) {
+      return mensagem.trim();
+    }
+  }
+
+  return fallback;
+}
+
 async function carregarEmpresaTenant(
   adminClient: any,
   tenantId: string,
@@ -462,6 +487,34 @@ function montarMetadataTenantAtualizacao({
   };
 }
 // SAFE_SCAN_I4C_C2_TENANT_METADATA_END
+
+function gerarSenhaBootstrapTenant() {
+  const bytes = new Uint8Array(
+    24,
+  );
+
+  crypto.getRandomValues(
+    bytes,
+  );
+
+  const base = Array.from(
+    bytes,
+  )
+    .map(
+      (byte) =>
+        byte
+          .toString(
+            16,
+          )
+          .padStart(
+            2,
+            "0",
+          ),
+    )
+    .join("");
+
+  return `${base}Aa1!`;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -763,12 +816,16 @@ Deno.serve(async (req) => {
       body?.perfil
     );
 
-  const senhaTemporaria =
-    String(
-      body?.senhaTemporaria ??
+  const senhaTemporariaRecebida = String(
+    body?.senhaTemporaria ??
       body?.senha_temporaria ??
-      ""
-    );
+      "",
+  );
+
+  const senhaTemporaria = modoTenant &&
+      !senhaTemporariaRecebida
+    ? gerarSenhaBootstrapTenant()
+    : senhaTemporariaRecebida;
 
   const ativo =
     perfil === "bloqueado"
@@ -947,8 +1004,10 @@ Deno.serve(async (req) => {
         {
           ok: false,
           erro:
-            error?.message ||
-            "Não foi possível validar a empresa do tenant.",
+            extrairMensagemErroSeguro(
+              error,
+              "Não foi possível validar a empresa do tenant."
+            ),
         }
       );
     }
@@ -1635,8 +1694,10 @@ Deno.serve(async (req) => {
           persistenciaPrincipalConcluida,
         compensacaoAuthFalhou,
         erro:
-          error?.message ||
-          "Não foi possível criar o login do app.",
+          extrairMensagemErroSeguro(
+            error,
+            "Não foi possível criar o login do app."
+          ),
       }
     );
   }

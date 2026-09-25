@@ -1,4 +1,4 @@
-export async function verificarAdministradorGlobalService({
+export async function verificarIdentidadeContaMestreService({
     supabase,
 } = {}) {
     if (!supabase) {
@@ -12,13 +12,13 @@ export async function verificarAdministradorGlobalService({
         error,
     } =
         await supabase.rpc(
-            "usuario_admin_global"
+            "usuario_conta_mestre_identidade"
         );
 
     if (error) {
         throw new Error(
             error.message ||
-            "Não foi possível validar o administrador global."
+            "Não foi possível validar a identidade da Conta Mestre."
         );
     }
 
@@ -29,6 +29,122 @@ export async function verificarAdministradorGlobalService({
 
     return resultado === true;
 }
+export async function obterStatusRotacaoSenhaContaMestreService({
+    supabase,
+} = {}) {
+    if (!supabase) {
+        throw new Error(
+            "Cliente Supabase não informado."
+        );
+    }
+
+    const {
+        data,
+        error,
+    } =
+        await supabase.rpc(
+            "admin_status_rotacao_senha_conta_mestre"
+        );
+
+    if (error) {
+        throw new Error(
+            error.message ||
+            "Não foi possível validar o estado de segurança da Conta Mestre."
+        );
+    }
+
+    const resultado =
+        Array.isArray(data)
+            ? data[0]
+            : data;
+
+    if (
+        !resultado ||
+        typeof resultado !==
+            "object"
+    ) {
+        return {
+            obrigatoria:
+                false,
+            motivo:
+                null,
+            emailReferencia:
+                null,
+            marcadaEm:
+                null,
+            senhaRotacionadaEm:
+                null,
+            concluidaEm:
+                null,
+        };
+    }
+
+    return {
+        obrigatoria:
+            resultado.rotacao_senha_obrigatoria ===
+            true,
+        motivo:
+            String(
+                resultado.motivo_rotacao ||
+                ""
+            ).trim() ||
+            null,
+        emailReferencia:
+            String(
+                resultado.email_referencia ||
+                ""
+            ).trim() ||
+            null,
+        marcadaEm:
+            resultado.marcada_em ||
+            null,
+        senhaRotacionadaEm:
+            resultado.senha_rotacionada_em ||
+            null,
+        concluidaEm:
+            resultado.concluida_em ||
+            null,
+    };
+}
+
+export async function concluirRotacaoSenhaContaMestreService({
+    supabase,
+} = {}) {
+    if (!supabase) {
+        throw new Error(
+            "Cliente Supabase não informado."
+        );
+    }
+
+    const {
+        data,
+        error,
+    } =
+        await supabase.rpc(
+            "admin_concluir_rotacao_senha_conta_mestre"
+        );
+
+    if (error) {
+        throw new Error(
+            error.message ||
+            "Não foi possível concluir a atualização de segurança da Conta Mestre."
+        );
+    }
+
+    const resultado =
+        Array.isArray(data)
+            ? data[0]
+            : data;
+
+    if (resultado !== true) {
+        throw new Error(
+            "A atualização de segurança da Conta Mestre não foi concluída."
+        );
+    }
+
+    return true;
+}
+
 export async function listarTenantsPlataformaService({
     supabase,
 } = {}) {
@@ -594,4 +710,528 @@ export async function provisionarTenantRascunhoService({
     }
 
     return data ?? null;
+}
+
+function validarClienteMfaContaMestre(
+    supabase
+) {
+    if (
+        !supabase?.auth?.mfa ||
+        typeof supabase.auth.mfa.listFactors !==
+            "function" ||
+        typeof supabase.auth.mfa
+            .getAuthenticatorAssuranceLevel !==
+            "function" ||
+        typeof supabase.auth.mfa.enroll !==
+            "function" ||
+        typeof supabase.auth.mfa.unenroll !==
+            "function" ||
+        typeof supabase.auth.mfa
+            .challengeAndVerify !==
+            "function"
+    ) {
+        throw new Error(
+            "MFA não está disponível no cliente de autenticação."
+        );
+    }
+}
+
+export async function obterEstadoMfaContaMestreService({
+    supabase,
+}) {
+    validarClienteMfaContaMestre(
+        supabase
+    );
+
+    const {
+        data:
+            assuranceData,
+        error:
+            assuranceError,
+    } =
+        await supabase.auth.mfa
+            .getAuthenticatorAssuranceLevel();
+
+    if (assuranceError) {
+        throw assuranceError;
+    }
+
+    const {
+        data:
+            factorsData,
+        error:
+            factorsError,
+    } =
+        await supabase.auth.mfa
+            .listFactors();
+
+    if (factorsError) {
+        throw factorsError;
+    }
+
+    const fatoresTotp =
+        Array.isArray(
+            factorsData?.totp
+        )
+            ? factorsData.totp
+            : [];
+
+    const fatoresTotpVerificados =
+        fatoresTotp.filter(
+            (fator) =>
+                fator?.status ===
+                "verified"
+        );
+
+    const fatoresTotpPendentes =
+        fatoresTotp.filter(
+            (fator) =>
+                fator?.status !==
+                "verified"
+        );
+
+    return {
+        currentLevel:
+            assuranceData
+                ?.currentLevel ||
+            null,
+
+        nextLevel:
+            assuranceData
+                ?.nextLevel ||
+            null,
+
+        fatoresTotp,
+
+        fatoresTotpVerificados,
+
+        fatoresTotpPendentes,
+    };
+}
+
+export async function iniciarCadastroMfaTotpContaMestreService({
+    supabase,
+}) {
+    validarClienteMfaContaMestre(
+        supabase
+    );
+
+    const estado =
+        await obterEstadoMfaContaMestreService({
+            supabase,
+        });
+
+    if (
+        estado
+            .fatoresTotpVerificados
+            .length >
+        0
+    ) {
+        throw new Error(
+            "A Conta Mestre já possui fator TOTP verificado."
+        );
+    }
+
+    for (
+        const fator of
+        estado.fatoresTotpPendentes
+    ) {
+        if (!fator?.id) {
+            continue;
+        }
+
+        const {
+            error,
+        } =
+            await supabase.auth.mfa
+                .unenroll({
+                    factorId:
+                        fator.id,
+                });
+
+        if (error) {
+            throw error;
+        }
+    }
+
+    const {
+        data,
+        error,
+    } =
+        await supabase.auth.mfa
+            .enroll({
+                factorType:
+                    "totp",
+                friendlyName:
+                    "SafeScan Conta Mestre",
+            });
+
+    if (error) {
+        throw error;
+    }
+
+    if (
+        !data?.id ||
+        !data?.totp?.secret
+    ) {
+        throw new Error(
+            "O Supabase não retornou os dados necessários para cadastrar o TOTP."
+        );
+    }
+
+    return {
+        factorId:
+            data.id,
+
+        qrCode:
+            data.totp
+                ?.qr_code ||
+            "",
+
+        secret:
+            data.totp
+                ?.secret ||
+            "",
+
+        uri:
+            data.totp
+                ?.uri ||
+            "",
+    };
+}
+
+export async function verificarMfaTotpContaMestreService({
+    supabase,
+    factorId,
+    codigo,
+}) {
+    validarClienteMfaContaMestre(
+        supabase
+    );
+
+    const codigoTratado =
+        String(
+            codigo ||
+            ""
+        )
+            .replace(
+                /\s+/g,
+                ""
+            );
+
+    if (
+        !factorId ||
+        !/^\d{6}$/.test(
+            codigoTratado
+        )
+    ) {
+        throw new Error(
+            "Informe o código de 6 dígitos do aplicativo autenticador."
+        );
+    }
+
+    const {
+        error,
+    } =
+        await supabase.auth.mfa
+            .challengeAndVerify({
+                factorId,
+                code:
+                    codigoTratado,
+            });
+
+    if (error) {
+        throw error;
+    }
+
+    const estado =
+        await obterEstadoMfaContaMestreService({
+            supabase,
+        });
+
+    if (
+        estado.currentLevel !==
+            "aal2" ||
+        estado
+            .fatoresTotpVerificados
+            .length ===
+            0
+    ) {
+        throw new Error(
+            "A sessão não atingiu o nível AAL2 após a verificação MFA."
+        );
+    }
+
+    /*
+     * A3-A12:
+     * challengeAndVerify e confirmação AAL2
+     * já ocorreram antes deste ponto.
+     *
+     * Nenhum fator, código ou segredo é enviado
+     * para a auditoria.
+     */
+    const {
+        error:
+            auditoriaError,
+    } =
+        await supabase.rpc(
+            "registrar_auditoria_mfa_conta_mestre"
+        );
+
+    if (auditoriaError) {
+        console.error(
+            "MASTER_MFA_AUDIT_FAILED"
+        );
+    }
+
+    return estado;
+}
+
+function decodificarJwtPayloadContaMestre(
+    accessToken
+) {
+    const partes =
+        String(
+            accessToken ||
+            ""
+        ).split(".");
+
+    if (
+        partes.length !== 3
+    ) {
+        throw new Error(
+            "Access token inválido para leitura da sessão."
+        );
+    }
+
+    const base64 =
+        partes[1]
+            .replace(
+                /-/g,
+                "+"
+            )
+            .replace(
+                /_/g,
+                "/"
+            );
+
+    const preenchimento =
+        base64 +
+        "=".repeat(
+            (
+                4 -
+                (
+                    base64.length %
+                    4
+                )
+            ) %
+            4
+        );
+
+    let json;
+
+    try {
+        json =
+            decodeURIComponent(
+                Array.from(
+                    atob(
+                        preenchimento
+                    )
+                )
+                    .map(
+                        (caractere) =>
+                            "%" +
+                            caractere
+                                .charCodeAt(0)
+                                .toString(16)
+                                .padStart(
+                                    2,
+                                    "0"
+                                )
+                    )
+                    .join("")
+            );
+    }
+    catch {
+        throw new Error(
+            "Não foi possível interpretar os dados da sessão."
+        );
+    }
+
+    return JSON.parse(
+        json
+    );
+}
+
+export async function obterEstadoSessaoContaMestreService({
+    supabase,
+}) {
+    if (
+        !supabase?.auth ||
+        typeof supabase.auth
+            .getSession !==
+            "function"
+    ) {
+        throw new Error(
+            "Serviço de sessão indisponível."
+        );
+    }
+
+    const {
+        data,
+        error,
+    } =
+        await supabase.auth
+            .getSession();
+
+    if (error) {
+        throw error;
+    }
+
+    const sessao =
+        data?.session;
+
+    if (
+        !sessao?.access_token ||
+        !sessao?.user?.id
+    ) {
+        throw new Error(
+            "Nenhuma sessão autenticada foi encontrada."
+        );
+    }
+
+    const payload =
+        decodificarJwtPayloadContaMestre(
+            sessao.access_token
+        );
+
+    return {
+        userId:
+            sessao.user.id,
+
+        email:
+            sessao.user.email ||
+            "",
+
+        sessionId:
+            String(
+                payload?.session_id ||
+                ""
+            ),
+
+        aal:
+            String(
+                payload?.aal ||
+                ""
+            ),
+
+        issuedAt:
+            Number(
+                payload?.iat
+            ) || null,
+
+        expiresAt:
+            Number(
+                payload?.exp
+            ) || null,
+    };
+}
+
+export async function revogarSessoesContaMestreService({
+    supabase,
+    escopo,
+}) {
+    const scope =
+        String(
+            escopo ||
+            ""
+        )
+            .trim()
+            .toLowerCase();
+
+    if (
+        scope !== "others" &&
+        scope !== "global"
+    ) {
+        throw new Error(
+            "Escopo de revogação de sessões inválido."
+        );
+    }
+
+    const estadoAntes =
+        await obterEstadoSessaoContaMestreService({
+            supabase,
+        });
+
+    if (
+        estadoAntes.aal !==
+        "aal2"
+    ) {
+        throw new Error(
+            "A revogação de sessões exige uma sessão AAL2."
+        );
+    }
+
+    if (
+        !supabase?.functions ||
+        typeof supabase.functions
+            .invoke !==
+            "function"
+    ) {
+        throw new Error(
+            "Serviço seguro de revogação de sessões indisponível."
+        );
+    }
+
+    const {
+        data,
+        error,
+    } =
+        await supabase.functions
+            .invoke(
+                "master-session-revoke",
+                {
+                    body: {
+                        scope,
+                    },
+                }
+            );
+
+    if (error) {
+        throw error;
+    }
+
+    if (
+        data?.ok !== true ||
+        data?.scope !==
+            scope
+    ) {
+        throw new Error(
+            "A revogação de sessões não foi confirmada pelo servidor."
+        );
+    }
+
+    if (
+        scope ===
+        "global"
+    ) {
+        const {
+            error:
+                localError,
+        } =
+            await supabase.auth
+                .signOut({
+                    scope:
+                        "local",
+                });
+
+        return {
+            ...data,
+            localSignOutError:
+                localError?.message ||
+                "",
+        };
+    }
+
+    return data;
 }

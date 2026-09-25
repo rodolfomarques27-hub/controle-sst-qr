@@ -79,10 +79,35 @@ async function executarFunction({
         );
     }
 
+    const modoNormalizado =
+        texto(
+            modo
+        ).toLowerCase();
+
+    const requerTenant =
+        modoNormalizado !==
+            "infraestrutura";
+
     const tenant =
-        validarTenantId(
-            tenantId
-        );
+        requerTenant
+            ? validarTenantId(
+                tenantId
+            )
+            : "";
+
+    const body =
+        requerTenant
+            ? {
+                tenantId:
+                    tenant,
+
+                modo:
+                    modoNormalizado,
+            }
+            : {
+                modo:
+                    modoNormalizado,
+            };
 
     const {
         data,
@@ -91,13 +116,7 @@ async function executarFunction({
         await supabase.functions.invoke(
             FUNCTION_NAME,
             {
-                body:
-                    {
-                        tenantId:
-                            tenant,
-
-                        modo,
-                    },
+                body,
             }
         );
 
@@ -134,6 +153,31 @@ export async function diagnosticarAtivacaoTenantService({
     });
 }
 
+export async function diagnosticarInfraestruturaGlobalServerService({
+    supabase,
+} = {}) {
+    const data =
+        await executarFunction({
+            supabase,
+            modo:
+                "infraestrutura",
+        });
+
+    if (
+        data?.modo !==
+            "infraestrutura" ||
+        !data?.worker ||
+        !data?.dns ||
+        !data?.https
+    ) {
+        throw new Error(
+            "O diagnóstico global server-side retornou uma resposta incompleta."
+        );
+    }
+
+    return data;
+}
+
 export async function ativarTenantOrquestradoService({
     supabase,
     tenantId,
@@ -144,4 +188,99 @@ export async function ativarTenantOrquestradoService({
         modo:
             "ativar",
     });
+}
+
+export async function obterLiberacaoAtivacaoTenantService({
+    supabase,
+    tenantId,
+} = {}) {
+    if (!supabase) {
+        throw new Error(
+            "Cliente Supabase não informado."
+        );
+    }
+
+    const tenant =
+        validarTenantId(
+            tenantId
+        );
+
+    const {
+        data,
+        error,
+    } =
+        await supabase.rpc(
+            "admin_obter_liberacao_ativacao_tenant",
+            {
+                p_tenant_id:
+                    tenant,
+            }
+        );
+
+    if (error) {
+        throw new Error(
+            error.message ||
+            "Não foi possível consultar a liberação piloto do tenant."
+        );
+    }
+
+    return (
+        data ||
+        {
+            tenantId:
+                tenant,
+            habilitada:
+                false,
+        }
+    );
+}
+
+export async function definirLiberacaoAtivacaoTenantService({
+    supabase,
+    tenantId,
+    habilitada,
+} = {}) {
+    if (!supabase) {
+        throw new Error(
+            "Cliente Supabase não informado."
+        );
+    }
+
+    if (
+        typeof habilitada !==
+        "boolean"
+    ) {
+        throw new Error(
+            "Estado da liberação piloto inválido."
+        );
+    }
+
+    const tenant =
+        validarTenantId(
+            tenantId
+        );
+
+    const {
+        data,
+        error,
+    } =
+        await supabase.rpc(
+            "admin_definir_liberacao_ativacao_tenant",
+            {
+                p_tenant_id:
+                    tenant,
+
+                p_habilitada:
+                    habilitada,
+            }
+        );
+
+    if (error) {
+        throw new Error(
+            error.message ||
+            "Não foi possível alterar a liberação piloto do tenant."
+        );
+    }
+
+    return data ?? null;
 }

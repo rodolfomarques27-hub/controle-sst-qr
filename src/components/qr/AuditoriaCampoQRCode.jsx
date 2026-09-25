@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from "react";
 import { ClipboardCheck, Eye, EyeOff, Plus, Trash2 } from "lucide-react";
 import { FileUploadAviso } from "../FileUploadAviso";
+import { PasswordInput } from "../commonComponents";
 import {
     notificacaoPadraoAuditoriaCampo,
     montarPreviewNotificacaoAuditoriaCampo,
@@ -351,18 +352,25 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
                             <h4 className="font-bold text-blue-950">Acesso à auditoria</h4>
                             <p className="mt-1 text-sm text-blue-700">Informe a senha de auditoria para registrar checklist, desvios e evidências pelo QR Code do colaborador.</p>
                             <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
-                                <input
-                                    type="password"
-                                    value={senhaAuditoriaQr}
-                                    onChange={(e) => setSenhaAuditoriaQr(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                            validarAcessoAuditoriaQRCode();
-                                        }
-                                    }}
-                                    placeholder="Senha da auditoria"
-                                    className="w-full rounded-2xl border border-blue-100 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-200"
-                                />
+                                <PasswordInput
+                            value={senhaAuditoriaQr}
+                            onChange={(e) =>
+                                setSenhaAuditoriaQr(
+                                    e.target.value
+                                )
+                            }
+                            onKeyDown={(e) => {
+                                if (
+                                    e.key ===
+                                    "Enter"
+                                ) {
+                                    validarAcessoAuditoriaQRCode();
+                                }
+                            }}
+                            placeholder="Senha da auditoria"
+                            autoComplete="current-password"
+                            inputClassName="!border-blue-100 focus:!border-blue-300 focus:!ring-2 focus:!ring-blue-200"
+                        />
                                 <button
                                     type="button"
                                     onClick={validarAcessoAuditoriaQRCode}

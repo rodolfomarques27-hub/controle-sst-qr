@@ -6,7 +6,6 @@ import {
     Activity,
     AlertTriangle,
     CheckCircle2,
-    Cloud,
     Globe2,
     LoaderCircle,
     Network,
@@ -17,8 +16,20 @@ import {
 } from "lucide-react";
 
 import {
+    supabase,
+} from "../../../lib/supabaseClient.js";
+
+import {
+    diagnosticarInfraestruturaGlobalServerService,
+} from "../services/tenantAdminActivationService.js";
+
+import {
     diagnosticarInfraestruturaGlobalService,
 } from "../services/tenantAdminInfrastructureService.js";
+
+import {
+    TenantAdminHero,
+} from "../components/TenantAdminHero.jsx";
 
 function StatusBadge({
     ok,
@@ -172,8 +183,94 @@ export function TenantAdminInfrastructurePage() {
         setErro("");
 
         try {
+            const [
+                publico,
+                servidor,
+            ] =
+                await globalThis.Promise.all([
+                    diagnosticarInfraestruturaGlobalService(),
+                    diagnosticarInfraestruturaGlobalServerService({
+                        supabase,
+                    }),
+                ]);
+
+            const workerValidado =
+                servidor?.worker?.validado ===
+                    true &&
+                servidor?.bloqueado ===
+                    false;
+
+            const ativacaoRealHabilitada =
+                servidor?.ativacaoRealHabilitada ===
+                true;
+
+            const ativacaoPronta =
+                workerValidado &&
+                ativacaoRealHabilitada;
+
             const resultado =
-                await diagnosticarInfraestruturaGlobalService();
+                {
+                    ...publico,
+
+                    worker:
+                        {
+                            ...publico?.worker,
+
+                            validado:
+                                workerValidado,
+
+                            marker:
+                                servidor?.worker?.marker ||
+                                "",
+
+                            assinaturaSafeScan:
+                                servidor?.worker?.assinaturaSafeScan ===
+                                true,
+
+                            fonteValidacao:
+                                "server-side",
+
+                            status:
+                                servidor?.worker?.mensagem ||
+                                publico?.worker?.status ||
+                                "Prova server-side do Worker indisponível.",
+                        },
+
+                    ativacaoAutomatica:
+                        {
+                            ...publico?.ativacaoAutomatica,
+
+                            pronta:
+                                ativacaoPronta,
+
+                            motivo:
+                                !workerValidado
+                                    ? (
+                                        servidor?.worker?.mensagem ||
+                                        "A prova server-side do Worker não está GREEN."
+                                    )
+                                    : ativacaoRealHabilitada
+                                        ? "Worker e gate server-side estão prontos para ativação."
+                                        : "Worker validado server-side. A ativação real permanece bloqueada pelo gate do servidor.",
+                        },
+
+                    provaServerSide:
+                        {
+                            consultadoEm:
+                                servidor?.consultadoEm ||
+                                null,
+
+                            wildcardHost:
+                                servidor?.wildcardHost ||
+                                "",
+
+                            bloqueado:
+                                servidor?.bloqueado ===
+                                true,
+
+                            ativacaoRealHabilitada,
+                        },
+                };
 
             setDiagnostico(
                 resultado
@@ -228,29 +325,11 @@ export function TenantAdminInfrastructurePage() {
             : [];
 
     return (
-        <div>
-            <section className="overflow-hidden rounded-3xl bg-gradient-to-r from-[#071d15] via-[#083223] to-[#075c3c] text-white shadow-sm">
-                <div className="flex flex-col gap-6 px-6 py-7 lg:flex-row lg:items-end lg:justify-between">
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <Cloud className="h-5 w-5 text-emerald-300" />
-
-                            <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-200">
-                                Infraestrutura global
-                            </span>
-                        </div>
-
-                        <h1 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
-                            Domínios e ativação automática
-                        </h1>
-
-                        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">
-                            Visão central da infraestrutura usada para publicar,
-                            validar e ativar novos clientes SafeScan sem configuração
-                            manual por empresa.
-                        </p>
-                    </div>
-
+        <div className="mx-auto w-full max-w-[1500px]">
+            <TenantAdminHero
+                titulo="Infraestrutura"
+                subtitulo="Monitore domínios, DNS, HTTPS e serviços globais da plataforma."
+                acoes={
                     <button
                         type="button"
                         onClick={
@@ -259,7 +338,7 @@ export function TenantAdminInfrastructurePage() {
                         disabled={
                             carregando
                         }
-                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-400 disabled:cursor-wait disabled:bg-slate-500"
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-bold text-white shadow-lg shadow-black/10 transition hover:bg-emerald-500 disabled:cursor-wait disabled:bg-slate-500"
                     >
                         {carregando ? (
                             <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -271,8 +350,8 @@ export function TenantAdminInfrastructurePage() {
                             ? "Diagnosticando..."
                             : "Diagnosticar infraestrutura"}
                     </button>
-                </div>
-            </section>
+                }
+            />
 
             <section className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <InfraCard
@@ -543,10 +622,8 @@ export function TenantAdminInfrastructurePage() {
                         </div>
 
                         <p className="text-xs leading-5 text-slate-500">
-                            {diagnostico?.worker?.validado
-                                ? "O Worker SafeScan e a rota wildcard estão operacionais. A disponibilidade continua sendo conferida pelo diagnóstico de DNS e HTTPS."
-                                : diagnostico?.worker?.status ||
-                                  "Execute o diagnóstico para validar o Worker e a rota wildcard."}
+                            {diagnostico?.worker?.status ||
+                                "Execute o diagnóstico para validar o Worker e a rota wildcard."}
                         </p>
                     </div>
                 </article>

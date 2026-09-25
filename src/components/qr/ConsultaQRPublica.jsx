@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { ChevronDown, ClipboardCheck, PhoneCall, ShieldCheck } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
-import { FotoColaborador, StatusPill, obterFotoColaboradorSrc } from "../commonComponents";
+import { FotoColaborador, PasswordInput, StatusPill, obterFotoColaboradorSrc } from "../commonComponents";
 import { AuditoriaCampoQRCode, statusGeralConsultaPublica } from "./AuditoriaCampoQRCode";
 import {
     classeClassificacaoAuditoriaCampo,
@@ -311,14 +311,17 @@ export function ConsultaQRPublica({ dados }) {
                 </div>
             ) : (
                 <form onSubmit={validarSenhaContatoEmergenciaPublica} className="mt-2 grid gap-2 sm:grid-cols-[1fr_140px]">
-                    <input
-                        type="password"
-                        value={senhaEmergenciaQr}
-                        onChange={(evento) => setSenhaEmergenciaQr(evento.target.value)}
-                        className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-950 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                        placeholder="PIN da empresa"
-                        autoComplete="off"
-                    />
+                    <PasswordInput
+                                value={senhaEmergenciaQr}
+                                onChange={(evento) =>
+                                    setSenhaEmergenciaQr(
+                                        evento.target.value
+                                    )
+                                }
+                                placeholder="PIN da empresa"
+                                autoComplete="off"
+                                inputClassName="!h-11 !py-0 text-sm font-bold text-slate-950 focus:!ring-2 focus:!ring-slate-100"
+                            />
 
                     <button
                         type="submit"

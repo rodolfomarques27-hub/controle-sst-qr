@@ -84,6 +84,35 @@ test(
 );
 
 test(
+    "rejeita todos os hosts reservados da plataforma",
+    () => {
+        const reservedHosts =
+            [
+                "www.safescanbrasil.com.br",
+                "admin.safescanbrasil.com.br",
+                "app.safescanbrasil.com.br",
+                "api.safescanbrasil.com.br",
+                "qr.safescanbrasil.com.br",
+                "status.safescanbrasil.com.br",
+                "assets.safescanbrasil.com.br",
+                "static.safescanbrasil.com.br",
+                "auth.safescanbrasil.com.br",
+                "idealiza.safescanbrasil.com.br",
+            ];
+
+        for (const hostname of reservedHosts) {
+            assert.equal(
+                deriveTenantSlug(
+                    hostname
+                ),
+                null,
+                hostname
+            );
+        }
+    }
+);
+
+test(
     "rejeita label inválida",
     () => {
         assert.equal(
