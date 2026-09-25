@@ -1419,9 +1419,21 @@ export default function App() {
         ]
     );
 
+    const carregandoModulosTenantRuntimeEfetivo =
+        Boolean(
+            aplicarGateModulosTenantRuntime
+            && (
+                carregandoModulosTenantRuntime
+                || (
+                    modulosTenantRuntime.length === 0
+                    && !erroModulosTenantRuntime
+                )
+            )
+        );
+
     const carregandoPermissaoRuntimeUsuario =
         aplicarGateModulosTenantRuntime
-            ? carregandoModulosTenantRuntime
+            ? carregandoModulosTenantRuntimeEfetivo
             : carregandoPermissaoSistemaUsuario;
 
     const erroPermissaoRuntimeUsuario =
@@ -1491,16 +1503,18 @@ export default function App() {
 
         if (
             carregandoPermissaoRuntimeUsuario
-            && !tenantAdminPodeGerenciarAcessos
         ) {
             return [];
         }
 
         if (
-            (
-                !permissaoSistemaRuntimeUsuario
-                || erroPermissaoRuntimeUsuario
-            )
+            erroPermissaoRuntimeUsuario
+        ) {
+            return [];
+        }
+
+        if (
+            !permissaoSistemaRuntimeUsuario
             && !tenantAdminPodeGerenciarAcessos
         ) {
             return [];
@@ -1555,16 +1569,18 @@ export default function App() {
 
         if (
             carregandoPermissaoRuntimeUsuario
-            && !tenantAdminPodeGerenciarAcessos
         ) {
             return "";
         }
 
         if (
-            (
-                !permissaoSistemaRuntimeUsuario
-                || erroPermissaoRuntimeUsuario
-            )
+            erroPermissaoRuntimeUsuario
+        ) {
+            return "";
+        }
+
+        if (
+            !permissaoSistemaRuntimeUsuario
             && !tenantAdminPodeGerenciarAcessos
         ) {
             return "";
@@ -1634,12 +1650,10 @@ export default function App() {
     const contextoPermissaoProntoApp =
         Boolean(
             !carregandoPermissaoRuntimeUsuario
+            && !erroPermissaoRuntimeUsuario
             && (
                 tenantAdminPodeGerenciarAcessos
-                || (
-                    permissaoSistemaRuntimeUsuario
-                    && !erroPermissaoRuntimeUsuario
-                )
+                || permissaoSistemaRuntimeUsuario
             )
         );
 
@@ -2104,7 +2118,7 @@ export default function App() {
                         carregandoPermissaoSistemaUsuario={carregandoPermissaoRuntimeUsuario}
                         erroPermissaoSistemaUsuario={erroPermissaoRuntimeUsuario}
                         modulosTenantRuntime={modulosTenantRuntime}
-                        carregandoModulosTenantRuntime={carregandoModulosTenantRuntime}
+                        carregandoModulosTenantRuntime={carregandoModulosTenantRuntimeEfetivo}
                         erroModulosTenantRuntime={erroModulosTenantRuntime}
                         aplicarGateModulosTenantRuntime={aplicarGateModulosTenantRuntime}
                         onPermissaoSistemaAtualizada={setPermissaoSistemaUsuario}
