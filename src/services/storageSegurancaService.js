@@ -483,7 +483,10 @@ export async function calcularUsoStorageRealTenant({
                                 ...new Set(
                                     mimeTypes
                                 ),
-                            ].sort(),
+                            ].sort(
+                                (a, b) =>
+                                    a.localeCompare(b)
+                            ),
                     };
                 }
             )
