@@ -756,17 +756,24 @@ export function AppContentRouter({
     ]);
 
     const aguardandoTelaPermitida = Boolean(
-        (
-            telaControladaPorPermissao
-            || telaControladaPorContrato
-        )
-        && !trocaSenhaTemporariaObrigatoria
+        !trocaSenhaTemporariaObrigatoria
         && (
-            carregandoPermissaoSistemaTela
-            || carregandoModulosTenantRuntime
-            || preparandoTelaPermitida
-            || deveRedirecionarParaTelaPermitida
-            || telaComModuloPronto !== tela
+            (
+                aplicarGateModulosTenantRuntime
+                && carregandoModulosTenantRuntime
+            )
+            || (
+                (
+                    telaControladaPorPermissao
+                    || telaControladaPorContrato
+                )
+                && (
+                    carregandoPermissaoSistemaTela
+                    || preparandoTelaPermitida
+                    || deveRedirecionarParaTelaPermitida
+                    || telaComModuloPronto !== tela
+                )
+            )
         )
     );
 
