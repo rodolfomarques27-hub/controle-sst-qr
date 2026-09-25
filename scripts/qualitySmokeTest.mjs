@@ -625,7 +625,7 @@ const codigoStorageSegurancaService = readFileSync(
     "utf8"
 );
 const migracaoResumoStorageTenant = readFileSync(
-    new URL("../supabase/migrations/20260925103000_tenant_storage_dashboard_scope.sql", import.meta.url),
+    new URL("../supabase/migrations/20260925113604_fix_resumo_storage_sst_tenant_bucket_ambiguous.sql", import.meta.url),
     "utf8"
 );
 const migracaoFundoLoginPublico = readFileSync(
@@ -699,6 +699,11 @@ assert.match(
     migracaoResumoStorageTenant,
     /usuario_tem_acesso_tenant[\s\S]*storage\.objects[\s\S]*grant execute[\s\S]*to authenticated/,
     "A RPC de Storage tenant deve autorizar o tenant e expor somente o agregado autenticado."
+);
+assert.match(
+    migracaoResumoStorageTenant,
+    /#variable_conflict use_column/,
+    "A RPC de Storage tenant deve resolver explicitamente o conflito entre colunas de retorno e identificadores internos."
 );
 assert.match(
     codigoAppLayout,
