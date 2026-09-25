@@ -2011,7 +2011,13 @@ export default function App() {
         );
     }
 
-    if (usuario && carregandoPermissaoSistemaUsuario) {
+    if (
+        usuario
+        && (
+            carregandoPermissaoSistemaUsuario
+            || carregandoModulosTenantRuntimeEfetivo
+        )
+    ) {
         return <AppTransicaoInterna />;
     }
 
