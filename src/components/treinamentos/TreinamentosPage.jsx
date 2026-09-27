@@ -14,6 +14,7 @@ import {
     usuarioPodeExcluirSistema,
 } from "../../services/usuariosPermissoesSistemaService";
 import { Card, Header } from "../commonComponents";
+import { useTenantRuntimeContext } from "../layout/TenantRuntimeContext.js";
 import { validarArquivoAntesUpload, validarListaArquivosAntesUpload } from "../FileUploadAviso";
 import { AlertasTstTreinamentos } from "./AlertasTstTreinamentos";
 import { BaseCertificadosTreinamentos } from "./BaseCertificadosTreinamentos";
@@ -403,6 +404,15 @@ export function Treinamentos({
     onSincronizarStorage,
     onRegistrarEmailEnviado,
 }) {
+    const contextoTenantRuntime =
+        useTenantRuntimeContext();
+
+    const tenantIdRuntime =
+        String(
+            contextoTenantRuntime?.tenant?.id ||
+            ""
+        ).trim();
+
     const [colabId, setColabId] = useState(
         () =>
             (colaboradores.find((c) => String(c.id) === String(colaboradorInicialId)) || colaboradores[0])
@@ -1887,6 +1897,13 @@ export function Treinamentos({
 
                 if (!grupos[chave]) {
                     grupos[chave] = {
+                        // R22_E3_D2A_DRY_RUN_TREINAMENTOS_EMPRESA
+                        empresaId:
+                            colaborador.empresaId
+                            ||
+                            colaborador.empresa_id
+                            ||
+                            null,
                         empresa: empresaNome,
                         tstResponsavel: colaborador.empresaTstResponsavel || "",
                         tstEmail: emailTstDaEmpresa(colaborador),
@@ -2015,8 +2032,8 @@ export function Treinamentos({
     const enviarEmailAlertaTstAutomatico = async (grupo) => {
         const { destinatario, assunto } = montarAvisoAlertaTst(grupo);
 
-        if (!destinatario) {
-            alert("Cadastre o e-mail do Técnico de Segurança responsável na empresa antes de enviar o aviso.");
+        if (!grupo.empresaId) {
+            alert("Não foi possível identificar a empresa para resolver o destinatário configurado de Treinamentos.");
             return;
         }
 
@@ -2037,6 +2054,8 @@ export function Treinamentos({
 
             const { data, error } = await supabase.functions.invoke(FUNCAO_EMAIL_ALERTA_TST, {
                 body: {
+                    tenantId: tenantIdRuntime,
+                    empresaId: grupo.empresaId,
                     para: destinatario,
                     tipoModelo: TIPOS_MODELO_EMAIL_SST.TREINAMENTOS,
                     assunto,
@@ -2067,7 +2086,7 @@ export function Treinamentos({
                 empresaId: grupo.empresaId || null,
                 colaboradorId: null,
                 documentoId: null,
-                destinatario,
+                destinatario: data?.destinatario || destinatario || "",
                 assunto,
                 tipoAlerta: "Alerta TST por empresa",
                 documento: itens.map((item) => item.treinamento).filter(Boolean).join(" | ").slice(0, 500),
