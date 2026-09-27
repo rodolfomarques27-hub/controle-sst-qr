@@ -1788,6 +1788,13 @@ export function Dashboard({
         const para = emailTstDaEmpresa(item.colaborador);
 
         return {
+            tenantId: tenantIdRuntime,
+            empresaId:
+                item.colaborador?.empresaId
+                ||
+                item.colaborador?.empresa_id
+                ||
+                null,
             para,
             tipoModelo: TIPOS_MODELO_EMAIL_SST.DOCUMENTO_COLABORADOR,
             assunto: `Aviso SST - ${statusEmail} - ${item.colaborador?.nome || "Colaborador"}`,
@@ -1832,9 +1839,9 @@ export function Dashboard({
         try {
             const payload = montarPayloadEmailPendencia(item);
 
-            if (!payload.para) {
+            if (!payload.empresaId) {
                 if (mostrarMensagem) {
-                    alert(`Cadastre o e-mail do TST responsável da empresa ${payload.empresa} antes de enviar.`);
+                    alert(`Não foi possível identificar a empresa para resolver o destinatário configurado de Documentos.`);
                 }
 
                 return false;
@@ -1870,7 +1877,7 @@ export function Dashboard({
                 empresaId: item.colaborador?.empresaId || null,
                 colaboradorId: item.colaborador?.id || null,
                 documentoId: item.realizado?.id || null,
-                destinatario: payload.para,
+                destinatario: data?.destinatario || payload.para || "",
                 assunto: payload.assunto,
                 tipoAlerta: tipoAlertaAuditoria,
                 documento: item.treinamento?.nome || "Documento não informado",
@@ -1879,7 +1886,7 @@ export function Dashboard({
             });
 
             if (mostrarMensagem) {
-                alert(`Alerta enviado para ${payload.para}.`);
+                alert(`Alerta enviado para ${data?.destinatario || payload.para}.`);
             }
 
             return true;
@@ -1950,6 +1957,15 @@ export function Dashboard({
             "Documento empresarial";
 
         return {
+            tenantId: tenantIdRuntime,
+            empresaId:
+                documento.empresa_id
+                ||
+                documento.empresaId
+                ||
+                empresa?.id
+                ||
+                null,
             para,
             tipoModelo: TIPOS_MODELO_EMAIL_SST.DOCUMENTO_EMPRESA,
             assunto:
@@ -2022,10 +2038,10 @@ export function Dashboard({
             obterRegistroEmpresaDocumentoDashboard(documento);
 
         try {
-            if (!payload.para) {
+            if (!payload.empresaId) {
                 if (mostrarMensagem) {
                     alert(
-                        `Cadastre o e-mail do TST responsável da empresa ${payload.empresa} antes de enviar.`
+                        `Não foi possível identificar a empresa para resolver o destinatário configurado de Documentos.`
                     );
                 }
 
@@ -2085,7 +2101,7 @@ export function Dashboard({
                     null,
                 colaboradorId: null,
                 documentoId: documento.id || null,
-                destinatario: payload.para,
+                destinatario: data?.destinatario || payload.para || "",
                 assunto: payload.assunto,
                 tipoAlerta: "Documento empresarial a vencer em 30 dias",
                 documento:
@@ -2098,7 +2114,7 @@ export function Dashboard({
 
             if (mostrarMensagem) {
                 alert(
-                    `Alerta enviado para ${payload.para}.`
+                    `Alerta enviado para ${data?.destinatario || payload.para}.`
                 );
             }
 
@@ -2160,6 +2176,27 @@ export function Dashboard({
                 : null;
 
             const colaborador = registro.item?.colaborador || null;
+
+            // R22_E3_D2A_DRY_RUN_DOCUMENTOS_EMPRESA
+            const empresaIdGrupo =
+                ehDocumentoEmpresa
+                    ? (
+                        registro.documento?.empresa_id
+                        ||
+                        registro.documento?.empresaId
+                        ||
+                        empresaRegistro?.id
+                        ||
+                        null
+                    )
+                    : (
+                        colaborador?.empresaId
+                        ||
+                        colaborador?.empresa_id
+                        ||
+                        null
+                    );
+
             const identificadorResponsavel = ehDocumentoEmpresa
                 ? empresaRegistro?.id || payloadItem.empresa
                 : colaborador?.id || colaborador?.codigoFuncionario || colaborador?.nome;
@@ -2175,6 +2212,7 @@ export function Dashboard({
                     chave: chaveGrupo,
                     origem: ehDocumentoEmpresa ? "empresa" : "colaborador",
                     empresa: payloadItem.empresa,
+                    empresaId: empresaIdGrupo,
                     para: payloadItem.para,
                     tstResponsavel: payloadItem.tstResponsavel,
                     nomeResponsavel: ehDocumentoEmpresa
@@ -2197,8 +2235,16 @@ export function Dashboard({
         grupo,
         payload,
         statusEnvio,
-        erro = ""
+        erro = "",
+        destinatarioResolvido = ""
     ) => {
+        const destinatarioHistorico =
+            destinatarioResolvido
+            ||
+            payload.para
+            ||
+            "";
+
         for (const registro of grupo.registros) {
             const ehDocumentoEmpresa = registro.origem === "empresa";
             const documento = ehDocumentoEmpresa
@@ -2220,7 +2266,7 @@ export function Dashboard({
                     : colaborador?.empresaId || null,
                 colaboradorId: colaborador?.id || null,
                 documentoId: documento?.id || null,
-                destinatario: payload.para,
+                destinatario: destinatarioHistorico,
                 assunto: payload.assunto,
                 tipoAlerta: "Resumo de documentos vencidos e a vencer",
                 documento: nomeDocumento,
@@ -2237,6 +2283,8 @@ export function Dashboard({
 
         const quantidade = grupo.itens.length;
         const payload = {
+            tenantId: tenantIdRuntime,
+            empresaId: grupo.empresaId,
             para: grupo.para,
             tipoModelo: TIPOS_MODELO_EMAIL_SST.DOCUMENTOS_LOTE,
             assunto: `Aviso SST - ${grupo.empresa} - ${grupo.nomeResponsavel} - ${quantidade} documento(s)`,
@@ -2248,7 +2296,7 @@ export function Dashboard({
             itens: grupo.itens,
         };
 
-        if (!payload.para) return false;
+        if (!payload.empresaId) return false;
 
         try {
             const { data, error } = await supabase.functions.invoke(
@@ -2263,7 +2311,13 @@ export function Dashboard({
                 return false;
             }
 
-            await registrarResultadoGrupoEmail(grupo, payload, "Sucesso");
+            await registrarResultadoGrupoEmail(
+                grupo,
+                payload,
+                "Sucesso",
+                "",
+                data?.destinatario || ""
+            );
             return true;
         } catch (erro) {
             const mensagemErro = erro?.message || String(erro);
