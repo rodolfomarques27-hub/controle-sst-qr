@@ -485,8 +485,12 @@ function parametrosConexao(
   };
 }
 
-function erroPareceConflito(
+function descricaoErro(
   erro: unknown,
+  campos: Array<[
+    string,
+    number,
+  ]>,
 ) {
   const registro =
     objeto(
@@ -494,121 +498,115 @@ function erroPareceConflito(
     );
 
   const descricao =
-    [
-      texto(
-        registro.message,
-        500,
-      ),
-
-      texto(
-        registro.details,
-        500,
-      ),
-
-      texto(
-        registro.hint,
-        500,
-      ),
-    ]
+    campos
+      .map(
+        ([
+          campo,
+          limite,
+        ]) =>
+          texto(
+            registro[campo],
+            limite,
+          ),
+      )
       .join(
         " ",
       )
       .toLowerCase();
 
-  return (
-    descricao.includes(
+  return {
+    registro,
+    descricao,
+  };
+}
+
+function contemAlgum(
+  descricao: string,
+  termos: string[],
+) {
+  return termos.some(
+    (termo) =>
+      descricao.includes(
+        termo,
+      ),
+  );
+}
+
+function erroPareceConflito(
+  erro: unknown,
+) {
+  const {
+    descricao,
+  } =
+    descricaoErro(
+      erro,
+      [
+        ["message", 500],
+        ["details", 500],
+        ["hint", 500],
+      ],
+    );
+
+  return contemAlgum(
+    descricao,
+    [
       "versão",
-    ) ||
-    descricao.includes(
       "versao",
-    ) ||
-    descricao.includes(
       "mudou",
-    ) ||
-    descricao.includes(
       "alterada",
-    )
+    ],
   );
 }
 
 function erroPareceIndisponibilidade(
   erro: unknown,
 ) {
-  const registro =
-    objeto(
+  const {
+    descricao,
+  } =
+    descricaoErro(
       erro,
+      [
+        ["message", 700],
+        ["details", 700],
+      ],
     );
 
-  const descricao =
+  return contemAlgum(
+    descricao,
     [
-      texto(
-        registro.message,
-        700,
-      ),
-
-      texto(
-        registro.details,
-        700,
-      ),
-    ]
-      .join(
-        " ",
-      )
-      .toLowerCase();
-
-  return (
-    descricao.includes(
       "teste aprovado",
-    ) ||
-    descricao.includes(
       "credencial válida",
-    ) ||
-    descricao.includes(
       "credencial valida",
-    ) ||
-    descricao.includes(
       "safescan_gerenciado",
-    ) ||
-    descricao.includes(
       "provedor institucional",
-    ) ||
-    descricao.includes(
       "configure e teste",
-    )
+    ],
   );
 }
 
 function erroParecePermissao(
   erro: unknown,
 ) {
-  const registro =
-    objeto(
+  const {
+    registro,
+    descricao,
+  } =
+    descricaoErro(
       erro,
+      [
+        ["message", 500],
+        ["details", 500],
+      ],
     );
 
-  const descricao =
-    [
-      texto(
-        registro.message,
-        500,
-      ),
-
-      texto(
-        registro.details,
-        500,
-      ),
-    ]
-      .join(
-        " ",
-      )
-      .toLowerCase();
-
   return (
-    descricao.includes(
-      "permissão",
-    ) ||
-    descricao.includes(
-      "permissao",
+    contemAlgum(
+      descricao,
+      [
+        "permissão",
+        "permissao",
+      ],
     ) ||
     registro.code ===
       "42501"
@@ -672,112 +670,78 @@ function erroRpc(
 function classificarErroSmtp(
   erro: unknown,
 ) {
-  const registro =
-    objeto(
+  const {
+    descricao,
+  } =
+    descricaoErro(
       erro,
+      [
+        ["code", 100],
+        ["message", 500],
+        ["response", 500],
+        ["responseCode", 100],
+        ["command", 100],
+      ],
     );
 
-  const descricao =
-    [
-      texto(
-        registro.code,
-        100,
-      ),
+  const classificacoes = [
+    {
+      codigo:
+        "SMTP_TIMEOUT",
 
-      texto(
-        registro.message,
-        500,
-      ),
+      termos: [
+        "timeout",
+        "etimedout",
+      ],
+    },
+    {
+      codigo:
+        "SMTP_AUTENTICACAO_FALHOU",
 
-      texto(
-        registro.response,
-        500,
-      ),
+      termos: [
+        "535",
+        "invalid login",
+        "authentication",
+        "credential",
+        "eauth",
+      ],
+    },
+    {
+      codigo:
+        "SMTP_TLS_FALHOU",
 
-      texto(
-        registro.responseCode,
-        100,
-      ),
+      termos: [
+        "certificate",
+        "tls",
+        "ssl",
+      ],
+    },
+    {
+      codigo:
+        "SMTP_CONEXAO_FALHOU",
 
-      texto(
-        registro.command,
-        100,
-      ),
-    ]
-      .join(
-        " ",
-      )
-      .toLowerCase();
+      termos: [
+        "econn",
+        "enotfound",
+        "eai_again",
+        "network",
+        "refused",
+        "connect",
+      ],
+    },
+  ];
 
-  if (
-    descricao.includes(
-      "timeout",
-    ) ||
-    descricao.includes(
-      "etimedout",
-    )
-  ) {
-    return "SMTP_TIMEOUT";
-  }
-
-  if (
-    descricao.includes(
-      "535",
-    ) ||
-    descricao.includes(
-      "invalid login",
-    ) ||
-    descricao.includes(
-      "authentication",
-    ) ||
-    descricao.includes(
-      "credential",
-    ) ||
-    descricao.includes(
-      "eauth",
-    )
-  ) {
-    return "SMTP_AUTENTICACAO_FALHOU";
-  }
-
-  if (
-    descricao.includes(
-      "certificate",
-    ) ||
-    descricao.includes(
-      "tls",
-    ) ||
-    descricao.includes(
-      "ssl",
-    )
-  ) {
-    return "SMTP_TLS_FALHOU";
-  }
-
-  if (
-    descricao.includes(
-      "econn",
-    ) ||
-    descricao.includes(
-      "enotfound",
-    ) ||
-    descricao.includes(
-      "eai_again",
-    ) ||
-    descricao.includes(
-      "network",
-    ) ||
-    descricao.includes(
-      "refused",
-    ) ||
-    descricao.includes(
-      "connect",
-    )
-  ) {
-    return "SMTP_CONEXAO_FALHOU";
-  }
-
-  return "SMTP_TESTE_FALHOU";
+  return (
+    classificacoes.find(
+      (classificacao) =>
+        contemAlgum(
+          descricao,
+          classificacao.termos,
+        ),
+    )?.codigo
+    ||
+    "SMTP_TESTE_FALHOU"
+  );
 }
 
 function codigoSmtpSeguro(
