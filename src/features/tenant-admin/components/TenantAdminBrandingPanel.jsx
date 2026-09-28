@@ -252,7 +252,16 @@ export function TenantAdminBrandingPanel({
                         previewFundoLocal
                     );
                 }
+            };
+        },
+        [
+            previewFundoLocal,
+        ]
+    );
 
+    useEffect(
+        () => {
+            return () => {
                 if (
                     previewLogoLocal
                         .startsWith(
@@ -266,7 +275,6 @@ export function TenantAdminBrandingPanel({
             };
         },
         [
-            previewFundoLocal,
             previewLogoLocal,
         ]
     );
