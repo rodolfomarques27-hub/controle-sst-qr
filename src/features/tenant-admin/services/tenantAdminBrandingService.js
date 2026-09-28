@@ -260,7 +260,12 @@ export async function carregarBrandingTenantAdminService({
             .filter(
                 Boolean
             )
-            .sort()
+            .sort(
+                (a, b) =>
+                    a.localeCompare(
+                        b
+                    )
+            )
             .at(
                 -1
             ) ||
