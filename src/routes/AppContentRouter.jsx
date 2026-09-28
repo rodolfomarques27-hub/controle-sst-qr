@@ -1001,6 +1001,8 @@ export function AppContentRouter({
                 aplicarGateModulosTenantRuntime ? (
                     <ConfiguracoesTenant
                         empresasBanco={empresasBanco}
+                        supabaseClient={supabaseClient}
+                        onAtualizarEmpresa={onAtualizarEmpresa}
                         usuario={usuario}
                         permissaoSistemaUsuario={permissaoSistemaTela}
                         modulosTenantRuntime={modulosTenantRuntime}

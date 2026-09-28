@@ -643,7 +643,7 @@ export async function carregarContextoEnvio(
         await adminClient
             .from("empresas")
             .select(
-                "id, nome, cnpj, tipo_empresa, data_inicio_contrato, data_fim_contrato",
+                "id, nome, cnpj, tenant_id, tipo_empresa, data_inicio_contrato, data_fim_contrato",
             )
             .eq(
                 "id",
@@ -674,6 +674,19 @@ export async function carregarContextoEnvio(
         throw new ErroHttp(
             404,
             "Empresa da competência não localizada.",
+        );
+    }
+
+    const tenantId =
+        textoSeguro(
+            empresa.tenant_id,
+            50,
+        );
+
+    if (!tenantId) {
+        throw new ErroHttp(
+            409,
+            "A empresa da competência não possui tenant válido para o envio operacional.",
         );
     }
 
@@ -1397,6 +1410,7 @@ export async function carregarContextoEnvio(
     return {
         competenciaId,
         empresaId,
+        tenantId,
         empresaNome,
         empresaCnpj,
 

@@ -1,5 +1,6 @@
 import {
     useCallback,
+    useContext,
     useEffect,
     useMemo,
     useRef,
@@ -30,6 +31,7 @@ import {
     aplicarVariaveisModeloEmailSst,
     criarValoresPrevisualizacaoModeloEmailSst,
     listarModelosEmailSstService,
+    listarModelosEmailSstTenantService,
     restaurarModeloEmailSstService,
     salvarModeloEmailSstService,
 } from "../../services/modelosEmailSstService";
@@ -37,6 +39,9 @@ import {
     AssinaturaModeloEmailSstConfiguracoes,
 } from "./AssinaturaModeloEmailSstConfiguracoes";
 import { classNames } from "../../utils/sstUtils";
+import {
+    TenantRuntimeContext,
+} from "../layout/TenantRuntimeContext.js";
 
 const FORMULARIO_MODELO_EMAIL_VAZIO = Object.freeze({
     tipo: "",
@@ -118,6 +123,7 @@ export function ModelosEmailSstConfiguracoes({
     onRegistrarAuditoria = null,
     controleCard = null,
     onRecolherCard = null,
+    tiposPermitidos = null,
 }) {
     const [modelos, setModelos] =
         useState([]);
@@ -160,6 +166,68 @@ export function ModelosEmailSstConfiguracoes({
 
     const corpoRef =
         useRef(null);
+
+    // R22_E3_C1_TIPOS_PERMITIDOS
+    const leituraFiltradaPermitida =
+        Array.isArray(
+            tiposPermitidos
+        );
+
+    // R22_E3_C2_LEITURA_MODELOS_TENANT
+    const tenantRuntimeContext =
+        useContext(
+            TenantRuntimeContext
+        );
+
+    const tenantIdLeitura =
+        String(
+            tenantRuntimeContext
+                ?.tenant
+                ?.id
+            ??
+            ""
+        ).trim();
+
+    const leituraTenantAtiva =
+        leituraFiltradaPermitida
+        &&
+        !podeAlterar;
+
+    const tiposModeloExibidos =
+        useMemo(
+            () => {
+                if (
+                    !leituraFiltradaPermitida
+                ) {
+                    return ORDEM_TIPOS_MODELO_EMAIL_SST;
+                }
+
+                const permitidos =
+                    new Set(
+                        tiposPermitidos
+                            .map(
+                                (tipo) =>
+                                    String(
+                                        tipo || ""
+                                    )
+                                        .trim()
+                                        .toLowerCase()
+                            )
+                            .filter(Boolean)
+                    );
+
+                return ORDEM_TIPOS_MODELO_EMAIL_SST.filter(
+                    (tipo) =>
+                        permitidos.has(
+                            tipo
+                        )
+                );
+            },
+            [
+                leituraFiltradaPermitida,
+                tiposPermitidos,
+            ]
+        );
 
     const valoresPrevisualizacao =
         useMemo(
@@ -316,7 +384,11 @@ export function ModelosEmailSstConfiguracoes({
 
     const carregarModelos =
         useCallback(async () => {
-            if (!podeAlterar) {
+            if (
+                !podeAlterar
+                &&
+                !leituraFiltradaPermitida
+            ) {
                 if (componenteAtivoRef.current) {
                     setModelos([]);
 
@@ -332,6 +404,35 @@ export function ModelosEmailSstConfiguracoes({
                     setMensagemPainel({
                         tipo: "aviso",
                         texto: mensagemBloqueio,
+                    });
+                }
+
+                return;
+            }
+
+            if (
+                leituraTenantAtiva
+                &&
+                !tenantIdLeitura
+            ) {
+                if (
+                    componenteAtivoRef.current
+                ) {
+                    setModelos([]);
+
+                    tipoSelecionadoRef.current =
+                        "";
+
+                    setTipoSelecionado("");
+
+                    setFormulario({
+                        ...FORMULARIO_MODELO_EMAIL_VAZIO,
+                    });
+
+                    setMensagemPainel({
+                        tipo: "aviso",
+                        texto:
+                            "Tenant ativo não identificado para leitura dos modelos de e-mail SST.",
                     });
                 }
 
@@ -360,25 +461,44 @@ export function ModelosEmailSstConfiguracoes({
 
             try {
                 const modelosCarregados =
-                    await listarModelosEmailSstService({
-                        supabase,
-                    });
+                    leituraTenantAtiva
+                        ? await listarModelosEmailSstTenantService({
+                            supabase,
+                            tenantId:
+                                tenantIdLeitura,
+                        })
+                        : await listarModelosEmailSstService({
+                            supabase,
+                        });
 
                 if (!componenteAtivoRef.current) {
                     return;
                 }
 
-                setModelos(modelosCarregados);
+                const modelosVisiveis =
+                    leituraFiltradaPermitida
+                        ? modelosCarregados.filter(
+                            (modelo) =>
+                                tiposModeloExibidos.includes(
+                                    modelo.tipo
+                                )
+                        )
+                        : modelosCarregados;
+
+                setModelos(
+                    modelosVisiveis
+                );
 
                 const tipoAtual =
                     tipoSelecionadoRef.current;
 
                 const proximoModelo =
-                    modelosCarregados.find(
+                    modelosVisiveis.find(
                         (modelo) =>
-                            modelo.tipo === tipoAtual
+                            modelo.tipo ===
+                            tipoAtual
                     ) ||
-                    modelosCarregados[0] ||
+                    modelosVisiveis[0] ||
                     null;
 
                 const proximoTipo =
@@ -398,18 +518,22 @@ export function ModelosEmailSstConfiguracoes({
                 );
 
                 if (
-                    modelosCarregados.length === 0
+                    modelosVisiveis.length === 0
                 ) {
                     setMensagemPainel({
                         tipo: "aviso",
                         texto:
-                            "Nenhum modelo de e-mail SST foi retornado pelo Supabase.",
+                            "Nenhum modelo permitido foi retornado para este módulo.",
                     });
-                } else {
+                }
+                else {
                     setMensagemPainel({
                         tipo: "sucesso",
                         texto:
-                            `${modelosCarregados.length} modelo(s) de e-mail SST carregado(s).`,
+                            String(
+                                modelosVisiveis.length
+                            ) +
+                            " modelo(s) de e-mail SST carregado(s).",
                     });
                 }
             } catch (error) {
@@ -436,9 +560,13 @@ export function ModelosEmailSstConfiguracoes({
                 }
             }
         }, [
+            leituraFiltradaPermitida,
+            leituraTenantAtiva,
             mensagemBloqueio,
             podeAlterar,
             supabase,
+            tenantIdLeitura,
+            tiposModeloExibidos,
         ]);
 
     useEffect(() => {
@@ -825,8 +953,9 @@ export function ModelosEmailSstConfiguracoes({
                     </div>
 
                     <p className="mt-1 max-w-3xl text-sm leading-relaxed text-slate-500">
-                        Edite assunto, conteúdo, remetente e estado das comunicações enviadas pelo SafeScan.
-                        Alertas SST e comunicações de acesso utilizam modelos privados recuperados pelas RPCs administrativas.
+                        {leituraFiltradaPermitida && !podeAlterar
+                            ? "Revise os modelos correspondentes ao módulo contratado. A edição permanece bloqueada nesta etapa."
+                            : "Edite assunto, conteúdo, remetente e estado das comunicações enviadas pelo SafeScan. Alertas SST e comunicações de acesso utilizam modelos privados recuperados pelas RPCs administrativas."}
                     </p>
                 </div>
 
@@ -847,14 +976,21 @@ export function ModelosEmailSstConfiguracoes({
 
                         {podeAlterar
                             ? "Edição autorizada"
-                            : "Acesso restrito"}
+                            : leituraFiltradaPermitida
+                                ? "Somente leitura"
+                                : "Acesso restrito"}
                     </span>
 
                     <button
                         type="button"
                         onClick={carregarModelos}
                         disabled={
-                            !podeAlterar ||
+                            (
+                                !podeAlterar
+                                &&
+                                !leituraFiltradaPermitida
+                            )
+                            ||
                             operacaoEmAndamento
                         }
                         className="inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
@@ -914,7 +1050,7 @@ export function ModelosEmailSstConfiguracoes({
                     </div>
 
                     <div className="space-y-2">
-                        {ORDEM_TIPOS_MODELO_EMAIL_SST.map(
+                        {tiposModeloExibidos.map(
                             (tipo) => {
                                 const modelo =
                                     modelos.find(

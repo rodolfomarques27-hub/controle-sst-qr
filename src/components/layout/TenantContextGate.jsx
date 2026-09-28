@@ -7,6 +7,7 @@ import {
 } from "react";
 
 import {
+    Building2,
     RefreshCcw,
     ShieldX,
     TriangleAlert,
@@ -38,6 +39,88 @@ import {
     TIPOS_AMBIENTE_RUNTIME_TENANT,
     classificarAmbienteRuntimeTenant,
 } from "../../utils/tenantRuntimeContextUtils.js";
+
+import {
+    PARAMETRO_HOST_TENANT_DEV,
+    ehEntradaAppOperacionalDev,
+    obterHostnameTenantDev,
+} from "../../routes/runtimeEntryService.js";
+
+function TelaSelecaoAmbienteDev() {
+    const [identificadorAmbiente, setIdentificadorAmbiente] = useState("");
+    const [erro, setErro] = useState("");
+
+    async function abrirAmbiente(event) {
+        event.preventDefault();
+
+        const entradaNormalizada = String(identificadorAmbiente || "")
+            .trim()
+            .toLowerCase()
+            .replace(/\.$/, "");
+
+        const hostnameNormalizado =
+            entradaNormalizada.includes(".")
+                ? entradaNormalizada
+                : `${entradaNormalizada}.safescanbrasil.com.br`;
+
+        if (
+            !entradaNormalizada
+            || !hostnameTenantValido(hostnameNormalizado)
+        ) {
+            setErro("Informe um nome de ambiente válido.");
+            return;
+        }
+
+        const {
+            error: erroEncerrarSessao,
+        } = await supabase.auth.signOut({
+            scope: "local",
+        });
+
+        if (erroEncerrarSessao) {
+            setErro(
+                "Não foi possível encerrar a sessão anterior para trocar de ambiente. Tente novamente."
+            );
+            return;
+        }
+
+        const destino = new URL(window.location.href);
+        destino.pathname = "/dev-app";
+        destino.search = "";
+        destino.searchParams.set(PARAMETRO_HOST_TENANT_DEV, hostnameNormalizado);
+        window.location.assign(destino.toString());
+    }
+
+    return (
+        <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
+            <form onSubmit={abrirAmbiente} className="w-full max-w-lg rounded-[2rem] bg-white p-8 shadow-sm">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+                    <Building2 className="h-6 w-6" />
+                </div>
+                <div className="mt-5 text-center">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">SafeScan DEV</p>
+                    <h1 className="mt-2 text-2xl font-bold text-slate-950">Selecionar ambiente</h1>
+                    <p className="mt-3 text-sm leading-6 text-slate-500">Informe o nome do ambiente, como cliente-a. O domínio SafeScan será completado automaticamente.</p>
+                </div>
+                <label className="mt-6 block">
+                    <span className="text-xs font-bold uppercase tracking-wide text-slate-600">Nome do ambiente</span>
+                    <input
+                        type="text"
+                        value={identificadorAmbiente}
+                        onChange={(event) => { setIdentificadorAmbiente(event.target.value); setErro(""); }}
+                        placeholder="Digite seu domínio"
+                        autoComplete="off"
+                        spellCheck="false"
+                        className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-mono text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                    />
+                </label>
+                {erro ? <p className="mt-3 text-sm font-semibold text-rose-600">{erro}</p> : null}
+                <button type="submit" className="mt-5 inline-flex w-full items-center justify-center rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Continuar para o login</button>
+                <p className="mt-4 text-center text-xs leading-5 text-slate-400">Esta seleção não concede acesso. Depois de selecionar o ambiente, entre com o e-mail e a senha de um usuário autorizado desse tenant.</p>
+            </form>
+        </div>
+    );
+}
 
 function TelaAmbienteNaoEncontrado({
     hostname = "",
@@ -113,46 +196,52 @@ export function TenantContextGate({
                 )
         );
 
+    const [entradaDevOperacional] =
+        useState(
+            () =>
+                ehEntradaAppOperacionalDev(
+                    typeof window !== "undefined"
+                        ? window.location
+                        : null
+                )
+        );
+
+    const [hostnameTenantDev] =
+        useState(
+            () =>
+                obterHostnameTenantDev(
+                    typeof window !== "undefined"
+                        ? window.location
+                        : null
+                )
+        );
+
+    const selecionarTenantDev = Boolean(entradaDevOperacional && !hostnameTenantDev);
+    const hostnameResolucao = hostnameTenantDev || classificacao.hostname;
+    const requerResolucaoTenant = Boolean(classificacao.requerResolucaoTenant || (entradaDevOperacional && hostnameTenantDev));
+
     const [contextoTenant, setContextoTenant] =
         useState(
             () => {
-                if (
-                    !classificacao
-                        .requerResolucaoTenant
-                ) {
+                if (!requerResolucaoTenant) {
                     return null;
                 }
 
-                if (
-                    !hostnameTenantValido(
-                        classificacao.hostname
-                    )
-                ) {
-                    return criarContextoTenantDesconhecido(
-                        classificacao.hostname
-                    );
+                if (!hostnameTenantValido(hostnameResolucao)) {
+                    return criarContextoTenantDesconhecido(hostnameResolucao);
                 }
 
-                return criarContextoTenantCarregando(
-                    classificacao.hostname
-                );
+                return criarContextoTenantCarregando(hostnameResolucao);
             }
         );
 
     useEffect(
         () => {
-            if (
-                !classificacao
-                    .requerResolucaoTenant
-            ) {
+            if (!requerResolucaoTenant) {
                 return undefined;
             }
 
-            if (
-                !hostnameTenantValido(
-                    classificacao.hostname
-                )
-            ) {
+            if (!hostnameTenantValido(hostnameResolucao)) {
                 return undefined;
             }
 
@@ -168,7 +257,7 @@ export function TenantContextGate({
                         await supabase.rpc(
                             "resolver_branding_tenant_por_hostname",
                             criarParametrosResolucaoHostnameTenant(
-                                classificacao.hostname
+                                hostnameResolucao
                             )
                         );
 
@@ -184,7 +273,7 @@ export function TenantContextGate({
 
                         setContextoTenant(
                             criarContextoTenantErro(
-                                classificacao.hostname
+                                hostnameResolucao
                             )
                         );
 
@@ -194,7 +283,7 @@ export function TenantContextGate({
                     const contextoNormalizado =
                         normalizarContextoTenantRpc(
                             data,
-                            classificacao.hostname
+                            hostnameResolucao
                         );
 
                     setContextoTenant({
@@ -220,7 +309,7 @@ export function TenantContextGate({
 
                     setContextoTenant(
                         criarContextoTenantErro(
-                            classificacao.hostname
+                            hostnameResolucao
                         )
                     );
                 }
@@ -234,8 +323,8 @@ export function TenantContextGate({
             };
         },
         [
-            classificacao.hostname,
-            classificacao.requerResolucaoTenant,
+            hostnameResolucao,
+            requerResolucaoTenant,
         ]
     );
 
@@ -252,7 +341,8 @@ export function TenantContextGate({
                     classificacao.tipo,
 
                 hostname:
-                    classificacao.hostname,
+                    tenantResolvido?.hostname
+                    || hostnameResolucao,
 
                 contextoTenant:
                     tenantResolvido,
@@ -287,6 +377,13 @@ export function TenantContextGate({
                     TIPOS_AMBIENTE_RUNTIME_TENANT
                         .DESENVOLVIMENTO,
 
+                tenantDevSelecionado:
+                    Boolean(
+                        entradaDevOperacional
+                        && hostnameTenantDev
+                        && tenantResolvido
+                    ),
+
                 preview:
                     classificacao.tipo ===
                     TIPOS_AMBIENTE_RUNTIME_TENANT
@@ -298,11 +395,19 @@ export function TenantContextGate({
                     ),
             }),
             [
-                classificacao.hostname,
                 classificacao.tipo,
+                entradaDevOperacional,
+                hostnameResolucao,
+                hostnameTenantDev,
                 tenantResolvido,
             ]
         );
+
+    if (selecionarTenantDev) {
+        return (
+            <TelaSelecaoAmbienteDev />
+        );
+    }
 
     if (
         classificacao.tipo ===
@@ -312,16 +417,13 @@ export function TenantContextGate({
         return (
             <TelaAmbienteNaoEncontrado
                 hostname={
-                    classificacao.hostname
+                    hostnameResolucao
                 }
             />
         );
     }
 
-    if (
-        !classificacao
-            .requerResolucaoTenant
-    ) {
+    if (!requerResolucaoTenant) {
         return (
             <TenantRuntimeContext.Provider
                 value={valorContexto}
@@ -348,7 +450,7 @@ export function TenantContextGate({
         return (
             <TelaAmbienteNaoEncontrado
                 hostname={
-                    classificacao.hostname
+                    hostnameResolucao
                 }
             />
         );

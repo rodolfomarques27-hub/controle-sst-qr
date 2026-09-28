@@ -564,6 +564,118 @@ export function criarValoresPrevisualizacaoModeloEmailSst(
             ].join("\n"),
     };
 }
+// R22_E3_C2_LEITURA_MODELOS_TENANT
+export async function listarModelosEmailSstTenantService({
+    supabase,
+    tenantId,
+}) {
+    garantirClienteSupabase(
+        supabase,
+        "listar modelos de e-mail SST do tenant"
+    );
+
+    const tenantIdSeguro =
+        textoTratado(
+            tenantId
+        );
+
+    if (!tenantIdSeguro) {
+        throw new Error(
+            "Tenant não informado para leitura dos modelos de e-mail SST."
+        );
+    }
+
+    const { data, error } =
+        await supabase.rpc(
+            "listar_modelos_email_sst_tenant",
+            {
+                p_tenant_id:
+                    tenantIdSeguro,
+            }
+        );
+
+    if (error) {
+        const codigo =
+            textoTratado(
+                error?.code
+            );
+
+        const mensagemOriginal =
+            textoTratado(
+                error?.message ||
+                error?.details ||
+                error?.hint
+            );
+
+        const mensagemChave =
+            mensagemOriginal
+                .toLowerCase();
+
+        if (
+            codigo === "42501"
+            ||
+            mensagemChave.includes(
+                "sem acesso"
+            )
+            ||
+            mensagemChave.includes(
+                "autenticação obrigatória"
+            )
+        ) {
+            const erro =
+                new Error(
+                    "Seu usuário não possui acesso aos modelos de e-mail SST deste tenant."
+                );
+
+            erro.code =
+                codigo || "42501";
+
+            throw erro;
+        }
+
+        throw criarErroModelosEmailSst(
+            error,
+            "Não foi possível carregar os modelos de e-mail SST deste tenant."
+        );
+    }
+
+    const registros =
+        Array.isArray(data)
+            ? data
+            : data
+                ? [data]
+                : [];
+
+    const modelos =
+        registros
+            .map(
+                normalizarModeloEmailSst
+            )
+            .filter(Boolean);
+
+    const indiceOrdem =
+        new Map(
+            ORDEM_TIPOS_MODELO_EMAIL_SST.map(
+                (tipo, indice) => [
+                    tipo,
+                    indice,
+                ]
+            )
+        );
+
+    return modelos.sort(
+        (a, b) =>
+            (
+                indiceOrdem.get(a.tipo) ??
+                Number.MAX_SAFE_INTEGER
+            ) -
+            (
+                indiceOrdem.get(b.tipo) ??
+                Number.MAX_SAFE_INTEGER
+            )
+    );
+}
+
 export async function listarModelosEmailSstService({
     supabase,
 }) {

@@ -2,8 +2,10 @@ import { useTenantRuntimeContext } from "./components/layout/TenantRuntimeContex
 import { carregarAcessoTenantAtualService } from "./services/tenantMembershipService.js";
 import {
     carregarModulosTenantRuntimeService,
+    membershipTenantRuntimeAtiva,
     moduloDisponivelTenantRuntime,
     montarPermissaoMembershipTenantRuntime,
+    montarUsuarioMembershipTenantRuntime,
     telaDisponivelTenantRuntime,
 } from "./services/tenantModulesRuntimeService.js";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -1029,34 +1031,26 @@ export default function App() {
                     return;
                 }
 
-                if (
-                    resultado?.autorizado
-                    !== true
-                ) {
+                const membership = resultado?.membership ?? null;
+                const membershipAtiva = membershipTenantRuntimeAtiva({
+                    membership,
+                    tenantId: tenant.id,
+                    userId: usuario.id,
+                });
+
+                if (resultado?.autorizado !== true || !membershipAtiva) {
                     setAcessoTenantRuntime({
-                        estado:
-                            "negado",
-
-                        membership:
-                            null,
-
-                        erro:
-                            "",
+                        estado: "negado",
+                        membership: null,
+                        erro: "",
                     });
-
                     return;
                 }
 
                 setAcessoTenantRuntime({
-                    estado:
-                        "autorizado",
-
-                    membership:
-                        resultado.membership
-                        ?? null,
-
-                    erro:
-                        "",
+                    estado: "autorizado",
+                    membership,
+                    erro: "",
                 });
             } catch (error) {
                 if (!componenteAtivo) {
@@ -1512,30 +1506,18 @@ export default function App() {
 
     const usuarioRuntime = useMemo(
         () => {
-            if (
-                !aplicarGateModulosTenantRuntime
-                || !permissaoSistemaRuntimeUsuario
-                || !usuario
-            ) {
+            if (!aplicarGateModulosTenantRuntime || !usuario) {
                 return usuario;
             }
 
-            return {
-                ...usuario,
-                perfil:
-                    permissaoSistemaRuntimeUsuario.perfil
-                    || usuario.perfil,
-                ativo:
-                    permissaoSistemaRuntimeUsuario.ativo,
-                bloqueado:
-                    permissaoSistemaRuntimeUsuario.bloqueado,
-                acesso_global:
-                    false,
-            };
+            return montarUsuarioMembershipTenantRuntime({
+                usuario,
+                membership: acessoTenantRuntime.membership,
+            });
         },
         [
+            acessoTenantRuntime.membership,
             aplicarGateModulosTenantRuntime,
-            permissaoSistemaRuntimeUsuario,
             usuario,
         ]
     );

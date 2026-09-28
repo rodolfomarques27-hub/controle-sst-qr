@@ -37,20 +37,31 @@ function ocorrencias(
 
 const obrigatorios = [
   "obter_configuracao_provedor_email_para_envio",
+  "backend_obter_configuracao_email_tenant_para_envio",
   "resolverTransportadorEmailParaEnvio",
+  "resolverTransportadorPlataforma",
+  "resolverTransportadorTenant",
+  "resolverTransportadorTenantCliente",
   "normalizarConfiguracaoSmtpPrivada",
+  "normalizarModoEnvioTenant",
   "criarTransportadorSmtp",
   "CriadorTransportadorSmtp",
-  "criarTransportador?: CriadorTransportadorSmtp",
-  "opcoes.criarTransportador ??",
-  "montarTransportadorResolvido",
+  "OpcoesResolverEmail",
+  "PLATAFORMA",
+  "TENANT",
   "CENTRAL",
   "LEGADO_GMAIL",
+  "TENANT_CLIENTE",
+  "SAFESCAN_GERENCIADO",
+  "PROVEDOR_CLIENTE",
+  "DESATIVADO",
   "GMAIL_USER",
   "GMAIL_APP_PASSWORD",
   "smtp.gmail.com",
   "PROVEDOR_CENTRAL_INDISPONIVEL",
   "PROVEDOR_CENTRAL_INVALIDO",
+  "PROVEDOR_TENANT_INDISPONIVEL",
+  "PROVEDOR_TENANT_INVALIDO",
   "PROVEDOR_NAO_CONFIGURADO",
   "TLS_IMPLICITO",
   "STARTTLS",
@@ -125,16 +136,23 @@ exigir(
 
 exigir(
   ocorrencias(
-    /criarTransportador:\s*CriadorTransportadorSmtp/g,
+    /"obter_configuracao_provedor_email_para_envio"/g,
   ) === 1,
-  "Montador deve receber exatamente uma factory explícita.",
+  "RPC central deve ser consultada exatamente uma vez no resolver.",
 );
 
 exigir(
   ocorrencias(
-    /criarTransportador,\s*\n\s*\);/g,
-  ) === 2,
-  "As duas rotas SMTP devem encaminhar a factory selecionada.",
+    /"backend_obter_configuracao_email_tenant_para_envio"/g,
+  ) === 1,
+  "RPC do tenant deve ser consultada exatamente uma vez no resolver.",
+);
+
+exigir(
+  ocorrencias(
+    /montarTransportadorResolvido\s*\([\s\S]*?criarTransportador,\s*\n\s*\);/g,
+  ) === 3,
+  "As três chamadas reais de montarTransportadorResolvido devem encaminhar a factory selecionada.",
 );
 
 const inicioResultado =
@@ -144,7 +162,7 @@ const inicioResultado =
 
 const fimResultado =
   fonte.indexOf(
-    "export async function resolverTransportadorEmailParaEnvio",
+    "function normalizarModoEnvioTenant",
   );
 
 exigir(
@@ -173,20 +191,36 @@ exigir(
   "Usuário SMTP não deve aparecer no resultado operacional.",
 );
 
-const posicaoErroRpc =
+const inicioPlataforma =
   fonte.indexOf(
-    "if (\n    resultado.error",
+    "async function resolverTransportadorPlataforma",
   );
 
-const posicaoFallback =
+const inicioTenantCliente =
   fonte.indexOf(
-    'Deno.env.get(\n        "GMAIL_USER"',
+    "async function resolverTransportadorTenantCliente",
   );
 
 exigir(
-  posicaoErroRpc >= 0 &&
-    posicaoFallback > posicaoErroRpc,
-  "Erro da RPC deve ser tratado antes do fallback.",
+  inicioPlataforma >= 0 &&
+    inicioTenantCliente > inicioPlataforma,
+  "Bloco da plataforma não localizado.",
+);
+
+const trechoPlataforma =
+  fonte.slice(
+    inicioPlataforma,
+    inicioTenantCliente,
+  );
+
+exigir(
+  trechoPlataforma.includes(
+    "GMAIL_USER",
+  ) &&
+    trechoPlataforma.includes(
+      "GMAIL_APP_PASSWORD",
+    ),
+  "Fallback legado deve permanecer restrito ao canal da plataforma.",
 );
 
 exigir(
@@ -208,7 +242,7 @@ console.log(
 );
 
 console.log(
-  "EMAIL_PROVIDER_E3M3R4_SHARED_RESOLVER_SMOKE_OK",
+  "EMAIL_PROVIDER_R22B_SHARED_RESOLVER_SMOKE_OK",
 );
 
 console.log(
@@ -224,6 +258,18 @@ console.log(
 );
 
 console.log(
+  "TENANT_RPC=1",
+);
+
+console.log(
+  "CANAIS=PLATAFORMA,TENANT",
+);
+
+console.log(
+  "ORIGEM_TENANT_CLIENTE=SIM",
+);
+
+console.log(
   "CREATE_TRANSPORT_SHARED=1",
 );
 
@@ -236,11 +282,7 @@ console.log(
 );
 
 console.log(
-  "LEGACY_GMAIL_FALLBACK=SIM",
-);
-
-console.log(
-  "FALLBACK_EM_ERRO_RPC=NAO",
+  "LEGACY_GMAIL_FALLBACK=PLATAFORMA",
 );
 
 console.log(

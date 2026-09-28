@@ -50,6 +50,10 @@ import {
 } from "../components/TenantAdminDomainReadinessPanel.jsx";
 
 import {
+    TenantAdminEmailProviderPanel,
+} from "../components/TenantAdminEmailProviderPanel.jsx";
+
+import {
     TenantAdminHero,
 } from "../components/TenantAdminHero.jsx";
 
@@ -967,6 +971,23 @@ export function TenantAdminTenantDetailPage({
                 >
                     Domínio e ativação
                 </button>
+
+                <button
+                    type="button"
+                    onClick={
+                        () =>
+                            setAbaAtiva(
+                                "email"
+                            )
+                    }
+                    className={
+                        abaAtiva === "email"
+                            ? "rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white shadow-sm"
+                            : "rounded-xl px-4 py-2.5 text-xs font-bold text-slate-500 transition hover:bg-emerald-50 hover:text-emerald-800"
+                    }
+                >
+                    E-mail
+                </button>
             </nav>
 
             {
@@ -1456,19 +1477,28 @@ export function TenantAdminTenantDetailPage({
                                 }
                             />
                         )
-                        : (
-                            <TenantAdminDomainReadinessPanel
-                                tenant={
-                                    tenant
-                                }
-                                empresas={
-                                    empresas
-                                }
-                                usuarios={
-                                    usuarios
-                                }
-                            />
-                        )
+                        : abaAtiva ===
+                            "email"
+                            ? (
+                                <TenantAdminEmailProviderPanel
+                                    tenant={
+                                        tenant
+                                    }
+                                />
+                            )
+                            : (
+                                <TenantAdminDomainReadinessPanel
+                                    tenant={
+                                        tenant
+                                    }
+                                    empresas={
+                                        empresas
+                                    }
+                                    usuarios={
+                                        usuarios
+                                    }
+                                />
+                            )
             }
 
             {usuarioAjusteDados ? (

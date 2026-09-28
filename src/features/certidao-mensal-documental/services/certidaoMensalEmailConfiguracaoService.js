@@ -3,13 +3,32 @@ import { supabase } from "../../../lib/supabaseClient";
 export const RPC_CONFIGURACAO_EMAIL_CERTIDAO_MENSAL =
     Object.freeze({
         LISTAR:
-            "admin_listar_configuracoes_email_certidao_mensal",
+            "listar_configuracoes_email_certidao_mensal_tenant",
 
         SALVAR:
-            "admin_salvar_configuracao_email_certidao_mensal",
+            "salvar_configuracao_email_certidao_mensal_tenant",
 
         EXCLUIR:
-            "admin_excluir_configuracao_email_certidao_mensal",
+            "excluir_configuracao_email_certidao_mensal_tenant",
+    });
+
+const EDGE_PROVEDOR_EMAIL_TENANT =
+    "admin-gerenciar-provedor-email-tenant";
+
+const REGEX_UUID_TENANT =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export const CONFIGURACAO_EMAIL_TENANT_SEGURA_PADRAO =
+    Object.freeze({
+        tenantId: null,
+        modoEnvio: "DESATIVADO",
+        provedor: null,
+        remetenteEmail: null,
+        credencialConfigurada: false,
+        ultimoTesteStatus: "NAO_APLICAVEL",
+        ultimoTesteCodigo: null,
+        ultimoTesteEm: null,
+        safescanGerenciadoDisponivel: false,
     });
 
 export const LIMITES_CONFIGURACAO_EMAIL_CERTIDAO_MENSAL =
@@ -84,6 +103,102 @@ function criarErroConfiguracaoEmail(
         erroOriginal || null;
 
     return erro;
+}
+
+function tenantIdObrigatorio(valor) {
+    const tenantId =
+        textoSeguro(valor)
+            .toLowerCase();
+
+    if (
+        !REGEX_UUID_TENANT.test(
+            tenantId,
+        )
+    ) {
+        throw criarErroConfiguracaoEmail(
+            null,
+            "Tenant inválido para a configuração de e-mail das Certidões Mensais.",
+        );
+    }
+
+    return tenantId;
+}
+
+function normalizarConfiguracaoEmailTenantSegura(
+    registro,
+) {
+    if (
+        !registro ||
+        typeof registro !== "object"
+    ) {
+        return {
+            ...CONFIGURACAO_EMAIL_TENANT_SEGURA_PADRAO,
+        };
+    }
+
+    return {
+        tenantId:
+            textoSeguro(
+                registro.tenantId ||
+                    registro.tenant_id,
+            ) ||
+            null,
+
+        modoEnvio:
+            (
+                textoSeguro(
+                    registro.modoEnvio ||
+                        registro.modo_envio,
+                ) ||
+                "DESATIVADO"
+            ).toUpperCase(),
+
+        provedor:
+            textoSeguro(
+                registro.provedor,
+            ) ||
+            null,
+
+        remetenteEmail:
+            normalizarEmailCertidaoMensal(
+                registro.remetenteEmail ||
+                    registro.remetente_email,
+            ) ||
+            null,
+
+        credencialConfigurada:
+            registro.credencialConfigurada ===
+                true ||
+            registro.credencial_configurada ===
+                true,
+
+        ultimoTesteStatus:
+            (
+                textoSeguro(
+                    registro.ultimoTesteStatus ||
+                        registro.ultimo_teste_status,
+                ) ||
+                "NAO_APLICAVEL"
+            ).toUpperCase(),
+
+        ultimoTesteCodigo:
+            textoSeguro(
+                registro.ultimoTesteCodigo ||
+                    registro.ultimo_teste_codigo,
+            ) ||
+            null,
+
+        ultimoTesteEm:
+            registro.ultimoTesteEm ||
+            registro.ultimo_teste_em ||
+            null,
+
+        safescanGerenciadoDisponivel:
+            registro.safescanGerenciadoDisponivel ===
+                true ||
+            registro.safescan_gerenciado_disponivel ===
+                true,
+    };
 }
 
 export function normalizarEmailCertidaoMensal(valor) {
@@ -395,11 +510,22 @@ function validarConfiguracaoParaSalvar(dados) {
     };
 }
 
-export async function listarConfiguracoesEmailCertidaoMensal() {
+export async function listarConfiguracoesEmailCertidaoMensal(
+    tenantId,
+) {
+    const tenantIdNormalizado =
+        tenantIdObrigatorio(
+            tenantId,
+        );
+
     const { data, error } =
         await supabase.rpc(
             RPC_CONFIGURACAO_EMAIL_CERTIDAO_MENSAL
                 .LISTAR,
+            {
+                p_tenant_id:
+                    tenantIdNormalizado,
+            },
         );
 
     if (error) {
@@ -417,8 +543,14 @@ export async function listarConfiguracoesEmailCertidaoMensal() {
 }
 
 export async function salvarConfiguracaoEmailCertidaoMensal(
+    tenantId,
     dados,
 ) {
+    const tenantIdNormalizado =
+        tenantIdObrigatorio(
+            tenantId,
+        );
+
     const configuracao =
         validarConfiguracaoParaSalvar(
             dados,
@@ -429,6 +561,9 @@ export async function salvarConfiguracaoEmailCertidaoMensal(
             RPC_CONFIGURACAO_EMAIL_CERTIDAO_MENSAL
                 .SALVAR,
             {
+                p_tenant_id:
+                    tenantIdNormalizado,
+
                 p_empresa_id:
                     configuracao.empresaId,
 
@@ -477,8 +612,14 @@ export async function salvarConfiguracaoEmailCertidaoMensal(
 }
 
 export async function excluirConfiguracaoEmailCertidaoMensal(
+    tenantId,
     empresaId,
 ) {
+    const tenantIdNormalizado =
+        tenantIdObrigatorio(
+            tenantId,
+        );
+
     const empresaIdNormalizado =
         textoSeguro(empresaId);
 
@@ -494,6 +635,9 @@ export async function excluirConfiguracaoEmailCertidaoMensal(
             RPC_CONFIGURACAO_EMAIL_CERTIDAO_MENSAL
                 .EXCLUIR,
             {
+                p_tenant_id:
+                    tenantIdNormalizado,
+
                 p_empresa_id:
                     empresaIdNormalizado,
             },
@@ -507,6 +651,63 @@ export async function excluirConfiguracaoEmailCertidaoMensal(
     }
 
     return data === true;
+}
+
+export async function obterConfiguracaoEmailTenantSegura(
+    tenantId,
+) {
+    const tenantIdNormalizado =
+        tenantIdObrigatorio(
+            tenantId,
+        );
+
+    const {
+        data,
+        error,
+    } =
+        await supabase.functions.invoke(
+            EDGE_PROVEDOR_EMAIL_TENANT,
+            {
+                body: {
+                    acao:
+                        "obter",
+
+                    tenantId:
+                        tenantIdNormalizado,
+                },
+            },
+        );
+
+    if (error) {
+        throw criarErroConfiguracaoEmail(
+            error,
+            "Não foi possível consultar o status seguro do provedor de e-mail deste tenant.",
+        );
+    }
+
+    if (
+        data?.ok !==
+        true
+    ) {
+        throw criarErroConfiguracaoEmail(
+            {
+                code:
+                    textoSeguro(
+                        data?.codigo,
+                    ),
+
+                message:
+                    textoSeguro(
+                        data?.erro,
+                    ),
+            },
+            "Não foi possível consultar o status seguro do provedor de e-mail deste tenant.",
+        );
+    }
+
+    return normalizarConfiguracaoEmailTenantSegura(
+        data?.configuracao,
+    );
 }
 
 export function resolverConfiguracaoEmailCertidaoMensal(

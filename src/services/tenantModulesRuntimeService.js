@@ -29,41 +29,115 @@ const TELAS_OCULTAS_RUNTIME_TENANT =
         "aniversariantes",
     ]);
 
+const PAPEIS_MEMBERSHIP_TENANT_VALIDOS =
+    new Set([
+        "administrador",
+        "gestor",
+        "tecnico_sst",
+        "auditor",
+        "consulta",
+    ]);
+
+const ROTULOS_PAPEL_MEMBERSHIP_TENANT =
+    Object.freeze({
+        administrador: "Administrador do ambiente",
+        gestor: "Gestor",
+        tecnico_sst: "Técnico SST",
+        auditor: "Auditor",
+        consulta: "Consulta",
+    });
+
+function normalizarPapelMembershipTenant(valor = "") {
+    const papel = textoSeguro(valor).toLowerCase();
+    return PAPEIS_MEMBERSHIP_TENANT_VALIDOS.has(papel) ? papel : "";
+}
+
+export function membershipTenantRuntimeAtiva({ membership = null, tenantId = "", userId = "" } = {}) {
+    if (!membership) {
+        return false;
+    }
+
+    const status = textoSeguro(membership.status).toLowerCase();
+    const papel = normalizarPapelMembershipTenant(membership.papel);
+    const tenantEsperado = textoSeguro(tenantId);
+    const usuarioEsperado = textoSeguro(userId);
+    const tenantMembership = textoSeguro(membership.tenant_id);
+    const usuarioMembership = textoSeguro(membership.user_id);
+
+    if (status !== "ativo" || !papel) {
+        return false;
+    }
+
+    if (tenantEsperado && tenantMembership !== tenantEsperado) {
+        return false;
+    }
+
+    if (usuarioEsperado && usuarioMembership !== usuarioEsperado) {
+        return false;
+    }
+
+    return true;
+}
+
+function nomeSeguroUsuarioTenant(email = "") {
+    const emailNormalizado = textoSeguro(email).toLowerCase();
+    if (!emailNormalizado.includes("@")) {
+        return "Usuário";
+    }
+
+    const local = emailNormalizado.split("@")[0].replace(/[._-]+/g, " ").replace(/\s+/g, " ").trim();
+    if (!local) {
+        return "Usuário";
+    }
+
+    return local.replace(/\b\p{L}/gu, (letra) => letra.toUpperCase());
+}
+
+export function montarUsuarioMembershipTenantRuntime({ usuario = null, membership = null } = {}) {
+    if (!usuario) {
+        return usuario;
+    }
+
+    const email = textoSeguro(usuario.email).toLowerCase();
+    const papel = normalizarPapelMembershipTenant(membership?.papel) || "consulta";
+    const status = textoSeguro(membership?.status).toLowerCase();
+    const nome = nomeSeguroUsuarioTenant(email);
+    const funcao = ROTULOS_PAPEL_MEMBERSHIP_TENANT[papel] || "Usuário do ambiente";
+
+    return {
+        ...usuario,
+        email,
+        nome,
+        name: nome,
+        displayName: nome,
+        funcao,
+        cargo: funcao,
+        perfil: papel,
+        ativo: status === "ativo",
+        bloqueado: status !== "ativo",
+        acesso_global: false,
+    };
+}
+
 export function montarPermissaoMembershipTenantRuntime({
     membership = null,
     permissaoLegada = null,
 } = {}) {
     if (!membership) {
-        return permissaoLegada || null;
+        return null;
     }
 
-    const status = textoSeguro(
-        membership.status
-    ).toLowerCase();
-
-    const papel = textoSeguro(
-        membership.papel
-    ).toLowerCase();
+    const status = textoSeguro(membership.status).toLowerCase();
+    const papel = normalizarPapelMembershipTenant(membership.papel);
 
     return {
-        ...(permissaoLegada || {}),
-        perfil:
-            papel
-            || permissaoLegada?.perfil
-            || "consulta",
-        ativo:
-            status === "ativo",
-        bloqueado:
-            status !== "ativo",
-        acesso_global:
-            false,
-        permissoes:
-            objetoSeguro(
-                membership.permissoes
-            ),
-        precisa_trocar_senha:
-            permissaoLegada?.precisa_trocar_senha ===
-            true,
+        email: textoSeguro(permissaoLegada?.email).toLowerCase(),
+        perfil: papel || "consulta",
+        ativo: status === "ativo",
+        bloqueado: status !== "ativo",
+        acesso_global: false,
+        permissoes: objetoSeguro(membership.permissoes),
+        precisa_trocar_senha: permissaoLegada?.precisa_trocar_senha === true,
     };
 }
 

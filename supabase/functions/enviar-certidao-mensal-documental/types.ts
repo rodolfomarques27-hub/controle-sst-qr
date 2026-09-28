@@ -42,6 +42,7 @@ export type DocumentoSnapshot = {
 export type ContextoEnvio = {
     competenciaId: string;
     empresaId: string;
+    tenantId: string;
     empresaNome: string;
     empresaCnpj: string;
     competencia: string;
