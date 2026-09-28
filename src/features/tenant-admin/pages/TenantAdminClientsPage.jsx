@@ -267,6 +267,7 @@ export function TenantAdminClientsPage({
                                 tenant.tenant_nome,
                                 tenant.tenant_slug,
                                 tenant.dominio_principal,
+                                tenant.admin_principal_email,
                             ]
                                 .map(
                                     normalizarTexto
@@ -378,7 +379,7 @@ export function TenantAdminClientsPage({
                                         event.target.value
                                     )
                             }
-                            placeholder="Nome, slug ou domínio"
+                            placeholder="Nome, slug, domínio ou e-mail"
                             className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-800 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
                         />
                     </label>
@@ -537,6 +538,10 @@ export function TenantAdminClientsPage({
                                     </th>
 
                                     <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">
+                                        Administrador principal
+                                    </th>
+
+                                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">
                                         Status
                                     </th>
 
@@ -591,6 +596,19 @@ export function TenantAdminClientsPage({
                                                             </p>
                                                         </div>
                                                     </div>
+                                                </td>
+
+                                                <td className="px-4 py-4">
+                                                    <p
+                                                        className="max-w-[280px] truncate text-xs font-semibold text-slate-700"
+                                                        title={
+                                                            tenant.admin_principal_email ||
+                                                            ""
+                                                        }
+                                                    >
+                                                        {tenant.admin_principal_email ||
+                                                            "Não informado"}
+                                                    </p>
                                                 </td>
 
                                                 <td className="px-4 py-4">
