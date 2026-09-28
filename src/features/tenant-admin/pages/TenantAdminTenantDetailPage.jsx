@@ -1073,6 +1073,21 @@ export function TenantAdminTenantDetailPage({
 
                         <div>
                             <dt className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                                E-mail do administrador principal
+                            </dt>
+
+                            <dd className="mt-1 break-all text-sm font-semibold text-slate-800">
+                                {
+                                    textoSeguro(
+                                        tenant?.admin_principal_email,
+                                        "Não informado"
+                                    )
+                                }
+                            </dd>
+                        </div>
+
+                        <div>
+                            <dt className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
                                 Status
                             </dt>
 

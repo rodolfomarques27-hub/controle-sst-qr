@@ -570,6 +570,10 @@ export function TenantAdminDashboardPage({
                                     </th>
 
                                     <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">
+                                        Administrador principal
+                                    </th>
+
+                                    <th className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.1em] text-slate-500">
                                         Status
                                     </th>
 
@@ -650,6 +654,19 @@ export function TenantAdminDashboardPage({
                                                         </p>
                                                     </div>
                                                 </div>
+                                            </td>
+
+                                            <td className="px-4 py-4">
+                                                <p
+                                                    className="max-w-[280px] truncate text-xs font-semibold text-slate-700"
+                                                    title={
+                                                        tenant.admin_principal_email ||
+                                                        ""
+                                                    }
+                                                >
+                                                    {tenant.admin_principal_email ||
+                                                        "Não informado"}
+                                                </p>
                                             </td>
 
                                             <td className="px-4 py-4">
