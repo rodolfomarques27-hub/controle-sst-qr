@@ -1,6 +1,7 @@
 import {
     useCallback,
     useEffect,
+    useRef,
     useState,
 } from "react";
 
@@ -107,6 +108,12 @@ export function TenantAdminBrandingPanel({
             tenant?.tenant_id ||
             ""
         ).trim();
+
+    const inputLogoRef =
+        useRef(null);
+
+    const inputFundoRef =
+        useRef(null);
 
     const [
         estado,
@@ -278,6 +285,66 @@ export function TenantAdminBrandingPanel({
             previewLogoLocal,
         ]
     );
+
+    function abrirSeletorLogo() {
+        if (salvando) {
+            return;
+        }
+
+        const input =
+            inputLogoRef.current;
+
+        if (!input) {
+            setErro(
+                "Não foi possível abrir o seletor da logo."
+            );
+
+            return;
+        }
+
+        setMensagem(
+            ""
+        );
+
+        setErro(
+            ""
+        );
+
+        input.value =
+            "";
+
+        input.click();
+    }
+
+    function abrirSeletorFundo() {
+        if (salvando) {
+            return;
+        }
+
+        const input =
+            inputFundoRef.current;
+
+        if (!input) {
+            setErro(
+                "Não foi possível abrir o seletor do fundo."
+            );
+
+            return;
+        }
+
+        setMensagem(
+            ""
+        );
+
+        setErro(
+            ""
+        );
+
+        input.value =
+            "";
+
+        input.click();
+    }
 
     function selecionarFundo(
         arquivo
@@ -817,6 +884,9 @@ export function TenantAdminBrandingPanel({
                         </p>
 
                         <input
+                            ref={
+                                inputLogoRef
+                            }
                             type="file"
                             accept="image/png"
                             disabled={
@@ -829,8 +899,38 @@ export function TenantAdminBrandingPanel({
                                         null
                                     )
                             }
-                            className="mt-3 block w-full text-xs font-semibold text-slate-600"
+                            className="hidden"
+                            tabIndex={-1}
                         />
+
+                        <button
+                            type="button"
+                            onClick={
+                                abrirSeletorLogo
+                            }
+                            disabled={
+                                salvando
+                            }
+                            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-3.5 py-2.5 text-xs font-bold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <ImagePlus className="h-4 w-4" />
+
+                            Selecionar logo
+                        </button>
+
+                        <p
+                            className="mt-2 truncate text-[11px] font-semibold text-slate-500"
+                            title={
+                                arquivoLogo?.name ||
+                                "Nenhum novo arquivo selecionado."
+                            }
+                        >
+                            {
+                                arquivoLogo?.name
+                                    ? "Selecionado: " + arquivoLogo.name
+                                    : "Nenhum novo arquivo selecionado."
+                            }
+                        </p>
 
                         {
                             estado?.possuiLogo
@@ -869,6 +969,9 @@ export function TenantAdminBrandingPanel({
                         </p>
 
                         <input
+                            ref={
+                                inputFundoRef
+                            }
                             type="file"
                             accept="image/jpeg,image/png,image/webp"
                             disabled={
@@ -881,8 +984,38 @@ export function TenantAdminBrandingPanel({
                                         null
                                     )
                             }
-                            className="mt-3 block w-full text-xs font-semibold text-slate-600"
+                            className="hidden"
+                            tabIndex={-1}
                         />
+
+                        <button
+                            type="button"
+                            onClick={
+                                abrirSeletorFundo
+                            }
+                            disabled={
+                                salvando
+                            }
+                            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-white px-3.5 py-2.5 text-xs font-bold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <ImagePlus className="h-4 w-4" />
+
+                            Selecionar fundo
+                        </button>
+
+                        <p
+                            className="mt-2 truncate text-[11px] font-semibold text-slate-500"
+                            title={
+                                arquivoFundo?.name ||
+                                "Nenhum novo arquivo selecionado."
+                            }
+                        >
+                            {
+                                arquivoFundo?.name
+                                    ? "Selecionado: " + arquivoFundo.name
+                                    : "Nenhum novo arquivo selecionado."
+                            }
+                        </p>
 
                         {
                             estado?.possuiFundo
