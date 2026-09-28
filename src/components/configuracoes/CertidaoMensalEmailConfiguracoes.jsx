@@ -16,12 +16,11 @@ import {
     Trash2,
 } from "lucide-react";
 import { Card } from "../commonComponents";
-import { supabase } from "../../lib/supabaseClient";
-import { AssinaturaModeloEmailSstConfiguracoes } from "./AssinaturaModeloEmailSstConfiguracoes";
 import {
     CONFIGURACAO_EMAIL_CERTIDAO_MENSAL_PADRAO,
     excluirConfiguracaoEmailCertidaoMensal,
     listarConfiguracoesEmailCertidaoMensal,
+    obterConfiguracaoEmailTenantSegura,
     resolverConfiguracaoEmailCertidaoMensal,
     salvarConfiguracaoEmailCertidaoMensal,
 } from "../../features/certidao-mensal-documental/services/certidaoMensalEmailConfiguracaoService";
@@ -165,6 +164,136 @@ function obterClasseMensagem(tipo) {
     );
 }
 
+function rotuloModoEnvioTenant(
+    configuracao,
+) {
+    const modo =
+        textoSeguro(
+            configuracao?.modoEnvio,
+        ).toUpperCase();
+
+    if (
+        modo ===
+        "SAFESCAN_GERENCIADO"
+    ) {
+        return "SafeScan gerenciado";
+    }
+
+    if (
+        modo ===
+        "PROVEDOR_CLIENTE"
+    ) {
+        return "Provedor próprio";
+    }
+
+    return "Desativado";
+}
+
+function classeModoEnvioTenant(
+    configuracao,
+    erro = "",
+) {
+    if (erro) {
+        return (
+            "bg-amber-50 text-amber-800 " +
+            "ring-amber-200"
+        );
+    }
+
+    const modo =
+        textoSeguro(
+            configuracao?.modoEnvio,
+        ).toUpperCase();
+
+    if (
+        modo ===
+        "PROVEDOR_CLIENTE"
+    ) {
+        return (
+            configuracao
+                ?.ultimoTesteStatus ===
+                "APROVADO"
+        )
+            ? (
+                "bg-emerald-50 text-emerald-800 " +
+                "ring-emerald-200"
+            )
+            : (
+                "bg-amber-50 text-amber-800 " +
+                "ring-amber-200"
+            );
+    }
+
+    if (
+        modo ===
+        "SAFESCAN_GERENCIADO"
+    ) {
+        return (
+            "bg-blue-50 text-blue-800 " +
+            "ring-blue-200"
+        );
+    }
+
+    return (
+        "bg-slate-100 text-slate-700 " +
+        "ring-slate-200"
+    );
+}
+
+function detalheModoEnvioTenant(
+    configuracao,
+    erro = "",
+) {
+    if (erro) {
+        return erro;
+    }
+
+    const modo =
+        textoSeguro(
+            configuracao?.modoEnvio,
+        ).toUpperCase();
+
+    if (
+        modo ===
+        "PROVEDOR_CLIENTE"
+    ) {
+        const provedor =
+            textoSeguro(
+                configuracao?.provedor,
+            ) ||
+            "SMTP próprio";
+
+        const credencial =
+            configuracao
+                ?.credencialConfigurada ===
+                true
+                ? "credencial configurada"
+                : "credencial não configurada";
+
+        const teste =
+            textoSeguro(
+                configuracao
+                    ?.ultimoTesteStatus,
+            ) ||
+            "NAO_TESTADO";
+
+        return `${provedor} · ${credencial} · teste: ${teste}`;
+    }
+
+    if (
+        modo ===
+        "SAFESCAN_GERENCIADO"
+    ) {
+        return configuracao
+            ?.safescanGerenciadoDisponivel ===
+            true
+            ? "Envio operacional pelo provedor institucional SafeScan."
+            : "Modo gerenciado selecionado; disponibilidade técnica controlada pela Conta Mestre SafeScan.";
+    }
+
+    return "O envio operacional automático está bloqueado para este tenant.";
+}
+
 async function registrarAuditoriaSegura(
     callback,
     dados,
@@ -184,14 +313,21 @@ async function registrarAuditoriaSegura(
 }
 
 export function CertidaoMensalEmailConfiguracoes({
+    tenantId = "",
     empresasBanco = [],
     podeAlterar = false,
     mensagemBloqueio =
         "Sem permissão para alterar configurações críticas do sistema.",
     onRegistrarAuditoria = null,
+    exibirCabecalho = true,
     controleCard = null,
     onRecolherCard = null,
 }) {
+    const tenantIdNormalizado =
+        textoSeguro(
+            tenantId,
+        );
+
     const [configuracoes, setConfiguracoes] =
         useState([]);
 
@@ -213,6 +349,24 @@ export function CertidaoMensalEmailConfiguracoes({
 
     const [excluindo, setExcluindo] =
         useState(false);
+
+    const [
+        configuracaoProvedorTenant,
+        setConfiguracaoProvedorTenant,
+    ] =
+        useState(null);
+
+    const [
+        carregandoProvedorTenant,
+        setCarregandoProvedorTenant,
+    ] =
+        useState(true);
+
+    const [
+        erroProvedorTenant,
+        setErroProvedorTenant,
+    ] =
+        useState("");
 
     const [mensagem, setMensagem] =
         useState({
@@ -283,7 +437,23 @@ export function CertidaoMensalEmailConfiguracoes({
     useEffect(() => {
         let componenteAtivo = true;
 
-        listarConfiguracoesEmailCertidaoMensal()
+        if (!tenantIdNormalizado) {
+            setConfiguracoes([]);
+            setMensagem({
+                tipo: "erro",
+                texto:
+                    "Tenant não identificado para carregar as configurações de envio.",
+            });
+            setCarregando(false);
+
+            return () => {
+                componenteAtivo = false;
+            };
+        }
+
+        listarConfiguracoesEmailCertidaoMensal(
+            tenantIdNormalizado,
+        )
             .then((registros) => {
                 if (!componenteAtivo) {
                     return;
@@ -327,7 +497,69 @@ export function CertidaoMensalEmailConfiguracoes({
         return () => {
             componenteAtivo = false;
         };
-    }, []);
+    }, [tenantIdNormalizado]);
+
+    useEffect(() => {
+        let componenteAtivo = true;
+
+        setCarregandoProvedorTenant(
+            true,
+        );
+        setErroProvedorTenant("");
+
+        if (!tenantIdNormalizado) {
+            setConfiguracaoProvedorTenant(
+                null,
+            );
+            setCarregandoProvedorTenant(
+                false,
+            );
+
+            return () => {
+                componenteAtivo = false;
+            };
+        }
+
+        obterConfiguracaoEmailTenantSegura(
+            tenantIdNormalizado,
+        )
+            .then((configuracao) => {
+                if (!componenteAtivo) {
+                    return;
+                }
+
+                setConfiguracaoProvedorTenant(
+                    configuracao,
+                );
+                setErroProvedorTenant("");
+            })
+            .catch((erro) => {
+                if (!componenteAtivo) {
+                    return;
+                }
+
+                setConfiguracaoProvedorTenant(
+                    null,
+                );
+                setErroProvedorTenant(
+                    erro?.message ||
+                        "Não foi possível consultar o status do provedor.",
+                );
+            })
+            .finally(() => {
+                if (!componenteAtivo) {
+                    return;
+                }
+
+                setCarregandoProvedorTenant(
+                    false,
+                );
+            });
+
+        return () => {
+            componenteAtivo = false;
+        };
+    }, [tenantIdNormalizado]);
 
     const atualizarCampo = useCallback(
         (campo, valor) => {
@@ -368,6 +600,9 @@ export function CertidaoMensalEmailConfiguracoes({
     const carregarConfiguracoes =
         useCallback(async () => {
             setCarregando(true);
+            setCarregandoProvedorTenant(
+                true,
+            );
             setMensagem({
                 tipo: "informacao",
                 texto:
@@ -376,7 +611,9 @@ export function CertidaoMensalEmailConfiguracoes({
 
             try {
                 const registros =
-                    await listarConfiguracoesEmailCertidaoMensal();
+                    await listarConfiguracoesEmailCertidaoMensal(
+                        tenantIdNormalizado,
+                    );
 
                 const empresaId =
                     escopoSelecionado === "GLOBAL"
@@ -396,6 +633,27 @@ export function CertidaoMensalEmailConfiguracoes({
                         empresaId,
                     ),
                 );
+
+                try {
+                    const provedor =
+                        await obterConfiguracaoEmailTenantSegura(
+                            tenantIdNormalizado,
+                        );
+
+                    setConfiguracaoProvedorTenant(
+                        provedor,
+                    );
+                    setErroProvedorTenant("");
+                } catch (erroProvedor) {
+                    setConfiguracaoProvedorTenant(
+                        null,
+                    );
+                    setErroProvedorTenant(
+                        erroProvedor?.message ||
+                            "Não foi possível consultar o status do provedor.",
+                    );
+                }
+
                 setMensagem({
                     tipo: "sucesso",
                     texto:
@@ -410,8 +668,14 @@ export function CertidaoMensalEmailConfiguracoes({
                 });
             } finally {
                 setCarregando(false);
+                setCarregandoProvedorTenant(
+                    false,
+                );
             }
-        }, [escopoSelecionado]);
+        }, [
+            escopoSelecionado,
+            tenantIdNormalizado,
+        ]);
 
     const salvarConfiguracao =
         async () => {
@@ -432,34 +696,34 @@ export function CertidaoMensalEmailConfiguracoes({
 
             try {
                 const configuracaoSalva =
-                    await salvarConfiguracaoEmailCertidaoMensal({
-                        empresaId:
-                            formulario.empresaId,
+                    await salvarConfiguracaoEmailCertidaoMensal(
+                        tenantIdNormalizado,
+                        {
+                            empresaId:
+                                formulario.empresaId,
 
-                        ativo:
-                            formulario.ativo,
+                            ativo:
+                                formulario.ativo,
 
+                            destinatarios:
+                                formulario.destinatariosTexto,
 
-                        destinatarios:
-                            formulario.destinatariosTexto,
+                            copias:
+                                formulario.copiasTexto,
 
-                        copias:
-                            formulario.copiasTexto,
+                            responderPara:
+                                formulario.responderPara,
 
-                        responderPara:
-                            formulario.responderPara,
+                            nomeRemetente:
+                                formulario.nomeRemetente,
 
-                        nomeRemetente:
-                            formulario.nomeRemetente,
+                            assuntoModelo:
+                                formulario.assuntoModelo,
 
-                        assuntoModelo:
-                            formulario.assuntoModelo,
-
-                        corpoModelo:
-                            formulario.corpoModelo,
-
-
-                    });
+                            corpoModelo:
+                                formulario.corpoModelo,
+                        },
+                    );
 
                 setConfiguracoes(
                     (estadoAtual) => [
@@ -541,6 +805,7 @@ export function CertidaoMensalEmailConfiguracoes({
 
             try {
                 await excluirConfiguracaoEmailCertidaoMensal(
+                    tenantIdNormalizado,
                     empresaId,
                 );
 
@@ -605,29 +870,43 @@ export function CertidaoMensalEmailConfiguracoes({
 
     return (
         <Card className="h-full overflow-hidden p-0">
-            <div className="border-b border-slate-200 bg-gradient-to-r from-blue-50 via-white to-cyan-50 px-5 py-5 sm:px-6">
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                    <div className="flex min-w-0 items-start gap-4">
-                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-200">
-                            <MailCheck className="h-6 w-6" />
-                        </span>
+            <div
+                className={
+                    exibirCabecalho
+                        ? "border-b border-slate-200 bg-gradient-to-r from-blue-50 via-white to-cyan-50 px-5 py-5 sm:px-6"
+                        : "hidden"
+                }
+            >
+                <div
+                    className={
+                        exibirCabecalho
+                            ? "flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between"
+                            : "flex min-h-10 items-center justify-end"
+                    }
+                >
+                    {exibirCabecalho ? (
+                        <div className="flex min-w-0 items-start gap-4">
+                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-200">
+                                <MailCheck className="h-6 w-6" />
+                            </span>
 
-                        <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <h2 className="text-lg font-black text-slate-950">
-                                    Notificação de pendências documentais
-                                </h2>
+                            <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <h2 className="text-lg font-black text-slate-950">
+                                        Notificação de pendências documentais
+                                    </h2>
 
-                                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-200">
-                                    Gmail existente
-                                </span>
+                                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-200">
+                                        Tenant isolado
+                                    </span>
+                                </div>
+
+                                <p className="mt-1 max-w-3xl text-sm leading-relaxed text-slate-500">
+                                    Configure os destinatários e o conteúdo da cobrança consolidada de pendências.
+                                </p>
                             </div>
-
-                            <p className="mt-1 max-w-3xl text-sm leading-relaxed text-slate-500">
-                                Configure os destinatários e o conteúdo da cobrança consolidada de pendências.
-                            </p>
                         </div>
-                    </div>
+                    ) : null}
 
                     <div className="flex flex-wrap items-center gap-2">
                         <button
@@ -663,26 +942,67 @@ export function CertidaoMensalEmailConfiguracoes({
                 </div>
             </div>
 
-            <div className="space-y-5 p-5 sm:p-6">
-                <div
-                    className={
-                        "flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm font-semibold " +
-                        obterClasseMensagem(
-                            mensagem.tipo,
-                        )
-                    }
-                >
-                    {mensagem.tipo === "erro" ? (
-                        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
-                    ) : mensagem.tipo === "sucesso" ? (
-                        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
-                    ) : (
-                        <Send className="mt-0.5 h-5 w-5 shrink-0" />
-                    )}
+            <div
+                className={
+                    exibirCabecalho
+                        ? "space-y-5 p-5 sm:p-6"
+                        : "space-y-5 px-5 pb-5 pt-3 sm:px-6 sm:pb-6 sm:pt-3"
+                }
+            >
 
-                    <p className="leading-relaxed">
-                        {mensagem.texto}
-                    </p>
+                <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
+                            Envio operacional do tenant
+                        </p>
+
+                        <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                            {carregandoProvedorTenant
+                                ? "Consultando o status seguro do provedor..."
+                                : detalheModoEnvioTenant(
+                                      configuracaoProvedorTenant,
+                                      erroProvedorTenant,
+                                  )}
+                        </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                        {!exibirCabecalho ? (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    void carregarConfiguracoes();
+                                }}
+                                disabled={carregando}
+                                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-2xl bg-white px-3.5 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {carregando ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <RefreshCw className="h-4 w-4" />
+                                )}
+                                Atualizar
+                            </button>
+                        ) : null}
+
+                        <span
+                            className={
+                                "inline-flex shrink-0 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-wide ring-1 " +
+                                classeModoEnvioTenant(
+                                    configuracaoProvedorTenant,
+                                    erroProvedorTenant,
+                                )
+                            }
+                        >
+                            {carregandoProvedorTenant
+                                ? "Consultando"
+                                : erroProvedorTenant
+                                  ? "Indisponível"
+                                  : rotuloModoEnvioTenant(
+                                        configuracaoProvedorTenant,
+                                    )}
+                        </span>
+                    </div>
                 </div>
 
                 <div className="grid gap-5 xl:grid-cols-[minmax(260px,0.7fr)_minmax(0,1.3fr)]">
@@ -999,65 +1319,13 @@ export function CertidaoMensalEmailConfiguracoes({
                             </p>
                         </div>
 
-                        <div className="md:col-span-2">
-                            <div className="mb-3">
-                                <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
-                                    Assinatura padrão das Certidões Mensais
-                                </p>
 
-                                <p className="mt-1 text-xs leading-relaxed text-slate-500">
-                                    Imagem única utilizada nos envios da
-                                    Certidões Mensais de todas as empresas.
-                                </p>
-                            </div>
-
-                            <AssinaturaModeloEmailSstConfiguracoes
-                                supabase={supabase}
-                                tipo="certidao_mensal_documental"
-                                modelo={{
-                                    tipo:
-                                        "certidao_mensal_documental",
-                                    nome:
-                                        "Certidões Mensais",
-                                }}
-                                podeAlterar={podeAlterar}
-                                mensagemBloqueio={
-                                    mensagemBloqueio
-                                }
-                                onRegistrarAuditoria={(
-                                    acao,
-                                    descricao,
-                                    modeloAuditoria,
-                                ) =>
-                                    registrarAuditoriaSegura(
-                                        onRegistrarAuditoria,
-                                        {
-                                            acao,
-                                            descricao,
-                                            empresaId:
-                                                formulario.empresaId ||
-                                                null,
-                                            escopo:
-                                                escopoSelecionado ===
-                                                "GLOBAL"
-                                                    ? "GLOBAL"
-                                                    : "EMPRESA",
-                                            tipo:
-                                                "certidao_mensal_documental",
-                                            modelo:
-                                                modeloAuditoria ||
-                                                null,
-                                        },
-                                    )
-                                }
-                            />
-                        </div>
                     </div>
                 </div>
 
                 <div className="flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
                     <p className="max-w-2xl text-xs leading-relaxed text-slate-500">
-                        O envio continuará utilizando o Gmail existente. Os PDFs serão processados pelo backend.
+                        A configuração técnica do SMTP é administrada pela Conta Mestre SafeScan. Esta tela nunca exibe senha, secret ou identificador do Vault.
                     </p>
 
                     <div className="flex flex-wrap items-center gap-2">
@@ -1103,6 +1371,27 @@ export function CertidaoMensalEmailConfiguracoes({
                         </button>
                     </div>
                 </div>
+                <div
+                    className={
+                        "flex items-start gap-2 rounded-xl border px-3 py-2 text-xs font-semibold " +
+                        obterClasseMensagem(
+                            mensagem.tipo,
+                        )
+                    }
+                >
+                    {mensagem.tipo === "erro" ? (
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                    ) : mensagem.tipo === "sucesso" ? (
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                    ) : (
+                        <Send className="mt-0.5 h-4 w-4 shrink-0" />
+                    )}
+
+                    <p className="leading-relaxed">
+                        {mensagem.texto}
+                    </p>
+                </div>
+
             </div>
         </Card>
     );

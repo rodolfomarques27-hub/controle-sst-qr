@@ -28,7 +28,7 @@ import { ConfiguracoesSistemaControles } from "./ConfiguracoesSistemaControles";
 import { ArquivosStorageConfiguracoes } from "./ArquivosStorageConfiguracoes";
 import { EmergenciaQrPinCard } from "./EmergenciaQrPinCard";
 import { ModelosEmailSstConfiguracoes } from "./ModelosEmailSstConfiguracoes";
-import { CertidaoMensalEmailConfiguracoes } from "./CertidaoMensalEmailConfiguracoes";
+
 import { ProvedorEmailConfiguracoes } from "./ProvedorEmailConfiguracoes";
 import {
     carregarConfiguracaoEventosAuditoriaSistemaSupabase,
@@ -283,7 +283,6 @@ const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
     "config-auditoria-publica",
     "config-emergencia-qr",
     "config-modelos-email-sst",
-    "config-email-certidao-mensal",
     "config-provedor-email",
     "config-arquivos-storage",
     "config-obras",
@@ -298,7 +297,6 @@ const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
 const CHAVES_BLOCOS_EMAIL_CONFIGURACOES =
     new Set([
         "config-modelos-email-sst",
-        "config-email-certidao-mensal",
         "config-provedor-email",
     ]);
 
@@ -452,7 +450,6 @@ const CHAVES_BLOCOS_CONFIGURACOES_CRITICOS = new Set([
     "config-auditoria-publica",
     "config-emergencia-qr",
     "config-modelos-email-sst",
-    "config-email-certidao-mensal",
     "config-provedor-email",
     "config-arquivos-storage",
     "config-login-visual",
@@ -483,7 +480,7 @@ const BLOCOS_CONFIGURACOES_TAMANHOS_PADRAO = CHAVES_BLOCOS_CONFIGURACOES_PADRAO.
 }, {});
 
 BLOCOS_CONFIGURACOES_TAMANHOS_PADRAO["config-modelos-email-sst"] = "destaque";
-BLOCOS_CONFIGURACOES_TAMANHOS_PADRAO["config-email-certidao-mensal"] = "destaque";
+
 BLOCOS_CONFIGURACOES_TAMANHOS_PADRAO["config-provedor-email"] = "destaque";
 
 const BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO = CHAVES_BLOCOS_CONFIGURACOES_PADRAO.reduce((acc, chave) => {
@@ -3085,7 +3082,7 @@ export function ConfiguracoesSistema({
         { chave: "config-auditoria-publica", titulo: "Auditoria pública, tokens e QR", descricao: "Token ativo, QR colaborador e QR de campo.", icon: KeyRound },
         { chave: "config-emergencia-qr", titulo: "Senha/PIN de emergência QR", descricao: "Proteção do contato de emergência por empresa.", icon: KeyRound },
         { chave: "config-modelos-email-sst", titulo: "Modelos de e-mail do SafeScan", descricao: "Modelos, variáveis, acessos de usuários e demais comunicações automáticas.", icon: Settings },
-        { chave: "config-email-certidao-mensal", titulo: "Notificação de pendências documentais", descricao: "Destinatários, assunto e conteúdo da cobrança consolidada por competência.", icon: Settings },
+
         { chave: "config-provedor-email", titulo: "Provedor de envio", descricao: "Conta SMTP central, segurança, remetente e estado operacional dos e-mails.", icon: Settings },
         { chave: "config-arquivos-storage", titulo: "Arquivos salvos no Storage", descricao: "Capacidade, vínculos, filtros e limpeza protegida.", icon: Database },
         { chave: "config-obras", titulo: "Obras", descricao: "Cadastro mestre de obras e vinculos com empresas.", icon: Database },
@@ -5109,47 +5106,6 @@ export function ConfiguracoesSistema({
                 </div>
             );
 
-        case "config-email-certidao-mensal":
-            if (!blocoConfiguracaoVisivel("config-email-certidao-mensal")) return null;
-
-            if (blocoConfiguracaoRecolhido("config-email-certidao-mensal")) {
-                return renderBlocoConfiguracaoComControle(
-                    "config-email-certidao-mensal",
-                    "Notificação de pendências documentais",
-                    "Destinatários, assunto e conteúdo da cobrança consolidada por competência.",
-                    null
-                );
-            }
-
-            return (
-                <div
-                    id="config-email-certidao-mensal"
-                    className="h-full scroll-mt-24"
-                >
-                    <CertidaoMensalEmailConfiguracoes
-                        empresasBanco={empresasBanco}
-                        podeAlterar={
-                            podeAlterarConfiguracoesCriticasSistema
-                        }
-                        mensagemBloqueio={
-                            mensagemBloqueioConfiguracoesCriticasSistema
-                        }
-                        onRegistrarAuditoria={(dados) =>
-                            registrarLogConfiguracoesSistema(
-                                dados?.acao ||
-                                    "salvar_configuracao_email_certidao_mensal",
-                                "Configuração de notificação de pendências alterada.",
-                                dados || {},
-                                dados?.empresaId || null
-                            )
-                        }
-                        controleCard={botaoRecolherBlocoConfiguracao(
-                            "config-email-certidao-mensal",
-                            "shrink-0 whitespace-nowrap"
-                        )}
-                    />
-                </div>
-            );
 
         case "config-provedor-email":
             if (!blocoConfiguracaoVisivel("config-provedor-email")) return null;
