@@ -509,6 +509,15 @@ function normalizarErroProvedorEmail(
   );
 }
 
+function uuidValido(
+  valor: string,
+) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    .test(
+      valor,
+    );
+}
+
 function fecharTransportadorEmail(
   provedorEmail: TransportadorEmailResolvido,
 ) {
@@ -554,6 +563,31 @@ serve(async (req) => {
     const empresa =
       dadosRecebidos.empresa;
 
+    const empresaId =
+      dadosRecebidos.empresaId;
+
+    // R22_E3_D2B_PUBLICO_EMAIL_AUTH
+    const auditoriaIdPublica =
+      textoSeguro(
+        dadosRecebidos.auditoriaId,
+        80,
+      ).toLowerCase();
+
+    const tokenAuditoriaPublica =
+      textoSeguro(
+        dadosRecebidos.tokenAuditoriaPublica,
+        300,
+      );
+
+    const senhaAuditoriaPublica =
+      textoSeguro(
+        dadosRecebidos.senhaAuditoriaPublica,
+        300,
+      );
+
+    let empresaIdEfetivo =
+      empresaId;
+
     const tstResponsavel =
       dadosRecebidos.tstResponsavel;
 
@@ -574,24 +608,54 @@ serve(async (req) => {
     const tipoModelo =
       dadosRecebidos.tipoModelo;
 
+    const tipoModeloSolicitado =
+      textoSeguro(
+        tipoModelo,
+        100,
+      ).toLowerCase();
+
+    const solicitacaoAuditoriaPublica =
+      tipoModeloSolicitado ===
+        "alerta_auditoria" &&
+      Boolean(
+        auditoriaIdPublica &&
+        tokenAuditoriaPublica &&
+        senhaAuditoriaPublica
+      );
+
     const sistema =
       dadosRecebidos.sistema;
 
     const urlSistema =
       dadosRecebidos.urlSistema;
 
-    const destinatario =
+    let tenantId =
+      textoSeguro(
+        dadosRecebidos.tenantId,
+        80,
+      ).toLowerCase();
+
+    if (
+      !solicitacaoAuditoriaPublica &&
+      (
+        !tenantId ||
+        !uuidValido(
+          tenantId,
+        )
+      )
+    ) {
+      throw new ErroHttp(
+        400,
+        "Tenant não informado ou inválido para o envio SST.",
+      );
+    }
+
+    let destinatario =
       textoSeguro(para, 1000)
         .split(/[;,]/)
         .map((email) => email.trim())
         .filter(Boolean)
         .join(",");
-
-    if (!destinatario) {
-      throw new ErroHttp(400,
-        "E-mail do destinatário/TST não informado.",
-      );
-    }
 
     if (
       !Array.isArray(itens) ||
@@ -609,13 +673,35 @@ serve(async (req) => {
     const supabaseServiceRoleKey =
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
+    const supabaseAnonKey =
+      Deno.env.get("SUPABASE_ANON_KEY");
+
 
     if (
       !supabaseUrl ||
+      !supabaseAnonKey ||
       !supabaseServiceRoleKey
     ) {
       throw new ErroHttp(500,
-        "Credenciais SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY não configuradas.",
+        "Credenciais SUPABASE_URL, SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY não configuradas.",
+      );
+    }
+
+    const authorization =
+      req.headers.get(
+        "Authorization",
+      ) || "";
+
+    if (
+      !authorization
+        .toLowerCase()
+        .startsWith(
+          "bearer ",
+        )
+    ) {
+      throw new ErroHttp(
+        401,
+        "Usuário não autenticado.",
       );
     }
 
@@ -630,6 +716,311 @@ serve(async (req) => {
           },
         },
       );
+
+    const supabaseUsuario =
+      createClient(
+        supabaseUrl,
+        supabaseAnonKey,
+        {
+          global: {
+            headers: {
+              Authorization:
+                authorization,
+            },
+          },
+
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+          },
+        },
+      );
+
+    const {
+      data: dadosUsuario,
+      error: erroUsuario,
+    } =
+      await supabaseUsuario.auth
+        .getUser();
+
+    const usuarioAutenticado =
+      !erroUsuario &&
+      Boolean(
+        dadosUsuario?.user?.id,
+      );
+
+    if (usuarioAutenticado) {
+      if (
+        !tenantId ||
+        !uuidValido(
+          tenantId,
+        )
+      ) {
+        throw new ErroHttp(
+          400,
+          "Tenant não informado ou inválido para o envio SST.",
+        );
+      }
+
+      const {
+        data: usuarioPodeAcessarTenant,
+        error: erroAcessoTenant,
+      } =
+        await supabaseUsuario.rpc(
+          "usuario_tem_acesso_tenant",
+          {
+            p_tenant_id:
+              tenantId,
+          },
+        );
+
+      if (erroAcessoTenant) {
+        throw new ErroHttp(
+          500,
+          "Não foi possível validar o acesso ao ambiente.",
+          false,
+        );
+      }
+
+      if (
+        usuarioPodeAcessarTenant !==
+          true
+      ) {
+        throw new ErroHttp(
+          403,
+          "Usuário sem acesso ao ambiente informado.",
+        );
+      }
+    } else {
+      if (!solicitacaoAuditoriaPublica) {
+        throw new ErroHttp(
+          401,
+          "Usuário não autenticado.",
+        );
+      }
+
+      if (
+        !uuidValido(
+          auditoriaIdPublica,
+        )
+      ) {
+        throw new ErroHttp(
+          403,
+          "Auditoria pública inválida para o envio.",
+        );
+      }
+
+      const {
+        data: validacaoAuditoriaPublica,
+        error: erroValidacaoAuditoriaPublica,
+      } =
+        await supabaseAdmin.rpc(
+          "validar_acesso_auditoria_publica",
+          {
+            p_token:
+              tokenAuditoriaPublica,
+            p_senha:
+              senhaAuditoriaPublica,
+          },
+        );
+
+      const validacaoPublica =
+        obterObjetoSeguro(
+          validacaoAuditoriaPublica,
+        );
+
+      if (
+        erroValidacaoAuditoriaPublica ||
+        !(
+          validacaoPublica.autorizado ===
+            true ||
+          validacaoPublica.ok ===
+            true
+        )
+      ) {
+        throw new ErroHttp(
+          403,
+          "Acesso público da auditoria não autorizado.",
+        );
+      }
+
+      const tokenIdValidado =
+        textoSeguro(
+          validacaoPublica.token_id,
+          80,
+        ).toLowerCase();
+
+      if (
+        !tokenIdValidado ||
+        !uuidValido(
+          tokenIdValidado,
+        )
+      ) {
+        throw new ErroHttp(
+          403,
+          "Token público validado sem identificação persistida.",
+        );
+      }
+
+      const {
+        data: registroTokenPublico,
+        error: erroRegistroTokenPublico,
+      } =
+        await supabaseAdmin
+          .from(
+            "auditoria_tokens_publicos",
+          )
+          .select(
+            "id,token,empresa_id,ativo,data_expiracao",
+          )
+          .eq(
+            "id",
+            tokenIdValidado,
+          )
+          .eq(
+            "token",
+            tokenAuditoriaPublica,
+          )
+          .eq(
+            "ativo",
+            true,
+          )
+          .maybeSingle();
+
+      if (
+        erroRegistroTokenPublico ||
+        !registroTokenPublico?.empresa_id
+      ) {
+        throw new ErroHttp(
+          403,
+          "Token público incompatível com a auditoria.",
+        );
+      }
+
+      const {
+        data: auditoriaPublica,
+        error: erroAuditoriaPublica,
+      } =
+        await supabaseAdmin
+          .from(
+            "auditorias_campo",
+          )
+          .select(
+            "id,token_qr,empresa_id",
+          )
+          .eq(
+            "id",
+            auditoriaIdPublica,
+          )
+          .maybeSingle();
+
+      if (
+        erroAuditoriaPublica ||
+        !auditoriaPublica?.id ||
+        !auditoriaPublica?.empresa_id
+      ) {
+        throw new ErroHttp(
+          403,
+          "Auditoria pública não localizada para o envio.",
+        );
+      }
+
+      if (
+        textoSeguro(
+          auditoriaPublica.token_qr,
+          300,
+        ) !==
+          tokenAuditoriaPublica
+      ) {
+        throw new ErroHttp(
+          403,
+          "Auditoria pública não pertence ao token validado.",
+        );
+      }
+
+      const {
+        data: empresaTokenPublico,
+        error: erroEmpresaTokenPublico,
+      } =
+        await supabaseAdmin
+          .from(
+            "empresas",
+          )
+          .select(
+            "id,tenant_id",
+          )
+          .eq(
+            "id",
+            registroTokenPublico.empresa_id,
+          )
+          .maybeSingle();
+
+      const {
+        data: empresaAuditoriaPublica,
+        error: erroEmpresaAuditoriaPublica,
+      } =
+        await supabaseAdmin
+          .from(
+            "empresas",
+          )
+          .select(
+            "id,tenant_id",
+          )
+          .eq(
+            "id",
+            auditoriaPublica.empresa_id,
+          )
+          .maybeSingle();
+
+      if (
+        erroEmpresaTokenPublico ||
+        erroEmpresaAuditoriaPublica ||
+        !empresaTokenPublico?.tenant_id ||
+        !empresaAuditoriaPublica?.tenant_id
+      ) {
+        throw new ErroHttp(
+          403,
+          "Não foi possível validar a empresa da auditoria pública.",
+        );
+      }
+
+      const tenantTokenPublico =
+        textoSeguro(
+          empresaTokenPublico.tenant_id,
+          80,
+        ).toLowerCase();
+
+      const tenantAuditoriaPublica =
+        textoSeguro(
+          empresaAuditoriaPublica.tenant_id,
+          80,
+        ).toLowerCase();
+
+      if (
+        !uuidValido(
+          tenantTokenPublico,
+        ) ||
+        !uuidValido(
+          tenantAuditoriaPublica,
+        ) ||
+        tenantTokenPublico !==
+          tenantAuditoriaPublica
+      ) {
+        throw new ErroHttp(
+          403,
+          "Empresa da auditoria pública não pertence ao tenant autorizado pelo token.",
+        );
+      }
+
+      tenantId =
+        tenantAuditoriaPublica;
+
+      empresaIdEfetivo =
+        textoSeguro(
+          empresaAuditoriaPublica.id,
+          80,
+        ).toLowerCase();
+    }
 
 
     const itensNormalizados =
@@ -733,6 +1124,169 @@ serve(async (req) => {
     ) {
       throw new ErroHttp(400,
         "tipoModelo ausente ou inválido para o envio SST.",
+      );
+    }
+
+    // R22_E3_D2A_DRY_RUN_DESTINATARIO_SST_EMPRESA
+    const regraCanalEmpresa =
+      [
+        "alerta_documento_colaborador",
+        "alerta_documento_empresa",
+        "alerta_documentos_lote",
+      ].includes(tipoModeloTratado)
+        ? {
+            canal: "DOCUMENTOS",
+            modulo: "gestao_documental_sst",
+          }
+        : tipoModeloTratado === "alerta_treinamentos"
+          ? {
+              canal: "TREINAMENTOS",
+              modulo: "treinamentos",
+            }
+          : tipoModeloTratado === "alerta_auditoria"
+            ? {
+                // R22_E3_D2B_AUDITORIA_CUTOVER
+                canal: "AUDITORIA",
+                modulo: "auditoria_campo",
+              }
+            : null;
+
+    if (regraCanalEmpresa) {
+      const empresaIdSeguro =
+        textoSeguro(
+          empresaIdEfetivo,
+          80,
+        ).toLowerCase();
+
+      if (
+        !empresaIdSeguro
+        ||
+        !uuidValido(
+          empresaIdSeguro,
+        )
+      ) {
+        throw new ErroHttp(
+          400,
+          "Empresa não informada ou inválida para o envio SST por canal.",
+        );
+      }
+
+      const {
+        data: empresaDoTenant,
+        error: erroEmpresaDoTenant,
+      } =
+        await supabaseAdmin
+          .from("empresas")
+          .select("id")
+          .eq("id", empresaIdSeguro)
+          .eq("tenant_id", tenantId)
+          .maybeSingle();
+
+      if (erroEmpresaDoTenant) {
+        throw new ErroHttp(
+          500,
+          "Não foi possível validar a empresa do envio SST.",
+          false,
+        );
+      }
+
+      if (!empresaDoTenant?.id) {
+        throw new ErroHttp(
+          403,
+          "Empresa não pertence ao ambiente informado.",
+        );
+      }
+
+      const {
+        data: moduloHabilitado,
+        error: erroModuloHabilitado,
+      } =
+        await supabaseAdmin.rpc(
+          "tenant_tem_modulo",
+          {
+            p_tenant_id: tenantId,
+            p_modulo_chave: regraCanalEmpresa.modulo,
+          },
+        );
+
+      if (erroModuloHabilitado) {
+        throw new ErroHttp(
+          500,
+          "Não foi possível validar o módulo contratado para o envio SST.",
+          false,
+        );
+      }
+
+      if (moduloHabilitado !== true) {
+        throw new ErroHttp(
+          403,
+          "Módulo não contratado para este canal de e-mail SST.",
+        );
+      }
+
+      const {
+        data: configuracaoCanal,
+        error: erroConfiguracaoCanal,
+      } =
+        await supabaseAdmin
+          .from("empresa_email_canal_configuracoes")
+          .select("ativo,email")
+          .eq("tenant_id", tenantId)
+          .eq("empresa_id", empresaIdSeguro)
+          .eq("canal", regraCanalEmpresa.canal)
+          .maybeSingle();
+
+      if (erroConfiguracaoCanal) {
+        throw new ErroHttp(
+          500,
+          "Não foi possível resolver a configuração de e-mail SST.",
+          false,
+        );
+      }
+
+      if (
+        !configuracaoCanal
+        ||
+        configuracaoCanal.ativo !== true
+      ) {
+        throw new ErroHttp(
+          409,
+          "Canal de e-mail SST não configurado ou inativo para esta empresa.",
+        );
+      }
+
+      const destinatariosCanal =
+        textoSeguro(
+          configuracaoCanal.email,
+          1000,
+        )
+          .split(/[;,]/)
+          .map((email) => email.trim())
+          .filter(Boolean);
+
+      const emailValido =
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      if (
+        destinatariosCanal.length === 0
+        ||
+        destinatariosCanal.some(
+          (email) =>
+            !emailValido.test(email),
+        )
+      ) {
+        throw new ErroHttp(
+          409,
+          "E-mail do canal SST não configurado ou inválido para esta empresa.",
+        );
+      }
+
+      destinatario =
+        destinatariosCanal.join(",");
+    }
+    else if (!destinatario) {
+      throw new ErroHttp(400,
+        "E-mail do destinatário/TST não informado.",
       );
     }
 
@@ -965,6 +1519,9 @@ serve(async (req) => {
         await resolverTransportadorEmailParaEnvio(
           supabaseAdmin,
           {
+            canal:
+              "TENANT",
+            tenantId,
             nomeRemetenteFallback:
               nomeRemetente,
           },
@@ -1015,6 +1572,7 @@ serve(async (req) => {
       JSON.stringify({
         ok: true,
         mensagem: "E-mail enviado com sucesso.",
+        destinatario,
         tipoModelo: tipoModeloTratado,
         modeloPersonalizado: modeloAtivo,
         versaoModelo:

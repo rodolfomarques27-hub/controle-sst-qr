@@ -4,6 +4,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { FUNCAO_EMAIL_ALERTA_TST, statusDesvioAuditoriaCampo } from "../../constants/sstConstants";
 import { TIPOS_MODELO_EMAIL_SST } from "../../constants/modelosEmailSstConstants";
 import { FotoAuditoriaPreview, PasswordInput } from "../commonComponents";
+import { useTenantRuntimeContext } from "../layout/TenantRuntimeContext.js";
 import { PreviaNotificacaoAuditoriaCampo } from "./PreviaNotificacaoAuditoriaCampo";
 import {
     fotosAuditoriaCampo,
@@ -14,6 +15,15 @@ import {
 import { formatDate, classNames } from "../../utils/sstUtils";
 
 export function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
+    const contextoTenantRuntime =
+        useTenantRuntimeContext();
+
+    const tenantIdRuntime =
+        String(
+            contextoTenantRuntime?.tenant?.id ||
+            ""
+        ).trim();
+
     const notificacaoInicial = auditoria.notificacao || {};
     const desvioPrincipal = Array.isArray(auditoria.desvios) ? auditoria.desvios[0] || null : null;
     const alvoAuditoria = identificarAlvoAuditoriaCampo(auditoria);
@@ -50,6 +60,21 @@ export function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualiza
         [notificacao]
     );
     const emailResponsavelAuditoria = String(auditoria.emailResponsavel || notificacaoInicial.emailResponsavel || "").trim();
+
+    // R22_E3_D2B_AUDITORIA_CUTOVER
+    const empresaIdAuditoria =
+        String(
+            auditoria.empresaId
+            ||
+            auditoria.empresa_id
+            ||
+            notificacaoInicial.empresaId
+            ||
+            notificacaoInicial.empresa_id
+            ||
+            ""
+        ).trim();
+
     const whatsappResponsavelAuditoria = String(auditoria.whatsappResponsavel || notificacaoInicial.whatsappResponsavel || "").replace(/\D/g, "");
     const whatsappResponsavelFormatado = whatsappResponsavelAuditoria
         ? (whatsappResponsavelAuditoria.startsWith("55") ? whatsappResponsavelAuditoria : `55${whatsappResponsavelAuditoria}`)
@@ -62,8 +87,8 @@ export function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualiza
         : "";
 
     const enviarEmailAuditoriaAutomatico = async () => {
-        if (!emailResponsavelAuditoria) {
-            setMensagem("Cadastre o e-mail do responsável antes de enviar.");
+        if (!empresaIdAuditoria) {
+            setMensagem("Não foi possível identificar a empresa para resolver o destinatário configurado de Auditoria.");
             return;
         }
 
@@ -73,6 +98,8 @@ export function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualiza
         try {
             const { data, error } = await supabase.functions.invoke(FUNCAO_EMAIL_ALERTA_TST, {
                 body: {
+                    tenantId: tenantIdRuntime,
+                    empresaId: empresaIdAuditoria,
                     para: emailResponsavelAuditoria,
                     tipoModelo: TIPOS_MODELO_EMAIL_SST.AUDITORIA,
                     assunto: notificacao.titulo || `Auditoria ${auditoria.numeroAuditoria || "de campo"}`,
@@ -99,7 +126,11 @@ export function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualiza
                 throw new Error(error?.message || data?.erro || "Falha na função de e-mail.");
             }
 
-            setMensagem("E-mail enviado automaticamente com sucesso.");
+            setMensagem(
+                data?.destinatario
+                    ? `E-mail enviado automaticamente para ${data.destinatario}.`
+                    : "E-mail enviado automaticamente com sucesso."
+            );
         } catch (error) {
             setMensagem(`Erro ao enviar e-mail: ${error.message}`);
         } finally {
@@ -567,7 +598,7 @@ export function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualiza
                                 <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Enviar auditoria para responsável</p>
                                 <p className="mt-1 text-xs text-slate-500">Envie automaticamente por e-mail ou abra a mensagem pronta no WhatsApp.</p>
                                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                                    {emailResponsavelAuditoria ? (
+                                    {empresaIdAuditoria ? (
                                         <button type="button" disabled={enviandoEmailAuditoria} onClick={enviarEmailAuditoriaAutomatico} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-50 disabled:opacity-60">
                                             <Mail className="h-4 w-4" />
                                             {enviandoEmailAuditoria ? "Enviando..." : "Enviar e-mail"}

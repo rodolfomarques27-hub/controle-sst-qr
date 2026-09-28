@@ -14,7 +14,17 @@ type ClienteRpcPrivado = {
 
 export type OrigemProvedorEmail =
   | "CENTRAL"
-  | "LEGADO_GMAIL";
+  | "LEGADO_GMAIL"
+  | "TENANT_CLIENTE";
+
+export type CanalEmail =
+  | "PLATAFORMA"
+  | "TENANT";
+
+export type ModoEnvioTenant =
+  | "SAFESCAN_GERENCIADO"
+  | "PROVEDOR_CLIENTE"
+  | "DESATIVADO";
 
 export type ModoSegurancaEmail =
   | "TLS_IMPLICITO"
@@ -37,6 +47,13 @@ export type ConfiguracaoSmtpPrivada = {
 export type CriadorTransportadorSmtp = (
   configuracao: ConfiguracaoSmtpPrivada,
 ) => Promise<any>;
+
+export type OpcoesResolverEmail = {
+  canal?: CanalEmail;
+  tenantId?: string;
+  nomeRemetenteFallback?: string;
+  criarTransportador?: CriadorTransportadorSmtp;
+};
 
 export type TransportadorEmailResolvido = {
   transportador: any;
@@ -269,8 +286,8 @@ export function normalizarConfiguracaoSmtpPrivada(
       )
     ) ||
     (
-      origem ===
-        "CENTRAL" &&
+      origem !==
+        "LEGADO_GMAIL" &&
       versao ===
         null
     )
@@ -384,17 +401,34 @@ async function montarTransportadorResolvido(
   };
 }
 
-export async function resolverTransportadorEmailParaEnvio(
-  adminClient: ClienteRpcPrivado,
-  opcoes: {
-    nomeRemetenteFallback?: string;
-    criarTransportador?: CriadorTransportadorSmtp;
-  } = {},
-): Promise<TransportadorEmailResolvido> {
-  const criarTransportador =
-    opcoes.criarTransportador ??
-    criarTransportadorSmtp;
+function normalizarModoEnvioTenant(
+  valor: unknown,
+): ModoEnvioTenant | null {
+  const modo =
+    texto(
+      valor,
+      40,
+    ).toUpperCase();
 
+  if (
+    modo ===
+      "SAFESCAN_GERENCIADO" ||
+    modo ===
+      "PROVEDOR_CLIENTE" ||
+    modo ===
+      "DESATIVADO"
+  ) {
+    return modo as ModoEnvioTenant;
+  }
+
+  return null;
+}
+
+async function resolverTransportadorPlataforma(
+  adminClient: ClienteRpcPrivado,
+  opcoes: OpcoesResolverEmail,
+  criarTransportador: CriadorTransportadorSmtp,
+): Promise<TransportadorEmailResolvido> {
   let resultado:
     ResultadoRpc;
 
@@ -519,5 +553,178 @@ export async function resolverTransportadorEmailParaEnvio(
   return await montarTransportadorResolvido(
     configuracaoLegada,
     criarTransportador,
+  );
+}
+
+async function resolverTransportadorTenantCliente(
+  linhaTenant: Registro,
+  criarTransportador: CriadorTransportadorSmtp,
+): Promise<TransportadorEmailResolvido> {
+  const configuracaoTenant =
+    normalizarConfiguracaoSmtpPrivada(
+      linhaTenant,
+      "TENANT_CLIENTE",
+    );
+
+  if (
+    !configuracaoTenant
+  ) {
+    throw new ErroResolvedorEmail(
+      "PROVEDOR_TENANT_INVALIDO",
+      "A configuração do provedor de e-mail do tenant está inconsistente ou ainda não foi aprovada.",
+    );
+  }
+
+  return await montarTransportadorResolvido(
+    configuracaoTenant,
+    criarTransportador,
+  );
+}
+
+async function resolverTransportadorTenant(
+  adminClient: ClienteRpcPrivado,
+  tenantId: string,
+  opcoes: OpcoesResolverEmail,
+  criarTransportador: CriadorTransportadorSmtp,
+): Promise<TransportadorEmailResolvido> {
+  const tenantIdNormalizado =
+    texto(
+      tenantId,
+      80,
+    );
+
+  if (
+    !tenantIdNormalizado
+  ) {
+    throw new ErroResolvedorEmail(
+      "PROVEDOR_TENANT_INDISPONIVEL",
+      "O tenant necessário para resolver o provedor de e-mail não foi informado.",
+    );
+  }
+
+  let resultadoTenant:
+    ResultadoRpc;
+
+  try {
+    resultadoTenant =
+      await adminClient.rpc(
+        "backend_obter_configuracao_email_tenant_para_envio",
+        {
+          p_tenant_id:
+            tenantIdNormalizado,
+        },
+      );
+  } catch {
+    throw new ErroResolvedorEmail(
+      "PROVEDOR_TENANT_INDISPONIVEL",
+      "Não foi possível consultar o provedor de e-mail do tenant.",
+    );
+  }
+
+  if (
+    resultadoTenant.error
+  ) {
+    throw new ErroResolvedorEmail(
+      "PROVEDOR_TENANT_INDISPONIVEL",
+      "Não foi possível consultar o provedor de e-mail do tenant.",
+    );
+  }
+
+  const linhaTenant =
+    primeiroRegistro(
+      resultadoTenant.data,
+    );
+
+  if (
+    !linhaTenant
+  ) {
+    throw new ErroResolvedorEmail(
+      "PROVEDOR_NAO_CONFIGURADO",
+      "O tenant não possui configuração de e-mail operacional.",
+    );
+  }
+
+  const modoEnvio =
+    normalizarModoEnvioTenant(
+      linhaTenant.modo_envio,
+    );
+
+  if (
+    !modoEnvio
+  ) {
+    throw new ErroResolvedorEmail(
+      "PROVEDOR_TENANT_INVALIDO",
+      "O modo de envio configurado para o tenant é inválido.",
+    );
+  }
+
+  if (
+    modoEnvio ===
+      "DESATIVADO"
+  ) {
+    throw new ErroResolvedorEmail(
+      "PROVEDOR_NAO_CONFIGURADO",
+      "O envio operacional de e-mail está desativado para este tenant.",
+    );
+  }
+
+  if (
+    modoEnvio ===
+      "SAFESCAN_GERENCIADO"
+  ) {
+    return await resolverTransportadorPlataforma(
+      adminClient,
+      opcoes,
+      criarTransportador,
+    );
+  }
+
+  return await resolverTransportadorTenantCliente(
+    linhaTenant,
+    criarTransportador,
+  );
+}
+
+export async function resolverTransportadorEmailParaEnvio(
+  adminClient: ClienteRpcPrivado,
+  opcoes: OpcoesResolverEmail = {},
+): Promise<TransportadorEmailResolvido> {
+  const criarTransportador =
+    opcoes.criarTransportador ??
+    criarTransportadorSmtp;
+
+  const canal =
+    opcoes.canal ??
+    "PLATAFORMA";
+
+  if (
+    canal ===
+      "PLATAFORMA"
+  ) {
+    return await resolverTransportadorPlataforma(
+      adminClient,
+      opcoes,
+      criarTransportador,
+    );
+  }
+
+  if (
+    canal ===
+      "TENANT"
+  ) {
+    return await resolverTransportadorTenant(
+      adminClient,
+      texto(
+        opcoes.tenantId,
+        80,
+      ),
+      opcoes,
+      criarTransportador,
+    );
+  }
+
+  throw new ErroResolvedorEmail(
+    "CANAL_EMAIL_INVALIDO",
+    "O canal de e-mail solicitado é inválido.",
   );
 }

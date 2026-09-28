@@ -16,6 +16,7 @@ import {
 import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import { supabase } from "../../lib/supabaseClient";
 import { Card, FotoAuditoriaPreview, Header } from "../commonComponents";
+import { useTenantRuntimeContext } from "../layout/TenantRuntimeContext.js";
 import { DashboardAuditoriaCampoControles } from "./DashboardAuditoriaCampoControles";
 import { DashboardCartaResumoModal } from "../dashboard/DashboardCartaResumoModal";
 import {
@@ -29,7 +30,8 @@ import {
     auditoriaCampoVencida,
     carregarAuditoriasCampoDiretoDashboard,
 } from "../../services/auditoriaCampoService";
-import { tiposAuditoriaCampoDireta } from "../../constants/sstConstants";
+import { FUNCAO_EMAIL_ALERTA_TST, tiposAuditoriaCampoDireta } from "../../constants/sstConstants";
+import { TIPOS_MODELO_EMAIL_SST } from "../../constants/modelosEmailSstConstants";
 import { normalizarTextoBusca, formatDate, formatarDataHora, classNames } from "../../utils/sstUtils";
 import { LIMITE_QRCODES_CAMPO_POR_CARGA } from "../../constants/sistemaLimitesConstants";
 import { QrCodeComLogo, obterLogoQrCodeAtual } from "../qr/QrCodeComLogo";
@@ -407,6 +409,12 @@ export function DashboardAuditoriaCampo({
     limiteQrcodesCampo = LIMITE_QRCODES_CAMPO_POR_CARGA,
     onAuditoriaAtualizada,
 }) {
+    const contextoTenantRuntime = useTenantRuntimeContext();
+    const tenantIdRuntime = String(contextoTenantRuntime?.tenant?.id || "").trim();
+
+    const [enviosHistoricoAuditoria, setEnviosHistoricoAuditoria] = useState({});
+    const enviosHistoricoAuditoriaRef = React.useRef(new Set());
+
     const [mostrarPersonalizacao, setMostrarPersonalizacao] = useState(false);
     const [resumoCartaAuditoriaCampo, setResumoCartaAuditoriaCampo] = useState(null);
     const [atualizandoDados, setAtualizandoDados] = useState(false);
@@ -3295,11 +3303,98 @@ const logoHtml = logoQr
                             : "";
                         const mensagemEnvioAuditoria = montarMensagemFluidaAuditoriaCampo(item, alvo);
                         const assuntoEnvioAuditoria = item.notificacao?.titulo || item.titulo || `Auditoria ${item.numeroAuditoria || "de campo"}`;
-                        const linkEnviarAuditoria = contatoEmail
-                            ? `mailto:${contatoEmail}?subject=${encodeURIComponent(assuntoEnvioAuditoria)}&body=${encodeURIComponent(mensagemEnvioAuditoria)}`
-                            : contatoWhatsapp
-                                ? `https://wa.me/${contatoWhatsapp}?text=${encodeURIComponent(mensagemEnvioAuditoria)}`
-                                : "";
+                        const empresaIdEnvioAuditoria = String(item.empresaId || item.empresa_id || "").trim();
+                        const estadoEnvioAuditoria = enviosHistoricoAuditoria[chaveAuditoria] || null;
+                        const enviandoAuditoria = estadoEnvioAuditoria?.tipo === "processando";
+                        const linkWhatsappEnvioAuditoria = contatoWhatsapp
+                            ? `https://wa.me/${contatoWhatsapp}?text=${encodeURIComponent(mensagemEnvioAuditoria)}`
+                            : "";
+
+                        const enviarAuditoriaAutomatico = async () => {
+                            if (enviosHistoricoAuditoriaRef.current.has(chaveAuditoria)) return;
+
+                            if (!tenantIdRuntime || !empresaIdEnvioAuditoria) {
+                                setEnviosHistoricoAuditoria((atual) => ({
+                                    ...atual,
+                                    [chaveAuditoria]: {
+                                        tipo: "erro",
+                                        mensagem: "Não foi possível identificar o tenant e a empresa desta auditoria.",
+                                    },
+                                }));
+                                return;
+                            }
+
+                            enviosHistoricoAuditoriaRef.current.add(chaveAuditoria);
+
+                            setEnviosHistoricoAuditoria((atual) => ({
+                                ...atual,
+                                [chaveAuditoria]: {
+                                    tipo: "processando",
+                                    mensagem: "Enviando auditoria...",
+                                },
+                            }));
+
+                            try {
+                                const { data, error } = await supabase.functions.invoke(
+                                    FUNCAO_EMAIL_ALERTA_TST,
+                                    {
+                                        body: {
+                                            tenantId: tenantIdRuntime,
+                                            empresaId: empresaIdEnvioAuditoria,
+                                            para: contatoEmail,
+                                            tipoModelo: TIPOS_MODELO_EMAIL_SST.AUDITORIA,
+                                            assunto: assuntoEnvioAuditoria,
+                                            empresa: empresaDestaque,
+                                            tstResponsavel: item.responsavelTratativa || item.auditorNome || "Responsável pela tratativa",
+                                            itens: [
+                                                {
+                                                    colaborador: item.titulo || alvo.titulo || "Auditoria de campo",
+                                                    codigo: item.numeroAuditoria || "-",
+                                                    funcao: item.tipoAuditoria || alvo.tipo || "Auditoria de campo",
+                                                    situacaoObra: item.statusAuditoria || item.statusDesvio || "Aberta",
+                                                    treinamento: item.situacaoEncontrada || alvo.descricao || "Auditoria de campo",
+                                                    realizacao: item.createdAt || new Date().toISOString(),
+                                                    vencimento: item.prazoAdequacao || "Não informado",
+                                                    dias: 0,
+                                                    arquivo: mensagemEnvioAuditoria,
+                                                },
+                                            ],
+                                            mensagem: mensagemEnvioAuditoria,
+                                        },
+                                    }
+                                );
+
+                                if (error || data?.ok === false) {
+                                    throw new Error(
+                                        error?.message ||
+                                        data?.erro ||
+                                        "Falha na função de e-mail."
+                                    );
+                                }
+
+                                const destinatario = String(data?.destinatario || "").trim();
+
+                                setEnviosHistoricoAuditoria((atual) => ({
+                                    ...atual,
+                                    [chaveAuditoria]: {
+                                        tipo: "sucesso",
+                                        mensagem: destinatario
+                                            ? `Auditoria enviada para ${destinatario}.`
+                                            : "Auditoria enviada com sucesso.",
+                                    },
+                                }));
+                            } catch (error) {
+                                setEnviosHistoricoAuditoria((atual) => ({
+                                    ...atual,
+                                    [chaveAuditoria]: {
+                                        tipo: "erro",
+                                        mensagem: `Não foi possível enviar a auditoria: ${error?.message || "erro desconhecido"}`,
+                                    },
+                                }));
+                            } finally {
+                                enviosHistoricoAuditoriaRef.current.delete(chaveAuditoria);
+                            }
+                        };
 
                         return (
                             <div key={chaveAuditoria} className="overflow-hidden rounded-3xl bg-white ring-1 ring-slate-200 shadow-sm">
@@ -3332,15 +3427,29 @@ const logoHtml = logoQr
                                             >
                                                 {aberta ? "Recolher auditoria" : "Abrir auditoria"}
                                             </button>
-                                            {linkEnviarAuditoria ? (
+                                            {tenantIdRuntime && empresaIdEnvioAuditoria ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={enviarAuditoriaAutomatico}
+                                                    disabled={enviandoAuditoria}
+                                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
+                                                >
+                                                    {enviandoAuditoria ? (
+                                                        <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                                    ) : (
+                                                        <Send className="h-3.5 w-3.5" />
+                                                    )}
+                                                    {enviandoAuditoria ? "Enviando auditoria..." : "Enviar auditoria"}
+                                                </button>
+                                            ) : linkWhatsappEnvioAuditoria ? (
                                                 <a
-                                                    href={linkEnviarAuditoria}
-                                                    target={contatoWhatsapp && !contatoEmail ? "_blank" : undefined}
-                                                    rel={contatoWhatsapp && !contatoEmail ? "noreferrer" : undefined}
+                                                    href={linkWhatsappEnvioAuditoria}
+                                                    target="_blank"
+                                                    rel="noreferrer"
                                                     className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800"
                                                 >
                                                     <Send className="h-3.5 w-3.5" />
-                                                    Enviar auditoria
+                                                    Enviar WhatsApp
                                                 </a>
                                             ) : (
                                                 <button type="button" disabled className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-400">
@@ -3348,6 +3457,21 @@ const logoHtml = logoQr
                                                     Sem contato
                                                 </button>
                                             )}
+
+                                            {estadoEnvioAuditoria?.mensagem ? (
+                                                <div
+                                                    className={classNames(
+                                                        "max-w-xs rounded-xl px-3 py-2 text-[11px] font-bold ring-1",
+                                                        estadoEnvioAuditoria.tipo === "sucesso"
+                                                            ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                                            : estadoEnvioAuditoria.tipo === "erro"
+                                                              ? "bg-red-50 text-red-700 ring-red-200"
+                                                              : "bg-blue-50 text-blue-700 ring-blue-200"
+                                                    )}
+                                                >
+                                                    {estadoEnvioAuditoria.mensagem}
+                                                </div>
+                                            ) : null}
                                         </div>
                                     </div>
                                 </div>
