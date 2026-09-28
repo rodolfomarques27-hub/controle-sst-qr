@@ -795,6 +795,13 @@ export function ConfiguracoesTenant({
             }
         };
 
+    const obterAtualizadorFormularioCanalSst =
+        (canal) =>
+            canal ===
+                CANAIS_EMAIL_SST_EMPRESA.DOCUMENTOS
+                ? setFormularioDocumentos
+                : setFormularioTreinamentos;
+
     const atualizarCampoCanal =
         (
             canal,
@@ -802,10 +809,9 @@ export function ConfiguracoesTenant({
             valor
         ) => {
             const atualizar =
-                canal ===
-                    CANAIS_EMAIL_SST_EMPRESA.DOCUMENTOS
-                    ? setFormularioDocumentos
-                    : setFormularioTreinamentos;
+                obterAtualizadorFormularioCanalSst(
+                    canal
+                );
 
             atualizar(
                 (atual) => ({
@@ -924,10 +930,9 @@ export function ConfiguracoesTenant({
             formulario
         ) => {
             const atualizar =
-                canal ===
-                    CANAIS_EMAIL_SST_EMPRESA.DOCUMENTOS
-                    ? setFormularioDocumentos
-                    : setFormularioTreinamentos;
+                obterAtualizadorFormularioCanalSst(
+                    canal
+                );
 
             atualizar(
                 criarFormularioCanal(
@@ -1169,6 +1174,22 @@ export function ConfiguracoesTenant({
             auditoriaAtualizadoEm
         );
 
+    const persistirConfiguracaoCanalSst =
+        (configuracao) =>
+            salvarConfiguracaoEmailSstEmpresaTenant({
+                tenantId,
+
+                empresaId:
+                    empresaSstSelecionada.id,
+
+                supabaseClient:
+                    supabaseClient
+                    ||
+                    undefined,
+
+                ...configuracao,
+            });
+
     const salvarCanalSst =
         async (
             canal
@@ -1238,12 +1259,7 @@ export function ConfiguracoesTenant({
 
             try {
                 const configuracaoSalva =
-                    await salvarConfiguracaoEmailSstEmpresaTenant({
-                        tenantId,
-
-                        empresaId:
-                            empresaSstSelecionada.id,
-
+                    await persistirConfiguracaoCanalSst({
                         canal,
 
                         ativo:
@@ -1255,11 +1271,6 @@ export function ConfiguracoesTenant({
 
                         email:
                             formulario.email,
-
-                        supabaseClient:
-                            supabaseClient
-                            ||
-                            undefined,
                     });
 
                 const formularioSalvo =
@@ -1594,12 +1605,7 @@ export function ConfiguracoesTenant({
             try {
                 // R22_E3_D2B_AUDITORIA_CUTOVER
                 const configuracaoSalva =
-                    await salvarConfiguracaoEmailSstEmpresaTenant({
-                        tenantId,
-
-                        empresaId:
-                            empresaSstSelecionada.id,
-
+                    await persistirConfiguracaoCanalSst({
                         canal:
                             CANAIS_EMAIL_SST_EMPRESA.AUDITORIA,
 
@@ -1616,11 +1622,6 @@ export function ConfiguracoesTenant({
                             textoSeguro(
                                 formularioAuditoria.emailAuditoria
                             ),
-
-                        supabaseClient:
-                            supabaseClient
-                            ||
-                            undefined,
                     });
 
                 const formularioPersistido = {
