@@ -22,7 +22,9 @@ import {
     statusAuditoriaCampoDireta,
     grausRiscoAuditoriaCampoDireta,
     descricoesGrauRiscoAuditoriaCampoDireta,
+    FUNCAO_EMAIL_ALERTA_TST,
 } from "../../constants/sstConstants";
+import { TIPOS_MODELO_EMAIL_SST } from "../../constants/modelosEmailSstConstants";
 import {
     classNames,
     obterParametroUrl,
@@ -66,6 +68,7 @@ import {
     ChevronUp,
     Image,
     Lock,
+    LoaderCircle,
     Mail,
     MessageCircle,
     QrCode,
@@ -345,6 +348,21 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     const salvandoRef = useRef(false);
     const [mensagem, setMensagem] = useState("");
     const [auditoriaSalva, setAuditoriaSalva] = useState(null);
+
+    // R22_E3_D2B_NOVA_AUDITORIA_EMAIL_AUTO
+    const [
+        enviandoEmailAuditoriaSalva,
+        setEnviandoEmailAuditoriaSalva,
+    ] = useState(false);
+
+    const enviandoEmailAuditoriaSalvaRef =
+        useRef(false);
+
+    const [
+        retornoEmailAuditoriaSalva,
+        setRetornoEmailAuditoriaSalva,
+    ] = useState(null);
+
     const [previewFotos, setPreviewFotos] = useState({ antes: "", depois: "" });
     const [formulario, setFormulario] = useState(() => criarFormularioInicialAuditoriaCampoDireta({
         tipoInicial,
@@ -674,9 +692,264 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     const linkWhatsappAuditoriaSalva = auditoriaSalva && whatsappResponsavelAuditoriaSalva
         ? `https://wa.me/${whatsappResponsavelAuditoriaSalva}?text=${encodeURIComponent(resumoAuditoriaSalva)}`
         : "";
-    const linkEmailAuditoriaSalva = auditoriaSalva && emailResponsavelAuditoriaSalva
-        ? `mailto:${emailResponsavelAuditoriaSalva}?subject=${encodeURIComponent(`Auditoria de campo - ${formatarNumeroAuditoriaCampoDireta(auditoriaSalva.numeroAuditoria || auditoriaSalva.id || "")}`)}&body=${encodeURIComponent(resumoAuditoriaSalva)}`
-        : "";
+
+    const empresaIdAuditoriaSalva =
+        String(
+            auditoriaSalva?.empresaId
+            ||
+            auditoriaSalva?.empresa_id
+            ||
+            ""
+        ).trim();
+
+    const empresaAuditoriaSalva =
+        empresaIdAuditoriaSalva
+            ? empresasAuditoriaCampo.find(
+                (empresa) =>
+                    String(
+                        empresa?.id
+                        ||
+                        empresa?.empresa_id
+                        ||
+                        ""
+                    ).trim() ===
+                    empresaIdAuditoriaSalva
+            )
+            ||
+            null
+            : null;
+
+    const tenantIdAuditoriaSalva =
+        String(
+            auditoriaSalva?.tenantId
+            ||
+            auditoriaSalva?.tenant_id
+            ||
+            empresaAuditoriaSalva?.tenantId
+            ||
+            empresaAuditoriaSalva?.tenant_id
+            ||
+            ""
+        ).trim();
+
+    const enviarEmailAuditoriaSalvaAutomatico =
+        async () => {
+            if (
+                enviandoEmailAuditoriaSalvaRef.current
+                ||
+                enviandoEmailAuditoriaSalva
+            ) {
+                return;
+            }
+
+            if (!auditoriaSalva) {
+                setRetornoEmailAuditoriaSalva({
+                    tipo:
+                        "erro",
+
+                    mensagem:
+                        "Salve a auditoria antes de enviar o e-mail.",
+                });
+
+                return;
+            }
+
+            if (
+                !tenantIdAuditoriaSalva
+                ||
+                !empresaIdAuditoriaSalva
+            ) {
+                setRetornoEmailAuditoriaSalva({
+                    tipo:
+                        "erro",
+
+                    mensagem:
+                        "Não foi possível identificar o tenant e a empresa da auditoria para resolver o destinatário configurado.",
+                });
+
+                return;
+            }
+
+            enviandoEmailAuditoriaSalvaRef.current =
+                true;
+
+            setEnviandoEmailAuditoriaSalva(
+                true
+            );
+
+            setRetornoEmailAuditoriaSalva({
+                tipo:
+                    "processando",
+
+                mensagem:
+                    "Enviando e-mail...",
+            });
+
+            try {
+                const assunto =
+                    `Auditoria de campo - ${formatarNumeroAuditoriaCampoDireta(
+                        auditoriaSalva.numeroAuditoria
+                        ||
+                        auditoriaSalva.id
+                        ||
+                        ""
+                    )}`;
+
+                const {
+                    data,
+                    error,
+                } =
+                    await supabase.functions.invoke(
+                        FUNCAO_EMAIL_ALERTA_TST,
+                        {
+                            body: {
+                                tenantId:
+                                    tenantIdAuditoriaSalva,
+
+                                empresaId:
+                                    empresaIdAuditoriaSalva,
+
+                                para:
+                                    emailResponsavelAuditoriaSalva,
+
+                                tipoModelo:
+                                    TIPOS_MODELO_EMAIL_SST.AUDITORIA,
+                                // R22_E3_D2B_PUBLICO_EMAIL_AUTH_FRONTEND_R2
+                                ...(usuario
+                                    ? {}
+                                    : {
+                                        auditoriaId:
+                                            auditoriaSalva.id || "",
+
+                                        tokenAuditoriaPublica:
+                                            tokenAuditoriaPublicaValidado
+                                            ||
+                                            tokenAcessoAuditoriaCampo,
+
+                                        senhaAuditoriaPublica:
+                                            senhaAcessoAuditoria,
+                                    }),
+
+                                assunto,
+
+                                empresa:
+                                    auditoriaSalva.empresaNome
+                                    ||
+                                    auditoriaSalva.empresaResponsavel
+                                    ||
+                                    empresaAuditoriaSalva?.nome
+                                    ||
+                                    "Empresa não informada",
+
+                                tstResponsavel:
+                                    auditoriaSalva.responsavelTratativa
+                                    ||
+                                    auditoriaSalva.auditorNome
+                                    ||
+                                    "Responsável pela tratativa",
+
+                                itens: [
+                                    {
+                                        colaborador:
+                                            auditoriaSalva.titulo
+                                            ||
+                                            "Auditoria de campo",
+
+                                        codigo:
+                                            auditoriaSalva.numeroAuditoria
+                                            ||
+                                            "-",
+
+                                        funcao:
+                                            auditoriaSalva.tipoAuditoria
+                                            ||
+                                            "Auditoria de campo",
+
+                                        situacaoObra:
+                                            auditoriaSalva.statusAuditoria
+                                            ||
+                                            auditoriaSalva.statusDesvio
+                                            ||
+                                            "Aberta",
+
+                                        treinamento:
+                                            auditoriaSalva.situacaoEncontrada
+                                            ||
+                                            "Auditoria de campo",
+
+                                        realizacao:
+                                            auditoriaSalva.createdAt
+                                            ||
+                                            new Date().toISOString(),
+
+                                        vencimento:
+                                            auditoriaSalva.prazoAdequacao
+                                            ||
+                                            "Não informado",
+
+                                        dias:
+                                            0,
+
+                                        arquivo:
+                                            resumoAuditoriaSalva,
+                                    },
+                                ],
+
+                                mensagem:
+                                    resumoAuditoriaSalva,
+                            },
+                        }
+                    );
+
+                if (
+                    error
+                    ||
+                    data?.ok === false
+                ) {
+                    throw new Error(
+                        error?.message
+                        ||
+                        data?.erro
+                        ||
+                        "Falha na função de e-mail."
+                    );
+                }
+
+                const destinatarioResolvido =
+                    String(
+                        data?.destinatario
+                        ||
+                        ""
+                    ).trim();
+
+                setRetornoEmailAuditoriaSalva({
+                    tipo:
+                        "sucesso",
+
+                    mensagem:
+                        destinatarioResolvido
+                            ? `E-mail enviado para ${destinatarioResolvido}.`
+                            : "E-mail enviado com sucesso.",
+                });
+            }
+            catch (error) {
+                setRetornoEmailAuditoriaSalva({
+                    tipo:
+                        "erro",
+
+                    mensagem:
+                        `Não foi possível enviar o e-mail: ${error?.message || "erro desconhecido"}`,
+                });
+            }
+            finally {
+                enviandoEmailAuditoriaSalvaRef.current =
+                    false;
+
+                setEnviandoEmailAuditoriaSalva(
+                    false
+                );
+            }
+        };
 
     const aplicarContatosEmpresaAuditoria = (nomeEmpresa) => {
         const empresa = encontrarEmpresaAuditoriaCampoDireta(empresasAuditoriaCampo, nomeEmpresa);
@@ -766,6 +1039,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         setRespostasChecklist(criarRespostasChecklistDinamico(tipoInicial.valor));
         setPreviewFotos({ antes: "", depois: "" });
         setAuditoriaSalva(null);
+        setRetornoEmailAuditoriaSalva(null);
         setMensagem("Formulário limpo. Você pode iniciar uma nova auditoria.");
     };
 
@@ -989,13 +1263,23 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
             setPontoMapaSelecionado("");
             setRespostasChecklist(criarRespostasChecklistDinamico(tipoInicial.valor));
             setPreviewFotos({ antes: "", depois: "" });
-            setAuditoriaSalva(normalizada);
+            setRetornoEmailAuditoriaSalva(null);
+            // R22_E3_D2B_PUBLICO_POS_SAVE_TENANT_CONTEXT
+            const normalizadaComContextoEmail = {
+                ...normalizada,
+                empresaId: data?.empresa_id || normalizada.empresaId || null,
+                empresa_id: data?.empresa_id || normalizada.empresaId || null,
+                tenantId: data?.tenant_id || null,
+                tenant_id: data?.tenant_id || null,
+            };
+
+            setAuditoriaSalva(normalizadaComContextoEmail);
             setMensagem(
                 avisoPersistenciaSecundaria
                     ? `Auditoria ${numeroGerado} salva com sucesso. ${avisoPersistenciaSecundaria} O formulário foi encerrado para evitar registro duplicado.`
                     : `Auditoria ${numeroGerado} salva com sucesso. O formulário foi limpo para evitar registro duplicado.`
             );
-            if (onAuditoriaSalva) onAuditoriaSalva(normalizada);
+            if (onAuditoriaSalva) onAuditoriaSalva(normalizadaComContextoEmail);
         } catch (error) {
             if (
                 !auditoriaPersistida
@@ -1719,18 +2003,49 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                                         WhatsApp indisponível
                                     </button>
                                 )}
-                                {linkEmailAuditoriaSalva ? (
-                                    <a href={linkEmailAuditoriaSalva} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100 hover:bg-emerald-50">
-                                        <Mail className="h-4 w-4" />
-                                        Enviar e-mail
-                                    </a>
+                                {tenantIdAuditoriaSalva && empresaIdAuditoriaSalva ? (
+                                    <button
+                                        type="button"
+                                        onClick={enviarEmailAuditoriaSalvaAutomatico}
+                                        disabled={enviandoEmailAuditoriaSalva}
+                                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100 transition hover:bg-emerald-50 disabled:cursor-wait disabled:opacity-70"
+                                    >
+                                        {enviandoEmailAuditoriaSalva ? (
+                                            <LoaderCircle className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <Mail className="h-4 w-4" />
+                                        )}
+
+                                        {enviandoEmailAuditoriaSalva
+                                            ? "Enviando e-mail..."
+                                            : "Enviar e-mail"}
+                                    </button>
                                 ) : (
-                                    <button type="button" disabled className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-xs font-bold text-slate-400 ring-1 ring-slate-200">
+                                    <button
+                                        type="button"
+                                        disabled
+                                        className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-xs font-bold text-slate-400 ring-1 ring-slate-200"
+                                    >
                                         <Mail className="h-4 w-4" />
                                         E-mail indisponível
                                     </button>
                                 )}
                             </div>
+
+                            {retornoEmailAuditoriaSalva?.mensagem ? (
+                                <div
+                                    className={classNames(
+                                        "rounded-2xl px-4 py-3 text-xs font-bold ring-1",
+                                        retornoEmailAuditoriaSalva.tipo === "sucesso"
+                                            ? "bg-emerald-100 text-emerald-800 ring-emerald-200"
+                                            : retornoEmailAuditoriaSalva.tipo === "erro"
+                                              ? "bg-red-50 text-red-700 ring-red-200"
+                                              : "bg-blue-50 text-blue-700 ring-blue-200"
+                                    )}
+                                >
+                                    {retornoEmailAuditoriaSalva.mensagem}
+                                </div>
+                            ) : null}
                         </div>
                     </Card>
                 )}
