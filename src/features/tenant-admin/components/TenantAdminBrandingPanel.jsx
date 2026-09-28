@@ -652,7 +652,7 @@ export function TenantAdminBrandingPanel({
 
     if (carregando) {
         return (
-            <section className="mt-5 flex min-h-[260px] items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <section className="mt-5 flex items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm" style={{ minHeight: 260 }}>
                 <div className="flex items-center gap-3 text-sm font-semibold text-slate-500">
                     <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
 
@@ -699,14 +699,14 @@ export function TenantAdminBrandingPanel({
                 </button>
             </div>
 
-            <div className="grid gap-5 p-5 xl:grid-cols-[0.9fr_1.1fr]">
+            <div className="grid gap-5 p-5 xl:grid-cols-2">
                 <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                    <p className="text-xs font-bold uppercase text-slate-400">
                         Prévia do login
                     </p>
 
                     <div
-                        className="relative mt-3 min-h-[360px] overflow-hidden rounded-2xl bg-slate-950 bg-cover bg-center shadow-inner"
+                        className="relative mt-3 overflow-hidden rounded-2xl bg-slate-950 bg-cover bg-center shadow-inner"
                         style={
                             fundoPreview
                                 ? {
@@ -742,26 +742,26 @@ export function TenantAdminBrandingPanel({
                             }}
                         />
 
-                        <div className="relative z-10 flex min-h-[360px] items-center justify-center p-6">
-                            <div className="w-full max-w-[360px] overflow-hidden rounded-2xl border border-white/10 bg-slate-950/75 shadow-xl">
-                                <div className="grid grid-cols-[1fr_120px]">
+                        <div className="relative z-10 flex items-center justify-center p-6" style={{ minHeight: 360 }}>
+                            <div className="w-full overflow-hidden rounded-2xl border border-white/10 shadow-xl" style={{ maxWidth: 360, backgroundColor: "rgba(2, 6, 23, 0.75)" }}>
+                                <div className="grid" style={{ gridTemplateColumns: "1fr 120px" }}>
                                     <div className="p-5">
                                         <p className="text-lg font-semibold text-white">
                                             Bem-vindo de volta
                                         </p>
 
-                                        <p className="mt-1 text-[11px] leading-5 text-slate-300/70">
+                                        <p className="mt-1 text-xs leading-5 text-slate-300">
                                             Entre com suas credenciais para acessar o sistema de gestão.
                                         </p>
 
-                                        <div className="mt-5 h-9 rounded-lg border border-white/10 bg-white/[0.04]" />
+                                        <div className="mt-5 h-9 rounded-lg border border-white/10" style={{ backgroundColor: "rgba(255, 255, 255, 0.04)" }} />
 
-                                        <div className="mt-2.5 h-9 rounded-lg border border-white/10 bg-white/[0.04]" />
+                                        <div className="mt-2.5 h-9 rounded-lg border border-white/10" style={{ backgroundColor: "rgba(255, 255, 255, 0.04)" }} />
 
                                         <div className="mt-4 h-9 rounded-lg bg-emerald-600" />
                                     </div>
 
-                                    <aside className="flex items-center justify-center border-l border-white/10 bg-slate-900/60 p-4">
+                                    <aside className="flex items-center justify-center border-l border-white/10 p-4" style={{ backgroundColor: "rgba(15, 23, 42, 0.60)" }}>
                                         {
                                             logoPreview
                                                 ? (
@@ -774,8 +774,8 @@ export function TenantAdminBrandingPanel({
                                                     />
                                                 )
                                                 : (
-                                                    <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]">
-                                                        <Building2 className="h-9 w-9 text-emerald-300/80" />
+                                                    <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-white/10" style={{ backgroundColor: "rgba(255, 255, 255, 0.04)" }}>
+                                                        <Building2 className="h-9 w-9 text-emerald-300" />
                                                     </div>
                                                 )
                                         }
@@ -785,7 +785,7 @@ export function TenantAdminBrandingPanel({
                         </div>
                     </div>
 
-                    <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-semibold text-slate-500">
+                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
                         <span className="rounded-full bg-slate-100 px-2.5 py-1">
                             Logo: {estado?.possuiLogo ? "configurada" : "padrão"}
                         </span>
@@ -829,7 +829,7 @@ export function TenantAdminBrandingPanel({
                                         null
                                     )
                             }
-                            className="mt-3 block w-full text-xs font-semibold text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white hover:file:bg-slate-700"
+                            className="mt-3 block w-full text-xs font-semibold text-slate-600"
                         />
 
                         {
@@ -881,7 +881,7 @@ export function TenantAdminBrandingPanel({
                                         null
                                     )
                             }
-                            className="mt-3 block w-full text-xs font-semibold text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white hover:file:bg-slate-700"
+                            className="mt-3 block w-full text-xs font-semibold text-slate-600"
                         />
 
                         {
