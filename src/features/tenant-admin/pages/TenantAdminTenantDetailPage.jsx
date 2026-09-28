@@ -54,6 +54,10 @@ import {
 } from "../components/TenantAdminEmailProviderPanel.jsx";
 
 import {
+    TenantAdminBrandingPanel,
+} from "../components/TenantAdminBrandingPanel.jsx";
+
+import {
     TenantAdminHero,
 } from "../components/TenantAdminHero.jsx";
 
@@ -977,6 +981,23 @@ export function TenantAdminTenantDetailPage({
                     onClick={
                         () =>
                             setAbaAtiva(
+                                "branding"
+                            )
+                    }
+                    className={
+                        abaAtiva === "branding"
+                            ? "rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white shadow-sm"
+                            : "rounded-xl px-4 py-2.5 text-xs font-bold text-slate-500 transition hover:bg-emerald-50 hover:text-emerald-800"
+                    }
+                >
+                    Identidade visual
+                </button>
+
+                <button
+                    type="button"
+                    onClick={
+                        () =>
+                            setAbaAtiva(
                                 "email"
                             )
                     }
@@ -1478,27 +1499,36 @@ export function TenantAdminTenantDetailPage({
                             />
                         )
                         : abaAtiva ===
-                            "email"
+                            "branding"
                             ? (
-                                <TenantAdminEmailProviderPanel
+                                <TenantAdminBrandingPanel
                                     tenant={
                                         tenant
                                     }
                                 />
                             )
-                            : (
-                                <TenantAdminDomainReadinessPanel
-                                    tenant={
-                                        tenant
-                                    }
-                                    empresas={
-                                        empresas
-                                    }
-                                    usuarios={
-                                        usuarios
-                                    }
-                                />
-                            )
+                            : abaAtiva ===
+                                "email"
+                                ? (
+                                    <TenantAdminEmailProviderPanel
+                                        tenant={
+                                            tenant
+                                        }
+                                    />
+                                )
+                                : (
+                                    <TenantAdminDomainReadinessPanel
+                                        tenant={
+                                            tenant
+                                        }
+                                        empresas={
+                                            empresas
+                                        }
+                                        usuarios={
+                                            usuarios
+                                        }
+                                    />
+                                )
             }
 
             {usuarioAjusteDados ? (
