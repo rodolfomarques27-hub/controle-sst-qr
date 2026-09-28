@@ -2338,6 +2338,9 @@ Deno.serve(
           await resolverTransportadorEmailParaEnvio(
             adminClient,
             {
+              canal:
+                "PLATAFORMA",
+
               nomeRemetenteFallback:
                 remetenteNome,
             },

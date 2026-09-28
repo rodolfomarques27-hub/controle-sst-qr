@@ -1,8 +1,5 @@
 import assert from "node:assert/strict";
 import {
-    createHash,
-} from "node:crypto";
-import {
     readFileSync,
 } from "node:fs";
 
@@ -35,24 +32,6 @@ function quantidade(
     ).length;
 }
 
-function sha256(
-    texto,
-) {
-    return createHash(
-        "sha256",
-    )
-        .update(
-            Buffer.from(
-                texto,
-                "utf8",
-            ),
-        )
-        .digest(
-            "hex",
-        )
-        .toUpperCase();
-}
-
 const email =
     ler(
         "supabase/functions/enviar-certidao-mensal-documental/email.ts",
@@ -61,6 +40,16 @@ const email =
 const index =
     ler(
         "supabase/functions/enviar-certidao-mensal-documental/index.ts",
+    );
+
+const dados =
+    ler(
+        "supabase/functions/enviar-certidao-mensal-documental/dados.ts",
+    );
+
+const types =
+    ler(
+        "supabase/functions/enviar-certidao-mensal-documental/types.ts",
     );
 
 const visual =
@@ -102,13 +91,31 @@ assert.equal(
         /\bresolverTransportadorEmailParaEnvio\b/g,
     ),
     2,
-    "O resolver central deve existir somente no import e na chamada operacional de email.ts.",
+    "O resolver compartilhado deve existir somente no import e na chamada operacional de email.ts.",
 );
 
 assert.match(
     email,
     /\.\.\/_shared\/emailProvedorResolver\.ts/,
-    "email.ts deve importar o shared resolver E3.",
+    "email.ts deve importar o shared resolver.",
+);
+
+assert.match(
+    email,
+    /canal:\s*"TENANT"/,
+    "A Certidão deve resolver obrigatoriamente o canal TENANT.",
+);
+
+assert.match(
+    email,
+    /tenantId,\s*\n\s*nomeRemetenteFallback/s,
+    "criarTransportadorEmail deve exigir tenantId antes do nome do remetente.",
+);
+
+assert.match(
+    email,
+    /canal:\s*"TENANT",\s*\n\s*tenantId,/s,
+    "O tenantId deve ser encaminhado explicitamente ao resolver.",
 );
 
 assert.equal(
@@ -131,8 +138,8 @@ assert.equal(
 
 assert.match(
     index,
-    /await\s+criarTransportadorEmail\s*\(\s*adminClient\s*,/s,
-    "index.ts deve resolver o provedor com o adminClient.",
+    /await\s+criarTransportadorEmail\s*\(\s*adminClient\s*,\s*contexto\.tenantId\s*,/s,
+    "index.ts deve propagar o tenantId do contexto ao resolver.",
 );
 
 assert.match(
@@ -142,15 +149,51 @@ assert.match(
 );
 
 assert.match(
+    dados,
+    /id,\s*nome,\s*cnpj,\s*tenant_id,\s*tipo_empresa/,
+    "A empresa da competência deve carregar tenant_id.",
+);
+
+assert.match(
+    dados,
+    /const tenantId\s*=/,
+    "O contexto deve normalizar o tenantId da empresa.",
+);
+
+assert.match(
+    dados,
+    /competenciaId,\s*\n\s*empresaId,\s*\n\s*tenantId,/s,
+    "O ContextoEnvio deve retornar o tenantId.",
+);
+
+assert.match(
+    types,
+    /tenantId:\s*string;/,
+    "ContextoEnvio deve tipar tenantId explicitamente.",
+);
+
+assert.match(
     email,
     /remetenteEmail:\s*provedorEmail\.remetenteEmail/s,
-    "O endereço real do From deve vir do provedor central/resolvido.",
+    "O endereço real do From deve vir do provedor resolvido.",
 );
 
 assert.match(
     email,
     /configuracao\.responderPara\s*\|\|\s*responderParaPadrao/s,
     "O reply-to específico da Certidão deve preceder o reply-to padrão do provedor.",
+);
+
+assert.match(
+    email,
+    /PROVEDOR_TENANT_INVALIDO/,
+    "Falha de configuração do tenant deve ser classificada de forma segura.",
+);
+
+assert.match(
+    email,
+    /PROVEDOR_TENANT_INDISPONIVEL/,
+    "Falha de resolução do tenant deve ser classificada de forma segura.",
 );
 
 assert.match(
@@ -191,20 +234,24 @@ assert.doesNotMatch(
     "O smoke visual também deve abandonar a nomenclatura Gmail.",
 );
 
-assert.equal(
-    sha256(
-        shared,
-    ),
-    "B115DD08126C8C0A2C100C75856BDFE6933FC9CC122BABDB659890289F52C679",
-    "O shared resolver E3 não pode ser alterado pela migração da Certidão.",
+assert.match(
+    shared,
+    /backend_obter_configuracao_email_tenant_para_envio/,
+    "Resolver compartilhado deve conhecer o contrato backend do tenant.",
+);
+
+assert.match(
+    shared,
+    /TENANT_CLIENTE/,
+    "Resolver compartilhado deve distinguir a origem do provedor do cliente.",
 );
 
 console.log(
-    "CERTIDAO_EMAIL_PROVIDER_E4M2M1R1_SHARED_SMOKE_OK",
+    "CERTIDAO_EMAIL_PROVIDER_R22B_TENANT_SMOKE_OK",
 );
 
 console.log(
-    "Validado: shared resolver, ausência de Gmail direto, sender central, reply-to, sendMail único, fechamento do transportador e classificação segura de erros.",
+    "Validado: tenant_id da empresa, canal TENANT, shared resolver, ausência de Gmail direto, sender resolvido, reply-to, sendMail único, fechamento do transportador e classificação segura de erros.",
 );
 
 console.log(
