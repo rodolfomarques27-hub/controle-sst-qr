@@ -53,9 +53,97 @@ function hash(path) {
 }
 
 assert(
-    hash(sharedPath) ===
-        "B115DD08126C8C0A2C100C75856BDFE6933FC9CC122BABDB659890289F52C679",
-    "shared resolver mudou",
+    /const\s+canal\s*=\s*opcoes\.canal\s*\?\?\s*"PLATAFORMA"/s.test(
+        shared,
+    ),
+    "shared resolver não mantém PLATAFORMA como canal padrão",
+);
+
+assert(
+    shared.includes(
+        'export type CanalEmail =',
+    ) &&
+        shared.includes(
+            '"PLATAFORMA"',
+        ) &&
+        shared.includes(
+            '"TENANT"',
+        ),
+    "contrato explícito de canais PLATAFORMA/TENANT ausente",
+);
+
+const inicioPlataforma =
+    shared.indexOf(
+        "async function resolverTransportadorPlataforma",
+    );
+
+const inicioTenantCliente =
+    shared.indexOf(
+        "async function resolverTransportadorTenantCliente",
+    );
+
+const inicioTenant =
+    shared.indexOf(
+        "async function resolverTransportadorTenant(",
+    );
+
+assert(
+    inicioPlataforma >= 0 &&
+        inicioTenantCliente >
+            inicioPlataforma &&
+        inicioTenant >
+            inicioTenantCliente,
+    "blocos PLATAFORMA/TENANT do shared resolver não foram localizados",
+);
+
+const blocoPlataforma =
+    shared.slice(
+        inicioPlataforma,
+        inicioTenantCliente,
+    );
+
+const blocoTenantCliente =
+    shared.slice(
+        inicioTenantCliente,
+        inicioTenant,
+    );
+
+for (
+    const required of [
+        "GMAIL_USER",
+        "GMAIL_APP_PASSWORD",
+        '"LEGADO_GMAIL"',
+    ]
+) {
+    assert(
+        blocoPlataforma.includes(
+            required,
+        ),
+        `fallback legado não está restrito ao bloco PLATAFORMA: ${required}`,
+    );
+}
+
+for (
+    const forbidden of [
+        "GMAIL_USER",
+        "GMAIL_APP_PASSWORD",
+        '"LEGADO_GMAIL"',
+        "Deno.env",
+    ]
+) {
+    assert(
+        !blocoTenantCliente.includes(
+            forbidden,
+        ),
+        `canal TENANT_CLIENTE contém fallback legado proibido: ${forbidden}`,
+    );
+}
+
+assert(
+    !edge.includes(
+        'canal: "TENANT"',
+    ),
+    "Edge administrativa não pode usar canal TENANT",
 );
 
 assert(

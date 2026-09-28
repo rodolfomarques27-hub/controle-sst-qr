@@ -353,6 +353,7 @@ export async function processarRequisicao(
         const provedorEmail =
             await criarTransportadorEmail(
                 adminClient,
+                contexto.tenantId,
                 contexto.configuracao
                     .nomeRemetente,
             );

@@ -1085,6 +1085,7 @@ async function executarEnvio({
         adminClient,
       ),
       {
+        canal: "PLATAFORMA",
         nomeRemetenteFallback: "SafeScan Brasil",
       },
     );

@@ -118,14 +118,18 @@ function classificarErroResolvedor(
             erro.codigo ===
                 "PROVEDOR_NAO_CONFIGURADO" ||
             erro.codigo ===
-                "PROVEDOR_CENTRAL_INVALIDO"
+                "PROVEDOR_CENTRAL_INVALIDO" ||
+            erro.codigo ===
+                "PROVEDOR_TENANT_INVALIDO"
         ) {
             return "SMTP_NAO_CONFIGURADO";
         }
 
         if (
             erro.codigo ===
-            "PROVEDOR_CENTRAL_INDISPONIVEL"
+                "PROVEDOR_CENTRAL_INDISPONIVEL" ||
+            erro.codigo ===
+                "PROVEDOR_TENANT_INDISPONIVEL"
         ) {
             return "PROVEDOR_INDISPONIVEL";
         }
@@ -738,12 +742,15 @@ function montarHtmlCorpoEmail({
 
 export async function criarTransportadorEmail(
     adminClient: SupabaseClientAny,
+    tenantId: string,
     nomeRemetenteFallback: string,
 ): Promise<TransportadorEmailResolvido> {
     try {
         return await resolverTransportadorEmailParaEnvio(
             adminClient,
             {
+                canal: "TENANT",
+                tenantId,
                 nomeRemetenteFallback,
             },
         );

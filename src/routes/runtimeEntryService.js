@@ -16,6 +16,9 @@ export const ROTA_ADMIN_DEV =
 export const ROTA_APP_OPERACIONAL_DEV =
     "/dev-app";
 
+export const PARAMETRO_HOST_TENANT_DEV =
+    "tenant_host";
+
 export const HOST_SITE_INSTITUCIONAL_APEX =
     "safescanbrasil.com.br";
 
@@ -219,6 +222,101 @@ function ehRotaAppOperacionalDev(
         ROTA_APP_OPERACIONAL_DEV
     );
 }
+
+function normalizarHostnameDevTenant(
+    valor = ""
+) {
+    return String(
+        valor || ""
+    )
+        .trim()
+        .toLowerCase()
+        .replace(/\.$/, "");
+}
+
+export function ehEntradaAppOperacionalDev(
+    localizacao = null
+) {
+    const alvo =
+        localizacao ??
+        (
+            typeof window !== "undefined"
+                ? window.location
+                : null
+        );
+
+    if (!alvo) {
+        return false;
+    }
+
+    const classificacao =
+        classificarAmbienteRuntimeTenant(
+            alvo.hostname
+        );
+
+    if (
+        classificacao.tipo !==
+        TIPOS_AMBIENTE_RUNTIME_TENANT
+            .DESENVOLVIMENTO
+    ) {
+        return false;
+    }
+
+    return ehRotaAppOperacionalDev(
+        normalizarPathname(
+            alvo.pathname
+        )
+    );
+}
+
+export function obterHostnameTenantDev(
+    localizacao = null
+) {
+    const alvo =
+        localizacao ??
+        (
+            typeof window !== "undefined"
+                ? window.location
+                : null
+        );
+
+    if (
+        !alvo ||
+        !ehEntradaAppOperacionalDev(
+            alvo
+        )
+    ) {
+        return "";
+    }
+
+    const parametros =
+        new URLSearchParams(
+            String(
+                alvo.search || ""
+            )
+        );
+
+    return normalizarHostnameDevTenant(
+        parametros.get(
+            PARAMETRO_HOST_TENANT_DEV
+        )
+    );
+}
+
+export function deveSelecionarTenantNoDev(
+    localizacao = null
+) {
+    return Boolean(
+        ehEntradaAppOperacionalDev(
+            localizacao
+        )
+        &&
+        !obterHostnameTenantDev(
+            localizacao
+        )
+    );
+}
+
 function ehAmbientePublicoConhecido(
     classificacao = {}
 ) {
