@@ -164,12 +164,33 @@ function email(
 function emailValido(
   valor: string,
 ) {
-  return Boolean(
-    valor &&
-    valor.length <= 254 &&
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(
-      valor,
-    )
+  if (
+    !valor ||
+    valor.length > 254 ||
+    /\s/u.test(valor)
+  ) {
+    return false;
+  }
+
+  const arroba =
+    valor.indexOf("@");
+
+  if (
+    arroba <= 0 ||
+    arroba !== valor.lastIndexOf("@")
+  ) {
+    return false;
+  }
+
+  const ponto =
+    valor.indexOf(
+      ".",
+      arroba + 2,
+    );
+
+  return (
+    ponto > arroba + 1 &&
+    ponto < valor.length - 1
   );
 }
 

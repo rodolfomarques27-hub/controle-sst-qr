@@ -645,11 +645,12 @@ function TenantAdminTemporaryPasswordModal({
                     }
                 >
                     <div>
-                        <label className="mb-1.5 block text-xs font-bold text-slate-700">
+                        <label htmlFor="r26-admin-temp-password" className="mb-1.5 block text-xs font-bold text-slate-700">
                             Senha temporária
                         </label>
 
                         <input
+                            id="r26-admin-temp-password"
                             type="password"
                             autoComplete="new-password"
                             value={
@@ -669,11 +670,12 @@ function TenantAdminTemporaryPasswordModal({
                     </div>
 
                     <div>
-                        <label className="mb-1.5 block text-xs font-bold text-slate-700">
+                        <label htmlFor="r26-admin-temp-password-confirm" className="mb-1.5 block text-xs font-bold text-slate-700">
                             Confirmar senha temporária
                         </label>
 
                         <input
+                            id="r26-admin-temp-password-confirm"
                             type="password"
                             autoComplete="new-password"
                             value={

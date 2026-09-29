@@ -1401,7 +1401,7 @@ function MfaObrigatorioAdmin({
             }
         }
 
-        carregar();
+        void carregar();
 
         return () => {
             ativo =
@@ -1812,7 +1812,7 @@ export function TenantAdminAuthGate({
             setCarregandoSessao(false);
         }
 
-        carregar();
+        void carregar();
 
         const {
             data,
@@ -1914,7 +1914,7 @@ export function TenantAdminAuthGate({
             }
         }
 
-        validar();
+        void validar();
 
         return () => {
             ativo =
@@ -2049,7 +2049,7 @@ export function TenantAdminAuthGate({
             }
         }
 
-        validarSeguranca();
+        void validarSeguranca();
 
         return () => {
             ativo =

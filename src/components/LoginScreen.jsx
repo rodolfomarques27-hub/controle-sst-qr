@@ -267,7 +267,7 @@ export function LoginScreen({ onLogin }) {
             }
         }
 
-        carregarFundoLogin();
+        void carregarFundoLogin();
 
         return () => {
             cancelado = true;

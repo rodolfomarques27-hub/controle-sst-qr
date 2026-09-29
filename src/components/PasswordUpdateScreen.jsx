@@ -622,11 +622,12 @@ export function PasswordUpdateScreen({
                 </div>
 
                 <div>
-                    <label className="mb-1.5 block text-xs font-bold text-slate-700">
+                    <label htmlFor="r26-password-update-new" className="mb-1.5 block text-xs font-bold text-slate-700">
                         Nova senha
                     </label>
 
                     <PasswordInput
+                        id="r26-password-update-new"
                         value={
                             novaSenha
                         }
@@ -647,11 +648,12 @@ export function PasswordUpdateScreen({
                 </div>
 
                 <div>
-                    <label className="mb-1.5 block text-xs font-bold text-slate-700">
+                    <label htmlFor="r26-password-update-confirm" className="mb-1.5 block text-xs font-bold text-slate-700">
                         Confirmar nova senha
                     </label>
 
                     <PasswordInput
+                        id="r26-password-update-confirm"
                         value={
                             confirmarSenha
                         }

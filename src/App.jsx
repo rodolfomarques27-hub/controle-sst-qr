@@ -292,8 +292,8 @@ export default function App() {
         if (!SUPABASE_CONFIGURADO) return undefined;
 
         const carregarAreaInterna = () => {
-            importarAppLayout();
-            importarAppContentRouter();
+            void importarAppLayout();
+            void importarAppContentRouter();
         };
 
         if (typeof window === "undefined") {
@@ -950,7 +950,7 @@ export default function App() {
             }
         }
 
-        carregarSessao();
+        void carregarSessao();
 
         const { data: listener } = supabase.auth.onAuthStateChange((evento, session) => {
             if (evento === "PASSWORD_RECOVERY") {
@@ -1085,7 +1085,7 @@ export default function App() {
             }
         }
 
-        validarAcessoTenantAtual();
+        void validarAcessoTenantAtual();
 
         return () => {
             componenteAtivo = false;
@@ -1151,7 +1151,7 @@ export default function App() {
             }
         }
 
-        carregarModulosTenantRuntime();
+        void carregarModulosTenantRuntime();
 
         return () => {
             componenteAtivo = false;
@@ -1251,7 +1251,7 @@ export default function App() {
             }
         }
 
-        carregarPermissaoUsuarioAtual();
+        void carregarPermissaoUsuarioAtual();
 
         return () => {
             componenteAtivo = false;
@@ -1294,7 +1294,7 @@ export default function App() {
             }
         }
 
-        carregarConsultaPublica();
+        void carregarConsultaPublica();
 
         return () => {
             ativo = false;
@@ -1336,7 +1336,7 @@ export default function App() {
             }
         }
 
-        carregarConsultaDdsPublica();
+        void carregarConsultaDdsPublica();
 
         return () => {
             ativo = false;
