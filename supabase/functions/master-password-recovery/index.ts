@@ -80,6 +80,7 @@ Deno.serve(async (req) => {
   }
 
   let email = "";
+  let captchaToken: string | undefined;
 
   try {
     const body =
@@ -91,6 +92,13 @@ Deno.serve(async (req) => {
       )
         .trim()
         .toLowerCase();
+
+    captchaToken =
+      String(
+        body?.captchaToken || "",
+      )
+        .trim() ||
+      undefined;
   } catch {
     return resposta(origin);
   }
@@ -244,6 +252,7 @@ Deno.serve(async (req) => {
         email,
         {
           redirectTo,
+          captchaToken,
         },
       );
 

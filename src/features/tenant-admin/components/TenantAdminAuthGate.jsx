@@ -21,6 +21,10 @@ import {
 } from "../../../components/commonComponents.jsx";
 
 import {
+    TurnstileWidget,
+} from "../../../components/security/TurnstileWidget.jsx";
+
+import {
     concluirRotacaoSenhaContaMestreService,
     iniciarCadastroMfaTotpContaMestreService,
     obterEstadoMfaContaMestreService,
@@ -68,6 +72,18 @@ function LoginAdmin({
     ] =
         useState(false);
 
+    const [
+        captchaToken,
+        setCaptchaToken,
+    ] =
+        useState("");
+
+    const [
+        captchaResetKey,
+        setCaptchaResetKey,
+    ] =
+        useState(0);
+
     async function solicitarRecuperacaoSenha() {
         const emailTratado =
             String(
@@ -87,6 +103,14 @@ function LoginAdmin({
             return;
         }
 
+        if (!captchaToken) {
+            setErro(
+                "Conclua a verificação de segurança antes de solicitar a recuperação de senha."
+            );
+
+            return;
+        }
+
         setCarregandoRecuperacao(
             true
         );
@@ -102,6 +126,7 @@ function LoginAdmin({
                             body: {
                                 email:
                                     emailTratado,
+                                captchaToken,
                             },
                         }
                     );
@@ -125,6 +150,13 @@ function LoginAdmin({
             );
         }
         finally {
+            setCaptchaToken("");
+
+            setCaptchaResetKey(
+                (atual) =>
+                    atual + 1
+            );
+
             setCarregandoRecuperacao(
                 false
             );
@@ -154,6 +186,14 @@ function LoginAdmin({
             return;
         }
 
+        if (!captchaToken) {
+            setErro(
+                "Conclua a verificação de segurança antes de entrar."
+            );
+
+            return;
+        }
+
         setErro("");
         setMensagem("");
         setCarregando(true);
@@ -168,6 +208,9 @@ function LoginAdmin({
                             emailTratado,
                         password:
                             senha,
+                        options: {
+                            captchaToken,
+                        },
                     });
 
             if (error) {
@@ -184,6 +227,13 @@ function LoginAdmin({
                 "Não foi possível autenticar."
             );
         } finally {
+            setCaptchaToken("");
+
+            setCaptchaResetKey(
+                (atual) =>
+                    atual + 1
+            );
+
             setCarregando(false);
         }
     }
@@ -270,6 +320,22 @@ function LoginAdmin({
                     />
                 </div>
 
+                <TurnstileWidget
+                    action="master_login"
+                    resetKey={captchaResetKey}
+                    onTokenChange={
+                        (token) => {
+                            setCaptchaToken(
+                                token
+                            );
+
+                            if (token) {
+                                setErro("");
+                            }
+                        }
+                    }
+                />
+
                 {erro ? (
                     <div
                         role="alert"
@@ -299,7 +365,8 @@ function LoginAdmin({
                         !String(
                             email || ""
                         ).trim() ||
-                        !senha
+                        !senha ||
+                        !captchaToken
                     }
                     className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-500 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-950/20 transition hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-400/20 disabled:cursor-not-allowed disabled:bg-white/[0.07] disabled:text-white/30 disabled:shadow-none"
                 >
@@ -325,7 +392,8 @@ function LoginAdmin({
                         !String(
                             email ||
                             ""
-                        ).trim()
+                        ).trim() ||
+                        !captchaToken
                     }
                     className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.025] px-4 py-2.5 text-xs font-semibold text-slate-300/80 transition hover:bg-white/[0.055] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                 >
@@ -721,6 +789,18 @@ function RotacaoSenhaObrigatoriaAdmin({
     ] =
         useState(false);
 
+    const [
+        captchaToken,
+        setCaptchaToken,
+    ] =
+        useState("");
+
+    const [
+        captchaResetKey,
+        setCaptchaResetKey,
+    ] =
+        useState(0);
+
     async function encerrarTodasAsSessoes() {
         if (
             !supabase?.auth ||
@@ -842,6 +922,14 @@ function RotacaoSenhaObrigatoriaAdmin({
             return;
         }
 
+        if (!captchaToken) {
+            setErro(
+                "Conclua a verificação de segurança antes de confirmar a senha atual."
+            );
+
+            return;
+        }
+
         setCarregando(true);
 
         try {
@@ -855,6 +943,9 @@ function RotacaoSenhaObrigatoriaAdmin({
                             emailAtual,
                         password:
                             senhaAtual,
+                        options: {
+                            captchaToken,
+                        },
                     });
 
             if (erroReautenticacao) {
@@ -983,6 +1074,13 @@ function RotacaoSenhaObrigatoriaAdmin({
             setSenhaAtual("");
         }
         finally {
+            setCaptchaToken("");
+
+            setCaptchaResetKey(
+                (atual) =>
+                    atual + 1
+            );
+
             setCarregando(false);
         }
     }
@@ -1160,6 +1258,22 @@ function RotacaoSenhaObrigatoriaAdmin({
                             />
                         </div>
 
+                        <TurnstileWidget
+                            action="master_password_rotation"
+                            resetKey={captchaResetKey}
+                            onTokenChange={
+                                (token) => {
+                                    setCaptchaToken(
+                                        token
+                                    );
+
+                                    if (token) {
+                                        setErro("");
+                                    }
+                                }
+                            }
+                        />
+
                         <p className="text-[11px] font-medium leading-5 text-slate-400">
                             Após a alteração, você será desconectado de todas as sessões e deverá entrar novamente com a nova senha.
                         </p>
@@ -1176,7 +1290,8 @@ function RotacaoSenhaObrigatoriaAdmin({
                         <button
                             type="submit"
                             disabled={
-                                carregando
+                                carregando ||
+                                !captchaToken
                             }
                             className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-500 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
                         >
