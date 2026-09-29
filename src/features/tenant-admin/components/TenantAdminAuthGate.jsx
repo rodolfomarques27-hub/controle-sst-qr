@@ -25,6 +25,10 @@ import {
 } from "../../../components/security/TurnstileWidget.jsx";
 
 import {
+    autenticarSenhaComGuardService,
+} from "../../../services/authLoginGuardService.js";
+
+import {
     concluirRotacaoSenhaContaMestreService,
     iniciarCadastroMfaTotpContaMestreService,
     obterEstadoMfaContaMestreService,
@@ -57,6 +61,12 @@ function LoginAdmin({
     const [
         mensagem,
         setMensagem,
+    ] =
+        useState("");
+
+    const [
+        alertaTentativa,
+        setAlertaTentativa,
     ] =
         useState("");
 
@@ -95,6 +105,7 @@ function LoginAdmin({
 
         setErro("");
         setMensagem("");
+        setAlertaTentativa("");
 
         if (!emailTratado) {
             setErro(
@@ -199,33 +210,58 @@ function LoginAdmin({
         setCarregando(true);
 
         try {
-            const {
-                error,
-            } =
-                await supabase.auth
-                    .signInWithPassword({
-                        email:
-                            emailTratado,
-                        password:
-                            senha,
-                        options: {
-                            captchaToken,
-                        },
-                    });
-
-            if (error) {
-                throw error;
-            }
+            await autenticarSenhaComGuardService({
+                supabase,
+                email:
+                    emailTratado,
+                password:
+                    senha,
+                captchaToken,
+            });
         } catch (error) {
-            setErro(
-                (
-                    error?.message ===
-                    "Invalid login credentials"
-                        ? "E-mail ou senha inválidos."
-                        : error?.message
-                ) ||
-                "Não foi possível autenticar."
-            );
+            const codigo =
+                String(
+                    error?.code ||
+                    ""
+                )
+                    .trim()
+                    .toLowerCase();
+
+            if (
+                codigo ===
+                "login_last_attempt"
+            ) {
+                setErro("");
+
+                const minutos =
+                    Number(
+                        error?.bloqueioMinutos
+                    );
+
+                const duracao =
+                    minutos === 30
+                        ? 30
+                        : minutos === 60
+                            ? 60
+                            : 15;
+
+                setAlertaTentativa(
+                    error?.message ||
+                    (
+                        "Atenção: resta 1 tentativa antes do bloqueio temporário de " +
+                        duracao +
+                        " minutos."
+                    )
+                );
+            }
+            else {
+                setAlertaTentativa("");
+
+                setErro(
+                    error?.message ||
+                    "Não foi possível autenticar."
+                );
+            }
         } finally {
             setCaptchaToken("");
 
@@ -289,6 +325,7 @@ function LoginAdmin({
                                     );
 
                                     setErro("");
+                                    setAlertaTentativa("");
                                 }
                             }
                             autoComplete="email"
@@ -335,6 +372,16 @@ function LoginAdmin({
                         }
                     }
                 />
+
+                {alertaTentativa ? (
+                    <div
+                        role="alert"
+                        aria-live="assertive"
+                        className="rounded-lg border border-amber-400/25 bg-amber-400/[0.10] px-3 py-2.5 text-center text-[11px] font-semibold leading-[1rem] text-amber-100"
+                    >
+                        {alertaTentativa}
+                    </div>
+                ) : null}
 
                 {erro ? (
                     <div
@@ -784,6 +831,12 @@ function RotacaoSenhaObrigatoriaAdmin({
         useState("");
 
     const [
+        alertaTentativa,
+        setAlertaTentativa,
+    ] =
+        useState("");
+
+    const [
         senhaAtualizada,
         setSenhaAtualizada,
     ] =
@@ -852,6 +905,7 @@ function RotacaoSenhaObrigatoriaAdmin({
         event?.preventDefault?.();
 
         setErro("");
+        setAlertaTentativa("");
 
         if (
             !senhaAtual ||
@@ -896,8 +950,6 @@ function RotacaoSenhaObrigatoriaAdmin({
 
         if (
             !supabase?.auth ||
-            typeof supabase.auth.signInWithPassword !==
-                "function" ||
             typeof supabase.auth.updateUser !==
                 "function"
         ) {
@@ -933,22 +985,17 @@ function RotacaoSenhaObrigatoriaAdmin({
         setCarregando(true);
 
         try {
-            const {
-                error:
-                    erroReautenticacao,
-            } =
-                await supabase.auth
-                    .signInWithPassword({
-                        email:
-                            emailAtual,
-                        password:
-                            senhaAtual,
-                        options: {
-                            captchaToken,
-                        },
-                    });
-
-            if (erroReautenticacao) {
+            try {
+                await autenticarSenhaComGuardService({
+                    supabase,
+                    email:
+                        emailAtual,
+                    password:
+                        senhaAtual,
+                    captchaToken,
+                });
+            }
+            catch (erroReautenticacao) {
                 const codigo =
                     String(
                         erroReautenticacao?.code ||
@@ -957,20 +1004,40 @@ function RotacaoSenhaObrigatoriaAdmin({
                         .trim()
                         .toLowerCase();
 
-                const mensagem =
-                    String(
+                if (
+                    codigo ===
+                    "login_last_attempt"
+                ) {
+                    setSenhaAtual("");
+                    setErro("");
+
+                    const minutos =
+                        Number(
+                            erroReautenticacao?.bloqueioMinutos
+                        );
+
+                    const duracao =
+                        minutos === 30
+                            ? 30
+                            : minutos === 60
+                                ? 60
+                                : 15;
+
+                    setAlertaTentativa(
                         erroReautenticacao?.message ||
-                        ""
-                    )
-                        .trim()
-                        .toLowerCase();
+                        (
+                            "Atenção: resta 1 tentativa antes do bloqueio temporário de " +
+                            duracao +
+                            " minutos."
+                        )
+                    );
+
+                    return;
+                }
 
                 if (
                     codigo ===
-                        "invalid_credentials" ||
-                    mensagem.includes(
-                        "invalid login credentials"
-                    )
+                    "login_invalid"
                 ) {
                     setSenhaAtual("");
 
@@ -1277,6 +1344,16 @@ function RotacaoSenhaObrigatoriaAdmin({
                         <p className="text-[11px] font-medium leading-5 text-slate-400">
                             Após a alteração, você será desconectado de todas as sessões e deverá entrar novamente com a nova senha.
                         </p>
+
+                        {alertaTentativa ? (
+                            <div
+                                role="alert"
+                                aria-live="assertive"
+                                className="rounded-lg border border-amber-400/25 bg-amber-400/[0.10] px-4 py-3 text-xs font-semibold leading-5 text-amber-100"
+                            >
+                                {alertaTentativa}
+                            </div>
+                        ) : null}
 
                         {erro ? (
                             <div
