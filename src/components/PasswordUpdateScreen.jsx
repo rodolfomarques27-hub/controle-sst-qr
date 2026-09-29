@@ -20,6 +20,79 @@ import {
     SUPABASE_URL,
 } from "../lib/supabaseClient.js";
 
+const PASSWORD_UPDATE_RUNTIME_CSS = `
+.r26-pw-panel {
+    max-width: 36rem;
+    border-radius: 1.5rem;
+    box-shadow: var(
+        --shadow-2xl,
+        0 25px 50px -12px rgb(0 0 0 / 0.25)
+    );
+}
+
+.r26-pw-icon {
+    --tw-ring-color:
+        color-mix(
+            in oklab,
+            var(--color-white, #fff) 15%,
+            transparent
+        );
+}
+
+.r26-pw-kicker {
+    letter-spacing: 0.16em;
+}
+
+.r26-pw-success-title {
+    color: var(
+        --color-emerald-950,
+        #022c22
+    );
+}
+
+.r26-pw-warning-title {
+    color: var(
+        --color-amber-950,
+        #451a03
+    );
+}
+
+.r26-pw-warning-body {
+    color: var(
+        --color-amber-900,
+        #78350f
+    );
+}
+
+.r26-pw-primary:hover {
+    background-color:
+        var(
+            --color-emerald-500,
+            #10b981
+        );
+}
+
+.r26-pw-primary:disabled {
+    cursor: wait;
+    background-color:
+        var(
+            --color-slate-400,
+            #94a3b8
+        );
+}
+
+.r26-pw-submit:hover {
+    background-color:
+        var(
+            --color-emerald-700,
+            #047857
+        );
+}
+
+.r26-pw-submit:disabled {
+    opacity: 0.6;
+}
+`.trim();
 function texto(valor) {
     return String(
         valor ??
@@ -228,15 +301,16 @@ function PainelBase({
 }) {
     return (
         <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-10">
-            <section className="w-full max-w-xl overflow-hidden rounded-3xl border border-white/10 bg-white shadow-2xl">
+            <style>{PASSWORD_UPDATE_RUNTIME_CSS}</style>
+            <section className="r26-pw-panel w-full overflow-hidden border border-white/10 bg-white">
                 <header className="bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 px-7 py-7 text-white">
                     <div className="flex items-start gap-3">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/15">
+                        <div className="r26-pw-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/10 ring-1">
                             <ShieldCheck className="h-6 w-6 text-emerald-300" />
                         </div>
 
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-300">
+                            <p className="r26-pw-kicker text-[10px] font-black uppercase text-emerald-300">
                                 SAFESCAN BRASIL
                             </p>
 
@@ -352,7 +426,7 @@ export function PasswordUpdateScreen({
                 {linkValido ? (
                     <>
                         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
-                            <p className="text-sm font-black text-emerald-950">
+                            <p className="r26-pw-success-title text-sm font-black">
                                 Solicitação localizada
                             </p>
 
@@ -384,7 +458,7 @@ export function PasswordUpdateScreen({
                                     );
                                 }
                             }
-                            className="mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-black text-white transition hover:bg-emerald-500 disabled:cursor-wait disabled:bg-slate-400"
+                            className="r26-pw-primary mt-6 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-black text-white transition"
                         >
                             {processando
                                 ? "Validando link..."
@@ -405,7 +479,7 @@ export function PasswordUpdateScreen({
                             <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
 
                             <div>
-                                <p className="text-sm font-black text-amber-950">
+                                <p className="r26-pw-warning-title text-sm font-black">
                                     Link inválido ou incompleto
                                 </p>
 
@@ -434,7 +508,7 @@ export function PasswordUpdateScreen({
                 titulo="Redefinição indisponível"
                 subtitulo="Não foi possível validar uma sessão segura para esta redefinição."
             >
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">
+                <div className="r26-pw-warning-body rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6">
                     Solicite à Conta Mestre um novo link de redefinição de senha.
                 </div>
             </PainelBase>
@@ -612,7 +686,7 @@ export function PasswordUpdateScreen({
                     disabled={
                         processando
                     }
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="r26-pw-submit inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white transition disabled:cursor-not-allowed"
                 >
                     {processando ? (
                         <Loader2 className="h-4 w-4 animate-spin" />

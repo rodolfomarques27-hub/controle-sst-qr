@@ -396,13 +396,18 @@ export function TurnstileWidget({
         <div className="space-y-1.5">
             <div
                 ref={containerRef}
-                className="flex min-h-[65px] w-full items-center justify-center"
+                className="flex w-full items-center justify-center"
+                style={{ minHeight: "65px" }}
             />
 
             {erro ? (
                 <p
                     role="alert"
-                    className="text-center text-[10px] font-medium leading-4 text-amber-200/85"
+                    className="text-center text-[10px] font-medium leading-4"
+                style={{
+                    color:
+                        "color-mix(in oklab, var(--color-amber-200, #fde68a) 85%, transparent)",
+                }}
                 >
                     {erro}
                 </p>
