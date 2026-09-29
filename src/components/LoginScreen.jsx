@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import { PasswordInput } from "./commonComponents";
+import { TurnstileWidget } from "./security/TurnstileWidget.jsx";
 import { registrarSolicitacaoRecuperacaoSenhaLoginService } from "../services/acessosAppService";
 import {
     carregarFundoLoginPublicoService,
@@ -165,6 +166,18 @@ export function LoginScreen({ onLogin }) {
         useState("");
 
     const [
+        captchaToken,
+        setCaptchaToken,
+    ] =
+        useState("");
+
+    const [
+        captchaResetKey,
+        setCaptchaResetKey,
+    ] =
+        useState(0);
+
+    const [
         fundoLoginUrl,
         setFundoLoginUrl,
     ] =
@@ -254,7 +267,7 @@ export function LoginScreen({ onLogin }) {
             }
         }
 
-        carregarFundoLogin();
+        void carregarFundoLogin();
 
         return () => {
             cancelado = true;
@@ -284,6 +297,14 @@ export function LoginScreen({ onLogin }) {
                 return;
             }
 
+            if (!captchaToken) {
+                setErro(
+                    "Conclua a verificação de segurança antes de entrar."
+                );
+
+                return;
+            }
+
             setCarregando(true);
 
             try {
@@ -295,6 +316,9 @@ export function LoginScreen({ onLogin }) {
                         .signInWithPassword({
                             email: emailTratado,
                             password: senha,
+                            options: {
+                                captchaToken,
+                            },
                         });
 
                 if (error) {
@@ -329,6 +353,13 @@ export function LoginScreen({ onLogin }) {
                 );
             }
             finally {
+                setCaptchaToken("");
+
+                setCaptchaResetKey(
+                    (atual) =>
+                        atual + 1
+                );
+
                 setCarregando(false);
             }
         };
@@ -388,7 +419,8 @@ export function LoginScreen({ onLogin }) {
         carregando ||
         carregandoSolicitacaoSenha ||
         !String(email || "").trim() ||
-        !senha;
+        !senha ||
+        !captchaToken;
 
     return (
         <div className="relative min-h-screen overflow-hidden bg-slate-950">
@@ -515,6 +547,22 @@ export function LoginScreen({ onLogin }) {
                                             inputClassName="login-input-base login-password-input !rounded-lg !border-transparent !bg-transparent !py-2.5 text-[13px] font-medium text-slate-100 placeholder:text-slate-500/80"
                                         />
                                     </div>
+
+                                    <TurnstileWidget
+                                        action="tenant_login"
+                                        resetKey={captchaResetKey}
+                                        onTokenChange={
+                                            (token) => {
+                                                setCaptchaToken(
+                                                    token
+                                                );
+
+                                                if (token) {
+                                                    setErro("");
+                                                }
+                                            }
+                                        }
+                                    />
 
                                     <div className={mostrarEsqueciSenha ? "flex justify-end" : "hidden"}>
                                         <button

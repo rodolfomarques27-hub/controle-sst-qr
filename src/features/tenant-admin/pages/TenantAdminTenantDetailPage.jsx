@@ -34,6 +34,12 @@ import {
 } from "../services/tenantAdminFirstAccessService.js";
 
 import {
+    definirSenhaTemporariaTenantAdminService,
+    enviarRedefinicaoSenhaTenantAdminService,
+    validarSenhaTemporariaTenantAdmin,
+} from "../services/tenantAdminPasswordService.js";
+
+import {
     TenantAdminModulesPanel,
 } from "../components/TenantAdminModulesPanel.jsx";
 
@@ -481,7 +487,7 @@ function PrimeiroAcessoTenantAction({
                         usuario
                     )
             }
-            className="inline-flex items-center justify-center whitespace-nowrap rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-xs font-bold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+            className="r26-admin-action-emerald inline-flex items-center justify-center whitespace-nowrap rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-xs font-bold text-emerald-700 transition disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
         >
             {enviando
                 ? "Enviando..."
@@ -491,6 +497,348 @@ function PrimeiroAcessoTenantAction({
         </button>
     );
 }
+
+function TenantAdminTemporaryPasswordModal({
+    tenantId,
+    usuario,
+    onClose,
+    onConcluido,
+}) {
+    const [
+        senhaTemporaria,
+        setSenhaTemporaria,
+    ] =
+        useState("");
+
+    const [
+        confirmarSenha,
+        setConfirmarSenha,
+    ] =
+        useState("");
+
+    const [
+        salvando,
+        setSalvando,
+    ] =
+        useState(false);
+
+    const [
+        erroModal,
+        setErroModal,
+    ] =
+        useState("");
+
+    if (!usuario) {
+        return null;
+    }
+
+    const userId =
+        String(
+            usuario?.user_id ||
+            ""
+        ).trim();
+
+    async function salvarSenhaTemporaria(event) {
+        event.preventDefault();
+
+        if (
+            salvando ||
+            !tenantId ||
+            !userId
+        ) {
+            return;
+        }
+
+        setErroModal("");
+
+        const validacao =
+            validarSenhaTemporariaTenantAdmin(
+                senhaTemporaria
+            );
+
+        if (validacao) {
+            setErroModal(
+                validacao
+            );
+
+            return;
+        }
+
+        if (
+            senhaTemporaria !==
+            confirmarSenha
+        ) {
+            setErroModal(
+                "A confirmação da senha temporária não confere."
+            );
+
+            return;
+        }
+
+        try {
+            setSalvando(
+                true
+            );
+
+            const resultado =
+                await definirSenhaTemporariaTenantAdminService({
+                    tenantId,
+                    userId,
+                    senhaTemporaria,
+                });
+
+            setSenhaTemporaria("");
+            setConfirmarSenha("");
+
+            await onConcluido?.(
+                resultado?.mensagem ||
+                "Senha temporária definida com sucesso."
+            );
+        }
+        catch (error) {
+            setErroModal(
+                error?.message ||
+                "Não foi possível definir a senha temporária."
+            );
+        }
+        finally {
+            setSalvando(
+                false
+            );
+        }
+    }
+
+    return (
+        <div className="r26-admin-modal-backdrop fixed inset-0 flex items-center justify-center p-4 backdrop-blur-sm">
+            <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="tenant-temp-password-title"
+                className="r26-admin-modal-panel w-full border border-slate-200 bg-white p-6"
+            >
+                <p className="text-[10px] font-black uppercase tracking-[0.12em] text-emerald-600">
+                    Segurança do acesso
+                </p>
+
+                <h2
+                    id="tenant-temp-password-title"
+                    className="mt-1 text-lg font-black text-slate-900"
+                >
+                    Definir senha temporária
+                </h2>
+
+                <p className="mt-2 text-xs leading-5 text-slate-500">
+                    O usuário e o e-mail serão mantidos. No próximo acesso, este administrador deverá criar uma nova senha.
+                </p>
+
+                <p className="mt-3 break-all rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700">
+                    {textoSeguro(
+                        usuario?.email,
+                        "E-mail não informado"
+                    )}
+                </p>
+
+                <form
+                    className="mt-5 space-y-4"
+                    onSubmit={
+                        salvarSenhaTemporaria
+                    }
+                >
+                    <div>
+                        <label htmlFor="r26-admin-temp-password" className="mb-1.5 block text-xs font-bold text-slate-700">
+                            Senha temporária
+                        </label>
+
+                        <input
+                            id="r26-admin-temp-password"
+                            type="password"
+                            autoComplete="new-password"
+                            value={
+                                senhaTemporaria
+                            }
+                            onChange={
+                                (event) =>
+                                    setSenhaTemporaria(
+                                        event.target.value
+                                    )
+                            }
+                            disabled={
+                                salvando
+                            }
+                            className="r26-admin-password-input h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition disabled:cursor-not-allowed disabled:bg-slate-100"
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="r26-admin-temp-password-confirm" className="mb-1.5 block text-xs font-bold text-slate-700">
+                            Confirmar senha temporária
+                        </label>
+
+                        <input
+                            id="r26-admin-temp-password-confirm"
+                            type="password"
+                            autoComplete="new-password"
+                            value={
+                                confirmarSenha
+                            }
+                            onChange={
+                                (event) =>
+                                    setConfirmarSenha(
+                                        event.target.value
+                                    )
+                            }
+                            disabled={
+                                salvando
+                            }
+                            className="r26-admin-password-input h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition disabled:cursor-not-allowed disabled:bg-slate-100"
+                        />
+                    </div>
+
+                    <p className="text-[11px] leading-5 text-slate-400">
+                        Mínimo de 12 caracteres, com letra maiúscula, minúscula, número e caractere especial.
+                    </p>
+
+                    {erroModal ? (
+                        <div
+                            role="alert"
+                            className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-semibold leading-5 text-red-800"
+                        >
+                            {erroModal}
+                        </div>
+                    ) : null}
+
+                    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                        <button
+                            type="button"
+                            onClick={
+                                onClose
+                            }
+                            disabled={
+                                salvando
+                            }
+                            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            Cancelar
+                        </button>
+
+                        <button
+                            type="submit"
+                            disabled={
+                                salvando
+                            }
+                            className="r26-admin-primary rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {salvando
+                                ? "Salvando..."
+                                : "Definir senha temporária"}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+const TENANT_ADMIN_DETAIL_RUNTIME_CSS = `
+.r26-admin-action-emerald:hover {
+    border-color:
+        var(
+            --color-emerald-300,
+            #6ee7b7
+        );
+
+    background-color:
+        var(
+            --color-emerald-100,
+            #d1fae5
+        );
+}
+
+.r26-admin-action-amber:hover {
+    border-color:
+        var(
+            --color-amber-300,
+            #fcd34d
+        );
+
+    background-color:
+        var(
+            --color-amber-100,
+            #fef3c7
+        );
+}
+
+.r26-admin-action-blue:hover {
+    border-color:
+        var(
+            --color-blue-300,
+            #93c5fd
+        );
+
+    background-color:
+        var(
+            --color-blue-100,
+            #dbeafe
+        );
+}
+
+.r26-admin-modal-backdrop {
+    z-index: 90;
+
+    background-color:
+        color-mix(
+            in oklab,
+            var(--color-slate-950, #020617) 65%,
+            transparent
+        );
+}
+
+.r26-admin-modal-panel {
+    max-width: 32rem;
+    border-radius: 1.5rem;
+
+    box-shadow:
+        var(
+            --shadow-2xl,
+            0 25px 50px -12px rgb(0 0 0 / 0.25)
+        );
+}
+
+.r26-admin-password-input:focus {
+    border-color:
+        var(
+            --color-emerald-400,
+            #34d399
+        );
+
+    box-shadow:
+        0 0 0 2px
+        var(
+            --color-emerald-100,
+            #d1fae5
+        );
+}
+
+.r26-admin-primary:hover {
+    background-color:
+        var(
+            --color-emerald-700,
+            #047857
+        );
+}
+
+.r26-admin-hero-primary:hover {
+    background-color:
+        var(
+            --color-emerald-500,
+            #10b981
+        );
+}
+
+.r26-admin-hero-primary:disabled {
+    cursor: wait;
+}
+`.trim();
 export function TenantAdminTenantDetailPage({
 
     tenant,
@@ -539,6 +887,18 @@ export function TenantAdminTenantDetailPage({
         setUsuarioAjusteDados,
     ] =
         useState(null);
+
+    const [
+        usuarioSenhaTemporaria,
+        setUsuarioSenhaTemporaria,
+    ] =
+        useState(null);
+
+    const [
+        operacaoSenhaUsuario,
+        setOperacaoSenhaUsuario,
+    ] =
+        useState("");
 
     const [
         mensagemEscopo,
@@ -768,6 +1128,62 @@ export function TenantAdminTenantDetailPage({
                 tenantId,
             ]
         );
+
+    const enviarRedefinicaoSenha =
+        useCallback(
+            async (
+                usuario
+            ) => {
+                const userId =
+                    String(
+                        usuario?.user_id ||
+                        ""
+                    ).trim();
+
+                if (
+                    !tenantId ||
+                    !userId ||
+                    operacaoSenhaUsuario
+                ) {
+                    return;
+                }
+
+                const chaveOperacao =
+                    `recovery:${userId}`;
+
+                setMensagemEscopo("");
+                setOperacaoSenhaUsuario(
+                    chaveOperacao
+                );
+
+                try {
+                    const resultado =
+                        await enviarRedefinicaoSenhaTenantAdminService({
+                            tenantId,
+                            userId,
+                        });
+
+                    setMensagemEscopo(
+                        resultado?.mensagem ||
+                        "Link de redefinição enviado com sucesso."
+                    );
+                }
+                catch (error) {
+                    setMensagemEscopo(
+                        error?.message ||
+                        "Não foi possível enviar a redefinição de senha."
+                    );
+                }
+                finally {
+                    setOperacaoSenhaUsuario("");
+                }
+            },
+            [
+                operacaoSenhaUsuario,
+                tenantId,
+            ]
+        );
+
     const admins =
 
         useMemo(
@@ -846,6 +1262,7 @@ export function TenantAdminTenantDetailPage({
 
     return (
         <div className="mx-auto max-w-[1500px]">
+            <style>{TENANT_ADMIN_DETAIL_RUNTIME_CSS}</style>
             <TenantAdminHero
                 eyebrow="DETALHE DO CLIENTE"
                 titulo={
@@ -891,7 +1308,7 @@ export function TenantAdminTenantDetailPage({
                             disabled={
                                 carregando
                             }
-                            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-bold text-white shadow-lg shadow-black/10 transition hover:bg-emerald-500 disabled:cursor-wait disabled:bg-slate-500"
+                            className="r26-admin-hero-primary inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 text-sm font-bold text-white shadow-lg shadow-black/10 transition disabled:bg-slate-500"
                         >
                             <RefreshCw
                                 className={
@@ -1416,7 +1833,7 @@ export function TenantAdminTenantDetailPage({
                                                 </p>
 
                                                 <p className="mt-0.5 text-[10px] text-slate-400">
-                                                    Gerencie convite, dados cadastrais e escopo de acesso.
+                                                    Gerencie convite, senha, dados cadastrais e escopo de acesso.
                                                 </p>
                                             </div>
 
@@ -1455,23 +1872,70 @@ export function TenantAdminTenantDetailPage({
                                                         .toLowerCase() ===
                                                     "ativo"
                                                         ? (
-                                                            <button
-                                                                type="button"
-                                                                onClick={
-                                                                    () => {
-                                                                        setMensagemEscopo(
-                                                                            ""
-                                                                        );
-
-                                                                        setUsuarioAjusteDados(
-                                                                            usuario
-                                                                        );
+                                                            <>
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={
+                                                                        Boolean(
+                                                                            operacaoSenhaUsuario
+                                                                        )
                                                                     }
-                                                                }
-                                                                className="rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-2.5 text-xs font-bold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
-                                                            >
-                                                                Ajustar dados
-                                                            </button>
+                                                                    onClick={
+                                                                        () =>
+                                                                            enviarRedefinicaoSenha(
+                                                                                usuario
+                                                                            )
+                                                                    }
+                                                                    className="r26-admin-action-emerald rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-xs font-bold text-emerald-700 transition disabled:cursor-not-allowed disabled:opacity-50"
+                                                                >
+                                                                    {
+                                                                        operacaoSenhaUsuario ===
+                                                                        `recovery:${String(
+                                                                            usuario.user_id ||
+                                                                            ""
+                                                                        ).trim()}`
+                                                                            ? "Enviando redefinição..."
+                                                                            : "Enviar redefinição de senha"
+                                                                    }
+                                                                </button>
+
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={
+                                                                        Boolean(
+                                                                            operacaoSenhaUsuario
+                                                                        )
+                                                                    }
+                                                                    onClick={
+                                                                        () => {
+                                                                            setMensagemEscopo("");
+
+                                                                            setUsuarioSenhaTemporaria(
+                                                                                usuario
+                                                                            );
+                                                                        }
+                                                                    }
+                                                                    className="r26-admin-action-amber rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs font-bold text-amber-800 transition disabled:cursor-not-allowed disabled:opacity-50"
+                                                                >
+                                                                    Definir senha temporária
+                                                                </button>
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={
+                                                                        () => {
+                                                                            setMensagemEscopo("");
+
+                                                                            setUsuarioAjusteDados(
+                                                                                usuario
+                                                                            );
+                                                                        }
+                                                                    }
+                                                                    className="r26-admin-action-blue rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-2.5 text-xs font-bold text-blue-700 transition"
+                                                                >
+                                                                    Ajustar dados
+                                                                </button>
+                                                            </>
                                                         )
                                                         : null
                                                 }
@@ -1582,6 +2046,37 @@ export function TenantAdminTenantDetailPage({
                     }
                 />
             ) : null}
+
+            <TenantAdminTemporaryPasswordModal
+                tenantId={
+                    tenantId
+                }
+                usuario={
+                    usuarioSenhaTemporaria
+                }
+                onClose={
+                    () =>
+                        setUsuarioSenhaTemporaria(
+                            null
+                        )
+                }
+                onConcluido={
+                    async (
+                        mensagem
+                    ) => {
+                        setUsuarioSenhaTemporaria(
+                            null
+                        );
+
+                        setMensagemEscopo(
+                            mensagem
+                        );
+
+                        await carregarDetalhes();
+                    }
+                }
+            />
+
             <TenantAdminUserScopeModal
                 key={
                     usuarioEscopo?.membership_id ||

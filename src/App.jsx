@@ -63,6 +63,7 @@ import {
 } from "lucide-react";
 
 const LoginScreen = React.lazy(() => import("./components/LoginScreen").then((modulo) => ({ default: modulo.LoginScreen })));
+const PasswordUpdateScreen = React.lazy(() => import("./components/PasswordUpdateScreen.jsx").then((modulo) => ({ default: modulo.PasswordUpdateScreen })));
 const PrimeiroAcessoClientePage = React.lazy(() => import("./features/tenant-admin/pages/PrimeiroAcessoClientePage.jsx").then((modulo) => ({ default: modulo.PrimeiroAcessoClientePage })));
 const PrimeiroAcessoConfirmarPage = React.lazy(() => import("./features/tenant-admin/pages/PrimeiroAcessoConfirmarPage.jsx").then((modulo) => ({ default: modulo.PrimeiroAcessoConfirmarPage })));
 const ConsultaQRPublica = React.lazy(() => import("./components/qr/ConsultaQRPublica").then((modulo) => ({ default: modulo.ConsultaQRPublica })));
@@ -188,6 +189,7 @@ export default function App() {
     });
 
     const [usuario, setUsuario] = useState(null);
+    const [recuperacaoSenhaEvento, setRecuperacaoSenhaEvento] = useState(false);
     const chaveCargaInicialUsuarioRef = useRef("");
     const chaveUsuarioSessao = String(usuario?.id || usuario?.email || "").trim();
     const [carregandoSessao, setCarregandoSessao] = useState(() => SUPABASE_CONFIGURADO);
@@ -290,8 +292,8 @@ export default function App() {
         if (!SUPABASE_CONFIGURADO) return undefined;
 
         const carregarAreaInterna = () => {
-            importarAppLayout();
-            importarAppContentRouter();
+            void importarAppLayout();
+            void importarAppContentRouter();
         };
 
         if (typeof window === "undefined") {
@@ -948,9 +950,13 @@ export default function App() {
             }
         }
 
-        carregarSessao();
+        void carregarSessao();
 
         const { data: listener } = supabase.auth.onAuthStateChange((evento, session) => {
+            if (evento === "PASSWORD_RECOVERY") {
+                setRecuperacaoSenhaEvento(true);
+            }
+
             if (session?.user) {
                 setUsuario({
                     id: session.user.id,
@@ -959,6 +965,10 @@ export default function App() {
                 });
             } else {
                 setUsuario(null);
+
+                if (evento === "SIGNED_OUT") {
+                    setRecuperacaoSenhaEvento(false);
+                }
             }
         });
 
@@ -1075,7 +1085,7 @@ export default function App() {
             }
         }
 
-        validarAcessoTenantAtual();
+        void validarAcessoTenantAtual();
 
         return () => {
             componenteAtivo = false;
@@ -1141,7 +1151,7 @@ export default function App() {
             }
         }
 
-        carregarModulosTenantRuntime();
+        void carregarModulosTenantRuntime();
 
         return () => {
             componenteAtivo = false;
@@ -1241,7 +1251,7 @@ export default function App() {
             }
         }
 
-        carregarPermissaoUsuarioAtual();
+        void carregarPermissaoUsuarioAtual();
 
         return () => {
             componenteAtivo = false;
@@ -1284,7 +1294,7 @@ export default function App() {
             }
         }
 
-        carregarConsultaPublica();
+        void carregarConsultaPublica();
 
         return () => {
             ativo = false;
@@ -1326,7 +1336,7 @@ export default function App() {
             }
         }
 
-        carregarConsultaDdsPublica();
+        void carregarConsultaDdsPublica();
 
         return () => {
             ativo = false;
@@ -2010,6 +2020,41 @@ export default function App() {
                 "primeiro_acesso"
             ) === "1"
         );
+
+    const rotaRecuperacaoSenhaConfirmarAtiva =
+        Boolean(
+            parametrosPrimeiroAcessoCliente
+            && parametrosPrimeiroAcessoCliente.get(
+                "password_recovery_confirmar"
+            ) === "1"
+        );
+
+    const rotaRecuperacaoSenhaAtiva =
+        Boolean(
+            parametrosPrimeiroAcessoCliente
+            && parametrosPrimeiroAcessoCliente.get(
+                "password_recovery"
+            ) === "1"
+        );
+
+    if (rotaRecuperacaoSenhaConfirmarAtiva) {
+        return (
+            <React.Suspense
+                fallback={
+                    <CarregandoTela
+                        mensagem="Preparando redefinição..."
+                        subtitulo="Validando o link seguro."
+                        telaCheia
+                    />
+                }
+            >
+                <PasswordUpdateScreen
+                    modo="confirmar"
+                />
+            </React.Suspense>
+        );
+    }
+
     if (rotaPrimeiroAcessoConfirmarAtiva) {
         return (
             <React.Suspense
@@ -2037,6 +2082,47 @@ export default function App() {
                 }
             >
                 <PrimeiroAcessoClientePage />
+            </React.Suspense>
+        );
+    }
+
+    if (
+        (
+            rotaRecuperacaoSenhaAtiva ||
+            recuperacaoSenhaEvento
+        ) &&
+        carregandoSessao &&
+        !usuario
+    ) {
+        return (
+            <CarregandoTela
+                mensagem="Preparando redefinição..."
+                subtitulo="Validando a sessão segura de recuperação."
+                telaCheia
+            />
+        );
+    }
+
+    if (
+        rotaRecuperacaoSenhaAtiva ||
+        recuperacaoSenhaEvento
+    ) {
+        return (
+            <React.Suspense
+                fallback={
+                    <CarregandoTela
+                        mensagem="Preparando redefinição..."
+                        subtitulo="Carregando a atualização segura da senha."
+                        telaCheia
+                    />
+                }
+            >
+                <PasswordUpdateScreen
+                    modo="atualizar"
+                    usuario={
+                        usuario
+                    }
+                />
             </React.Suspense>
         );
     }
