@@ -34,6 +34,12 @@ import {
 } from "../services/tenantAdminFirstAccessService.js";
 
 import {
+    definirSenhaTemporariaTenantAdminService,
+    enviarRedefinicaoSenhaTenantAdminService,
+    validarSenhaTemporariaTenantAdmin,
+} from "../services/tenantAdminPasswordService.js";
+
+import {
     TenantAdminModulesPanel,
 } from "../components/TenantAdminModulesPanel.jsx";
 
@@ -491,6 +497,246 @@ function PrimeiroAcessoTenantAction({
         </button>
     );
 }
+
+function TenantAdminTemporaryPasswordModal({
+    tenantId,
+    usuario,
+    onClose,
+    onConcluido,
+}) {
+    const [
+        senhaTemporaria,
+        setSenhaTemporaria,
+    ] =
+        useState("");
+
+    const [
+        confirmarSenha,
+        setConfirmarSenha,
+    ] =
+        useState("");
+
+    const [
+        salvando,
+        setSalvando,
+    ] =
+        useState(false);
+
+    const [
+        erroModal,
+        setErroModal,
+    ] =
+        useState("");
+
+    if (!usuario) {
+        return null;
+    }
+
+    const userId =
+        String(
+            usuario?.user_id ||
+            ""
+        ).trim();
+
+    async function salvarSenhaTemporaria(event) {
+        event.preventDefault();
+
+        if (
+            salvando ||
+            !tenantId ||
+            !userId
+        ) {
+            return;
+        }
+
+        setErroModal("");
+
+        const validacao =
+            validarSenhaTemporariaTenantAdmin(
+                senhaTemporaria
+            );
+
+        if (validacao) {
+            setErroModal(
+                validacao
+            );
+
+            return;
+        }
+
+        if (
+            senhaTemporaria !==
+            confirmarSenha
+        ) {
+            setErroModal(
+                "A confirmação da senha temporária não confere."
+            );
+
+            return;
+        }
+
+        try {
+            setSalvando(
+                true
+            );
+
+            const resultado =
+                await definirSenhaTemporariaTenantAdminService({
+                    tenantId,
+                    userId,
+                    senhaTemporaria,
+                });
+
+            setSenhaTemporaria("");
+            setConfirmarSenha("");
+
+            await onConcluido?.(
+                resultado?.mensagem ||
+                "Senha temporária definida com sucesso."
+            );
+        }
+        catch (error) {
+            setErroModal(
+                error?.message ||
+                "Não foi possível definir a senha temporária."
+            );
+        }
+        finally {
+            setSalvando(
+                false
+            );
+        }
+    }
+
+    return (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm">
+            <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="tenant-temp-password-title"
+                className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl"
+            >
+                <p className="text-[10px] font-black uppercase tracking-[0.12em] text-emerald-600">
+                    Segurança do acesso
+                </p>
+
+                <h2
+                    id="tenant-temp-password-title"
+                    className="mt-1 text-lg font-black text-slate-900"
+                >
+                    Definir senha temporária
+                </h2>
+
+                <p className="mt-2 text-xs leading-5 text-slate-500">
+                    O usuário e o e-mail serão mantidos. No próximo acesso, este administrador deverá criar uma nova senha.
+                </p>
+
+                <p className="mt-3 break-all rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700">
+                    {textoSeguro(
+                        usuario?.email,
+                        "E-mail não informado"
+                    )}
+                </p>
+
+                <form
+                    className="mt-5 space-y-4"
+                    onSubmit={
+                        salvarSenhaTemporaria
+                    }
+                >
+                    <div>
+                        <label className="mb-1.5 block text-xs font-bold text-slate-700">
+                            Senha temporária
+                        </label>
+
+                        <input
+                            type="password"
+                            autoComplete="new-password"
+                            value={
+                                senhaTemporaria
+                            }
+                            onChange={
+                                (event) =>
+                                    setSenhaTemporaria(
+                                        event.target.value
+                                    )
+                            }
+                            disabled={
+                                salvando
+                            }
+                            className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="mb-1.5 block text-xs font-bold text-slate-700">
+                            Confirmar senha temporária
+                        </label>
+
+                        <input
+                            type="password"
+                            autoComplete="new-password"
+                            value={
+                                confirmarSenha
+                            }
+                            onChange={
+                                (event) =>
+                                    setConfirmarSenha(
+                                        event.target.value
+                                    )
+                            }
+                            disabled={
+                                salvando
+                            }
+                            className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                        />
+                    </div>
+
+                    <p className="text-[11px] leading-5 text-slate-400">
+                        Mínimo de 12 caracteres, com letra maiúscula, minúscula, número e caractere especial.
+                    </p>
+
+                    {erroModal ? (
+                        <div
+                            role="alert"
+                            className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-semibold leading-5 text-red-800"
+                        >
+                            {erroModal}
+                        </div>
+                    ) : null}
+
+                    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                        <button
+                            type="button"
+                            onClick={
+                                onClose
+                            }
+                            disabled={
+                                salvando
+                            }
+                            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            Cancelar
+                        </button>
+
+                        <button
+                            type="submit"
+                            disabled={
+                                salvando
+                            }
+                            className="rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {salvando
+                                ? "Salvando..."
+                                : "Definir senha temporária"}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
 export function TenantAdminTenantDetailPage({
 
     tenant,
@@ -539,6 +785,18 @@ export function TenantAdminTenantDetailPage({
         setUsuarioAjusteDados,
     ] =
         useState(null);
+
+    const [
+        usuarioSenhaTemporaria,
+        setUsuarioSenhaTemporaria,
+    ] =
+        useState(null);
+
+    const [
+        operacaoSenhaUsuario,
+        setOperacaoSenhaUsuario,
+    ] =
+        useState("");
 
     const [
         mensagemEscopo,
@@ -768,6 +1026,62 @@ export function TenantAdminTenantDetailPage({
                 tenantId,
             ]
         );
+
+    const enviarRedefinicaoSenha =
+        useCallback(
+            async (
+                usuario
+            ) => {
+                const userId =
+                    String(
+                        usuario?.user_id ||
+                        ""
+                    ).trim();
+
+                if (
+                    !tenantId ||
+                    !userId ||
+                    operacaoSenhaUsuario
+                ) {
+                    return;
+                }
+
+                const chaveOperacao =
+                    `recovery:${userId}`;
+
+                setMensagemEscopo("");
+                setOperacaoSenhaUsuario(
+                    chaveOperacao
+                );
+
+                try {
+                    const resultado =
+                        await enviarRedefinicaoSenhaTenantAdminService({
+                            tenantId,
+                            userId,
+                        });
+
+                    setMensagemEscopo(
+                        resultado?.mensagem ||
+                        "Link de redefinição enviado com sucesso."
+                    );
+                }
+                catch (error) {
+                    setMensagemEscopo(
+                        error?.message ||
+                        "Não foi possível enviar a redefinição de senha."
+                    );
+                }
+                finally {
+                    setOperacaoSenhaUsuario("");
+                }
+            },
+            [
+                operacaoSenhaUsuario,
+                tenantId,
+            ]
+        );
+
     const admins =
 
         useMemo(
@@ -1416,7 +1730,7 @@ export function TenantAdminTenantDetailPage({
                                                 </p>
 
                                                 <p className="mt-0.5 text-[10px] text-slate-400">
-                                                    Gerencie convite, dados cadastrais e escopo de acesso.
+                                                    Gerencie convite, senha, dados cadastrais e escopo de acesso.
                                                 </p>
                                             </div>
 
@@ -1455,23 +1769,70 @@ export function TenantAdminTenantDetailPage({
                                                         .toLowerCase() ===
                                                     "ativo"
                                                         ? (
-                                                            <button
-                                                                type="button"
-                                                                onClick={
-                                                                    () => {
-                                                                        setMensagemEscopo(
-                                                                            ""
-                                                                        );
-
-                                                                        setUsuarioAjusteDados(
-                                                                            usuario
-                                                                        );
+                                                            <>
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={
+                                                                        Boolean(
+                                                                            operacaoSenhaUsuario
+                                                                        )
                                                                     }
-                                                                }
-                                                                className="rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-2.5 text-xs font-bold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
-                                                            >
-                                                                Ajustar dados
-                                                            </button>
+                                                                    onClick={
+                                                                        () =>
+                                                                            enviarRedefinicaoSenha(
+                                                                                usuario
+                                                                            )
+                                                                    }
+                                                                    className="rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-xs font-bold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                >
+                                                                    {
+                                                                        operacaoSenhaUsuario ===
+                                                                        `recovery:${String(
+                                                                            usuario.user_id ||
+                                                                            ""
+                                                                        ).trim()}`
+                                                                            ? "Enviando redefinição..."
+                                                                            : "Enviar redefinição de senha"
+                                                                    }
+                                                                </button>
+
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={
+                                                                        Boolean(
+                                                                            operacaoSenhaUsuario
+                                                                        )
+                                                                    }
+                                                                    onClick={
+                                                                        () => {
+                                                                            setMensagemEscopo("");
+
+                                                                            setUsuarioSenhaTemporaria(
+                                                                                usuario
+                                                                            );
+                                                                        }
+                                                                    }
+                                                                    className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs font-bold text-amber-800 transition hover:border-amber-300 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                >
+                                                                    Definir senha temporária
+                                                                </button>
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={
+                                                                        () => {
+                                                                            setMensagemEscopo("");
+
+                                                                            setUsuarioAjusteDados(
+                                                                                usuario
+                                                                            );
+                                                                        }
+                                                                    }
+                                                                    className="rounded-xl border border-blue-200 bg-blue-50 px-3.5 py-2.5 text-xs font-bold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
+                                                                >
+                                                                    Ajustar dados
+                                                                </button>
+                                                            </>
                                                         )
                                                         : null
                                                 }
@@ -1582,6 +1943,37 @@ export function TenantAdminTenantDetailPage({
                     }
                 />
             ) : null}
+
+            <TenantAdminTemporaryPasswordModal
+                tenantId={
+                    tenantId
+                }
+                usuario={
+                    usuarioSenhaTemporaria
+                }
+                onClose={
+                    () =>
+                        setUsuarioSenhaTemporaria(
+                            null
+                        )
+                }
+                onConcluido={
+                    async (
+                        mensagem
+                    ) => {
+                        setUsuarioSenhaTemporaria(
+                            null
+                        );
+
+                        setMensagemEscopo(
+                            mensagem
+                        );
+
+                        await carregarDetalhes();
+                    }
+                }
+            />
+
             <TenantAdminUserScopeModal
                 key={
                     usuarioEscopo?.membership_id ||
