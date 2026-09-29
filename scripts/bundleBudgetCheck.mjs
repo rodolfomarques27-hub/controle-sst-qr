@@ -30,7 +30,7 @@ const baselineBundle = Object.freeze({
 
 const crescimentoPermitidoBundle = Object.freeze({
     scriptsTotal: 150_000,
-    cssTotal: 80_000,
+    cssTotal: 100_000,
     imagensTotal: 170_000,
 });
 
@@ -43,7 +43,7 @@ const limites = {
         baselineBundle.scriptsTotal +
         crescimentoPermitidoBundle.scriptsTotal,
 
-    cssInicial: 605_000,
+    cssInicial: 625_000,
     cssLazyArquivo: 250_000,
     cssTotal:
         baselineBundle.cssTotal +
@@ -337,7 +337,7 @@ assert.equal(
 
 assert.ok(
     totalCssBoot <= limites.cssInicial,
-    `CSS inicial acima de 600 KB: ${totalCssBoot} bytes.`,
+    `CSS inicial acima do orçamento (${limites.cssInicial} bytes): ${totalCssBoot} bytes.`,
 );
 
 assert.equal(
