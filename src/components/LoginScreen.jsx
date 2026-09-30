@@ -7,6 +7,7 @@ import {
     Mail,
 } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
+import { autenticarSenhaComGuardService } from "../services/authLoginGuardService.js";
 import { PasswordInput } from "./commonComponents";
 import { TurnstileWidget } from "./security/TurnstileWidget.jsx";
 import { registrarSolicitacaoRecuperacaoSenhaLoginService } from "../services/acessosAppService";
@@ -166,6 +167,12 @@ export function LoginScreen({ onLogin }) {
         useState("");
 
     const [
+        alertaTentativa,
+        setAlertaTentativa,
+    ] =
+        useState("");
+
+    const [
         captchaToken,
         setCaptchaToken,
     ] =
@@ -280,6 +287,7 @@ export function LoginScreen({ onLogin }) {
 
             setErro("");
             setMensagem("");
+            setAlertaTentativa("");
 
             const emailTratado =
                 String(email || "")
@@ -309,28 +317,18 @@ export function LoginScreen({ onLogin }) {
 
             try {
                 const {
-                    data,
-                    error,
+                    user,
                 } =
-                    await supabase.auth
-                        .signInWithPassword({
-                            email: emailTratado,
-                            password: senha,
-                            options: {
-                                captchaToken,
-                            },
-                        });
+                    await autenticarSenhaComGuardService({
+                        supabase,
+                        email:
+                            emailTratado,
+                        password:
+                            senha,
+                        captchaToken,
+                    });
 
-                if (error) {
-                    setMostrarEsqueciSenha(true);
-                    setErro(
-                        "Não foi possível entrar.\nConfira o e-mail, a senha ou solicite liberação ao administrador."
-                    );
-
-                    return;
-                }
-
-                if (!data?.user?.id) {
+                if (!user?.id) {
                     setErro(
                         "Login autenticado sem identificação do usuário. Tente novamente."
                     );
@@ -339,14 +337,56 @@ export function LoginScreen({ onLogin }) {
                 }
 
                 onLogin({
-                    id: data.user.id,
+                    id: user.id,
                     email:
-                        data.user.email ||
+                        user.email ||
                         emailTratado,
                     perfil: "",
                 });
             }
             catch (error) {
+                setMostrarEsqueciSenha(true);
+
+                const codigo =
+                    String(
+                        error?.code ||
+                        ""
+                    )
+                        .trim()
+                        .toLowerCase();
+
+                if (
+                    codigo ===
+                    "login_last_attempt"
+                ) {
+                    setErro("");
+
+                    const minutos =
+                        Number(
+                            error?.bloqueioMinutos
+                        );
+
+                    const duracao =
+                        minutos === 30
+                            ? 30
+                            : minutos === 60
+                                ? 60
+                                : 15;
+
+                    setAlertaTentativa(
+                        error?.message ||
+                        (
+                            "Atenção: resta 1 tentativa antes do bloqueio temporário de " +
+                            duracao +
+                            " minutos."
+                        )
+                    );
+
+                    return;
+                }
+
+                setAlertaTentativa("");
+
                 setErro(
                     error?.message ||
                     "Não foi possível entrar no sistema. Tente novamente."
@@ -518,6 +558,7 @@ export function LoginScreen({ onLogin }) {
 
                                                     setErro("");
                                                     setMensagem("");
+                                                    setAlertaTentativa("");
                                                 }}
                                                 placeholder="Digite seu e-mail"
                                                 autoComplete="email"
@@ -591,6 +632,18 @@ export function LoginScreen({ onLogin }) {
                                             }
                                         </button>
                                     </div>
+
+                                    {
+                                        alertaTentativa && (
+                                            <div
+                                                className="rounded-lg border border-amber-400/25 bg-amber-400/[0.10] px-3 py-2.5 text-[11px] font-semibold leading-[1rem] text-amber-100"
+                                                role="alert"
+                                                aria-live="assertive"
+                                            >
+                                                {alertaTentativa}
+                                            </div>
+                                        )
+                                    }
 
                                     {
                                         erro && (
