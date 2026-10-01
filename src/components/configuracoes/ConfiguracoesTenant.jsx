@@ -3275,6 +3275,60 @@ export function ConfiguracoesTenant({
                 </section>
             ) : null}
 
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-3">
+                        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                            <BadgeCheck className="h-5 w-5" />
+                        </span>
+
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-[0.08em] text-emerald-700">
+                                Versão do SafeScan
+                            </p>
+                            <p className="mt-0.5 text-sm text-slate-500">
+                                Acompanhe a versão atual e as melhorias disponíveis neste ambiente.
+                            </p>
+                        </div>
+                    </div>
+
+                    <span className="w-fit rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-200">
+                        Versão atual
+                    </span>
+                </div>
+
+                <div className="mt-3 grid items-start gap-2 lg:grid-cols-[max-content_minmax(0,1fr)]">
+                    <div className="flex w-max self-stretch justify-self-start flex-col justify-center rounded-xl border border-emerald-200 bg-emerald-50/60 px-3 py-3">
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-700">
+                            Versão disponível
+                        </p>
+
+                        <p className="mt-1 text-center text-2xl font-black tracking-tight text-slate-950">
+                            v{import.meta.env.VITE_APP_VERSION}
+                        </p>
+                    </div>
+
+                    <div className="flex min-w-0 items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3">
+                        <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                            <BadgeCheck className="h-4.5 w-4.5" />
+                        </span>
+
+                        <div className="min-w-0">
+                            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
+                                Novidades desta versão
+                            </p>
+
+                            <p className="mt-1 text-sm font-black text-slate-950">
+                                Aniversariantes
+                            </p>
+
+                            <p className="mt-0.5 text-sm leading-5 text-slate-600">
+                                Bloqueados, Inativos e Desmobilizados deixam de aparecer na lista, indicadores e relatório de aniversários.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
             <section className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
                 <div className="flex items-start gap-3">
                     <LockKeyhole className="mt-0.5 h-5 w-5 shrink-0 text-slate-600" />
