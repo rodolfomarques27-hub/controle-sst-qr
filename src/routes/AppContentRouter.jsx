@@ -515,11 +515,15 @@ function TrocaSenhaTemporariaObrigatoria({ usuario, permissao, onSenhaAtualizada
 
                             <div className="mt-7 space-y-4 rounded-3xl border border-slate-200 bg-slate-50/80 p-5 shadow-inner shadow-slate-100/60">
                                 <div>
-                                    <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                                    <label
+                                        htmlFor="primeiro-acesso-senha-atual"
+                                        className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500"
+                                    >
                                         Senha temporária atual
                                     </label>
 
                                     <PasswordInput
+                                        id="primeiro-acesso-senha-atual"
                                         value={senhaAtual}
                                         onChange={(event) =>
                                             setSenhaAtual(
@@ -534,11 +538,15 @@ function TrocaSenhaTemporariaObrigatoria({ usuario, permissao, onSenhaAtualizada
                                 </div>
 
                                 <div>
-                                    <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                                    <label
+                                        htmlFor="primeiro-acesso-nova-senha"
+                                        className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500"
+                                    >
                                         Nova senha
                                     </label>
 
                                     <PasswordInput
+                                        id="primeiro-acesso-nova-senha"
                                         value={novaSenha}
                                         onChange={(event) =>
                                             setNovaSenha(
@@ -553,11 +561,15 @@ function TrocaSenhaTemporariaObrigatoria({ usuario, permissao, onSenhaAtualizada
                                 </div>
 
                                 <div>
-                                    <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                                    <label
+                                        htmlFor="primeiro-acesso-confirmar-senha"
+                                        className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500"
+                                    >
                                         Confirmar nova senha
                                     </label>
 
                                     <PasswordInput
+                                        id="primeiro-acesso-confirmar-senha"
                                         value={confirmarSenha}
                                         onChange={(event) =>
                                             setConfirmarSenha(
@@ -569,7 +581,7 @@ function TrocaSenhaTemporariaObrigatoria({ usuario, permissao, onSenhaAtualizada
                                                 event.key ===
                                                 "Enter"
                                             ) {
-                                                handleSalvarSenhaTemporaria();
+                                                void handleSalvarSenhaTemporaria();
                                             }
                                         }}
                                         placeholder="Confirme a nova senha"
@@ -773,7 +785,7 @@ export function AppContentRouter({
             }
         }
 
-        carregarPermissaoTela();
+        void carregarPermissaoTela();
 
         return () => {
             componenteAtivo = false;

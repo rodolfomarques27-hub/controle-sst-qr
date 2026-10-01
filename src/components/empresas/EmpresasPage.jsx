@@ -769,7 +769,7 @@ export function Empresas({
             }
         }
 
-        carregarVerificacoesDocumentaisEmpresas();
+        void carregarVerificacoesDocumentaisEmpresas();
 
         return () => {
             cancelado = true;
@@ -1336,7 +1336,7 @@ export function Empresas({
             return;
         }
 
-        onExcluirDocumentoEmpresa(doc);
+        void onExcluirDocumentoEmpresa(doc);
     };
 
     const excluirEmpresaEdicao = async () => {
