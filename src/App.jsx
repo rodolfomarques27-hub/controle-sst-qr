@@ -8,6 +8,12 @@ import {
     montarUsuarioMembershipTenantRuntime,
     telaDisponivelTenantRuntime,
 } from "./services/tenantModulesRuntimeService.js";
+import {
+    listarRecursosOperacionaisTenant,
+    recursoOperacionalDisponivelTenantRuntime,
+    telaDisponivelRecursoOperacionalTenantRuntime,
+    telaTemMapeamentoRecursoOperacional,
+} from "./services/tenantOperationalResourcesService.js";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     supabase,
@@ -53,6 +59,7 @@ import {
     FileText,
     LayoutDashboard,
     Map,
+    MapPin,
     MapPinned,
     ClipboardList,
     Plus,
@@ -140,6 +147,9 @@ function obterPrimeiraTelaPermitidaApp(
     {
         modulosTenantRuntime = [],
         aplicarGateModulosTenant = false,
+        recursosOperacionaisTenantRuntime = [],
+        aplicarGateRecursosOperacionaisTenant = false,
+        recursosOperacionaisTenantRuntimeProntos = true,
     } = {}
 ) {
     return ORDEM_TELAS_INICIAIS_PERMITIDAS_APP.find(
@@ -151,6 +161,19 @@ function obterPrimeiraTelaPermitidaApp(
                     telaCandidata
                 )
             )
+            && (
+                !aplicarGateRecursosOperacionaisTenant
+                || !telaTemMapeamentoRecursoOperacional(
+                    telaCandidata
+                )
+                || (
+                    recursosOperacionaisTenantRuntimeProntos
+                    && telaDisponivelRecursoOperacionalTenantRuntime(
+                        recursosOperacionaisTenantRuntime,
+                        telaCandidata
+                    )
+                )
+            )
             && usuarioPodeAcessarTelaSistema(
                 permissao,
                 telaCandidata
@@ -160,11 +183,7 @@ function obterPrimeiraTelaPermitidaApp(
 
 function AppTransicaoInterna() {
     return (
-        <CarregandoTela
-            mensagem="Preparando sistema..."
-            subtitulo="Carregando sua área de trabalho com segurança."
-            telaCheia
-        />
+        <AppCarregandoSistema />
     );
 }
 
@@ -233,6 +252,9 @@ export default function App() {
     const [modulosTenantRuntime, setModulosTenantRuntime] = useState([]);
     const [carregandoModulosTenantRuntime, setCarregandoModulosTenantRuntime] = useState(false);
     const [erroModulosTenantRuntime, setErroModulosTenantRuntime] = useState("");
+    const [recursosOperacionaisTenantRuntime, setRecursosOperacionaisTenantRuntime] = useState([]);
+    const [carregandoRecursosOperacionaisTenantRuntime, setCarregandoRecursosOperacionaisTenantRuntime] = useState(false);
+    const [erroRecursosOperacionaisTenantRuntime, setErroRecursosOperacionaisTenantRuntime] = useState("");
 
     const ambienteTenantRuntime = Boolean(
         tenantResolvido
@@ -254,6 +276,29 @@ export default function App() {
         )
     );
 
+    const aplicarGateRecursosOperacionaisTenantRuntime =
+        aplicarGateModulosTenantRuntime;
+
+    const recursosOperacionaisTenantRuntimeProntos =
+        Boolean(
+            !ambienteTenantRuntime
+            || (
+                aplicarGateRecursosOperacionaisTenantRuntime
+                && recursosOperacionaisTenantRuntime.length > 0
+                && !carregandoRecursosOperacionaisTenantRuntime
+                && !erroRecursosOperacionaisTenantRuntime
+            )
+        );
+
+    const obrasRecursoOperacionalDisponivelRuntime =
+        !aplicarGateRecursosOperacionaisTenantRuntime
+        || (
+            recursosOperacionaisTenantRuntimeProntos
+            && recursoOperacionalDisponivelTenantRuntime(
+                recursosOperacionaisTenantRuntime,
+                "obras"
+            )
+        );
     const auditoriaCampoDisponivelRuntime =
         !ambienteTenantRuntime
         || (
@@ -264,29 +309,22 @@ export default function App() {
             )
         );
 
-    const mapaObraDisponivelRuntime =
-        !ambienteTenantRuntime
-        || (
-            aplicarGateModulosTenantRuntime
-            && moduloDisponivelTenantRuntime(
-                modulosTenantRuntime,
-                "mapa_obra"
-            )
-        );
-
-    const extintoresDisponivelRuntime =
-        !ambienteTenantRuntime
-        || (
-            aplicarGateModulosTenantRuntime
-            && moduloDisponivelTenantRuntime(
-                modulosTenantRuntime,
-                "extintores"
-            )
-        );
 
     const dadosObrasDisponiveisRuntime =
-        mapaObraDisponivelRuntime
-        || extintoresDisponivelRuntime;
+        (
+            !ambienteTenantRuntime
+            || (
+                aplicarGateModulosTenantRuntime
+                &&
+                modulosTenantRuntimeProntos
+                &&
+                moduloDisponivelTenantRuntime(
+                    modulosTenantRuntime,
+                    "nucleo_safescan"
+                )
+            )
+        )
+        && obrasRecursoOperacionalDisponivelRuntime;
 
     useEffect(() => {
         if (!SUPABASE_CONFIGURADO) return undefined;
@@ -1161,6 +1199,76 @@ export default function App() {
         tenantResolvido,
         tenant?.id,
     ]);
+    useEffect(() => {
+        if (
+            !SUPABASE_CONFIGURADO
+            || !tenantResolvido
+            || !tenant?.id
+            || acessoTenantRuntime.estado !== "autorizado"
+        ) {
+            setRecursosOperacionaisTenantRuntime([]);
+            setCarregandoRecursosOperacionaisTenantRuntime(false);
+            setErroRecursosOperacionaisTenantRuntime("");
+            return undefined;
+        }
+
+        let componenteAtivo = true;
+
+        setRecursosOperacionaisTenantRuntime([]);
+        setCarregandoRecursosOperacionaisTenantRuntime(true);
+        setErroRecursosOperacionaisTenantRuntime("");
+
+        async function carregarRecursosOperacionaisTenantRuntime() {
+            try {
+                const recursos =
+                    await listarRecursosOperacionaisTenant({
+                        tenantId:
+                            tenant.id,
+
+                        supabaseClient:
+                            supabase,
+                    });
+
+                if (!componenteAtivo) {
+                    return;
+                }
+
+                setRecursosOperacionaisTenantRuntime(
+                    recursos
+                );
+            } catch (error) {
+                if (!componenteAtivo) {
+                    return;
+                }
+
+                console.error(
+                    "Não foi possível carregar os recursos operacionais do tenant:",
+                    error
+                );
+
+                setRecursosOperacionaisTenantRuntime([]);
+
+                setErroRecursosOperacionaisTenantRuntime(
+                    error?.message
+                    || "Não foi possível validar os recursos operacionais deste ambiente."
+                );
+            } finally {
+                if (componenteAtivo) {
+                    setCarregandoRecursosOperacionaisTenantRuntime(false);
+                }
+            }
+        }
+
+        void carregarRecursosOperacionaisTenantRuntime();
+
+        return () => {
+            componenteAtivo = false;
+        };
+    }, [
+        acessoTenantRuntime.estado,
+        tenantResolvido,
+        tenant?.id,
+    ]);
 
     useEffect(() => {
         if (!SUPABASE_CONFIGURADO) return undefined;
@@ -1504,9 +1612,24 @@ export default function App() {
             )
         );
 
+    const carregandoRecursosOperacionaisTenantRuntimeEfetivo =
+        Boolean(
+            aplicarGateRecursosOperacionaisTenantRuntime
+            && (
+                carregandoRecursosOperacionaisTenantRuntime
+                || (
+                    recursosOperacionaisTenantRuntime.length === 0
+                    && !erroRecursosOperacionaisTenantRuntime
+                )
+            )
+        );
+
     const carregandoPermissaoRuntimeUsuario =
         aplicarGateModulosTenantRuntime
-            ? carregandoModulosTenantRuntimeEfetivo
+            ? (
+                carregandoModulosTenantRuntimeEfetivo
+                || carregandoRecursosOperacionaisTenantRuntimeEfetivo
+            )
             : carregandoPermissaoSistemaUsuario;
 
     const erroPermissaoRuntimeUsuario =
@@ -1543,6 +1666,7 @@ export default function App() {
         { id: "novaAuditoriaCampo", label: "Nova Auditoria", icon: Plus, grupo: "AUDITORIA" },
 
         { id: "empresas", label: "Empresas", icon: Building2, grupo: "CADASTROS" },
+        { id: "obras", label: "Obras", icon: MapPin, grupo: "CADASTROS" },
         { id: "colaboradores", label: "Colaboradores", icon: Users, grupo: "CADASTROS" },
         { id: "aniversariantes", label: "Aniversariantes", icon: CalendarClock, grupo: "CADASTROS" },
         { id: "treinamentos", label: "Treinamentos", icon: ClipboardCheck, grupo: "CADASTROS" },
@@ -1590,10 +1714,40 @@ export default function App() {
             }
 
             if (
+                item.id === "obras"
+            ) {
+                return Boolean(
+                    aplicarGateModulosTenantRuntime
+                    && tenantAdminPodeGerenciarAcessos
+                    && recursosOperacionaisTenantRuntimeProntos
+                    && telaDisponivelRecursoOperacionalTenantRuntime(
+                        recursosOperacionaisTenantRuntime,
+                        item.id
+                    )
+                );
+            }
+
+            if (
                 aplicarGateModulosTenantRuntime
                 && !telaDisponivelTenantRuntime(
                     modulosTenantRuntime,
                     item.id
+                )
+            ) {
+                return false;
+            }
+
+            if (
+                aplicarGateRecursosOperacionaisTenantRuntime
+                && telaTemMapeamentoRecursoOperacional(
+                    item.id
+                )
+                && (
+                    !recursosOperacionaisTenantRuntimeProntos
+                    || !telaDisponivelRecursoOperacionalTenantRuntime(
+                        recursosOperacionaisTenantRuntime,
+                        item.id
+                    )
                 )
             ) {
                 return false;
@@ -1613,12 +1767,15 @@ export default function App() {
         });
     }, [
         aplicarGateModulosTenantRuntime,
+        aplicarGateRecursosOperacionaisTenantRuntime,
         carregandoPermissaoRuntimeUsuario,
         erroPermissaoRuntimeUsuario,
         modulosTenantRuntime,
         navCompleta,
         permissaoSistemaRuntimeUsuario,
         podeAcessarAuditoria,
+        recursosOperacionaisTenantRuntime,
+        recursosOperacionaisTenantRuntimeProntos,
         tenantAdminPodeGerenciarAcessos,
         usuario?.email,
     ]);
@@ -1655,6 +1812,12 @@ export default function App() {
                         modulosTenantRuntime,
                         aplicarGateModulosTenant:
                             aplicarGateModulosTenantRuntime,
+
+                        recursosOperacionaisTenantRuntime,
+                        aplicarGateRecursosOperacionaisTenant:
+                            aplicarGateRecursosOperacionaisTenantRuntime,
+
+                        recursosOperacionaisTenantRuntimeProntos,
                     }
                 )
                 : "";
@@ -1669,10 +1832,13 @@ export default function App() {
         );
     }, [
         aplicarGateModulosTenantRuntime,
+        aplicarGateRecursosOperacionaisTenantRuntime,
         carregandoPermissaoRuntimeUsuario,
         erroPermissaoRuntimeUsuario,
         modulosTenantRuntime,
         permissaoSistemaRuntimeUsuario,
+        recursosOperacionaisTenantRuntime,
+        recursosOperacionaisTenantRuntimeProntos,
         tenantAdminPodeGerenciarAcessos,
         usuario?.email,
     ]);
@@ -1689,20 +1855,49 @@ export default function App() {
             tela
         );
 
+    const telaAtualDisponivelNoRecursoOperacional =
+        !aplicarGateRecursosOperacionaisTenantRuntime
+        || !telaTemMapeamentoRecursoOperacional(
+            tela
+        )
+        || (
+            recursosOperacionaisTenantRuntimeProntos
+            && telaDisponivelRecursoOperacionalTenantRuntime(
+                recursosOperacionaisTenantRuntime,
+                tela
+            )
+        );
+
+    const telaObrasTenantPermitida =
+        Boolean(
+            tela !== "obras"
+            || (
+                aplicarGateModulosTenantRuntime
+                && tenantAdminPodeGerenciarAcessos
+            )
+        );
+
     const telaAtualPermitidaApp =
         Boolean(
-            !usuario?.email
-            || !permissaoSistemaRuntimeUsuario
-            || (
-                telaAtualDisponivelNoContrato
-                && (
-                    (
-                        tenantAdminPodeGerenciarAcessos
-                        && tela === "acessosApp"
-                    )
-                    || usuarioPodeAcessarTelaSistema(
-                        permissaoSistemaRuntimeUsuario,
-                        tela
+            telaObrasTenantPermitida
+            && telaAtualDisponivelNoRecursoOperacional
+            && (
+                !usuario?.email
+                || !permissaoSistemaRuntimeUsuario
+                || (
+                    telaAtualDisponivelNoContrato
+                    && (
+                        (
+                            tenantAdminPodeGerenciarAcessos
+                            && (
+                                tela === "acessosApp"
+                                || tela === "obras"
+                            )
+                        )
+                        || usuarioPodeAcessarTelaSistema(
+                            permissaoSistemaRuntimeUsuario,
+                            tela
+                        )
                     )
                 )
             )
@@ -1803,6 +1998,10 @@ export default function App() {
                 "inativo"
             || acessoTenantRuntime.estado ===
                 "carregando";
+
+        if (validandoAcessoTenant) {
+            return <AppCarregandoSistema />;
+        }
 
         const tituloAcessoTenant =
             validandoAcessoTenant
@@ -2150,10 +2349,7 @@ export default function App() {
 
     if (
         usuario
-        && (
-            carregandoPermissaoSistemaUsuario
-            || carregandoModulosTenantRuntimeEfetivo
-        )
+        && carregandoPermissaoRuntimeUsuario
     ) {
         return <AppTransicaoInterna />;
     }
@@ -2264,6 +2460,10 @@ export default function App() {
                         carregandoModulosTenantRuntime={carregandoModulosTenantRuntimeEfetivo}
                         erroModulosTenantRuntime={erroModulosTenantRuntime}
                         aplicarGateModulosTenantRuntime={aplicarGateModulosTenantRuntime}
+                        recursosOperacionaisTenantRuntime={recursosOperacionaisTenantRuntime}
+                        carregandoRecursosOperacionaisTenantRuntime={carregandoRecursosOperacionaisTenantRuntimeEfetivo}
+                        erroRecursosOperacionaisTenantRuntime={erroRecursosOperacionaisTenantRuntime}
+                        aplicarGateRecursosOperacionaisTenantRuntime={aplicarGateRecursosOperacionaisTenantRuntime}
                         onPermissaoSistemaAtualizada={setPermissaoSistemaUsuario}
                         onRedirecionarTelaPermitida={setTela}
                     />

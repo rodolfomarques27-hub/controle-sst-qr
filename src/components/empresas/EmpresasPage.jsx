@@ -34,8 +34,8 @@ import {
 import { documentosEmpresaBase } from "../../constants/documentosEmpresaConstants";
 import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import {
-    baixarRelatorioDocumentosEmpresaPDF,
-    baixarRelatorioEmpresasDocumentosPDF,
+    baixarRelatorioDocumentosEmpresaPDF as baixarRelatorioDocumentosEmpresaPDFSemGate,
+    baixarRelatorioEmpresasDocumentosPDF as baixarRelatorioEmpresasDocumentosPDFSemGate,
     baixarRelatorioPendenciasDocumentaisPDF,
 } from "../../services/exportacaoService";
 import {
@@ -418,15 +418,121 @@ export function Empresas({
     carregandoBanco,
     erroBanco,
     permissaoSistemaUsuario = null,
+    gestaoDocumentalSstDisponivelRuntime = true,
     onAtualizarBanco,
     onAdicionarEmpresa,
     onAtualizarEmpresa,
     onExcluirEmpresa,
-    onAdicionarDocumentoEmpresa,
-    onAtualizarDocumentoEmpresa,
-    onExcluirDocumentoEmpresa,
-    onVisualizarDocumentoEmpresa,
+    onAdicionarDocumentoEmpresa: onAdicionarDocumentoEmpresaBase,
+    onAtualizarDocumentoEmpresa: onAtualizarDocumentoEmpresaBase,
+    onExcluirDocumentoEmpresa: onExcluirDocumentoEmpresaBase,
+    onVisualizarDocumentoEmpresa: onVisualizarDocumentoEmpresaBase,
 }) {
+    const gestaoDocumentalSstDisponivel =
+        gestaoDocumentalSstDisponivelRuntime === true;
+
+    const bloquearGestaoDocumentalSst = () => {
+        if (gestaoDocumentalSstDisponivel) {
+            return false;
+        }
+
+        if (typeof window !== "undefined") {
+            mostrarAlertaSafeScan(
+                "Gestão Documental SST está desativada para este ambiente."
+            );
+        }
+
+        return true;
+    };
+
+    const onAdicionarDocumentoEmpresa = async (...args) => {
+        if (bloquearGestaoDocumentalSst()) {
+            return false;
+        }
+
+        if (
+            typeof onAdicionarDocumentoEmpresaBase !==
+            "function"
+        ) {
+            return false;
+        }
+
+        return onAdicionarDocumentoEmpresaBase(
+            ...args
+        );
+    };
+
+    const onAtualizarDocumentoEmpresa = async (...args) => {
+        if (bloquearGestaoDocumentalSst()) {
+            return false;
+        }
+
+        if (
+            typeof onAtualizarDocumentoEmpresaBase !==
+            "function"
+        ) {
+            return false;
+        }
+
+        return onAtualizarDocumentoEmpresaBase(
+            ...args
+        );
+    };
+
+    const onExcluirDocumentoEmpresa = async (...args) => {
+        if (bloquearGestaoDocumentalSst()) {
+            return false;
+        }
+
+        if (
+            typeof onExcluirDocumentoEmpresaBase !==
+            "function"
+        ) {
+            return false;
+        }
+
+        return onExcluirDocumentoEmpresaBase(
+            ...args
+        );
+    };
+
+    const onVisualizarDocumentoEmpresa = async (...args) => {
+        if (bloquearGestaoDocumentalSst()) {
+            return false;
+        }
+
+        if (
+            typeof onVisualizarDocumentoEmpresaBase !==
+            "function"
+        ) {
+            return false;
+        }
+
+        return onVisualizarDocumentoEmpresaBase(
+            ...args
+        );
+    };
+
+    const baixarRelatorioDocumentosEmpresaPDF = (...args) => {
+        if (bloquearGestaoDocumentalSst()) {
+            return false;
+        }
+
+        return baixarRelatorioDocumentosEmpresaPDFSemGate(
+            ...args
+        );
+    };
+
+    const baixarRelatorioEmpresasDocumentosPDF = (...args) => {
+        if (bloquearGestaoDocumentalSst()) {
+            return false;
+        }
+
+        return baixarRelatorioEmpresasDocumentosPDFSemGate(
+            ...args
+        );
+    };
+
     const [novaEmpresa, setNovaEmpresa] = useState({
         nome: "",
         cnpj: "",
@@ -476,8 +582,13 @@ export function Empresas({
     const [versaoFiltroSalvoEmpresasDocumentos, setVersaoFiltroSalvoEmpresasDocumentos] = useState(0);
 
     const filtrosSalvosEmpresasDocumentosDisponiveis = useMemo(
-        () => Boolean(carregarFiltrosSalvosEmpresasDocumentos()),
-        [versaoFiltroSalvoEmpresasDocumentos]
+        () =>
+            gestaoDocumentalSstDisponivel
+            && Boolean(carregarFiltrosSalvosEmpresasDocumentos()),
+        [
+            gestaoDocumentalSstDisponivel,
+            versaoFiltroSalvoEmpresasDocumentos,
+        ]
     );
     const [uploadRevisao, setUploadRevisao] = useState({});
     const [salvandoUploadRevisao, setSalvandoUploadRevisao] = useState("");
@@ -1923,6 +2034,7 @@ export function Empresas({
                         className="empresa-premium-row__acoes"
                         data-empresa-acao
                     >
+                        {gestaoDocumentalSstDisponivel && (
                         <span
                             title={situacaoDocumental.detalhe}
                             className={classNames(
@@ -1932,6 +2044,7 @@ export function Empresas({
                         >
                             {situacaoDocumental.texto}
                         </span>
+                        )}
 
                         <button
                             type="button"
@@ -1973,6 +2086,8 @@ export function Empresas({
                             >
                                 <FileText className="h-4 w-4" />
                             </button>
+                            {gestaoDocumentalSstDisponivel && (
+                                <>
 
                             <button
                                 type="button"
@@ -2016,6 +2131,8 @@ export function Empresas({
                                     )}
                                 </button>
                             )}
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -2026,7 +2143,7 @@ export function Empresas({
                         className="empresa-premium-row__detalhes"
                     >
                         <div className="grid gap-3">
-                            {documentosEmpresaBase.map((tipoDoc) => {
+                            {gestaoDocumentalSstDisponivel && documentosEmpresaBase.map((tipoDoc) => {
                                 const doc = docs.find((item) => item.tipo_documento === tipoDoc.tipo);
                                 const st = statusEmpresaDocumento(doc?.data_vencimento);
                                 const verificacao = obterVerificacaoDocumentoEmpresa(doc);
@@ -2382,6 +2499,10 @@ export function Empresas({
     };
 
     const baixarRelatorioPendencias = async () => {
+        if (bloquearGestaoDocumentalSst()) {
+            return false;
+        }
+
         if (!podeExportarEmpresasSistema) {
             if (typeof window !== "undefined") mostrarAlertaSafeScan(mensagemBloqueioExportacaoEmpresas);
             return;
@@ -2505,10 +2626,12 @@ export function Empresas({
                             <Building2 className="h-4 w-4 text-emerald-300" />
                             <span>{empresasBanco.length} empresas ativas</span>
                         </div>
+                        {gestaoDocumentalSstDisponivel && (
                         <div className="empresas-hero-banner__stat">
                             <FileText className="h-4 w-4 text-emerald-300" />
                             <span>{documentosEmpresas.length} documentos SST</span>
                         </div>
+                        )}
                     </div>
                 </div>
             </section>
@@ -2570,8 +2693,16 @@ export function Empresas({
                                     </div>
 
                                     <div className="min-w-0">
-                                        <h2>Cadastro e documentos</h2>
-                                        <p>Cadastre empresas e gerencie documentos obrigatórios.</p>
+                                        <h2>
+                                            {gestaoDocumentalSstDisponivel
+                                                ? "Cadastro e documentos"
+                                                : "Cadastro de empresas"}
+                                        </h2>
+                                        <p>
+                                            {gestaoDocumentalSstDisponivel
+                                                ? "Cadastre empresas e gerencie documentos obrigatórios."
+                                                : "Cadastre e gerencie os dados das empresas."}
+                                        </p>
                                     </div>
                                 </div>
 
@@ -2600,7 +2731,12 @@ export function Empresas({
                                     id="empresas-cadastro-conteudo"
                                     className="empresas-cadastro-aprovado__grid"
                                 >
-                                    <Card className="empresas-cadastro-aprovado__painel">
+                                    <Card
+                                        className={classNames(
+                                            "empresas-cadastro-aprovado__painel",
+                                            !gestaoDocumentalSstDisponivel && "col-span-full"
+                                        )}
+                                    >
                                         <div className="empresas-cadastro-aprovado__painel-cabecalho">
                                             <div className="empresas-cadastro-aprovado__painel-icone empresas-cadastro-aprovado__painel-icone--empresa">
                                                 <Building2 className="h-5 w-5" />
@@ -2994,7 +3130,8 @@ export function Empresas({
                                         </div>
                                     </Card>
 
-                                    <Card className="empresas-cadastro-aprovado__painel">
+                                    {gestaoDocumentalSstDisponivel && (
+                                        <Card className="empresas-cadastro-aprovado__painel">
                                         <div className="empresas-cadastro-aprovado__painel-cabecalho">
                                             <div className="empresas-cadastro-aprovado__painel-icone empresas-cadastro-aprovado__painel-icone--documento">
                                                 <FileText className="h-5 w-5" />
@@ -3067,7 +3204,7 @@ export function Empresas({
                                             </div>
 
                                             <div className="empresas-cadastro-aprovado__documentos">
-                                                {documentosEmpresaBase.map((doc) => (
+                                                {gestaoDocumentalSstDisponivel && documentosEmpresaBase.map((doc) => (
                                                     <button
                                                         key={doc.tipo}
                                                         type="button"
@@ -3179,6 +3316,7 @@ export function Empresas({
                                             </button>
                                         </div>
                                     </Card>
+                                    )}
                                 </div>
                             )}
                         </Card>
@@ -3242,6 +3380,7 @@ export function Empresas({
                             id="empresas-informacoes-conteudo"
                             className="contents"
                         >
+                    {gestaoDocumentalSstDisponivel && (
                     <div className="empresas-filtros-salvos-card mb-4 rounded-2xl border border-slate-200 bg-white p-3">
                         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                             <div>
@@ -3286,6 +3425,7 @@ export function Empresas({
                         </div>
                     </div>
 
+                    )}
                     <div className="empresas-filtros-grid empresas-filtros-grid--premium mb-5 grid gap-3 lg:grid-cols-[1fr_220px_220px]">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -3353,7 +3493,7 @@ export function Empresas({
                         </div>
                     )}
 
-                    {empresasBanco.length > 0 && (
+                    {gestaoDocumentalSstDisponivel && empresasBanco.length > 0 && (
                         <div className="empresas-relatorios-pdf-card mt-8 border-t border-slate-200 pt-5">
                             <p className="mb-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-400">
                                 Relatórios gerais em PDF
@@ -3886,7 +4026,7 @@ export function Empresas({
                 </div>
             )}
 
-            {empresaRevisao && (
+            {gestaoDocumentalSstDisponivel && empresaRevisao && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-slate-950/70 p-4">
                     <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
                         <div className="shrink-0 border-b border-slate-200 bg-white p-6 pb-4">
@@ -3913,7 +4053,7 @@ export function Empresas({
 
                         <div className="scrollbar-discreta flex-1 overflow-y-auto px-6 py-5">
                             <div className="grid gap-4">
-                                {documentosEmpresaBase.map((tipoDoc) => {
+                                {gestaoDocumentalSstDisponivel && documentosEmpresaBase.map((tipoDoc) => {
                                     const docsAtualizadosRevisao = documentosPorEmpresa[empresaRevisao.empresa.id] || [];
                                     const doc = docsAtualizadosRevisao.find((item) => item.tipo_documento === tipoDoc.tipo);
                                     const st = statusEmpresaDocumento(doc?.data_vencimento);

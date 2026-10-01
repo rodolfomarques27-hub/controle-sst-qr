@@ -13,6 +13,11 @@ import {
     telaTemMapeamentoModuloTenantRuntime,
 } from "../services/tenantModulesRuntimeService.js";
 import {
+    recursoOperacionalDisponivelTenantRuntime,
+    telaDisponivelRecursoOperacionalTenantRuntime,
+    telaTemMapeamentoRecursoOperacional,
+} from "../services/tenantOperationalResourcesService.js";
+import {
     carregarPermissaoSistemaAtualService,
     normalizarPermissaoSistema,
     registrarSolicitacaoAcessoSistemaService,
@@ -31,6 +36,7 @@ const VistoriaExtintores = React.lazy(() => import("../components/extintores/Vis
 const MapaObra = React.lazy(() => import("../components/mapa/MapaObraPage").then((modulo) => ({ default: modulo.MapaObraPage })));
 const MapaObraVisualizacao = React.lazy(() => import("../components/mapa/MapaObraVisualizacaoPage").then((modulo) => ({ default: modulo.MapaObraVisualizacaoPage })));
 const Empresas = React.lazy(() => import("../components/empresas/EmpresasPage").then((modulo) => ({ default: modulo.Empresas })));
+const ObrasPage = React.lazy(() => import("../components/obras/ObrasPage").then((modulo) => ({ default: modulo.ObrasPage })));
 const Colaboradores = React.lazy(() => import("../components/colaboradores/ColaboradoresPage").then((modulo) => ({ default: modulo.Colaboradores })));
 const Treinamentos = React.lazy(() => import("../components/treinamentos/TreinamentosPage").then((modulo) => ({ default: modulo.Treinamentos })));
 const ConsolidacaoColaboradorPage = React.lazy(() => import("../features/consolidacao-colaborador/pages/ConsolidacaoColaboradorPage").then((modulo) => ({ default: modulo.ConsolidacaoColaboradorPage })));
@@ -51,6 +57,9 @@ function obterPrimeiraTelaPermitidaParaUsuario(
     {
         modulosTenantRuntime = [],
         aplicarGateModulosTenantRuntime = false,
+        recursosOperacionaisTenantRuntime = [],
+        aplicarGateRecursosOperacionaisTenantRuntime = false,
+        recursosOperacionaisTenantRuntimeProntos = true,
     } = {}
 ) {
     return ORDEM_REDIRECIONAMENTO_TELAS_PERMITIDAS.find(
@@ -60,6 +69,19 @@ function obterPrimeiraTelaPermitidaParaUsuario(
                 || telaDisponivelTenantRuntime(
                     modulosTenantRuntime,
                     telaCandidata
+                )
+            )
+            && (
+                !aplicarGateRecursosOperacionaisTenantRuntime
+                || !telaTemMapeamentoRecursoOperacional(
+                    telaCandidata
+                )
+                || (
+                    recursosOperacionaisTenantRuntimeProntos
+                    && telaDisponivelRecursoOperacionalTenantRuntime(
+                        recursosOperacionaisTenantRuntime,
+                        telaCandidata
+                    )
                 )
             )
             && usuarioPodeAcessarTelaSistema(
@@ -236,7 +258,100 @@ function AcessoModuloSistemaBloqueado({ tela, bloqueio, permissao, erro, usuario
 }
 
 
+function validarNovaSenhaTemporariaObrigatoria(senha = "") {
+    const valor = String(senha || "");
+
+    if (valor.length < 12) {
+        return "A nova senha deve possuir pelo menos 12 caracteres.";
+    }
+
+    if (!/[a-z]/.test(valor)) {
+        return "Inclua pelo menos uma letra minúscula.";
+    }
+
+    if (!/[A-Z]/.test(valor)) {
+        return "Inclua pelo menos uma letra maiúscula.";
+    }
+
+    if (!/[0-9]/.test(valor)) {
+        return "Inclua pelo menos um número.";
+    }
+
+    if (!/[^A-Za-z0-9]/.test(valor)) {
+        return "Inclua pelo menos um caractere especial.";
+    }
+
+    return "";
+}
+
+function mensagemErroTrocaSenhaTemporaria(erro = null) {
+    const codigo =
+        String(
+            erro?.code ||
+            ""
+        )
+            .trim()
+            .toLowerCase();
+
+    const mensagem =
+        String(
+            erro?.message ||
+            ""
+        )
+            .trim()
+            .toLowerCase();
+
+    if (
+        codigo === "current_password_required" ||
+        mensagem.includes(
+            "current password required"
+        )
+    ) {
+        return "Informe sua senha temporária atual para definir uma nova senha.";
+    }
+
+    if (
+        codigo === "current_password_incorrect" ||
+        mensagem.includes(
+            "current password is incorrect"
+        ) ||
+        mensagem.includes(
+            "current password incorrect"
+        )
+    ) {
+        return "A senha temporária atual está incorreta.";
+    }
+
+    if (
+        codigo === "weak_password" ||
+        mensagem.includes(
+            "password should be at least"
+        ) ||
+        mensagem.includes(
+            "weak password"
+        )
+    ) {
+        return "A nova senha não atende aos requisitos de segurança.";
+    }
+
+    if (
+        codigo === "same_password" ||
+        codigo === "password_same_as_old" ||
+        mensagem.includes(
+            "new password should be different"
+        ) ||
+        mensagem.includes(
+            "same password"
+        )
+    ) {
+        return "A nova senha deve ser diferente da senha temporária atual.";
+    }
+
+    return "Não foi possível atualizar a senha. Verifique os dados informados e tente novamente.";
+}
+
 function TrocaSenhaTemporariaObrigatoria({ usuario, permissao, onSenhaAtualizada }) {
+    const [senhaAtual, setSenhaAtual] = useState("");
     const [novaSenha, setNovaSenha] = useState("");
     const [confirmarSenha, setConfirmarSenha] = useState("");
     const [salvando, setSalvando] = useState(false);
@@ -247,45 +362,108 @@ function TrocaSenhaTemporariaObrigatoria({ usuario, permissao, onSenhaAtualizada
         setErro("");
         setMensagem("");
 
-        if (!novaSenha || !confirmarSenha) {
-            setErro("Informe e confirme a nova senha.");
+        if (!senhaAtual) {
+            setErro(
+                "Informe sua senha temporária atual."
+            );
             return;
         }
 
-        if (novaSenha.length < 6) {
-            setErro("A nova senha deve ter pelo menos 6 caracteres.");
+        if (!novaSenha || !confirmarSenha) {
+            setErro(
+                "Informe e confirme a nova senha."
+            );
+            return;
+        }
+
+        const erroNovaSenha =
+            validarNovaSenhaTemporariaObrigatoria(
+                novaSenha
+            );
+
+        if (erroNovaSenha) {
+            setErro(
+                erroNovaSenha
+            );
             return;
         }
 
         if (novaSenha !== confirmarSenha) {
-            setErro("A confirmação da senha não confere.");
+            setErro(
+                "A confirmação da senha não confere."
+            );
             return;
         }
 
         try {
             setSalvando(true);
 
-            const { error: senhaError } = await supabase.auth.updateUser({
-                password: novaSenha,
-            });
+            const {
+                error:
+                    senhaError,
+            } =
+                await supabase.auth.updateUser({
+                    current_password:
+                        senhaAtual,
+
+                    password:
+                        novaSenha,
+                });
 
             if (senhaError) {
-                throw new Error(senhaError.message || "Não foi possível atualizar a senha no Supabase Auth.");
+                throw new Error(
+                    mensagemErroTrocaSenhaTemporaria(
+                        senhaError
+                    )
+                );
             }
 
-            const { data, error: rpcError } = await supabase.rpc("finalizar_troca_senha_temporaria_sistema");
+            /*
+             * A pendência interna só pode ser finalizada
+             * depois de o Supabase Auth confirmar a troca.
+             */
+            const {
+                data,
+                error:
+                    rpcError,
+            } =
+                await supabase.rpc(
+                    "finalizar_troca_senha_temporaria_sistema"
+                );
 
             if (rpcError) {
-                throw new Error(rpcError.message || "Senha alterada, mas não foi possível finalizar a pendência no sistema.");
+                throw new Error(
+                    rpcError.message ||
+                    "Senha alterada, mas não foi possível finalizar a pendência no sistema."
+                );
             }
 
-            const permissaoAtualizada = Array.isArray(data) ? data[0] : data;
-            setMensagem("Senha atualizada com sucesso. Seu acesso foi liberado.");
+            const permissaoAtualizada =
+                Array.isArray(data)
+                    ? data[0]
+                    : data;
+
+            setMensagem(
+                "Senha atualizada com sucesso. Seu acesso foi liberado."
+            );
+
+            setSenhaAtual("");
             setNovaSenha("");
             setConfirmarSenha("");
-            onSenhaAtualizada?.(permissaoAtualizada || { ...permissao, precisa_trocar_senha: false });
+
+            onSenhaAtualizada?.(
+                permissaoAtualizada ||
+                {
+                    ...permissao,
+                    precisa_trocar_senha:
+                        false,
+                }
+            );
         } catch (error) {
-            setErro(error?.message || "Não foi possível alterar a senha temporária.");
+            setErro(
+                error?.message ||
+                "Não foi possível alterar a senha temporária."
+            );
         } finally {
             setSalvando(false);
         }
@@ -303,11 +481,20 @@ function TrocaSenhaTemporariaObrigatoria({ usuario, permissao, onSenhaAtualizada
                             </div>
                         </div>
 
-                        <p className="text-xs font-black uppercase tracking-[0.28em] text-orange-700">Primeiro acesso</p>
-                        <h2 className="mt-4 text-3xl font-black tracking-tight text-slate-950">Troque sua senha</h2>
+                        <p className="text-xs font-black uppercase tracking-[0.28em] text-orange-700">
+                            Primeiro acesso
+                        </p>
+
+                        <h2 className="mt-4 text-3xl font-black tracking-tight text-slate-950">
+                            Troque sua senha
+                        </h2>
+
                         <div className="mt-4 h-1 w-14 rounded-full bg-orange-600" />
+
                         <p className="mt-6 max-w-[260px] text-sm font-semibold leading-7 text-slate-500">
-                            Seu login foi criado com senha temporária. Altere a senha para continuar usando o sistema.
+                            Seu login foi criado com senha temporária.
+                            Informe essa senha e crie uma nova senha
+                            para continuar usando o sistema.
                         </p>
                     </aside>
 
@@ -316,41 +503,94 @@ function TrocaSenhaTemporariaObrigatoria({ usuario, permissao, onSenhaAtualizada
                             <h3 className="text-2xl font-black leading-tight tracking-tight text-slate-950 sm:text-3xl">
                                 Atualização obrigatória de senha
                             </h3>
+
                             <p className="mt-4 text-sm font-semibold leading-7 text-slate-500">
-                                Usuário: <span className="text-slate-800">{permissao?.email || usuario?.email || "não informado"}</span>. A nova senha ficará salva somente no Supabase Auth.
+                                Usuário:{" "}
+                                <span className="text-slate-800">
+                                    {permissao?.email || usuario?.email || "não informado"}
+                                </span>
+                                . A senha temporária é utilizada somente para
+                                confirmar esta alteração e não é armazenada pelo SafeScan.
                             </p>
 
                             <div className="mt-7 space-y-4 rounded-3xl border border-slate-200 bg-slate-50/80 p-5 shadow-inner shadow-slate-100/60">
                                 <div>
-                                    <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">Nova senha</label>
+                                    <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                                        Senha temporária atual
+                                    </label>
+
                                     <PasswordInput
-                                        value={novaSenha}
-                                        onChange={(event) => setNovaSenha(event.target.value)}
-                                        placeholder="Digite a nova senha"
-                                        autoComplete="new-password"
+                                        value={senhaAtual}
+                                        onChange={(event) =>
+                                            setSenhaAtual(
+                                                event.target.value
+                                            )
+                                        }
+                                        placeholder="Digite sua senha temporária atual"
+                                        autoComplete="current-password"
+                                        disabled={salvando}
                                         inputClassName="focus:ring-2 focus:ring-orange-200"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">Confirmar nova senha</label>
+                                    <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                                        Nova senha
+                                    </label>
+
                                     <PasswordInput
-                                        value={confirmarSenha}
-                                        onChange={(event) => setConfirmarSenha(event.target.value)}
-                                        onKeyDown={(event) => {
-                                            if (event.key === "Enter") handleSalvarSenhaTemporaria();
-                                        }}
-                                        placeholder="Confirme a nova senha"
+                                        value={novaSenha}
+                                        onChange={(event) =>
+                                            setNovaSenha(
+                                                event.target.value
+                                            )
+                                        }
+                                        placeholder="Digite a nova senha"
                                         autoComplete="new-password"
+                                        disabled={salvando}
                                         inputClassName="focus:ring-2 focus:ring-orange-200"
                                     />
                                 </div>
+
+                                <div>
+                                    <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                                        Confirmar nova senha
+                                    </label>
+
+                                    <PasswordInput
+                                        value={confirmarSenha}
+                                        onChange={(event) =>
+                                            setConfirmarSenha(
+                                                event.target.value
+                                            )
+                                        }
+                                        onKeyDown={(event) => {
+                                            if (
+                                                event.key ===
+                                                "Enter"
+                                            ) {
+                                                handleSalvarSenhaTemporaria();
+                                            }
+                                        }}
+                                        placeholder="Confirme a nova senha"
+                                        autoComplete="new-password"
+                                        disabled={salvando}
+                                        inputClassName="focus:ring-2 focus:ring-orange-200"
+                                    />
+                                </div>
+
+                                <p className="text-xs font-semibold leading-5 text-slate-500">
+                                    A nova senha deve possuir pelo menos
+                                    12 caracteres, incluindo letra maiúscula,
+                                    letra minúscula, número e caractere especial.
+                                </p>
 
                                 {erro ? (
                                     <div className="rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700 ring-1 ring-red-200">
                                         {erro}
                                     </div>
                                 ) : null}
+
                                 {mensagem ? (
                                     <div className="rounded-2xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700 ring-1 ring-emerald-200">
                                         {mensagem}
@@ -365,7 +605,10 @@ function TrocaSenhaTemporariaObrigatoria({ usuario, permissao, onSenhaAtualizada
                                 className="mt-6 inline-flex w-full items-center justify-center gap-3 rounded-2xl bg-slate-950 px-8 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 <KeyRound className="h-4 w-4" />
-                                {salvando ? "Salvando nova senha..." : "Salvar nova senha"}
+
+                                {salvando
+                                    ? "Salvando nova senha..."
+                                    : "Salvar nova senha"}
                             </button>
                         </div>
                     </section>
@@ -445,6 +688,10 @@ export function AppContentRouter({
     carregandoModulosTenantRuntime = false,
     erroModulosTenantRuntime = "",
     aplicarGateModulosTenantRuntime = false,
+    recursosOperacionaisTenantRuntime = [],
+    carregandoRecursosOperacionaisTenantRuntime = false,
+    erroRecursosOperacionaisTenantRuntime = "",
+    aplicarGateRecursosOperacionaisTenantRuntime = false,
     onPermissaoSistemaAtualizada,
     onRedirecionarTelaPermitida,
 }) {
@@ -556,6 +803,18 @@ export function AppContentRouter({
             && tela === "acessosApp"
         );
 
+    const telaControladaAdministracaoTenant =
+        tela === "obras";
+
+    const telaBloqueadaPorAdministracaoTenant =
+        Boolean(
+            telaControladaAdministracaoTenant
+            && (
+                !aplicarGateModulosTenantRuntime
+                || !tenantAdminPodeGerenciarAcessos
+            )
+        );
+
     const telaControladaPorPermissao =
         Boolean(
             obterModuloPermissaoSistemaPorTela(
@@ -593,6 +852,50 @@ export function AppContentRouter({
             )
         );
 
+    const recursosOperacionaisTenantRuntimeProntos =
+        Boolean(
+            !aplicarGateRecursosOperacionaisTenantRuntime
+            || (
+                !carregandoRecursosOperacionaisTenantRuntime
+                && !erroRecursosOperacionaisTenantRuntime
+            )
+        );
+
+    const gestaoDocumentalSstDisponivelRuntime =
+        Boolean(
+            !aplicarGateRecursosOperacionaisTenantRuntime
+            || (
+                recursosOperacionaisTenantRuntimeProntos
+                && recursoOperacionalDisponivelTenantRuntime(
+                    recursosOperacionaisTenantRuntime,
+                    "gestao_documental_sst"
+                )
+            )
+        );
+
+    const telaControladaPorRecursoOperacional =
+        Boolean(
+            aplicarGateRecursosOperacionaisTenantRuntime
+            && telaTemMapeamentoRecursoOperacional(
+                tela
+            )
+        );
+
+    const telaBloqueadaPorRecursoOperacional =
+        Boolean(
+            telaControladaPorRecursoOperacional
+            && !carregandoRecursosOperacionaisTenantRuntime
+            && (
+                Boolean(
+                    erroRecursosOperacionaisTenantRuntime
+                )
+                || !telaDisponivelRecursoOperacionalTenantRuntime(
+                    recursosOperacionaisTenantRuntime,
+                    tela
+                )
+            )
+        );
+
     const trocaSenhaTemporariaObrigatoria =
         permissaoProntaParaDecisao
         && permissaoSistemaTela?.precisa_trocar_senha === true;
@@ -610,7 +913,9 @@ export function AppContentRouter({
 
     const telaBloqueadaRuntime =
         telaBloqueadaPorPermissao
-        || telaBloqueadaPorContrato;
+        || telaBloqueadaPorContrato
+        || telaBloqueadaPorRecursoOperacional
+        || telaBloqueadaPorAdministracaoTenant;
 
     const primeiraTelaPermitidaSistema = useMemo(() => {
         if (
@@ -626,6 +931,9 @@ export function AppContentRouter({
                     {
                         modulosTenantRuntime,
                         aplicarGateModulosTenantRuntime,
+                        recursosOperacionaisTenantRuntime,
+                        aplicarGateRecursosOperacionaisTenantRuntime,
+                        recursosOperacionaisTenantRuntimeProntos,
                     }
                 )
                 : "";
@@ -640,9 +948,12 @@ export function AppContentRouter({
         );
     }, [
         aplicarGateModulosTenantRuntime,
+        aplicarGateRecursosOperacionaisTenantRuntime,
         modulosTenantRuntime,
         permissaoProntaParaDecisao,
         permissaoSistemaTela,
+        recursosOperacionaisTenantRuntime,
+        recursosOperacionaisTenantRuntimeProntos,
         tenantAdminPodeGerenciarAcessos,
         trocaSenhaTemporariaObrigatoria,
     ]);
@@ -652,6 +963,8 @@ export function AppContentRouter({
         && (
             telaControladaPorPermissao
             || telaControladaPorContrato
+            || telaControladaPorRecursoOperacional
+            || telaControladaAdministracaoTenant
         )
         && telaBloqueadaRuntime
         && primeiraTelaPermitidaSistema
@@ -673,8 +986,14 @@ export function AppContentRouter({
         }
 
         if (
-            aplicarGateModulosTenantRuntime
-            && carregandoModulosTenantRuntime
+            (
+                aplicarGateModulosTenantRuntime
+                && carregandoModulosTenantRuntime
+            )
+            || (
+                telaControladaPorRecursoOperacional
+                && carregandoRecursosOperacionaisTenantRuntime
+            )
         ) {
             setPreparandoTelaPermitida(true);
             return undefined;
@@ -683,6 +1002,10 @@ export function AppContentRouter({
         if (
             erroPermissaoSistemaTela
             || erroModulosTenantRuntime
+            || (
+                telaControladaPorRecursoOperacional
+                && erroRecursosOperacionaisTenantRuntime
+            )
         ) {
             setPreparandoTelaPermitida(false);
             setTelaComModuloPronto(tela);
@@ -750,15 +1073,19 @@ export function AppContentRouter({
         };
     }, [
         aplicarGateModulosTenantRuntime,
+        aplicarGateRecursosOperacionaisTenantRuntime,
         carregandoModulosTenantRuntime,
+        carregandoRecursosOperacionaisTenantRuntime,
         deveRedirecionarParaTelaPermitida,
         onRedirecionarTelaPermitida,
         erroModulosTenantRuntime,
         erroPermissaoSistemaTela,
+        erroRecursosOperacionaisTenantRuntime,
         permissaoProntaParaDecisao,
         primeiraTelaPermitidaSistema,
         tela,
         telaComModuloPronto,
+        telaControladaPorRecursoOperacional,
         trocaSenhaTemporariaObrigatoria,
         usuario?.email,
     ]);
@@ -767,13 +1094,21 @@ export function AppContentRouter({
         !trocaSenhaTemporariaObrigatoria
         && (
             (
-                aplicarGateModulosTenantRuntime
-                && carregandoModulosTenantRuntime
+                (
+                    aplicarGateModulosTenantRuntime
+                    && carregandoModulosTenantRuntime
+                )
+                || (
+                    telaControladaPorRecursoOperacional
+                    && carregandoRecursosOperacionaisTenantRuntime
+                )
             )
             || (
                 (
                     telaControladaPorPermissao
                     || telaControladaPorContrato
+                    || telaControladaPorRecursoOperacional
+                    || telaControladaAdministracaoTenant
                 )
                 && (
                     carregandoPermissaoSistemaTela
@@ -810,8 +1145,23 @@ export function AppContentRouter({
             erroModulosTenantRuntime
             || erroPermissaoSistemaTela
             || (
+                telaBloqueadaPorAdministracaoTenant
+                    ? "Cadastro de Obras disponível somente para o administrador do tenant."
+                    : ""
+            )
+            || (
                 telaBloqueadaPorContrato
                     ? "Módulo não contratado ou indisponível para este ambiente."
+                    : ""
+            )
+            || (
+                telaControladaPorRecursoOperacional
+                    ? erroRecursosOperacionaisTenantRuntime
+                    : ""
+            )
+            || (
+                telaBloqueadaPorRecursoOperacional
+                    ? "Recurso operacional desativado para este ambiente."
                     : ""
             );
 
@@ -838,6 +1188,10 @@ export function AppContentRouter({
                     auditoriasCampo={auditoriasCampo}
                     modulosTenantRuntime={modulosTenantRuntime}
                     aplicarGateModulosTenantRuntime={aplicarGateModulosTenantRuntime}
+                    recursosOperacionaisTenantRuntime={recursosOperacionaisTenantRuntime}
+                    carregandoRecursosOperacionaisTenantRuntime={carregandoRecursosOperacionaisTenantRuntime}
+                    erroRecursosOperacionaisTenantRuntime={erroRecursosOperacionaisTenantRuntime}
+                    aplicarGateRecursosOperacionaisTenantRuntime={aplicarGateRecursosOperacionaisTenantRuntime}
                     onSelectColab={onSelectColab}
                     onVisualizarDocumentoEmpresa={onVisualizarDocumentoEmpresa}
                     onVisualizarCertificado={onVisualizarCertificado}
@@ -882,6 +1236,7 @@ export function AppContentRouter({
                     carregandoBanco={carregandoBanco}
                     erroBanco={erroBanco}
                     permissaoSistemaUsuario={permissaoSistemaTela}
+                    gestaoDocumentalSstDisponivelRuntime={gestaoDocumentalSstDisponivelRuntime}
                     onAtualizarBanco={onAtualizarBanco}
                     onAdicionarEmpresa={onAdicionarEmpresa}
                     onAtualizarEmpresa={onAtualizarEmpresa}
@@ -890,6 +1245,16 @@ export function AppContentRouter({
                     onAtualizarDocumentoEmpresa={onAtualizarDocumentoEmpresa}
                     onExcluirDocumentoEmpresa={onExcluirDocumentoEmpresa}
                     onVisualizarDocumentoEmpresa={onVisualizarDocumentoEmpresa}
+                />
+            )}
+
+            {tela === "obras" && (
+                <ObrasPage
+                    empresasBanco={empresasBanco}
+                    tenantAdminAutorizado={
+                        aplicarGateModulosTenantRuntime
+                        && tenantAdminPodeGerenciarAcessos
+                    }
                 />
             )}
 
