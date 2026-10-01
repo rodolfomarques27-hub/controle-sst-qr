@@ -1,3 +1,6 @@
+import {
+    moduloPlanoBaseSafeScan,
+} from "../../../constants/tenantModulesCommercialMatrix.js";
 export async function verificarIdentidadeContaMestreService({
     supabase,
 } = {}) {
@@ -300,9 +303,41 @@ export async function listarModulosTenantAdminService({
         );
     }
 
-    return Array.isArray(data)
-        ? data
-        : [];
+    const lista =
+        Array.isArray(data)
+            ? data
+            : [];
+
+    return lista.map(
+        (modulo) => {
+            const planoBase =
+                moduloPlanoBaseSafeScan(
+                    modulo?.modulo_chave
+                );
+
+            if (!planoBase) {
+                return {
+                    ...modulo,
+                    plano_base:
+                        false,
+                };
+            }
+
+            return {
+                ...modulo,
+                plano_base:
+                    true,
+                contratavel:
+                    false,
+                contratado:
+                    true,
+                entitlement_status:
+                    "ativo",
+                disponivel:
+                    true,
+            };
+        }
+    );
 }
 
 export async function salvarModuloTenantAdminService({
@@ -342,6 +377,16 @@ export async function salvarModuloTenantAdminService({
         )
             .trim()
             .toLowerCase();
+
+    if (
+        moduloPlanoBaseSafeScan(
+            moduloNormalizado
+        )
+    ) {
+        throw new Error(
+            "Este módulo integra o Plano Base SafeScan e é gerenciado pelo sistema."
+        );
+    }
 
     if (
         ![

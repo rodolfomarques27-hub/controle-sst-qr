@@ -21,6 +21,10 @@ import {
 } from "../../../lib/supabaseClient.js";
 
 import {
+    APRESENTACAO_PLANO_BASE_SAFESCAN,
+} from "../../../constants/tenantModulesCommercialMatrix.js";
+
+import {
     listarModulosTenantAdminService,
     salvarModuloTenantAdminService,
 } from "../services/tenantAdminService.js";
@@ -40,6 +44,13 @@ function textoSeguro(
 function statusAtualModulo(
     modulo
 ) {
+    if (
+        modulo?.plano_base ===
+        true
+    ) {
+        return "base";
+    }
+
     if (
         modulo?.obrigatorio
     ) {
@@ -74,6 +85,12 @@ function rotuloStatusContrato(
     status
 ) {
     if (
+        status === "base"
+    ) {
+        return "Plano base";
+    }
+
+    if (
         status === "ativo"
     ) {
         return "Ativo";
@@ -101,6 +118,17 @@ function configuracaoVisualModulo(
         statusAtualModulo(
             modulo
         );
+
+    if (
+        status === "base"
+    ) {
+        return {
+            texto:
+                "Plano base",
+            classe:
+                "border-emerald-200 bg-emerald-50 text-emerald-700",
+        };
+    }
 
     if (
         status === "core"
@@ -174,6 +202,159 @@ function CardMetrica({
     );
 }
 
+function PlanoBaseSafeScanCard({
+    modulosBase = [],
+}) {
+    const modulosEsperados =
+        APRESENTACAO_PLANO_BASE_SAFESCAN
+            .modulosTecnicos;
+
+    const disponivel =
+        modulosBase.length ===
+            modulosEsperados.length
+        &&
+        modulosEsperados.every(
+            (chave) =>
+                modulosBase.some(
+                    (modulo) =>
+                        modulo?.modulo_chave ===
+                            chave
+                        &&
+                        modulo?.disponivel ===
+                            true
+                )
+        );
+
+    return (
+        <article className="overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm">
+            <div className="border-b border-emerald-100 bg-gradient-to-r from-emerald-50 via-white to-white p-5">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.1em] text-emerald-700">
+                                Plano base
+                            </span>
+
+                            <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-600">
+                                Sempre incluído
+                            </span>
+                        </div>
+
+                        <h3 className="mt-3 text-xl font-black tracking-tight text-slate-950">
+                            {
+                                APRESENTACAO_PLANO_BASE_SAFESCAN
+                                    .nome
+                            }
+                        </h3>
+
+                        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+                            {
+                                APRESENTACAO_PLANO_BASE_SAFESCAN
+                                    .descricao
+                            }
+                        </p>
+                    </div>
+
+                    <div className="flex shrink-0 flex-col items-start gap-2 lg:items-end">
+                        <span
+                            className={
+                                disponivel
+                                    ? "inline-flex rounded-full bg-emerald-100 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.08em] text-emerald-800"
+                                    : "inline-flex rounded-full bg-amber-100 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.08em] text-amber-800"
+                            }
+                        >
+                            {
+                                disponivel
+                                    ? "Disponível"
+                                    : "Atenção"
+                            }
+                        </span>
+
+                        <span className="text-[10px] font-semibold text-slate-400">
+                            Gerenciado pelo sistema
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid gap-4 p-5 lg:grid-cols-3">
+                {
+                    APRESENTACAO_PLANO_BASE_SAFESCAN
+                        .secoes
+                        .map(
+                            (secao) => (
+                                <div
+                                    key={
+                                        secao.titulo
+                                    }
+                                    className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4"
+                                >
+                                    <p className="text-[11px] font-black uppercase tracking-[0.1em] text-slate-600">
+                                        {secao.titulo}
+                                    </p>
+
+                                    <div className="mt-3 space-y-2">
+                                        {
+                                            secao.itens.map(
+                                                (
+                                                    item
+                                                ) => (
+                                                    <div
+                                                        key={
+                                                            item
+                                                        }
+                                                        className="flex items-start gap-2"
+                                                    >
+                                                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+
+                                                        <span className="text-xs font-semibold leading-5 text-slate-600">
+                                                            {item}
+                                                        </span>
+                                                    </div>
+                                                )
+                                            )
+                                        }
+                                    </div>
+                                </div>
+                            )
+                        )
+                }
+            </div>
+
+            <div className="grid gap-3 border-t border-slate-100 px-5 py-4 sm:grid-cols-2">
+                <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                        Contrato
+                    </p>
+
+                    <p className="mt-1 text-sm font-black text-slate-900">
+                        Plano Base SafeScan
+                    </p>
+                </div>
+
+                <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400">
+                        Disponibilidade
+                    </p>
+
+                    <p
+                        className={
+                            disponivel
+                                ? "mt-1 text-sm font-black text-emerald-700"
+                                : "mt-1 text-sm font-black text-amber-700"
+                        }
+                    >
+                        {
+                            disponivel
+                                ? "Sempre disponível"
+                                : "Revisar componentes do Plano Base"
+                        }
+                    </p>
+                </div>
+            </div>
+        </article>
+    );
+}
 function ModuloCard({
     modulo,
     onGerenciar,
@@ -193,6 +374,8 @@ function ModuloCard({
         modulo?.contratavel ===
             true &&
         modulo?.obrigatorio !==
+            true &&
+        modulo?.plano_base !==
             true;
 
     const disponivel =
@@ -720,7 +903,10 @@ export function TenantAdminModulesPanel({
                             modulo
                         ) =>
                             modulo?.contratavel ===
-                            true
+                                true
+                            &&
+                            modulo?.plano_base !==
+                                true
                     );
 
                 return {
@@ -756,16 +942,33 @@ export function TenantAdminModulesPanel({
                                 "suspenso"
                         ).length,
 
-                    core:
+                    planoBaseDisponivel:
                         modulos.filter(
                             (
                                 modulo
                             ) =>
-                                modulo?.obrigatorio ===
-                                    true &&
-                                modulo?.disponivel ===
+                                modulo?.plano_base ===
+                                true
+                        ).length ===
+                            APRESENTACAO_PLANO_BASE_SAFESCAN
+                                .modulosTecnicos
+                                .length
+                        &&
+                        modulos
+                            .filter(
+                                (
+                                    modulo
+                                ) =>
+                                    modulo?.plano_base ===
                                     true
-                        ).length,
+                            )
+                            .every(
+                                (
+                                    modulo
+                                ) =>
+                                    modulo?.disponivel ===
+                                    true
+                            ),
                 };
             },
             [
@@ -773,6 +976,35 @@ export function TenantAdminModulesPanel({
             ]
         );
 
+    const modulosPlanoBase =
+        useMemo(
+            () =>
+                modulos.filter(
+                    (
+                        modulo
+                    ) =>
+                        modulo?.plano_base ===
+                        true
+                ),
+            [
+                modulos,
+            ]
+        );
+
+    const modulosAdicionais =
+        useMemo(
+            () =>
+                modulos.filter(
+                    (
+                        modulo
+                    ) =>
+                        modulo?.plano_base !==
+                        true
+                ),
+            [
+                modulos,
+            ]
+        );
     function abrirGerenciamento(
         modulo
     ) {
@@ -817,8 +1049,8 @@ export function TenantAdminModulesPanel({
                         </div>
 
                         <p className="mt-2 max-w-3xl text-xs leading-5 text-slate-500">
-                            Configure somente os módulos contratados pelo cliente.
-                            Empresas vinculadas são entidades operacionais e não possuem licenciamento próprio.
+                            O Plano Base SafeScan é sempre incluído.
+                            Configure abaixo somente os módulos adicionais contratados pelo cliente.
                         </p>
                     </div>
 
@@ -889,13 +1121,17 @@ export function TenantAdminModulesPanel({
                     />
 
                     <CardMetrica
-                        titulo="Núcleo"
+                        titulo="Plano base"
                         valor={
                             carregando
                                 ? "—"
-                                : metricas.core
+                                : (
+                                    metricas.planoBaseDisponivel
+                                        ? "Ativo"
+                                        : "Atenção"
+                                )
                         }
-                        detalhe="Módulo obrigatório"
+                        detalhe="Sempre incluído"
                         Icone={LockKeyhole}
                     />
                 </div>
@@ -925,28 +1161,59 @@ export function TenantAdminModulesPanel({
                 {!carregando &&
                 !erro &&
                 modulos.length > 0 ? (
-                    <div className="mt-4 grid gap-4 xl:grid-cols-2">
-                        {modulos.map(
-                            (
-                                modulo
-                            ) => (
-                                <ModuloCard
-                                    key={
-                                        modulo.modulo_chave
-                                    }
-                                    modulo={
-                                        modulo
-                                    }
-                                    onGerenciar={
-                                        abrirGerenciamento
-                                    }
-                                    bloqueado={
-                                        carregando
-                                    }
-                                />
-                            )
-                        )}
-                    </div>
+                    <>
+                        <div className="mt-4">
+                            <PlanoBaseSafeScanCard
+                                modulosBase={
+                                    modulosPlanoBase
+                                }
+                            />
+                        </div>
+
+                        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-[0.12em] text-emerald-700">
+                                    Expansão do ambiente
+                                </p>
+
+                                <h3 className="mt-1 text-lg font-black text-slate-950">
+                                    Módulos adicionais
+                                </h3>
+
+                                <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500">
+                                    Ative somente os recursos adicionais contratados pelo cliente.
+                                    Eles complementam o Plano Base sem alterar sua estrutura essencial.
+                                </p>
+                            </div>
+
+                            <span className="inline-flex w-fit rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.08em] text-slate-600">
+                                {metricas.contratados}/{metricas.contrataveis} contratados
+                            </span>
+                        </div>
+
+                        <div className="mt-3 grid gap-4 xl:grid-cols-2">
+                            {modulosAdicionais.map(
+                                (
+                                    modulo
+                                ) => (
+                                    <ModuloCard
+                                        key={
+                                            modulo.modulo_chave
+                                        }
+                                        modulo={
+                                            modulo
+                                        }
+                                        onGerenciar={
+                                            abrirGerenciamento
+                                        }
+                                        bloqueado={
+                                            carregando
+                                        }
+                                    />
+                                )
+                            )}
+                        </div>
+                    </>
                 ) : null}
             </section>
 

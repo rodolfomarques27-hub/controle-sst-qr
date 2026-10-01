@@ -1,3 +1,8 @@
+import {
+    moduloPlanoBaseSafeScan,
+    obterDefinicaoComercialModuloSafeScan,
+    telaPlanoBaseSafeScan,
+} from "../constants/tenantModulesCommercialMatrix.js";
 function textoSeguro(valor = "") {
     return String(valor ?? "").trim();
 }
@@ -24,10 +29,6 @@ function normalizarTelasModulo(metadados = null) {
     ];
 }
 
-const TELAS_OCULTAS_RUNTIME_TENANT =
-    new Set([
-        "aniversariantes",
-    ]);
 
 const PAPEIS_MEMBERSHIP_TENANT_VALIDOS =
     new Set([
@@ -257,15 +258,49 @@ export async function carregarModulosTenantRuntimeService({
                     modulo?.obrigatorio ===
                     true;
 
+                const definicaoComercial =
+                    obterDefinicaoComercialModuloSafeScan(
+                        chave
+                    );
+
+                const planoBase =
+                    moduloPlanoBaseSafeScan(
+                        chave
+                    );
+
                 const status =
-                    obrigatorio
-                        ? "core"
+                    planoBase
+                        ? "base"
                         : (
-                            statusPorModulo.get(
-                                chave
-                            )
-                            || "nao_contratado"
+                            obrigatorio
+                                ? "core"
+                                : (
+                                    statusPorModulo.get(
+                                        chave
+                                    )
+                                    || "nao_contratado"
+                                )
                         );
+
+                const telasCatalogo =
+                    normalizarTelasModulo(
+                        modulo?.metadados
+                    );
+
+                const telasCanonicas =
+                    Array.isArray(
+                        definicaoComercial?.telas
+                    )
+                        ? definicaoComercial.telas
+                        : [];
+
+                const telas =
+                    [
+                        ...new Set([
+                            ...telasCatalogo,
+                            ...telasCanonicas,
+                        ]),
+                    ];
 
                 return {
                     chave,
@@ -274,16 +309,22 @@ export async function carregarModulosTenantRuntimeService({
                             modulo?.nome
                         ),
                     obrigatorio,
-                    status,
-                    telas:
-                        normalizarTelasModulo(
-                            modulo?.metadados
+                    planoBase,
+                    grupoComercial:
+                        definicaoComercial?.grupo ||
+                        (
+                            planoBase
+                                ? "plano_base"
+                                : "adicional"
                         ),
+                    status,
+                    telas,
                     disponivel:
                         modulo?.ativo ===
                             true
                         && (
-                            obrigatorio
+                            planoBase
+                            || obrigatorio
                             || status ===
                                 "ativo"
                         ),
@@ -340,13 +381,6 @@ export function telaTemMapeamentoModuloTenantRuntime(
         return false;
     }
 
-    if (
-        TELAS_OCULTAS_RUNTIME_TENANT.has(
-            telaNormalizada
-        )
-    ) {
-        return true;
-    }
 
     return (
         Array.isArray(
@@ -377,12 +411,13 @@ export function telaDisponivelTenantRuntime(
         return true;
     }
 
+
     if (
-        TELAS_OCULTAS_RUNTIME_TENANT.has(
+        telaPlanoBaseSafeScan(
             telaNormalizada
         )
     ) {
-        return false;
+        return true;
     }
 
     const modulosDaTela =
@@ -407,6 +442,24 @@ export function telaDisponivelTenantRuntime(
         0
     ) {
         return true;
+    }
+
+    const modulosComerciaisDaTela =
+        modulosDaTela.filter(
+            (modulo) =>
+                modulo?.obrigatorio !==
+                true
+        );
+
+    if (
+        modulosComerciaisDaTela.length >
+        0
+    ) {
+        return modulosComerciaisDaTela.some(
+            (modulo) =>
+                modulo?.disponivel ===
+                true
+        );
     }
 
     return modulosDaTela.some(

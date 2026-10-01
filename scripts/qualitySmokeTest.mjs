@@ -624,6 +624,10 @@ const codigoTenantModulesRuntimeService = readFileSync(
     new URL("../src/services/tenantModulesRuntimeService.js", import.meta.url),
     "utf8"
 );
+const codigoTenantOperationalResourcesService = readFileSync(
+    new URL("../src/services/tenantOperationalResourcesService.js", import.meta.url),
+    "utf8"
+);
 const codigoDashboardIndicadoresOperacionaisService = readFileSync(
     new URL("../src/services/dashboardIndicadoresOperacionaisService.js", import.meta.url),
     "utf8"
@@ -683,14 +687,34 @@ assert.match(
     "O runtime do tenant deve combinar membership ativa e disponibilidade comercial."
 );
 assert.match(
-    codigoTenantModulesRuntimeService,
-    /TELAS_OCULTAS_RUNTIME_TENANT[\s\S]*"aniversariantes"[\s\S]*return false;/,
-    "Aniversariantes deve permanecer fora da navegação operacional do tenant."
+    codigoTenantOperationalResourcesService,
+    /RECURSOS_OPERACIONAIS_PLANO_BASE[\s\S]*chave:\s*"aniversariantes"/,
+    "Aniversariantes deve permanecer declarado como recurso operacional do Plano Base."
+);
+assert.match(
+    codigoTenantOperationalResourcesService,
+    /RECURSO_OPERACIONAL_POR_TELA[\s\S]*aniversariantes:\s*"aniversariantes"/,
+    "A tela Aniversariantes deve permanecer mapeada para o recurso operacional correspondente."
+);
+assert.match(
+    codigoApp,
+    /navCompleta\.filter[\s\S]*aplicarGateRecursosOperacionaisTenantRuntime[\s\S]*telaTemMapeamentoRecursoOperacional[\s\S]*telaDisponivelRecursoOperacionalTenantRuntime/,
+    "A navegação do tenant deve aplicar o gate dos recursos operacionais mapeados por tela."
 );
 assert.match(
     codigoDashboard,
-    /moduloPorCartaTenant[\s\S]*participacoesDdsMes[\s\S]*certidao_mensal_documental[\s\S]*extintoresForaOperacao[\s\S]*auditoria_campo[\s\S]*mapa_obra/,
-    "Os cards do Dashboard tenant devem respeitar os módulos comerciais contratados."
+    /const moduloPorCartaTenant = \{[\s\S]*participacoesDdsMes:[\s\S]*"dds"[\s\S]*competenciasDocumentaisAbertas:[\s\S]*"certidao_mensal_documental"[\s\S]*extintoresForaOperacao:[\s\S]*"extintores"[\s\S]*desviosAbertos:[\s\S]*"auditoria_campo"/,
+    "Os cards comerciais do Dashboard devem permanecer mapeados para DDS, Certidão, Extintores e Auditoria de Campo."
+);
+assert.match(
+    codigoDashboard,
+    /const recursoOperacionalPorCartaTenant = \{[\s\S]*documentosVencidos:[\s\S]*"gestao_documental_sst"[\s\S]*documentosAVencer:[\s\S]*"gestao_documental_sst"[\s\S]*aniversariantesMes:[\s\S]*"aniversariantes"[\s\S]*obrasAtivas:[\s\S]*"obras"/,
+    "Os cards operacionais do Dashboard devem permanecer mapeados para Gestão Documental SST, Aniversariantes e Obras."
+);
+assert.match(
+    codigoDashboard,
+    /const cardsDisponiveisRuntime =[\s\S]*cards\.filter\([\s\S]*const chaveRecursoOperacional =[\s\S]*aplicarGateRecursosOperacionaisTenantRuntime[\s\S]*recursoOperacionalDisponivelTenantRuntime[\s\S]*!aplicarGateModulosTenantRuntime[\s\S]*const chaveModulo =[\s\S]*moduloPorCartaTenant[\s\S]*moduloDisponivelDashboard/,
+    "O Dashboard deve aplicar o gate operacional dos cards mapeados antes de preservar o gate comercial de módulo."
 );
 assert.match(
     codigoDashboard,

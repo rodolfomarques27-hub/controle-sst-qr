@@ -1,3 +1,4 @@
+import { recursoOperacionalDisponivelTenantRuntime } from "../../services/tenantOperationalResourcesService.js";
 import "../../styles/pages/dashboard-hero.css";
 /* eslint-disable no-unused-vars */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -238,6 +239,10 @@ export function Dashboard({
     auditoriasCampo = [],
     modulosTenantRuntime = [],
     aplicarGateModulosTenantRuntime = false,
+    recursosOperacionaisTenantRuntime = [],
+    carregandoRecursosOperacionaisTenantRuntime = false,
+    erroRecursosOperacionaisTenantRuntime = "",
+    aplicarGateRecursosOperacionaisTenantRuntime = false,
     onSelectColab,
     onVisualizarDocumentoEmpresa,
     onVisualizarCertificado,
@@ -1013,25 +1018,54 @@ export function Dashboard({
             "extintores",
         desviosAbertos:
             "auditoria_campo",
+    };
+
+    const recursoOperacionalPorCartaTenant = {
+        documentosVencidos:
+            "gestao_documental_sst",
+        documentosAVencer:
+            "gestao_documental_sst",
+        aniversariantesMes:
+            "aniversariantes",
         obrasAtivas:
-            "mapa_obra",
+            "obras",
     };
 
     const cardsDisponiveisRuntime =
         cards.filter(
             (item) => {
+                const chaveRecursoOperacional =
+                    recursoOperacionalPorCartaTenant[
+                        item.chave
+                    ];
+
+                if (
+                    aplicarGateRecursosOperacionaisTenantRuntime
+                    && chaveRecursoOperacional
+                ) {
+                    if (
+                        carregandoRecursosOperacionaisTenantRuntime
+                        || erroRecursosOperacionaisTenantRuntime
+                    ) {
+                        return false;
+                    }
+
+                    if (
+                        !recursoOperacionalDisponivelTenantRuntime(
+                            recursosOperacionaisTenantRuntime,
+                            chaveRecursoOperacional
+                        )
+                    ) {
+                        return false;
+                    }
+                }
+
                 if (
                     !aplicarGateModulosTenantRuntime
                 ) {
                     return true;
                 }
 
-                if (
-                    item.chave ===
-                    "aniversariantesMes"
-                ) {
-                    return false;
-                }
 
                 const chaveModulo =
                     moduloPorCartaTenant[
