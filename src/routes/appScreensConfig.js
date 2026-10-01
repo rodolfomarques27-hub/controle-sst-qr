@@ -47,6 +47,7 @@ export const ROTULOS_TELAS_ACESSO_BLOQUEADO = Object.freeze({
     novaAuditoriaCampo: "Nova Auditoria",
     auditoriaCampo: "Dashboard Auditoria",
     empresas: "Empresas",
+    obras: "Obras",
     colaboradores: "Colaboradores",
     aniversariantes: "Aniversariantes",
     treinamentos: "Treinamentos",
@@ -73,6 +74,7 @@ const CARREGADORES_MODULOS_TELAS = Object.freeze({
     novaAuditoriaCampo: () =>
         import("../components/auditoria/NovaAuditoriaCampoDireta"),
     empresas: () => import("../components/empresas/EmpresasPage"),
+    obras: () => import("../components/obras/ObrasPage"),
     colaboradores: () =>
         import("../components/colaboradores/ColaboradoresPage"),
     aniversariantes: () =>

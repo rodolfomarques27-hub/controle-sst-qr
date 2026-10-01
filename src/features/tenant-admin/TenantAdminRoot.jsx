@@ -1,6 +1,7 @@
 import {
     useCallback,
     useEffect,
+    useRef,
     useState,
 } from "react";
 
@@ -91,6 +92,9 @@ export default function TenantAdminRoot() {
             obterSecaoAdminAtual
         );
 
+    const resetClientesRef =
+        useRef(null);
+
     useEffect(
         () => {
             function sincronizarHash() {
@@ -114,6 +118,18 @@ export default function TenantAdminRoot() {
         []
     );
 
+    const registrarResetClientes =
+        useCallback(
+            (reset) => {
+                resetClientesRef.current =
+                    typeof reset ===
+                        "function"
+                        ? reset
+                        : null;
+            },
+            []
+        );
+
     const navegar =
         useCallback(
             (secao) => {
@@ -132,6 +148,15 @@ export default function TenantAdminRoot() {
                     window.location.hash ===
                     proximoHash
                 ) {
+                    if (
+                        proximaSecao ===
+                        "clientes"
+                    ) {
+                        resetClientesRef
+                            .current
+                            ?.();
+                    }
+
                     setSecaoAtiva(
                         proximaSecao
                     );
@@ -159,6 +184,9 @@ export default function TenantAdminRoot() {
                             navegar(
                                 "novo-cliente"
                             )
+                    }
+                    onRegistrarReset={
+                        registrarResetClientes
                     }
                 />
             );

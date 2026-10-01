@@ -121,6 +121,7 @@ function StatusTenant({
 
 export function TenantAdminClientsPage({
     onNovoCliente,
+    onRegistrarReset,
 }) {
     const [
         tenants,
@@ -163,6 +164,34 @@ export function TenantAdminClientsPage({
         setTenantSelecionado,
     ] =
         useState(null);
+
+    const voltarParaLista =
+        useCallback(
+            () => {
+                setTenantSelecionado(
+                    null
+                );
+            },
+            []
+        );
+
+    useEffect(
+        () => {
+            onRegistrarReset?.(
+                voltarParaLista
+            );
+
+            return () => {
+                onRegistrarReset?.(
+                    null
+                );
+            };
+        },
+        [
+            onRegistrarReset,
+            voltarParaLista,
+        ]
+    );
 
     const carregar =
         useCallback(
@@ -335,10 +364,7 @@ export function TenantAdminClientsPage({
                     tenantSelecionado
                 }
                 onVoltar={
-                    () =>
-                        setTenantSelecionado(
-                            null
-                        )
+                    voltarParaLista
                 }
             />
         );

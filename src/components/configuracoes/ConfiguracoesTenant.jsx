@@ -1,4 +1,5 @@
 import {
+    useEffect,
     useRef,
     useState,
 } from "react";
@@ -34,6 +35,12 @@ import {
     obterUltimaAtualizacaoAuditoriaEmpresaTenant,
     salvarConfiguracaoEmailSstEmpresaTenant,
 } from "../../services/emailSstCanalEmpresaService.js";
+import {
+    RECURSOS_OPERACIONAIS_PLANO_BASE,
+    listarRecursosOperacionaisTenant,
+    recursoOperacionalDisponivelTenantRuntime,
+    salvarRecursoOperacionalTenant,
+} from "../../services/tenantOperationalResourcesService.js";
 
 const TIPOS_MODELO_DOCUMENTOS =
     Object.freeze([
@@ -285,6 +292,10 @@ export function ConfiguracoesTenant({
         perfilUsuarioChave ===
         "administrador";
 
+    const podeAlterarRecursosOperacionais =
+        perfilUsuarioChave ===
+        "administrador";
+
     const certidaoMensalDisponivel =
         modulosDisponiveis.some(
             (modulo) =>
@@ -309,12 +320,12 @@ export function ConfiguracoesTenant({
                         true
             );
 
-    const documentosDisponivel =
+    const documentosDisponivelComercial =
         moduloDisponivel(
             "gestao_documental_sst"
         );
 
-    const treinamentosDisponivel =
+    const treinamentosDisponivelComercial =
         moduloDisponivel(
             "treinamentos"
         );
@@ -323,13 +334,6 @@ export function ConfiguracoesTenant({
         moduloDisponivel(
             "auditoria_campo"
         );
-
-    const sstDisponivel =
-        documentosDisponivel
-        ||
-        treinamentosDisponivel
-        ||
-        auditoriaDisponivel;
 
     const [
         empresaSstSelecionadaId,
@@ -432,6 +436,315 @@ export function ConfiguracoesTenant({
 
     const selecaoSstSequenciaRef =
         useRef(0);
+
+    const [
+        recursosOperacionais,
+        setRecursosOperacionais,
+    ] =
+        useState(
+            () =>
+                RECURSOS_OPERACIONAIS_PLANO_BASE.map(
+                    (recurso) => ({
+                        ...recurso,
+                        ativo:
+                            true,
+                        configurado:
+                            false,
+                        atualizadoEm:
+                            null,
+                    })
+                )
+        );
+
+    const [
+        carregandoRecursosOperacionais,
+        setCarregandoRecursosOperacionais,
+    ] =
+        useState(false);
+
+    const [
+        salvandoRecursoOperacional,
+        setSalvandoRecursoOperacional,
+    ] =
+        useState("");
+
+    const [
+        retornoRecursosOperacionais,
+        setRetornoRecursosOperacionais,
+    ] =
+        useState(null);
+
+    useEffect(
+        () => {
+            let efeitoAtivo =
+                true;
+
+            if (!tenantId) {
+                setRecursosOperacionais(
+                    RECURSOS_OPERACIONAIS_PLANO_BASE.map(
+                        (recurso) => ({
+                            ...recurso,
+                            ativo:
+                                true,
+                            configurado:
+                                false,
+                            atualizadoEm:
+                                null,
+                        })
+                    )
+                );
+
+                setCarregandoRecursosOperacionais(
+                    false
+                );
+
+                setRetornoRecursosOperacionais(
+                    null
+                );
+
+                return () => {
+                    efeitoAtivo =
+                        false;
+                };
+            }
+
+            setCarregandoRecursosOperacionais(
+                true
+            );
+
+            setRetornoRecursosOperacionais(
+                null
+            );
+
+            listarRecursosOperacionaisTenant({
+                tenantId,
+
+                supabaseClient:
+                    supabaseClient
+                    ||
+                    undefined,
+            })
+                .then(
+                    (recursos) => {
+                        if (!efeitoAtivo) {
+                            return;
+                        }
+
+                        setRecursosOperacionais(
+                            recursos
+                        );
+                    }
+                )
+                .catch(
+                    (erro) => {
+                        if (!efeitoAtivo) {
+                            return;
+                        }
+
+                        setRetornoRecursosOperacionais({
+                            tipo:
+                                "erro",
+
+                            mensagem:
+                                erro?.message
+                                ||
+                                "Não foi possível carregar os recursos operacionais do Plano Base.",
+                        });
+                    }
+                )
+                .finally(
+                    () => {
+                        if (!efeitoAtivo) {
+                            return;
+                        }
+
+                        setCarregandoRecursosOperacionais(
+                            false
+                        );
+                    }
+                );
+
+            return () => {
+                efeitoAtivo =
+                    false;
+            };
+        },
+        [
+            tenantId,
+            supabaseClient,
+        ]
+    );
+
+    const alterarRecursoOperacional =
+        async (
+            recursoChave,
+            proximoEstado
+        ) => {
+            if (
+                !podeAlterarRecursosOperacionais
+                ||
+                !tenantId
+                ||
+                salvandoRecursoOperacional
+            ) {
+                return;
+            }
+
+            const chave =
+                textoSeguro(
+                    recursoChave
+                ).toLowerCase();
+
+            const recursoExiste =
+                recursosOperacionais.some(
+                    (recurso) =>
+                        recurso.chave ===
+                        chave
+                );
+
+            if (!recursoExiste) {
+                return;
+            }
+
+            const estadoAnterior =
+                recursosOperacionais.map(
+                    (recurso) => ({
+                        ...recurso,
+                    })
+                );
+
+            setRetornoRecursosOperacionais(
+                null
+            );
+
+            setSalvandoRecursoOperacional(
+                chave
+            );
+
+            setRecursosOperacionais(
+                (atual) =>
+                    atual.map(
+                        (recurso) =>
+                            recurso.chave ===
+                                chave
+                                ? {
+                                    ...recurso,
+                                    ativo:
+                                        proximoEstado,
+                                }
+                                : recurso
+                    )
+            );
+
+            try {
+                const salvo =
+                    await salvarRecursoOperacionalTenant({
+                        tenantId,
+
+                        recursoChave:
+                            chave,
+
+                        ativo:
+                            proximoEstado,
+
+                        supabaseClient:
+                            supabaseClient
+                            ||
+                            undefined,
+                    });
+
+                setRecursosOperacionais(
+                    (atual) =>
+                        atual.map(
+                            (recurso) =>
+                                recurso.chave ===
+                                    chave
+                                    ? {
+                                        ...recurso,
+                                        ativo:
+                                            salvo.ativo,
+                                        configurado:
+                                            true,
+                                        atualizadoEm:
+                                            salvo.atualizadoEm,
+                                    }
+                                    : recurso
+                        )
+                );
+
+                setRetornoRecursosOperacionais({
+                    tipo:
+                        "sucesso",
+
+                    mensagem:
+                        "Recurso operacional atualizado com sucesso.",
+                });
+            }
+            catch (erro) {
+                setRecursosOperacionais(
+                    estadoAnterior
+                );
+
+                setRetornoRecursosOperacionais({
+                    tipo:
+                        "erro",
+
+                    mensagem:
+                        erro?.message
+                        ||
+                        "Não foi possível atualizar o recurso operacional.",
+                });
+            }
+            finally {
+                setSalvandoRecursoOperacional(
+                    ""
+                );
+            }
+        };
+
+    const recursosOperacionaisProntosConfiguracao =
+        Boolean(
+            !tenantId
+            || (
+                !carregandoRecursosOperacionais
+                && recursosOperacionais.length > 0
+                && retornoRecursosOperacionais?.tipo !== "erro"
+            )
+        );
+
+    const recursoOperacionalConfiguracaoDisponivel =
+        (chave) =>
+            !tenantId
+            || (
+                recursosOperacionaisProntosConfiguracao
+                && recursoOperacionalDisponivelTenantRuntime(
+                    recursosOperacionais,
+                    chave
+                )
+            );
+
+    const documentosDisponivel =
+        Boolean(
+            documentosDisponivelComercial
+            && recursoOperacionalConfiguracaoDisponivel(
+                "gestao_documental_sst"
+            )
+        );
+
+    const treinamentosDisponivel =
+        Boolean(
+            treinamentosDisponivelComercial
+            && recursoOperacionalConfiguracaoDisponivel(
+                "treinamentos"
+            )
+        );
+
+    const sstDisponivel =
+        documentosDisponivel
+        ||
+        treinamentosDisponivel
+        ||
+        auditoriaDisponivel;
 
     const empresaSstSelecionada =
         empresas.find(
@@ -2262,6 +2575,175 @@ export function ConfiguracoesTenant({
                         )}
                     </div>
                 </article>
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="text-base font-bold text-slate-950">
+                                Recursos do Plano Base
+                            </h2>
+
+                            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-200">
+                                Incluso no plano
+                            </span>
+                        </div>
+
+                        <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500">
+                            Controle operacional dos recursos incluídos no Plano Base. Desativar um recurso não exclui seus dados.
+                        </p>
+                    </div>
+
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
+                        {
+                            podeAlterarRecursosOperacionais
+                                ? "Administrador"
+                                : "Somente leitura"
+                        }
+                    </span>
+                </div>
+
+                {carregandoRecursosOperacionais ? (
+                    <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-5 text-sm font-semibold text-slate-600">
+                        Carregando recursos do Plano Base...
+                    </div>
+                ) : (
+                    <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                        {recursosOperacionais.map(
+                            (recurso) => {
+                                const salvando =
+                                    salvandoRecursoOperacional ===
+                                    recurso.chave;
+
+                                const bloqueado =
+                                    !podeAlterarRecursosOperacionais
+                                    ||
+                                    Boolean(
+                                        salvandoRecursoOperacional
+                                    );
+
+                                return (
+                                    <article
+                                        key={recurso.chave}
+                                        className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-4"
+                                    >
+                                        <div className="min-w-0">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <p className="text-sm font-bold text-slate-900">
+                                                    {recurso.nome}
+                                                </p>
+
+                                                <span
+                                                    className={
+                                                        recurso.ativo
+                                                            ? "rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-emerald-700"
+                                                            : "rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-slate-600"
+                                                    }
+                                                >
+                                                    {
+                                                        salvando
+                                                            ? "Salvando..."
+                                                            : (
+                                                                recurso.ativo
+                                                                    ? "Ativo"
+                                                                    : "Desativado"
+                                                            )
+                                                    }
+                                                </span>
+                                            </div>
+
+                                            <p className="mt-1 text-xs leading-5 text-slate-500">
+                                                {recurso.descricao}
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            role="switch"
+                                            aria-checked={
+                                                recurso.ativo
+                                            }
+                                            aria-label={
+                                                (
+                                                    recurso.ativo
+                                                        ? "Desativar "
+                                                        : "Ativar "
+                                                ) +
+                                                recurso.nome
+                                            }
+                                            disabled={
+                                                bloqueado
+                                            }
+                                            onClick={() =>
+                                                alterarRecursoOperacional(
+                                                    recurso.chave,
+                                                    !recurso.ativo
+                                                )
+                                            }
+                                            className={
+                                                "relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition " +
+                                                (
+                                                    recurso.ativo
+                                                        ? "bg-emerald-600"
+                                                        : "bg-slate-300"
+                                                ) +
+                                                (
+                                                    bloqueado
+                                                        ? " cursor-not-allowed opacity-60"
+                                                        : " cursor-pointer"
+                                                )
+                                            }
+                                        >
+                                            <span
+                                                aria-hidden="true"
+                                                className={
+                                                    "inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform " +
+                                                    (
+                                                        recurso.ativo
+                                                            ? "translate-x-6"
+                                                            : "translate-x-1"
+                                                    )
+                                                }
+                                            />
+                                        </button>
+                                    </article>
+                                );
+                            }
+                        )}
+                    </div>
+                )}
+
+                <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3">
+                    <p className="text-xs font-semibold leading-5 text-blue-800">
+                        Sem configuração específica, o recurso permanece ativo por compatibilidade. A desativação preserva os dados existentes e pode ser revertida posteriormente.
+                    </p>
+                </div>
+
+                {retornoRecursosOperacionais ? (
+                    <div
+                        role="status"
+                        className={
+                            "mt-3 rounded-xl border px-4 py-3 text-xs font-bold " +
+                            (
+                                retornoRecursosOperacionais.tipo ===
+                                    "sucesso"
+                                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                                    : "border-rose-200 bg-rose-50 text-rose-800"
+                            )
+                        }
+                    >
+                        {
+                            retornoRecursosOperacionais.mensagem
+                        }
+                    </div>
+                ) : null}
+
+                {!podeAlterarRecursosOperacionais ? (
+                    <p className="mt-3 text-xs font-semibold text-slate-500">
+                        Somente o perfil Administrador deste ambiente pode alterar os recursos operacionais do Plano Base.
+                    </p>
+                ) : null}
             </section>
 
             {(
