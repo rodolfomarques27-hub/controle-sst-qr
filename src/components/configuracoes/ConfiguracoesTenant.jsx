@@ -64,6 +64,132 @@ function textoSeguro(valor = "") {
     return String(valor ?? "").trim();
 }
 
+const CHAVE_ESTADO_CARDS_CONFIGURACOES_TENANT =
+    "safescan:configuracoes-tenant:cards:v1";
+
+const ESTADO_PADRAO_CARDS_CONFIGURACOES_TENANT =
+    Object.freeze({
+        ambiente: true,
+        acessoAtual: true,
+        empresasVinculadas: true,
+        recursosDisponiveis: true,
+        planoBase: true,
+        versaoSafescan: true,
+        arquivosStorage: true,
+    });
+
+function obterChaveEstadoCardsConfiguracoesTenant(tenantId = "") {
+    const tenantIdSeguro =
+        textoSeguro(tenantId);
+
+    if (!tenantIdSeguro) {
+        return "";
+    }
+
+    return `${CHAVE_ESTADO_CARDS_CONFIGURACOES_TENANT}:${tenantIdSeguro}`;
+}
+
+function lerEstadoCardsConfiguracoesTenant(tenantId = "") {
+    const padrao = {
+        ...ESTADO_PADRAO_CARDS_CONFIGURACOES_TENANT,
+    };
+
+    const chave =
+        obterChaveEstadoCardsConfiguracoesTenant(
+            tenantId
+        );
+
+    if (
+        !chave
+        || typeof window === "undefined"
+    ) {
+        return padrao;
+    }
+
+    try {
+        const bruto =
+            window.localStorage.getItem(
+                chave
+            );
+
+        if (!bruto) {
+            return padrao;
+        }
+
+        const parseado =
+            JSON.parse(
+                bruto
+            );
+
+        if (
+            !parseado
+            || typeof parseado !== "object"
+            || Array.isArray(parseado)
+        ) {
+            return padrao;
+        }
+
+        return Object.keys(
+            padrao
+        ).reduce(
+            (acumulado, chaveCard) => {
+                acumulado[chaveCard] =
+                    typeof parseado[chaveCard] === "boolean"
+                        ? parseado[chaveCard]
+                        : padrao[chaveCard];
+
+                return acumulado;
+            },
+            {}
+        );
+    } catch {
+        return padrao;
+    }
+}
+
+function salvarEstadoCardsConfiguracoesTenant(
+    tenantId = "",
+    estado = {}
+) {
+    const chave =
+        obterChaveEstadoCardsConfiguracoesTenant(
+            tenantId
+        );
+
+    if (
+        !chave
+        || typeof window === "undefined"
+    ) {
+        return;
+    }
+
+    const estadoSeguro =
+        Object.keys(
+            ESTADO_PADRAO_CARDS_CONFIGURACOES_TENANT
+        ).reduce(
+            (acumulado, chaveCard) => {
+                acumulado[chaveCard] =
+                    typeof estado[chaveCard] === "boolean"
+                        ? estado[chaveCard]
+                        : ESTADO_PADRAO_CARDS_CONFIGURACOES_TENANT[chaveCard];
+
+                return acumulado;
+            },
+            {}
+        );
+
+    try {
+        window.localStorage.setItem(
+            chave,
+            JSON.stringify(
+                estadoSeguro
+            )
+        );
+    } catch {
+        // ignorar indisponibilidade do localStorage
+    }
+}
+
 // R22_E3_C5A1_UX_ULTIMA_ATUALIZACAO
 function formatarDataHoraAtualizacao(valor = "") {
     const timestamp =
@@ -287,6 +413,50 @@ export function ConfiguracoesTenant({
         textoSeguro(
             tenant?.id
         );
+
+    const [
+        estadoCardsConfiguracoesPorTenant,
+        setEstadoCardsConfiguracoesPorTenant,
+    ] =
+        useState({});
+
+    const estadoCardsConfiguracoesAtivo =
+        estadoCardsConfiguracoesPorTenant[tenantId]
+        || lerEstadoCardsConfiguracoesTenant(
+            tenantId
+        );
+
+    const atualizarEstadoCardConfiguracoes =
+        (
+            card,
+            aberto
+        ) => {
+            const estadoAtualTenant =
+                lerEstadoCardsConfiguracoesTenant(
+                    tenantId
+                );
+
+            const proximoEstado = {
+                ...estadoAtualTenant,
+                [card]:
+                    Boolean(
+                        aberto
+                    ),
+            };
+
+            salvarEstadoCardsConfiguracoesTenant(
+                tenantId,
+                proximoEstado
+            );
+
+            setEstadoCardsConfiguracoesPorTenant(
+                (estadoAtual) => ({
+                    ...estadoAtual,
+                    [tenantId]:
+                        proximoEstado,
+                })
+            );
+        };
 
     const perfilUsuarioChave =
         textoSeguro(
@@ -2395,7 +2565,27 @@ export function ConfiguracoesTenant({
             </section>
 
             <section className="grid items-start gap-5 xl:grid-cols-2">
-                <details open data-r10-collapse="ambiente" className="group rounded-2xl border border-slate-200 bg-white shadow-sm self-start overflow-hidden">
+                <details
+                    open={estadoCardsConfiguracoesAtivo.ambiente}
+                    onToggle={(evento) => {
+                        const aberto =
+                            evento.currentTarget.open;
+
+                        if (
+                            aberto ===
+                            estadoCardsConfiguracoesAtivo.ambiente
+                        ) {
+                            return;
+                        }
+
+                        atualizarEstadoCardConfiguracoes(
+                            "ambiente",
+                            aberto
+                        );
+                    }}
+                    data-r10-collapse="ambiente"
+                    className="group rounded-2xl border border-slate-200 bg-white shadow-sm self-start overflow-hidden"
+                >
         <summary className="flex h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
             <span className="text-sm font-black text-slate-950 sm:text-base">
                 Ambiente
@@ -2457,7 +2647,27 @@ export function ConfiguracoesTenant({
 
 </div></details>
 
-                <details open data-r10-collapse="acesso-atual" className="group rounded-2xl border border-slate-200 bg-white shadow-sm self-start overflow-hidden">
+                <details
+                    open={estadoCardsConfiguracoesAtivo.acessoAtual}
+                    onToggle={(evento) => {
+                        const aberto =
+                            evento.currentTarget.open;
+
+                        if (
+                            aberto ===
+                            estadoCardsConfiguracoesAtivo.acessoAtual
+                        ) {
+                            return;
+                        }
+
+                        atualizarEstadoCardConfiguracoes(
+                            "acessoAtual",
+                            aberto
+                        );
+                    }}
+                    data-r10-collapse="acesso-atual"
+                    className="group rounded-2xl border border-slate-200 bg-white shadow-sm self-start overflow-hidden"
+                >
         <summary className="flex h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
             <span className="text-sm font-black text-slate-950 sm:text-base">
                 Acesso atual
@@ -2509,7 +2719,27 @@ export function ConfiguracoesTenant({
             </section>
 
             <section className="grid items-start gap-5 xl:grid-cols-2">
-                <details open data-r10-collapse="empresas-vinculadas" className="group rounded-2xl border border-slate-200 bg-white shadow-sm self-start overflow-hidden">
+                <details
+                    open={estadoCardsConfiguracoesAtivo.empresasVinculadas}
+                    onToggle={(evento) => {
+                        const aberto =
+                            evento.currentTarget.open;
+
+                        if (
+                            aberto ===
+                            estadoCardsConfiguracoesAtivo.empresasVinculadas
+                        ) {
+                            return;
+                        }
+
+                        atualizarEstadoCardConfiguracoes(
+                            "empresasVinculadas",
+                            aberto
+                        );
+                    }}
+                    data-r10-collapse="empresas-vinculadas"
+                    className="group rounded-2xl border border-slate-200 bg-white shadow-sm self-start overflow-hidden"
+                >
         <summary className="flex h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
             <span className="text-sm font-black text-slate-950 sm:text-base">
                 Empresas vinculadas
@@ -2567,7 +2797,27 @@ export function ConfiguracoesTenant({
 
 </div></details>
 
-                <details open data-r10-collapse="recursos-disponiveis" className="group rounded-2xl border border-slate-200 bg-white shadow-sm self-start overflow-hidden">
+                <details
+                    open={estadoCardsConfiguracoesAtivo.recursosDisponiveis}
+                    onToggle={(evento) => {
+                        const aberto =
+                            evento.currentTarget.open;
+
+                        if (
+                            aberto ===
+                            estadoCardsConfiguracoesAtivo.recursosDisponiveis
+                        ) {
+                            return;
+                        }
+
+                        atualizarEstadoCardConfiguracoes(
+                            "recursosDisponiveis",
+                            aberto
+                        );
+                    }}
+                    data-r10-collapse="recursos-disponiveis"
+                    className="group rounded-2xl border border-slate-200 bg-white shadow-sm self-start overflow-hidden"
+                >
         <summary className="flex h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
             <span className="text-sm font-black text-slate-950 sm:text-base">
                 Recursos disponíveis
@@ -2630,7 +2880,27 @@ export function ConfiguracoesTenant({
 </div></details>
             </section>
 
-            <details open data-r10-collapse="plano-base" className="group rounded-2xl border border-slate-200 bg-white shadow-sm self-start overflow-hidden">
+            <details
+                open={estadoCardsConfiguracoesAtivo.planoBase}
+                onToggle={(evento) => {
+                    const aberto =
+                        evento.currentTarget.open;
+
+                    if (
+                        aberto ===
+                        estadoCardsConfiguracoesAtivo.planoBase
+                    ) {
+                        return;
+                    }
+
+                    atualizarEstadoCardConfiguracoes(
+                        "planoBase",
+                        aberto
+                    );
+                }}
+                data-r10-collapse="plano-base"
+                className="group rounded-2xl border border-slate-200 bg-white shadow-sm self-start overflow-hidden"
+            >
         <summary className="flex h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
             <span className="text-sm font-black text-slate-950 sm:text-base">
                 Recursos do Plano Base
@@ -3325,7 +3595,27 @@ export function ConfiguracoesTenant({
                 </section>
             ) : null}
 
-            <details open data-r10-collapse="versao-safescan" className="group rounded-2xl border border-slate-200 bg-white shadow-sm self-start overflow-hidden">
+            <details
+                open={estadoCardsConfiguracoesAtivo.versaoSafescan}
+                onToggle={(evento) => {
+                    const aberto =
+                        evento.currentTarget.open;
+
+                    if (
+                        aberto ===
+                        estadoCardsConfiguracoesAtivo.versaoSafescan
+                    ) {
+                        return;
+                    }
+
+                    atualizarEstadoCardConfiguracoes(
+                        "versaoSafescan",
+                        aberto
+                    );
+                }}
+                data-r10-collapse="versao-safescan"
+                className="group rounded-2xl border border-slate-200 bg-white shadow-sm self-start overflow-hidden"
+            >
         <summary className="flex h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
             <span className="text-sm font-black text-slate-950 sm:text-base">
                 Versão do SafeScan
@@ -3396,6 +3686,13 @@ export function ConfiguracoesTenant({
                 className="scroll-mt-24"
             >
                 <ArquivosStorageConfiguracoes
+                    storageAbertoControlado={estadoCardsConfiguracoesAtivo.arquivosStorage}
+                    onStorageAbertoChange={(aberto) =>
+                        atualizarEstadoCardConfiguracoes(
+                            "arquivosStorage",
+                            aberto
+                        )
+                    }
                     limiteStorageMb={limiteStorageMb}
                     permissaoSistemaUsuario={permissaoSistemaUsuario}
                     onListarArquivosStorage={onListarArquivosStorage}

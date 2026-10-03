@@ -136,9 +136,15 @@ export function ArquivosStorageConfiguracoes({
     onExcluirArquivoStorage,
     onAtualizarAuditoria,
     controleCard = null,
+    storageAbertoControlado = null,
+    onStorageAbertoChange = null,
 }) {
     const [filtrosStorage, setFiltrosStorage] = useState(FILTROS_STORAGE_PADRAO);
-    const [storageRecolhido, setStorageRecolhido] = useState(false);
+    const [storageRecolhidoInterno, setStorageRecolhidoInterno] = useState(false);
+    const storageControlado = typeof storageAbertoControlado === "boolean";
+    const storageRecolhido = storageControlado
+        ? !storageAbertoControlado
+        : storageRecolhidoInterno;
     const [arquivosStorage, setArquivosStorage] = useState([]);
     const [analiseStorageExecutada, setAnaliseStorageExecutada] = useState(false);
     const [carregandoStorage, setCarregandoStorage] = useState(false);
@@ -158,6 +164,23 @@ export function ArquivosStorageConfiguracoes({
         ? "Permissão central carregada. A limpeza só fica disponível para perfil autorizado."
         : "Nenhuma permissão central disponível para o usuário autenticado.";
     const storageMontadoRef = useRef(false);
+
+    const alternarStorageRecolhido = () => {
+        const proximoRecolhido =
+            !storageRecolhido;
+
+        if (storageControlado) {
+            onStorageAbertoChange?.(
+                !proximoRecolhido
+            );
+
+            return;
+        }
+
+        setStorageRecolhidoInterno(
+            proximoRecolhido
+        );
+    };
 
     useEffect(() => {
         storageMontadoRef.current = true;
@@ -805,10 +828,7 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
                             onClick={(evento) => {
                                 evento.stopPropagation();
 
-                                setStorageRecolhido(
-                                    (atual) =>
-                                        !atual
-                                );
+                                alternarStorageRecolhido();
                             }}
                             aria-expanded={!storageRecolhido}
                             className="inline-flex min-h-[46px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-white px-3 py-3 text-xs font-black text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-50"
@@ -839,10 +859,7 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
                 tabIndex={0}
                 aria-expanded={!storageRecolhido}
                 onClick={() => {
-                    setStorageRecolhido(
-                        (atual) =>
-                            !atual
-                    );
+                    alternarStorageRecolhido();
                 }}
                 onKeyDown={(evento) => {
                     if (
@@ -854,10 +871,7 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
 
                     evento.preventDefault();
 
-                    setStorageRecolhido(
-                        (atual) =>
-                            !atual
-                    );
+                    alternarStorageRecolhido();
                 }}
             >
                 <h2
