@@ -8,8 +8,8 @@ import {
     registrarEvidenciaCorrenteCertificadoService,
 } from "./certificadosEvidenciasService";
 import {
-    excluirArquivoStorageAuditoriaService,
-    listarArquivosCertificadosStorageService,
+    excluirArquivoStorageTenantService,
+    listarArquivosStorageTenantService,
     sincronizarCertificadosDoStorageService,
 } from "./storageAuditoriaService";
 import { obterTreinamento, treinamentoSemValidade } from "./colaboradorDocumentosService";
@@ -810,17 +810,17 @@ export async function sincronizarCertificadosDoStorageAppService({
 }
 
 export async function listarArquivosCertificadosStorageAppService({
-    colaboradores,
-    empresasBanco,
+    supabase,
+    tenantId,
     setErroBanco,
     onProgress,
 }) {
     setErroBanco("");
 
     try {
-        return await listarArquivosCertificadosStorageService({
-            colaboradores,
-            empresasBanco,
+        return await listarArquivosStorageTenantService({
+            supabase,
+            tenantId,
             onProgress,
         });
     } catch (error) {
@@ -832,6 +832,7 @@ export async function listarArquivosCertificadosStorageAppService({
 
 export async function excluirArquivoCertificadoStorageAppService({
     supabase,
+    tenantId,
     arquivo,
     registrarAuditoria,
     setErroBanco,
@@ -863,8 +864,9 @@ export async function excluirArquivoCertificadoStorageAppService({
     }
 
     try {
-        await excluirArquivoStorageAuditoriaService({
+        await excluirArquivoStorageTenantService({
             supabase,
+            tenantId,
             arquivo,
         });
 
@@ -1349,7 +1351,7 @@ export async function salvarCertificadoTreinamentoAppService({
             };
         });
 
-        executarVerificacaoCertificadoSemBloquearFluxo({
+        void executarVerificacaoCertificadoSemBloquearFluxo({
             supabase,
             certificado: certificadoFluxo,
             certificadoNormalizado,

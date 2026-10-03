@@ -3,7 +3,6 @@ import "../../styles/pages/heroes-aniversariantes-colaboradores-data.css";
 import React, { useEffect, useMemo, useState } from "react";
 import { CalendarClock, CalendarDays, ChevronDown, Download, Search, Users } from "lucide-react";
 import { Card, FotoColaborador, Header, obterFotoColaboradorSrc } from "../commonComponents";
-import { STATUS_CLASSIFICACAO_COLABORADOR } from "../../constants/sstConstants";
 import { baixarRelatorioAniversariantesPDF } from "../../services/exportacaoService";
 import { classNames, formatarAniversario, normalizarTextoBusca } from "../../utils/sstUtils";
 import { obterUrlLogoEmpresa } from "../../services/supabaseServices";
@@ -88,6 +87,19 @@ const obterIniciais = (nome = "") => {
 const CHAVE_FILTROS_ANIVERSARIANTES = "controle-sst-qr:aniversariantes:filtros-salvos:v1";
 const CHAVE_LAYOUT_ANIVERSARIANTES = "controle-sst-qr:aniversariantes:layout-recolhido:v1";
 
+const STATUS_FILTRO_ANIVERSARIANTES = Object.freeze([
+    "Todos",
+    "Liberado",
+    "Com pendência",
+    "Em análise",
+]);
+
+const STATUS_ANIVERSARIANTES_EXCLUIDOS = new Set([
+    "Bloqueado",
+    "Inativo",
+    "Desmobilizado",
+]);
+
 
 function carregarLayoutAniversariantes() {
     if (typeof window === "undefined" || !window.localStorage) {
@@ -151,6 +163,14 @@ function normalizarFiltroSalvoAniversariantes(valor, fallback = "") {
     return texto || fallback;
 }
 
+function normalizarStatusFiltroAniversariantes(valor, fallback = "Todos") {
+    const statusNormalizado = normalizarFiltroSalvoAniversariantes(valor, fallback);
+
+    return STATUS_FILTRO_ANIVERSARIANTES.includes(statusNormalizado)
+        ? statusNormalizado
+        : fallback;
+}
+
 function carregarFiltrosSalvosAniversariantes() {
     if (typeof window === "undefined" || !window.localStorage) return null;
 
@@ -167,7 +187,7 @@ function carregarFiltrosSalvosAniversariantes() {
             mes: normalizarFiltroSalvoAniversariantes(dados.mes, padrao.mes),
             empresa: normalizarFiltroSalvoAniversariantes(dados.empresa, padrao.empresa),
             funcao: normalizarFiltroSalvoAniversariantes(dados.funcao, padrao.funcao),
-            status: normalizarFiltroSalvoAniversariantes(dados.status, padrao.status),
+            status: normalizarStatusFiltroAniversariantes(dados.status, padrao.status),
             busca: normalizarFiltroSalvoAniversariantes(dados.busca, padrao.busca),
         };
     } catch (error) {
@@ -220,7 +240,13 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
     );
 
     const colaboradoresElegiveis = useMemo(
-        () => colaboradores.filter((colaborador) => deveMostrarAniversarioColaborador(colaborador)),
+        () => colaboradores.filter(
+            (colaborador) =>
+                deveMostrarAniversarioColaborador(colaborador)
+                && !STATUS_ANIVERSARIANTES_EXCLUIDOS.has(
+                    statusGeral(colaborador).texto
+                )
+        ),
         [colaboradores]
     );
 
@@ -239,7 +265,7 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
         [colaboradoresComAniversario]
     );
 
-    const opcoesStatus = ["Todos", ...STATUS_CLASSIFICACAO_COLABORADOR];
+    const opcoesStatus = STATUS_FILTRO_ANIVERSARIANTES;
 
     const aplicarFiltrosBase = (colaborador, considerarMes = true) => {
         const dataAniversario = obterDataAniversarioColaborador(colaborador);

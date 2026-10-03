@@ -835,8 +835,8 @@ export default function App() {
         const { listarArquivosCertificadosStorageAppService } = await carregarTreinamentosHandlers();
 
         return listarArquivosCertificadosStorageAppService({
-            colaboradores,
-            empresasBanco,
+            supabase,
+            tenantId: tenant?.id || "",
             setErroBanco,
             onProgress,
         });
@@ -847,6 +847,7 @@ export default function App() {
 
         return excluirArquivoCertificadoStorageAppService({
             supabase,
+            tenantId: tenant?.id || "",
             arquivo,
             registrarAuditoria,
             setErroBanco,

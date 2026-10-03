@@ -1383,6 +1383,10 @@ export function AppContentRouter({
                         usuario={usuario}
                         permissaoSistemaUsuario={permissaoSistemaTela}
                         modulosTenantRuntime={modulosTenantRuntime}
+                        limiteStorageMb={LIMITE_STORAGE_MB}
+                        onListarArquivosStorage={onListarArquivosStorage}
+                        onExcluirArquivoStorage={onExcluirArquivoStorage}
+                        onAtualizarAuditoria={onAtualizarAuditoria}
                     />
                 ) : (
                     <ConfiguracoesSistema
