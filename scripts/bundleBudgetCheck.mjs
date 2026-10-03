@@ -52,6 +52,8 @@ const limites = {
     imagensIniciais: 200_000,
     imagensPublicas: 750_000,
     imagemArquivo: 1_300_000,
+    imagemSocialArquivo: 250_000,
+    imagensSociaisTotal: 300_000,
     imagensTotal:
         baselineBundle.imagensTotal +
         crescimentoPermitidoBundle.imagensTotal,
@@ -226,6 +228,24 @@ const imagens = detalhar(
 
 const scripts = [...js, ...mjs];
 
+const assetsSociais = new Set([
+    "brand/safescan-social-share.png",
+]);
+
+const imagensSociais = imagens.filter((item) =>
+    assetsSociais.has(item.arquivo),
+);
+
+const imagensAplicacao = imagens.filter(
+    (item) => !assetsSociais.has(item.arquivo),
+);
+
+assert.equal(
+    imagensSociais.length,
+    assetsSociais.size,
+    `Assets sociais ausentes ou duplicados: ${JSON.stringify([...assetsSociais])}`,
+);
+
 // ------------------------------------------------------------
 // SCRIPTS
 // ------------------------------------------------------------
@@ -282,7 +302,7 @@ const totalCss = totalizar(css);
 // IMAGENS
 // ------------------------------------------------------------
 
-const imagensBoot = imagens.filter((item) =>
+const imagensBoot = imagensAplicacao.filter((item) =>
     assetsIniciais.has(item.arquivo),
 );
 
@@ -291,17 +311,22 @@ const imagensMapeadas = new Set([
     ...assetsLazy,
 ]);
 
-const imagensPublicas = imagens.filter(
+const imagensPublicas = imagensAplicacao.filter(
     (item) => !imagensMapeadas.has(item.arquivo),
 );
 
-const imagensGrandes = imagens.filter(
+const imagensGrandes = imagensAplicacao.filter(
     (item) => item.bytes > limites.imagemArquivo,
+);
+
+const imagensSociaisGrandes = imagensSociais.filter(
+    (item) => item.bytes > limites.imagemSocialArquivo,
 );
 
 const totalImagensBoot = totalizar(imagensBoot);
 const totalImagensPublicas = totalizar(imagensPublicas);
-const totalImagens = totalizar(imagens);
+const totalImagens = totalizar(imagensAplicacao);
+const totalImagensSociais = totalizar(imagensSociais);
 
 // ------------------------------------------------------------
 // ASSERTS
@@ -372,6 +397,17 @@ assert.ok(
     `Imagens acima do orçamento global (${limites.imagensTotal} bytes): ${totalImagens} bytes.`,
 );
 
+assert.equal(
+    imagensSociaisGrandes.length,
+    0,
+    `Asset social acima de 250 KB: ${JSON.stringify(imagensSociaisGrandes)}`,
+);
+
+assert.ok(
+    totalImagensSociais <= limites.imagensSociaisTotal,
+    `Assets sociais acima do orçamento (${limites.imagensSociaisTotal} bytes): ${totalImagensSociais} bytes.`,
+);
+
 // ------------------------------------------------------------
 // RELATORIO
 // ------------------------------------------------------------
@@ -413,6 +449,10 @@ console.log(
 );
 
 console.log(
+    `- imagens sociais/Open Graph: ${totalImagensSociais} bytes (${formatarMb(totalImagensSociais)} MB) / ${limites.imagensSociaisTotal}`,
+);
+
+console.log(
     `- maior script: ${maiorScript?.arquivo || "n/a"}`,
 );
 
@@ -423,6 +463,17 @@ console.log(
 if (imagensPublicas.length > 0) {
     console.log(
         `- assets publicos: ${imagensPublicas
+            .map(
+                (item) =>
+                    `${item.arquivo} (${item.bytes} bytes)`,
+            )
+            .join(", ")}`,
+    );
+}
+
+if (imagensSociais.length > 0) {
+    console.log(
+        `- assets sociais/Open Graph: ${imagensSociais
             .map(
                 (item) =>
                     `${item.arquivo} (${item.bytes} bytes)`,
