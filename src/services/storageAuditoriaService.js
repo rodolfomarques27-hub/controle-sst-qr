@@ -2823,3 +2823,452 @@ export async function excluirArquivoStorageAuditoriaService({ supabase, arquivo 
 
     return true;
 }
+
+/*
+ * R2.11-A3.7 — gerenciamento tenant-safe do Storage.
+ *
+ * As rotinas administrativas globais acima permanecem intactas.
+ * A autoridade para classificação de vínculo pertence ao backend/RPC.
+ */
+
+function normalizarRegistroInventarioStorageTenant(
+    registro = {},
+    tenantId = ""
+) {
+    return {
+        id:
+            registro?.id || "",
+
+        tenantId:
+            registro?.tenant_id || tenantId,
+
+        bucket:
+            registro?.bucket_id || "",
+
+        bucketId:
+            registro?.bucket_id || "",
+
+        caminho:
+            registro?.caminho || "",
+
+        nome:
+            registro?.nome || "",
+
+        pasta:
+            registro?.pasta || "raiz",
+
+        tamanho:
+            Number(
+                registro?.tamanho_bytes || 0
+            ),
+
+        mimeType:
+            registro?.mime_type || "",
+
+        criadoEm:
+            registro?.criado_em || null,
+
+        atualizadoEm:
+            registro?.atualizado_em
+            || registro?.criado_em
+            || null,
+
+        origemTipo:
+            registro?.origem_tipo || "",
+
+        tabelaOrigem:
+            registro?.tabela_origem || "",
+
+        origemRegistro:
+            registro?.registro_id || "",
+
+        registroId:
+            registro?.registro_id || "",
+
+        empresaId:
+            registro?.empresa_id || "",
+
+        empresaNome:
+            registro?.empresa_nome || "",
+
+        colaboradorId:
+            registro?.colaborador_id || "",
+
+        colaboradorNome:
+            registro?.colaborador_nome || "",
+
+        colaboradorEmpresa:
+            registro?.empresa_nome || "",
+
+        emUso:
+            registro?.em_uso === true,
+
+        semRegistro:
+            registro?.sem_vinculo === true,
+
+        semVinculo:
+            registro?.sem_vinculo === true,
+
+        foraDePasta:
+            registro?.fora_de_pasta === true,
+
+        atribuicao:
+            registro?.atribuicao || "",
+
+        candidatoLimpezaForaPasta:
+            registro?.candidato_limpeza_fora_pasta === true,
+
+        ativoSistema:
+            false,
+
+        protegidoSistema:
+            false,
+
+        escopoStorage:
+            "tenant",
+
+        vinculoTenantOrigem:
+            "rpc-inventario-storage-tenant",
+    };
+}
+
+
+export async function listarArquivosStorageTenantService({
+    supabase,
+    tenantId,
+    onProgress = null,
+    limite = 500,
+} = {}) {
+    if (!supabase) {
+        throw new Error(
+            "Cliente Supabase não informado para listar o Storage do tenant."
+        );
+    }
+
+    const tenantIdNormalizado =
+        String(
+            tenantId || ""
+        ).trim();
+
+    if (!tenantIdNormalizado) {
+        throw new Error(
+            "Tenant não informado para listar arquivos do Storage."
+        );
+    }
+
+    const limitePagina =
+        Math.min(
+            Math.max(
+                Number(limite) || 500,
+                1
+            ),
+            1000
+        );
+
+    const informarProgresso =
+        (dados) => {
+            if (
+                typeof onProgress ===
+                "function"
+            ) {
+                onProgress(dados);
+            }
+        };
+
+    const coletados = [];
+
+    let offset = 0;
+    let totalResultados = null;
+
+    informarProgresso({
+        etapa:
+            "inventario-tenant",
+
+        atual:
+            0,
+
+        total:
+            1,
+
+        mensagem:
+            "Consultando inventário seguro do Storage...",
+    });
+
+    while (true) {
+        const {
+            data,
+            error,
+        } =
+            await supabase.rpc(
+                "inventario_storage_sst_tenant",
+                {
+                    p_tenant_id:
+                        tenantIdNormalizado,
+
+                    p_limite:
+                        limitePagina,
+
+                    p_offset:
+                        offset,
+
+                    p_bucket_id:
+                        null,
+
+                    p_caminho:
+                        null,
+                }
+            );
+
+        if (error) {
+            throw new Error(
+                error.message ||
+                "Não foi possível consultar o inventário do Storage deste tenant."
+            );
+        }
+
+        const lote =
+            Array.isArray(data)
+                ? data
+                : [];
+
+        if (
+            totalResultados === null &&
+            lote.length > 0
+        ) {
+            totalResultados =
+                Math.max(
+                    0,
+                    Number(
+                        lote[0]
+                            ?.total_resultados ||
+                        0
+                    )
+                );
+        }
+
+        coletados.push(
+            ...lote.map(
+                (registro) =>
+                    normalizarRegistroInventarioStorageTenant(
+                        registro,
+                        tenantIdNormalizado
+                    )
+            )
+        );
+
+        offset +=
+            lote.length;
+
+        informarProgresso({
+            etapa:
+                "inventario-tenant",
+
+            atual:
+                coletados.length,
+
+            total:
+                Math.max(
+                    totalResultados ??
+                    coletados.length,
+                    1
+                ),
+
+            mensagem:
+                `${coletados.length} arquivo(s) do tenant analisado(s).`,
+        });
+
+        if (
+            lote.length === 0 ||
+            lote.length < limitePagina ||
+            (
+                totalResultados !== null &&
+                offset >= totalResultados
+            )
+        ) {
+            break;
+        }
+    }
+
+    return coletados;
+}
+
+
+export async function excluirArquivoStorageTenantService({
+    supabase,
+    tenantId,
+    arquivo,
+} = {}) {
+    if (!supabase) {
+        throw new Error(
+            "Cliente Supabase não informado para excluir arquivo do Storage."
+        );
+    }
+
+    const tenantIdNormalizado =
+        String(
+            tenantId || ""
+        ).trim();
+
+    const bucket =
+        String(
+            arquivo?.bucket ||
+            arquivo?.bucketId ||
+            ""
+        ).trim();
+
+    const caminho =
+        String(
+            arquivo?.caminho ||
+            ""
+        )
+            .trim()
+            .replace(
+                /^\/+|\/+$/g,
+                ""
+            );
+
+    if (!tenantIdNormalizado) {
+        throw new Error(
+            "Exclusão bloqueada: tenant não informado."
+        );
+    }
+
+    if (!bucket || !caminho) {
+        throw new Error(
+            "Exclusão bloqueada: bucket ou caminho inválido."
+        );
+    }
+
+    const {
+        data,
+        error,
+    } =
+        await supabase.rpc(
+            "inventario_storage_sst_tenant",
+            {
+                p_tenant_id:
+                    tenantIdNormalizado,
+
+                p_limite:
+                    1,
+
+                p_offset:
+                    0,
+
+                p_bucket_id:
+                    bucket,
+
+                p_caminho:
+                    caminho,
+            }
+        );
+
+    if (error) {
+        throw new Error(
+            error.message ||
+            "Não foi possível revalidar o arquivo antes da exclusão."
+        );
+    }
+
+    const registros =
+        Array.isArray(data)
+            ? data
+            : [];
+
+    if (registros.length !== 1) {
+        throw new Error(
+            "Exclusão bloqueada: o arquivo não pertence ao tenant atual ou não possui atribuição segura."
+        );
+    }
+
+    const registro =
+        registros[0];
+
+    const tenantConfirmado =
+        String(
+            registro?.tenant_id ||
+            ""
+        ).trim();
+
+    const bucketConfirmado =
+        String(
+            registro?.bucket_id ||
+            ""
+        ).trim();
+
+    const caminhoConfirmado =
+        String(
+            registro?.caminho ||
+            ""
+        )
+            .trim()
+            .replace(
+                /^\/+|\/+$/g,
+                ""
+            );
+
+    if (
+        tenantConfirmado !==
+        tenantIdNormalizado
+    ) {
+        throw new Error(
+            "Exclusão bloqueada: tenant divergente na revalidação."
+        );
+    }
+
+    if (
+        bucketConfirmado !== bucket ||
+        caminhoConfirmado !== caminho
+    ) {
+        throw new Error(
+            "Exclusão bloqueada: bucket ou caminho divergiu da revalidação."
+        );
+    }
+
+    const nomeConfirmado =
+        String(
+            registro?.nome ||
+            caminhoConfirmado
+                .split("/")
+                .pop() ||
+            ""
+        ).trim();
+
+    if (
+        nomeConfirmado ===
+        ".emptyFolderPlaceholder"
+    ) {
+        throw new Error(
+            "Exclusão bloqueada: marcador técnico de pasta do Storage."
+        );
+    }
+
+    if (
+        registro?.em_uso === true ||
+        registro?.sem_vinculo !== true
+    ) {
+        throw new Error(
+            `Exclusão bloqueada: o arquivo continua vinculado a ${registro?.origem_tipo || registro?.tabela_origem || "um registro do sistema"}.`
+        );
+    }
+
+    const {
+        error:
+            erroExclusao,
+    } =
+        await supabase.storage
+            .from(
+                bucketConfirmado
+            )
+            .remove([
+                caminhoConfirmado,
+            ]);
+
+    if (erroExclusao) {
+        throw new Error(
+            `Erro ao excluir arquivo do Storage: ${erroExclusao.message}`
+        );
+    }
+
+    return true;
+}

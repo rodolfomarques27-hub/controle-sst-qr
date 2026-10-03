@@ -1,3 +1,4 @@
+import { ArquivosStorageConfiguracoes } from "./ArquivosStorageConfiguracoes";
 import {
     useEffect,
     useRef,
@@ -205,6 +206,10 @@ export function ConfiguracoesTenant({
     usuario = null,
     permissaoSistemaUsuario = null,
     modulosTenantRuntime = [],
+    limiteStorageMb = 10240,
+    onListarArquivosStorage = null,
+    onExcluirArquivoStorage = null,
+    onAtualizarAuditoria = null,
 }) {
     const {
         tenant,
@@ -2389,17 +2394,28 @@ export function ConfiguracoesTenant({
                 />
             </section>
 
-            <section className="grid gap-5 xl:grid-cols-[1.05fr_1fr]">
-                <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <section className="grid items-start gap-5 xl:grid-cols-2">
+                <details open data-r10-collapse="ambiente" className="group rounded-2xl border border-slate-200 bg-white shadow-sm self-start overflow-hidden">
+        <summary className="flex h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+            <span className="text-sm font-black text-slate-950 sm:text-base">
+                Ambiente
+            </span>
+
+            <span
+                aria-hidden="true"
+                className="shrink-0 text-lg font-black text-slate-400 transition-transform duration-200 group-open:rotate-180"
+            >
+                ⌄
+            </span>
+        </summary>
+<div data-r10-body="ambiente" className="px-5 pb-5 pt-2">
                     <div className="flex items-center gap-3">
                         <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-sky-50 text-sky-700">
                             <Globe2 className="h-5 w-5" />
                         </span>
 
                         <div>
-                            <h2 className="text-base font-bold text-slate-950">
-                                Ambiente
-                            </h2>
+
 
                             <p className="text-xs text-slate-500">
                                 Identificação do ambiente contratado.
@@ -2438,18 +2454,30 @@ export function ConfiguracoesTenant({
                             </dd>
                         </div>
                     </dl>
-                </article>
 
-                <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+</div></details>
+
+                <details open data-r10-collapse="acesso-atual" className="group rounded-2xl border border-slate-200 bg-white shadow-sm self-start overflow-hidden">
+        <summary className="flex h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+            <span className="text-sm font-black text-slate-950 sm:text-base">
+                Acesso atual
+            </span>
+
+            <span
+                aria-hidden="true"
+                className="shrink-0 text-lg font-black text-slate-400 transition-transform duration-200 group-open:rotate-180"
+            >
+                ⌄
+            </span>
+        </summary>
+<div data-r10-body="acesso-atual" className="px-5 pb-5 pt-2">
                     <div className="flex items-center gap-3">
                         <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
                             <UserRound className="h-5 w-5" />
                         </span>
 
                         <div>
-                            <h2 className="text-base font-bold text-slate-950">
-                                Acesso atual
-                            </h2>
+
 
                             <p className="text-xs text-slate-500">
                                 Identidade e perfil reconhecidos neste tenant.
@@ -2476,16 +2504,28 @@ export function ConfiguracoesTenant({
                             </div>
                         </div>
                     </div>
-                </article>
+
+</div></details>
             </section>
 
-            <section className="grid gap-5 xl:grid-cols-2">
-                <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <section className="grid items-start gap-5 xl:grid-cols-2">
+                <details open data-r10-collapse="empresas-vinculadas" className="group rounded-2xl border border-slate-200 bg-white shadow-sm self-start overflow-hidden">
+        <summary className="flex h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+            <span className="text-sm font-black text-slate-950 sm:text-base">
+                Empresas vinculadas
+            </span>
+
+            <span
+                aria-hidden="true"
+                className="shrink-0 text-lg font-black text-slate-400 transition-transform duration-200 group-open:rotate-180"
+            >
+                ⌄
+            </span>
+        </summary>
+<div data-r10-body="empresas-vinculadas" className="px-5 pb-5 pt-2">
                     <div className="flex items-center justify-between gap-3">
                         <div>
-                            <h2 className="text-base font-bold text-slate-950">
-                                Empresas vinculadas
-                            </h2>
+
 
                             <p className="mt-1 text-xs text-slate-500">
                                 Empresas já disponíveis para este ambiente.
@@ -2524,14 +2564,26 @@ export function ConfiguracoesTenant({
                             </div>
                         )}
                     </div>
-                </article>
 
-                <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+</div></details>
+
+                <details open data-r10-collapse="recursos-disponiveis" className="group rounded-2xl border border-slate-200 bg-white shadow-sm self-start overflow-hidden">
+        <summary className="flex h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+            <span className="text-sm font-black text-slate-950 sm:text-base">
+                Recursos disponíveis
+            </span>
+
+            <span
+                aria-hidden="true"
+                className="shrink-0 text-lg font-black text-slate-400 transition-transform duration-200 group-open:rotate-180"
+            >
+                ⌄
+            </span>
+        </summary>
+<div data-r10-body="recursos-disponiveis" className="px-5 pb-5 pt-2">
                     <div className="flex items-center justify-between gap-3">
                         <div>
-                            <h2 className="text-base font-bold text-slate-950">
-                                Recursos disponíveis
-                            </h2>
+
 
                             <p className="mt-1 text-xs text-slate-500">
                                 Núcleo SafeScan e módulos contratados para esta conta.
@@ -2574,16 +2626,28 @@ export function ConfiguracoesTenant({
                             </div>
                         )}
                     </div>
-                </article>
+
+</div></details>
             </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <details open data-r10-collapse="plano-base" className="group rounded-2xl border border-slate-200 bg-white shadow-sm self-start overflow-hidden">
+        <summary className="flex h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+            <span className="text-sm font-black text-slate-950 sm:text-base">
+                Recursos do Plano Base
+            </span>
+
+            <span
+                aria-hidden="true"
+                className="shrink-0 text-lg font-black text-slate-400 transition-transform duration-200 group-open:rotate-180"
+            >
+                ⌄
+            </span>
+        </summary>
+<div data-r10-body="plano-base" className="px-5 pb-5 pt-2">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                         <div className="flex flex-wrap items-center gap-2">
-                            <h2 className="text-base font-bold text-slate-950">
-                                Recursos do Plano Base
-                            </h2>
+
 
                             <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-200">
                                 Incluso no plano
@@ -2744,7 +2808,8 @@ export function ConfiguracoesTenant({
                         Somente o perfil Administrador deste ambiente pode alterar os recursos operacionais do Plano Base.
                     </p>
                 ) : null}
-            </section>
+
+</div></details>
 
             {(
                 sstDisponivel
@@ -2757,38 +2822,23 @@ export function ConfiguracoesTenant({
                 >
                     <details
                         name="configuracoes-tenant"
-                        className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                        className="group self-start overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
                     >
-                        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
-                            <div className="flex min-w-0 items-center gap-3">
-                                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-                                    <Blocks className="h-5 w-5" />
-                                </span>
+             <summary className="flex h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+    <span className="text-sm font-black text-slate-950 sm:text-base">
+        Notificação de pendências documentais
+    </span>
 
-                                <div className="min-w-0">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <h2 className="text-sm font-bold text-slate-950 sm:text-base">
-                                            Notificação de pendências documentais
-                                        </h2>
-
-                                        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-200">
-                                            Tenant isolado
-                                        </span>
-                                    </div>
-
-                                    <p className="mt-1 text-xs leading-5 text-slate-500">
-                                        Configurações independentes conforme os módulos contratados.
-                                    </p>
-                                </div>
-                            </div>
-
-                            <ChevronDown
-                                aria-hidden="true"
-                                className="h-5 w-5 shrink-0 text-slate-500 transition-transform duration-200 group-open:rotate-180"
-                            />
-                        </summary>
+    <span
+        aria-hidden="true"
+        className="shrink-0 text-lg font-black text-slate-400 transition-transform duration-200 group-open:rotate-180"
+    >
+        ⌄
+    </span>
+</summary>
 
                         <div className="space-y-3 border-t border-slate-100 bg-slate-50/40 p-3 sm:p-4">
+
                             {sstDisponivel ? (
                                 <details
                                     name="configuracoes-email-tipo"
@@ -3275,7 +3325,20 @@ export function ConfiguracoesTenant({
                 </section>
             ) : null}
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <details open data-r10-collapse="versao-safescan" className="group rounded-2xl border border-slate-200 bg-white shadow-sm self-start overflow-hidden">
+        <summary className="flex h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+            <span className="text-sm font-black text-slate-950 sm:text-base">
+                Versão do SafeScan
+            </span>
+
+            <span
+                aria-hidden="true"
+                className="shrink-0 text-lg font-black text-slate-400 transition-transform duration-200 group-open:rotate-180"
+            >
+                ⌄
+            </span>
+        </summary>
+<div data-r10-body="versao-safescan" className="px-5 pb-5 pt-2">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-3">
                         <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
@@ -3283,9 +3346,7 @@ export function ConfiguracoesTenant({
                         </span>
 
                         <div>
-                            <p className="text-xs font-black uppercase tracking-[0.08em] text-emerald-700">
-                                Versão do SafeScan
-                            </p>
+
                             <p className="mt-0.5 text-sm text-slate-500">
                                 Acompanhe a versão atual e as melhorias disponíveis neste ambiente.
                             </p>
@@ -3328,6 +3389,19 @@ export function ConfiguracoesTenant({
                         </div>
                     </div>
                 </div>
+
+</div></details>
+            <section
+                id="config-arquivos-storage-tenant"
+                className="scroll-mt-24"
+            >
+                <ArquivosStorageConfiguracoes
+                    limiteStorageMb={limiteStorageMb}
+                    permissaoSistemaUsuario={permissaoSistemaUsuario}
+                    onListarArquivosStorage={onListarArquivosStorage}
+                    onExcluirArquivoStorage={onExcluirArquivoStorage}
+                    onAtualizarAuditoria={onAtualizarAuditoria}
+                />
             </section>
             <section className="rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
                 <div className="flex items-start gap-3">
@@ -3339,7 +3413,7 @@ export function ConfiguracoesTenant({
                         </h2>
 
                         <p className="mt-1 text-sm leading-6 text-slate-600">
-                            Limites globais, tokens, auditoria de sistema, Storage administrativo, provedores de e-mail, aparência global e manutenção da infraestrutura são administrados exclusivamente pela Conta Mestre SafeScan.
+                            Limites globais, tokens, auditoria de sistema, Storage administrativo global, provedores de e-mail, aparência global e manutenção da infraestrutura são administrados exclusivamente pela Conta Mestre SafeScan. O gerenciamento de arquivos deste tenant é disponibilizado separadamente no bloco de Storage acima.
                         </p>
                     </div>
                 </div>

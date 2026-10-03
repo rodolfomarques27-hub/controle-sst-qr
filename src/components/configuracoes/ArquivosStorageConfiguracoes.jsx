@@ -30,6 +30,28 @@ const arquivoStoragePodeSerExcluido = (arquivo) =>
     !arquivo?.protegidoSistema &&
     arquivoStorageTemDestinoValido(arquivo);
 
+const arquivoStorageForaDePasta = (arquivo) => {
+    const caminho = String(arquivo?.caminho || "")
+        .trim()
+        .replace(/^\/+|\/+$/g, "");
+
+    if (!caminho) return false;
+
+    const pasta = String(arquivo?.pasta || "")
+        .trim()
+        .toLowerCase();
+
+    const pastaInformada =
+        pasta &&
+        pasta !== "raiz" &&
+        pasta !== "root" &&
+        pasta !== "/";
+
+    if (pastaInformada) return false;
+
+    return !caminho.includes("/");
+};
+
 const obterEmpresaArquivoStorage = (arquivo) =>
     arquivo?.empresaNome || arquivo?.colaboradorEmpresa || "Sem empresa vinculada";
 
@@ -116,7 +138,9 @@ export function ArquivosStorageConfiguracoes({
     controleCard = null,
 }) {
     const [filtrosStorage, setFiltrosStorage] = useState(FILTROS_STORAGE_PADRAO);
+    const [storageRecolhido, setStorageRecolhido] = useState(false);
     const [arquivosStorage, setArquivosStorage] = useState([]);
+    const [analiseStorageExecutada, setAnaliseStorageExecutada] = useState(false);
     const [carregandoStorage, setCarregandoStorage] = useState(false);
     const [progressoCarregamentoStorage, setProgressoCarregamentoStorage] = useState({ etapa: "", atual: 0, total: 1, mensagem: "" });
     const [excluindoStorage, setExcluindoStorage] = useState("");
@@ -124,6 +148,10 @@ export function ArquivosStorageConfiguracoes({
     const [progressoLimpezaStorage, setProgressoLimpezaStorage] = useState({ atual: 0, total: 0 });
     const [confirmacaoLimpezaStorage, setConfirmacaoLimpezaStorage] = useState("");
     const [mostrarPainelLimpezaStorage, setMostrarPainelLimpezaStorage] = useState(false);
+    const [mostrarPainelLimpezaForaPastas, setMostrarPainelLimpezaForaPastas] = useState(false);
+    const [confirmacaoLimpezaForaPastas, setConfirmacaoLimpezaForaPastas] = useState("");
+    const [limpandoForaPastas, setLimpandoForaPastas] = useState(false);
+    const [progressoLimpezaForaPastas, setProgressoLimpezaForaPastas] = useState({ atual: 0, total: 0 });
     const [quantidadeArquivosVisiveis, setQuantidadeArquivosVisiveis] = useState(QUANTIDADE_INICIAL_ARQUIVOS_STORAGE);
     const permissaoSistemaAtual = permissaoSistemaUsuario;
     const mensagemPermissao = permissaoSistemaAtual
@@ -169,6 +197,10 @@ export function ArquivosStorageConfiguracoes({
         filtrosStorage.vinculo,
     ]);
 
+    useEffect(() => {
+        setConfirmacaoLimpezaForaPastas("");
+    }, [arquivosStorage.length]);
+
 
     const bloqueioLimparArquivosStorageSistema = useMemo(
         () => obterBloqueioVisualAcaoCriticaSistema(
@@ -188,6 +220,7 @@ export function ArquivosStorageConfiguracoes({
     const storageSemRegistroBytes = arquivosSemRegistro.reduce((total, arquivo) => total + Number(arquivo?.tamanho || 0), 0);
     const storageLimiteBytes = Math.max(1, Number(limiteStorageMb || 1024) * 1024 * 1024);
     const storagePercentual = Math.round((storageTotalBytes / storageLimiteBytes) * 100);
+    const storageLivreBytes = Math.max(0, storageLimiteBytes - storageTotalBytes);
 
     const storageStatus = storagePercentual >= 90
         ? {
@@ -251,6 +284,44 @@ export function ArquivosStorageConfiguracoes({
 
     const filtroLimpezaSemVinculoAtivo = filtrosStorage.vinculo === "Sem vínculo";
     const confirmacaoLimpezaValida = confirmacaoLimpezaStorage.trim().toUpperCase() === "LIMPAR";
+
+    const arquivosForaPastas =
+        arquivosStorage.filter(arquivoStorageForaDePasta);
+
+    const arquivosForaPastasAptos =
+        arquivosForaPastas.filter(arquivoStoragePodeSerExcluido);
+
+    const arquivosForaPastasProtegidos =
+        arquivosForaPastas.filter(
+            (arquivo) => !arquivoStoragePodeSerExcluido(arquivo)
+        );
+
+    const storageForaPastasBytes =
+        arquivosForaPastas.reduce(
+            (total, arquivo) =>
+                total + Number(arquivo?.tamanho || 0),
+            0
+        );
+
+    const storageForaPastasAptosBytes =
+        arquivosForaPastasAptos.reduce(
+            (total, arquivo) =>
+                total + Number(arquivo?.tamanho || 0),
+            0
+        );
+
+    const confirmacaoLimpezaForaPastasValida =
+        confirmacaoLimpezaForaPastas.trim().toUpperCase() === "LIMPAR";
+
+    const mensagemBloqueioLimpezaForaPastas =
+        bloqueioLimparArquivosStorageSistema.bloqueado
+            ? bloqueioLimparArquivosStorageSistema.mensagem
+            : arquivosForaPastasAptos.length === 0
+                ? "Nenhum arquivo fora de pasta está apto à limpeza."
+                : !confirmacaoLimpezaForaPastasValida
+                    ? "Digite LIMPAR para liberar a limpeza dos arquivos fora de pastas."
+                    : `${arquivosForaPastasAptos.length} arquivo(s) apto(s) · ${formatarBytes(storageForaPastasAptosBytes)} poderão ser removidos.`;
+
     const mensagemBloqueioLimpezaStorage = bloqueioLimparArquivosStorageSistema.bloqueado
         ? bloqueioLimparArquivosStorageSistema.mensagem
         : !filtroLimpezaSemVinculoAtivo
@@ -262,12 +333,38 @@ export function ArquivosStorageConfiguracoes({
     const opcoesEmpresasStorage = Array.from(new Set(arquivosStorage.map(obterEmpresaArquivoStorage))).sort();
     const opcoesColaboradoresStorage = Array.from(new Set(arquivosStorage.map(obterColaboradorArquivoStorage))).sort();
     const opcoesTiposStorage = Array.from(new Set(arquivosStorage.map(obterTipoArquivoStorage))).sort();
-    const storagePorBucket = agruparArquivosStorage(arquivosStorage, (arquivo) => arquivo?.bucket || "storage")
-        .map((item) => ({ ...item, bucket: item.nome }))
+
+    const storagePorTipo = agruparArquivosStorage(
+        arquivosStorage,
+        obterTipoArquivoStorage
+    )
+        .map((item) => ({
+            ...item,
+            percentual:
+                storageTotalBytes > 0
+                    ? Math.round((item.bytes / storageTotalBytes) * 100)
+                    : 0,
+        }))
+        .sort((a, b) => b.bytes - a.bytes)
+        .slice(0, 10);
+
+    const storagePorBucket = agruparArquivosStorage(
+        arquivosStorage,
+        (arquivo) => arquivo?.bucket || "storage"
+    )
+        .map((item) => ({
+            ...item,
+            bucket: item.nome,
+            percentual:
+                storageTotalBytes > 0
+                    ? Math.round((item.bytes / storageTotalBytes) * 100)
+                    : 0,
+        }))
         .sort((a, b) => b.bytes - a.bytes);
+
     const maioresArquivosStorage = [...arquivosStorage]
         .sort((a, b) => Number(b?.tamanho || 0) - Number(a?.tamanho || 0))
-        .slice(0, 6);
+        .slice(0, 10);
     const ultimoUploadStorage = [...arquivosStorage]
         .filter((arquivo) => arquivo?.atualizadoEm)
         .sort((a, b) => new Date(b.atualizadoEm).getTime() - new Date(a.atualizadoEm).getTime())[0];
@@ -285,6 +382,7 @@ export function ArquivosStorageConfiguracoes({
 
             if (storageMontadoRef.current) {
                 setArquivosStorage(lista || []);
+                setAnaliseStorageExecutada(true);
                 setProgressoCarregamentoStorage({ etapa: "concluido", atual: 1, total: 1, mensagem: `${(lista || []).length} arquivo(s) analisado(s).` });
             }
         } finally {
@@ -423,6 +521,125 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
         }
     };
 
+    const limparArquivosStorageForaPastas = async () => {
+        if (
+            !onExcluirArquivoStorage ||
+            arquivosForaPastasAptos.length === 0
+        ) {
+            return;
+        }
+
+        if (bloqueioLimparArquivosStorageSistema.bloqueado) {
+            if (typeof window !== "undefined") {
+                window.alert(
+                    bloqueioLimparArquivosStorageSistema.mensagem
+                );
+            }
+            return;
+        }
+
+        if (!confirmacaoLimpezaForaPastasValida) {
+            if (typeof window !== "undefined") {
+                window.alert(
+                    "Digite LIMPAR para liberar a limpeza dos arquivos fora de pastas."
+                );
+            }
+            return;
+        }
+
+        const totalArquivos =
+            arquivosForaPastasAptos.length;
+
+        const mensagemConfirmacao =
+            `Confirma excluir ${totalArquivos} arquivo(s) fora de pastas e sem vínculo?` +
+            `\n\nEspaço estimado a liberar: ${formatarBytes(storageForaPastasAptosBytes)}.` +
+            `\n\nArquivos em uso, ativos ou protegidos pelo sistema NÃO serão removidos.` +
+            `\n\nEssa ação remove somente arquivos físicos seguros e não altera registros vinculados do banco.`;
+
+        if (
+            typeof window !== "undefined" &&
+            !window.confirm(mensagemConfirmacao)
+        ) {
+            return;
+        }
+
+        setLimpandoForaPastas(true);
+        setExcluindoStorage("__limpeza_fora_pastas__");
+        setProgressoLimpezaForaPastas({
+            atual: 0,
+            total: totalArquivos,
+        });
+
+        let excluidos = 0;
+        let falhas = 0;
+
+        try {
+            for (
+                const [indice, arquivo]
+                of arquivosForaPastasAptos.entries()
+            ) {
+                if (!storageMontadoRef.current) break;
+
+                try {
+                    const ok =
+                        await onExcluirArquivoStorage({
+                            ...arquivo,
+                            ignorarConfirmacaoIndividual: true,
+                            ignorarConfirmacao: true,
+                            limpezaEmLote: true,
+                            origemLimpeza: "fora_de_pastas",
+                        });
+
+                    if (ok) {
+                        excluidos += 1;
+                    }
+                    else {
+                        falhas += 1;
+                    }
+                }
+                catch (erro) {
+                    falhas += 1;
+
+                    console.warn(
+                        "Erro ao excluir arquivo fora de pasta:",
+                        erro
+                    );
+                }
+                finally {
+                    if (storageMontadoRef.current) {
+                        setProgressoLimpezaForaPastas({
+                            atual: indice + 1,
+                            total: totalArquivos,
+                        });
+                    }
+                }
+            }
+        }
+        finally {
+            if (storageMontadoRef.current) {
+                await carregarStorage();
+
+                onAtualizarAuditoria?.();
+
+                setLimpandoForaPastas(false);
+                setExcluindoStorage("");
+                setConfirmacaoLimpezaForaPastas("");
+                setMostrarPainelLimpezaForaPastas(false);
+
+                setProgressoLimpezaForaPastas({
+                    atual: 0,
+                    total: 0,
+                });
+
+                if (typeof window !== "undefined") {
+                    window.alert(
+                        `Limpeza de arquivos fora de pastas concluída. Excluído(s): ${excluidos}. Falha(s): ${falhas}.`
+                    );
+                }
+            }
+        }
+    };
+
 
     const acionarBotaoLimpezaStorage = () => {
         if (!onExcluirArquivoStorage) return;
@@ -435,6 +652,8 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
         }
 
         if (!mostrarPainelLimpezaStorage) {
+            setMostrarPainelLimpezaForaPastas(false);
+            setConfirmacaoLimpezaForaPastas("");
             setMostrarPainelLimpezaStorage(true);
             setConfirmacaoLimpezaStorage("");
             setFiltrosStorage((atual) => ({ ...atual, vinculo: "Sem vínculo" }));
@@ -449,9 +668,45 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
         setConfirmacaoLimpezaStorage("");
     };
 
+    const acionarBotaoLimpezaForaPastas = () => {
+        if (!onExcluirArquivoStorage) return;
+
+        if (bloqueioLimparArquivosStorageSistema.bloqueado) {
+            if (typeof window !== "undefined") {
+                window.alert(
+                    bloqueioLimparArquivosStorageSistema.mensagem
+                );
+            }
+            return;
+        }
+
+        if (!mostrarPainelLimpezaForaPastas) {
+            setMostrarPainelLimpezaStorage(false);
+            setConfirmacaoLimpezaStorage("");
+            setMostrarPainelLimpezaForaPastas(true);
+            setConfirmacaoLimpezaForaPastas("");
+            return;
+        }
+
+        limparArquivosStorageForaPastas();
+    };
+
+    const cancelarPainelLimpezaForaPastas = () => {
+        setMostrarPainelLimpezaForaPastas(false);
+        setConfirmacaoLimpezaForaPastas("");
+    };
+
     const botaoLimpezaStorageBloqueado = carregandoStorage
         || limpandoStorage
+        || limpandoForaPastas
         || arquivosSemRegistroExcluiveis.length === 0
+        || !onExcluirArquivoStorage
+        || bloqueioLimparArquivosStorageSistema.bloqueado;
+
+    const botaoLimpezaForaPastasBloqueado = carregandoStorage
+        || limpandoStorage
+        || limpandoForaPastas
+        || arquivosForaPastasAptos.length === 0
         || !onExcluirArquivoStorage
         || bloqueioLimparArquivosStorageSistema.bloqueado;
 
@@ -462,9 +717,42 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
             : confirmacaoLimpezaValida
                 ? `Confirmar limpeza (${arquivosFiltradosSemVinculo.length})`
                 : "Digite LIMPAR";
+
+    const textoBotaoLimpezaForaPastas = limpandoForaPastas
+        ? `Limpando ${progressoLimpezaForaPastas.atual}/${progressoLimpezaForaPastas.total}`
+        : !mostrarPainelLimpezaForaPastas
+            ? "Limpar fora de pastas"
+            : confirmacaoLimpezaForaPastasValida
+                ? `Confirmar (${arquivosForaPastasAptos.length})`
+                : "Digite LIMPAR";
     return (
         <Card>
-            <div className="flex flex-col gap-4 border-b border-slate-100 pb-4 lg:flex-row lg:items-start lg:justify-between">
+            {controleCard ? (
+<div
+                className={classNames(
+                    "flex flex-col gap-4 border-b border-slate-100 pb-4 lg:flex-row lg:items-start lg:justify-between",
+                    !controleCard && "cursor-pointer select-none"
+                )}
+                onClick={(evento) => {
+                    if (controleCard) return;
+
+                    const alvo =
+                        evento.target;
+
+                    if (
+                        alvo?.closest?.(
+                            "button, input, select, textarea, a, summary, [role='button']"
+                        )
+                    ) {
+                        return;
+                    }
+
+                    setStorageRecolhido(
+                        (atual) =>
+                            !atual
+                    );
+                }}
+            >
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                         <HardDrive className="h-5 w-5 text-slate-500" />
@@ -480,14 +768,16 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
                     <button
                         type="button"
                         onClick={carregarStorage}
-                        disabled={carregandoStorage || limpandoStorage || !onListarArquivosStorage}
-                        className="inline-flex min-h-[46px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                        disabled={carregandoStorage || limpandoStorage || limpandoForaPastas || !onListarArquivosStorage}
+                        className="inline-flex min-h-[46px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-100 disabled:opacity-60"
                     >
-                        {arquivosStorage.length > 0 ? <RefreshCw className="h-4 w-4" /> : <Database className="h-4 w-4" />}
-                        {carregandoStorage ? "Carregando..." : arquivosStorage.length > 0 ? "Atualizar arquivos" : "Carregar arquivos"}
+                        {analiseStorageExecutada ? <RefreshCw className="h-4 w-4" /> : <Database className="h-4 w-4" />}
+                        {carregandoStorage ? "Carregando..." : analiseStorageExecutada ? "Atualizar arquivos" : "Carregar arquivos"}
                     </button>
 
-                    <button
+                    {analiseStorageExecutada && arquivosSemRegistroExcluiveis.length > 0 && (
+                        <span data-r10c-action="sem-vinculo" className="contents">
+                            <button
                         type="button"
                         onClick={acionarBotaoLimpezaStorage}
                         disabled={botaoLimpezaStorageBloqueado}
@@ -502,10 +792,208 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
                         <Trash2 className="h-4 w-4" />
                         {textoBotaoLimpezaStorage}
                     </button>
+                        </span>
+                    )}
+
+                    {analiseStorageExecutada && arquivosForaPastasAptos.length > 0 && (
+                        <span data-r10c-action="fora-pastas" className="contents">
+                            <button
+                        type="button"
+                        onClick={acionarBotaoLimpezaForaPastas}
+                        disabled={botaoLimpezaForaPastasBloqueado}
+                        className={classNames(
+                            "inline-flex min-h-[46px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-4 py-3 text-sm font-semibold ring-1 transition disabled:opacity-50",
+                            mostrarPainelLimpezaForaPastas
+                                ? "bg-orange-600 text-white ring-orange-600 hover:bg-orange-700"
+                                : "bg-orange-50 text-orange-700 ring-orange-200 hover:bg-orange-100"
+                        )}
+                        title={
+                            botaoLimpezaForaPastasBloqueado
+                                ? mensagemBloqueioLimpezaForaPastas
+                                : "Revisar e limpar arquivos encontrados fora de pastas"
+                        }
+                    >
+                        <AlertTriangle className="h-4 w-4" />
+                        {textoBotaoLimpezaForaPastas}
+                    </button>
+                        </span>
+                    )}
 
                     {controleCard}
+
+                    {!controleCard && (
+                        <button
+                            type="button"
+                            onClick={(evento) => {
+                                evento.stopPropagation();
+
+                                setStorageRecolhido(
+                                    (atual) =>
+                                        !atual
+                                );
+                            }}
+                            aria-expanded={!storageRecolhido}
+                            className="inline-flex min-h-[46px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-white px-3 py-3 text-xs font-black text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-50"
+                        >
+                            <span
+                                aria-hidden="true"
+                                className={classNames(
+                                    "text-base transition-transform duration-200",
+                                    !storageRecolhido &&
+                                        "rotate-180"
+                                )}
+                            >
+                                ⌄
+                            </span>
+
+                            {storageRecolhido
+                                ? "Abrir"
+                                : "Recolher"}
+                        </button>
+                    )}
                 </div>
             </div>
+            ) : (
+<div
+                data-r10d-storage-header="tenant"
+                className="-m-5 flex h-14 cursor-pointer select-none items-center justify-between gap-4 px-5"
+                role="button"
+                tabIndex={0}
+                aria-expanded={!storageRecolhido}
+                onClick={() => {
+                    setStorageRecolhido(
+                        (atual) =>
+                            !atual
+                    );
+                }}
+                onKeyDown={(evento) => {
+                    if (
+                        evento.key !== "Enter" &&
+                        evento.key !== " "
+                    ) {
+                        return;
+                    }
+
+                    evento.preventDefault();
+
+                    setStorageRecolhido(
+                        (atual) =>
+                            !atual
+                    );
+                }}
+            >
+                <h2
+                    id="config-arquivos-storage"
+                    className="scroll-mt-24 text-sm font-black text-slate-950 sm:text-base"
+                >
+                    Arquivos salvos no Storage
+                </h2>
+
+                <span
+                    aria-hidden="true"
+                    className={classNames(
+                        "shrink-0 text-lg font-black text-slate-400 transition-transform duration-200",
+                        !storageRecolhido &&
+                            "rotate-180"
+                    )}
+                >
+                    ⌄
+                </span>
+            </div>
+            )}
+            {!storageRecolhido && (
+                <>
+
+                    {!controleCard && (
+                        <div
+                            data-r10d-storage-actions="tenant"
+                            className="pt-5 lg:flex lg:items-start lg:justify-between lg:gap-6"
+                        >
+                            <div className="min-w-0 lg:flex-1">
+                                <p className="text-sm leading-6 text-slate-500">
+                                    Consulte capacidade, vínculos, tipos de documentos, maiores arquivos, uploads recentes e arquivos sem vínculo.
+                                </p>
+
+                                <p className="mt-1 text-xs font-bold text-slate-400">
+                                    {mensagemPermissao}
+                                </p>
+                            </div>
+
+                            <div className="mt-4 flex flex-wrap items-center gap-2 lg:mt-0 lg:shrink-0 lg:justify-end">
+                                <button
+                                    type="button"
+                                    onClick={carregarStorage}
+                                    disabled={
+                                        carregandoStorage ||
+                                        limpandoStorage ||
+                                        limpandoForaPastas ||
+                                        !onListarArquivosStorage
+                                    }
+                                    className="inline-flex min-h-[46px] items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-100 disabled:opacity-60"
+                                >
+                                    {analiseStorageExecutada ? (
+                                        <RefreshCw className="h-4 w-4" />
+                                    ) : (
+                                        <Database className="h-4 w-4" />
+                                    )}
+
+                                    {carregandoStorage
+                                        ? "Carregando..."
+                                        : analiseStorageExecutada
+                                            ? "Atualizar arquivos"
+                                            : "Carregar arquivos"}
+                                </button>
+
+                                {analiseStorageExecutada &&
+                                    arquivosSemRegistroExcluiveis.length > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={acionarBotaoLimpezaStorage}
+                                            disabled={botaoLimpezaStorageBloqueado}
+                                            className={classNames(
+                                                "inline-flex min-h-[46px] items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-4 py-3 text-sm font-semibold ring-1 transition disabled:opacity-50",
+                                                mostrarPainelLimpezaStorage
+                                                    ? "bg-red-600 text-white ring-red-600 hover:bg-red-700"
+                                                    : "bg-red-50 text-red-700 ring-red-200 hover:bg-red-100"
+                                            )}
+                                            title={
+                                                botaoLimpezaStorageBloqueado
+                                                    ? mensagemBloqueioLimpezaStorage
+                                                    : "Excluir somente arquivos sem vínculo"
+                                            }
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                            {textoBotaoLimpezaStorage}
+                                        </button>
+                                    )}
+
+                                {analiseStorageExecutada &&
+                                    arquivosForaPastasAptos.length > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={acionarBotaoLimpezaForaPastas}
+                                            disabled={botaoLimpezaForaPastasBloqueado}
+                                            className={classNames(
+                                                "inline-flex min-h-[46px] items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-4 py-3 text-sm font-semibold ring-1 transition disabled:opacity-50",
+                                                mostrarPainelLimpezaForaPastas
+                                                    ? "bg-orange-600 text-white ring-orange-600 hover:bg-orange-700"
+                                                    : "bg-orange-50 text-orange-700 ring-orange-200 hover:bg-orange-100"
+                                            )}
+                                            title={
+                                                botaoLimpezaForaPastasBloqueado
+                                                    ? mensagemBloqueioLimpezaForaPastas
+                                                    : "Revisar e limpar arquivos encontrados fora de pastas"
+                                            }
+                                        >
+                                            <AlertTriangle className="h-4 w-4" />
+                                            {textoBotaoLimpezaForaPastas}
+                                        </button>
+                                    )}
+                            </div>
+                        </div>
+                    )}
+
+
 
             {!onListarArquivosStorage && (
                 <div className="mt-4 rounded-2xl bg-orange-50 px-4 py-3 text-xs font-bold text-orange-700 ring-1 ring-orange-200">
@@ -566,59 +1054,382 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
                 </div>
             )}
 
-            <div className={classNames("mt-4 rounded-3xl p-4 ring-1", storageStatus.classe)}>
+            {mostrarPainelLimpezaForaPastas && arquivosStorage.length > 0 && (
+                <div className="mt-4 rounded-3xl border border-orange-200 bg-orange-50/60 p-4">
+                    <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                        <div className="min-w-0 flex-1">
+                            <p className="text-sm font-black text-orange-950">
+                                Arquivos fora de pastas
+                            </p>
+                            <p className="mt-1 text-xs leading-relaxed text-orange-800">
+                                São arquivos encontrados na raiz do bucket ou sem pasta identificada. Arquivos em uso, ativos ou protegidos permanecem visíveis e nunca entram na limpeza.
+                            </p>
+
+                            <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                                <div className="rounded-2xl bg-white p-3 ring-1 ring-orange-100">
+                                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                                        Encontrados
+                                    </p>
+                                    <p className="mt-1 text-xl font-black text-slate-950">
+                                        {arquivosForaPastas.length}
+                                    </p>
+                                </div>
+
+                                <div className="rounded-2xl bg-white p-3 ring-1 ring-orange-100">
+                                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                                        Espaço ocupado
+                                    </p>
+                                    <p className="mt-1 text-xl font-black text-slate-950">
+                                        {formatarBytes(storageForaPastasBytes)}
+                                    </p>
+                                </div>
+
+                                <div className="rounded-2xl bg-white p-3 ring-1 ring-emerald-100">
+                                    <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">
+                                        Aptos a limpar
+                                    </p>
+                                    <p className="mt-1 text-xl font-black text-emerald-900">
+                                        {arquivosForaPastasAptos.length}
+                                    </p>
+                                    <p className="mt-1 text-xs text-emerald-700">
+                                        {formatarBytes(storageForaPastasAptosBytes)}
+                                    </p>
+                                </div>
+
+                                <div className="rounded-2xl bg-white p-3 ring-1 ring-blue-100">
+                                    <p className="text-[10px] font-black uppercase tracking-wide text-blue-700">
+                                        Protegidos
+                                    </p>
+                                    <p className="mt-1 text-xl font-black text-blue-900">
+                                        {arquivosForaPastasProtegidos.length}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {arquivosForaPastas.length > 0 && (
+                                <div className="mt-3 max-h-52 space-y-2 overflow-y-auto pr-1 scrollbar-discreta">
+                                    {arquivosForaPastas.slice(0, 20).map((arquivo) => {
+                                        const apto =
+                                            arquivoStoragePodeSerExcluido(arquivo);
+
+                                        return (
+                                            <div
+                                                key={`${arquivo.bucket}-${arquivo.caminho}-fora-pasta`}
+                                                className="flex flex-col gap-2 rounded-2xl bg-white p-3 ring-1 ring-orange-100 sm:flex-row sm:items-center sm:justify-between"
+                                            >
+                                                <div className="min-w-0">
+                                                    <p className="break-words text-xs font-black text-slate-900">
+                                                        {arquivo.nome}
+                                                    </p>
+                                                    <p className="mt-1 break-words text-[11px] text-slate-500">
+                                                        {arquivo.bucket || "storage"} · raiz · {formatarBytes(arquivo.tamanho || 0)}
+                                                    </p>
+                                                </div>
+
+                                                <span
+                                                    className={classNames(
+                                                        "w-fit shrink-0 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wide ring-1",
+                                                        apto
+                                                            ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                                            : "bg-blue-50 text-blue-700 ring-blue-200"
+                                                    )}
+                                                >
+                                                    {apto
+                                                        ? "Apto à limpeza"
+                                                        : "Protegido"}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="w-full rounded-2xl bg-white p-3 ring-1 ring-orange-200 xl:w-[280px]">
+                            <p className="text-xs font-black text-slate-900">
+                                Confirmação de limpeza
+                            </p>
+                            <p className="mt-1 text-[11px] leading-5 text-slate-500">
+                                Somente arquivos fora de pasta, sem vínculo, não protegidos e com destino válido serão removidos.
+                            </p>
+
+                            <input
+                                type="text"
+                                value={confirmacaoLimpezaForaPastas}
+                                onChange={(e) =>
+                                    setConfirmacaoLimpezaForaPastas(
+                                        e.target.value
+                                    )
+                                }
+                                placeholder="Digite LIMPAR"
+                                disabled={
+                                    limpandoForaPastas ||
+                                    bloqueioLimparArquivosStorageSistema.bloqueado
+                                }
+                                className="mt-3 w-full rounded-xl border border-orange-200 bg-white px-3 py-2.5 text-sm font-black uppercase tracking-wide text-orange-900 outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100 disabled:opacity-60"
+                            />
+
+                            <button
+                                type="button"
+                                onClick={cancelarPainelLimpezaForaPastas}
+                                disabled={limpandoForaPastas}
+                                className="mt-2 w-full rounded-xl bg-slate-50 px-3 py-2 text-xs font-black text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100 disabled:opacity-60"
+                            >
+                                Cancelar
+                            </button>
+
+                            <p className="mt-2 text-[11px] font-bold leading-5 text-orange-800">
+                                {mensagemBloqueioLimpezaForaPastas}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <details open data-r10-collapse="storage-status" className={classNames("mt-4 rounded-3xl p-4 ring-1", storageStatus.classe)}>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-xl py-2 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+            <span className="text-sm font-black text-slate-950 sm:text-base">
+                Status de armazenamento
+            </span>
+
+            <span
+                aria-hidden="true"
+                className="shrink-0 text-lg font-black text-slate-400 transition-transform duration-200 group-open:rotate-180"
+            >
+                ⌄
+            </span>
+        </summary>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-start gap-3">
                         <AlertTriangle className="mt-0.5 h-5 w-5" />
                         <div>
-                            <p className="text-sm font-bold">Status de armazenamento: {storageStatus.texto}</p>
-                            <p className="mt-1 text-xs leading-relaxed">{storageStatus.detalhe}</p>
+                            <p className="text-sm font-black">
+                                Status de armazenamento: {storageStatus.texto}
+                            </p>
+                            <p className="mt-1 text-xs leading-relaxed">
+                                {storageStatus.detalhe}
+                            </p>
                         </div>
                     </div>
+
                     <div className="text-left sm:text-right">
-                        <p className="text-3xl font-black">{storagePercentual}%</p>
-                        <p className="text-xs font-semibold">{formatarBytes(storageTotalBytes)} de {formatarBytes(storageLimiteBytes)}</p>
+                        <p className="text-3xl font-black">
+                            {storagePercentual}%
+                        </p>
+                        <p className="text-xs font-semibold">
+                            {formatarBytes(storageTotalBytes)} de {formatarBytes(storageLimiteBytes)}
+                        </p>
                     </div>
                 </div>
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/70">
-                    <div className={classNames("h-full rounded-full", storageStatus.barra)} style={{ width: `${Math.max(2, Math.min(100, storagePercentual))}%` }} />
-                </div>
-            </div>
 
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                <div className="flex min-h-32 flex-col items-center justify-center rounded-3xl bg-slate-50 p-4 text-center ring-1 ring-slate-200">
-                    <p className="text-xs font-black uppercase tracking-wide text-slate-500">Total no Storage</p>
-                    <p className="mt-2 text-2xl font-black text-slate-950">{formatarBytes(storageTotalBytes)}</p>
-                    <p className="mt-1 text-xs text-slate-500">Limite administrativo: {formatarBytes(storageLimiteBytes)}</p>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/70">
+                    <div
+                        className={classNames(
+                            "h-full rounded-full",
+                            storageStatus.barra
+                        )}
+                        style={{
+                            width: `${Math.max(
+                                2,
+                                Math.min(100, storagePercentual)
+                            )}%`,
+                        }}
+                    />
                 </div>
-                <div className="flex min-h-32 flex-col items-center justify-center rounded-3xl bg-blue-50 p-4 text-center ring-1 ring-blue-100">
-                    <p className="text-xs font-black uppercase tracking-wide text-blue-700">Ativos do sistema</p>
-                    <p className="mt-2 text-2xl font-black text-blue-900">{arquivosAtivosSistema.length}</p>
-                    <p className="mt-1 text-xs text-blue-700">{formatarBytes(storageAtivosSistemaBytes)} protegidos e fora da limpeza</p>
+            </details>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                <div className="rounded-3xl bg-slate-50 p-4 text-center ring-1 ring-slate-200">
+                    <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                        Usado
+                    </p>
+                    <p className="mt-2 text-2xl font-black text-slate-950">
+                        {formatarBytes(storageTotalBytes)}
+                    </p>
                 </div>
-                <div className="flex min-h-32 flex-col items-center justify-center rounded-3xl bg-emerald-50 p-4 text-center ring-1 ring-emerald-100">
-                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Com vínculo</p>
-                    <p className="mt-2 text-2xl font-black text-emerald-900">{arquivosEmUso.length}</p>
-                    <p className="mt-1 text-xs text-emerald-700">{formatarBytes(storageEmUsoBytes)} em registros ativos</p>
+
+                <div className="rounded-3xl bg-slate-50 p-4 text-center ring-1 ring-slate-200">
+                    <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                        Capacidade
+                    </p>
+                    <p className="mt-2 text-2xl font-black text-slate-950">
+                        {formatarBytes(storageLimiteBytes)}
+                    </p>
                 </div>
-                <div className="flex min-h-32 flex-col items-center justify-center rounded-3xl bg-red-50 p-4 text-center ring-1 ring-red-100">
-                    <p className="text-xs font-black uppercase tracking-wide text-red-700">Sem vínculo</p>
-                    <p className="mt-2 text-2xl font-black text-red-900">{arquivosSemRegistro.length}</p>
-                    <p className="mt-1 text-xs text-red-700">{formatarBytes(storageSemRegistroBytes)} sem registro</p>
+
+                <div className="rounded-3xl bg-emerald-50 p-4 text-center ring-1 ring-emerald-100">
+                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                        Livre
+                    </p>
+                    <p className="mt-2 text-2xl font-black text-emerald-900">
+                        {formatarBytes(storageLivreBytes)}
+                    </p>
                 </div>
-                <div className="flex min-h-32 flex-col items-center justify-center rounded-3xl bg-blue-50 p-4 text-center ring-1 ring-blue-100">
-                    <p className="text-xs font-black uppercase tracking-wide text-blue-700">Último upload</p>
-                    <p className="mt-2 break-words text-sm font-black text-blue-900">{ultimoUploadStorage?.nome || "Não carregado"}</p>
-                    <p className="mt-1 text-xs text-blue-700">
-                        {ultimoUploadStorage?.atualizadoEm ? new Date(ultimoUploadStorage.atualizadoEm).toLocaleString("pt-BR") : "Clique em carregar arquivos"}
+
+                <div className="rounded-3xl bg-blue-50 p-4 text-center ring-1 ring-blue-100">
+                    <p className="text-xs font-black uppercase tracking-wide text-blue-700">
+                        Utilização
+                    </p>
+                    <p className="mt-2 text-2xl font-black text-blue-900">
+                        {storagePercentual}%
+                    </p>
+                </div>
+
+                <div className="rounded-3xl bg-blue-50 p-4 text-center ring-1 ring-blue-100">
+                    <p className="text-xs font-black uppercase tracking-wide text-blue-700">
+                        Total de arquivos
+                    </p>
+                    <p className="mt-2 text-2xl font-black text-blue-900">
+                        {arquivosStorage.length}
                     </p>
                 </div>
             </div>
 
-            <div className="mt-4 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-3xl bg-blue-50 p-4 text-center ring-1 ring-blue-100">
+                    <p className="text-xs font-black uppercase tracking-wide text-blue-700">
+                        Ativos do sistema
+                    </p>
+                    <p className="mt-2 text-2xl font-black text-blue-900">
+                        {arquivosAtivosSistema.length}
+                    </p>
+                    <p className="mt-1 text-xs text-blue-700">
+                        {formatarBytes(storageAtivosSistemaBytes)} protegidos
+                    </p>
+                </div>
+
+                <div className="rounded-3xl bg-emerald-50 p-4 text-center ring-1 ring-emerald-100">
+                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">
+                        Com vínculo
+                    </p>
+                    <p className="mt-2 text-2xl font-black text-emerald-900">
+                        {arquivosEmUso.length}
+                    </p>
+                    <p className="mt-1 text-xs text-emerald-700">
+                        {formatarBytes(storageEmUsoBytes)} em registros ativos
+                    </p>
+                </div>
+
+                <div className="rounded-3xl bg-red-50 p-4 text-center ring-1 ring-red-100">
+                    <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                        Sem vínculo
+                    </p>
+                    <p className="mt-2 text-2xl font-black text-red-900">
+                        {arquivosSemRegistro.length}
+                    </p>
+                    <p className="mt-1 text-xs text-red-700">
+                        {formatarBytes(storageSemRegistroBytes)} sem registro
+                    </p>
+                </div>
+
+                <div className="rounded-3xl bg-slate-50 p-4 text-center ring-1 ring-slate-200">
+                    <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                        Último upload
+                    </p>
+                    <p className="mt-2 break-words text-sm font-black text-slate-900">
+                        {ultimoUploadStorage?.nome || "Não carregado"}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                        {ultimoUploadStorage?.atualizadoEm
+                            ? new Date(
+                                ultimoUploadStorage.atualizadoEm
+                            ).toLocaleString("pt-BR")
+                            : "Clique em carregar arquivos"}
+                    </p>
+                </div>
+            </div>
+
+            {storagePorTipo.length > 0 && (
+                <details open data-r10-collapse="storage-uso" className="group mt-4 rounded-3xl border border-slate-200 bg-white p-4">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-xl py-2 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+            <span className="text-sm font-black text-slate-950 sm:text-base">
+                Onde o Storage está sendo utilizado
+            </span>
+
+            <span
+                aria-hidden="true"
+                className="shrink-0 text-lg font-black text-slate-400 transition-transform duration-200 group-open:rotate-180"
+            >
+                ⌄
+            </span>
+        </summary>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+
+                            <p className="mt-1 text-xs text-slate-500">
+                                Ranking por tipo/origem, do maior consumo para o menor.
+                            </p>
+                        </div>
+
+                        <p className="text-xs font-bold text-slate-500">
+                            Clique em um item para filtrar a lista.
+                        </p>
+                    </div>
+
+                    <div className="mt-3 space-y-2">
+                        {storagePorTipo.map((item) => (
+                            <button
+                                key={item.nome}
+                                type="button"
+                                onClick={() =>
+                                    setFiltrosStorage((atual) => ({
+                                        ...atual,
+                                        tipo: item.nome,
+                                    }))
+                                }
+                                className="w-full rounded-2xl bg-slate-50 p-3 text-left ring-1 ring-slate-200 transition hover:bg-slate-100"
+                            >
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="min-w-0">
+                                        <p className="break-words text-sm font-black text-slate-900">
+                                            {item.nome}
+                                        </p>
+                                        <p className="mt-1 text-xs text-slate-500">
+                                            {item.arquivos} arquivo(s) · {formatarBytes(item.bytes)}
+                                        </p>
+                                    </div>
+
+                                    <p className="shrink-0 text-lg font-black text-slate-900">
+                                        {item.percentual}%
+                                    </p>
+                                </div>
+
+                                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                                    <div
+                                        className="h-full rounded-full bg-emerald-500"
+                                        style={{
+                                            width: `${Math.max(
+                                                2,
+                                                Math.min(
+                                                    100,
+                                                    item.percentual
+                                                )
+                                            )}%`,
+                                        }}
+                                    />
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </details>
+            )}
+
+            <details open data-r10-collapse="storage-filtros" className="group mt-4 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-xl py-2 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+            <span className="text-sm font-black text-slate-950 sm:text-base">
+                Filtros do Storage
+            </span>
+
+            <span
+                aria-hidden="true"
+                className="shrink-0 text-lg font-black text-slate-400 transition-transform duration-200 group-open:rotate-180"
+            >
+                ⌄
+            </span>
+        </summary>
                 <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div>
-                        <p className="text-sm font-black text-slate-950">Filtros do Storage</p>
+
                         <p className="mt-1 text-xs text-slate-500">Filtre antes de executar limpeza para evitar exclusões indevidas.</p>
                     </div>
                     <button
@@ -696,36 +1507,174 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
                     <button type="button" onClick={() => setFiltrosStorage((atual) => ({ ...atual, tamanho: "acima-50mb" }))} className={classNames("rounded-full px-3 py-2 text-xs font-black ring-1", filtrosStorage.tamanho === "acima-50mb" ? "bg-orange-100 text-orange-700 ring-orange-200" : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-100")}>
                         Arquivos acima de 50 MB
                     </button>
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setFiltrosStorage((atual) => ({
+                                ...atual,
+                                busca: "treinamento",
+                                tipo: "Todos",
+                            }))
+                        }
+                        className="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
+                    >
+                        Treinamentos
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setFiltrosStorage((atual) => ({
+                                ...atual,
+                                busca: "document",
+                                tipo: "Todos",
+                            }))
+                        }
+                        className="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
+                    >
+                        Documentos
+                    </button>
                 </div>
-            </div>
+            </details>
 
             {storagePorBucket.length > 0 && (
-                <div className="mt-4 rounded-3xl border border-slate-200 bg-white p-4">
-                    <h3 className="font-bold text-slate-950">Uso por bucket</h3>
+                <details open data-r10-collapse="storage-buckets" className="group mt-4 rounded-3xl border border-slate-200 bg-white p-4">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-xl py-2 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+            <span className="text-sm font-black text-slate-950 sm:text-base">
+                Uso por bucket
+            </span>
+
+            <span
+                aria-hidden="true"
+                className="shrink-0 text-lg font-black text-slate-400 transition-transform duration-200 group-open:rotate-180"
+            >
+                ⌄
+            </span>
+        </summary>
+
                     <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
                         {storagePorBucket.map((bucketInfo) => (
-                            <div key={bucketInfo.bucket} className="rounded-2xl bg-slate-50 p-3 text-xs ring-1 ring-slate-200">
-                                <p className="break-words font-bold text-slate-700">{bucketInfo.bucket}</p>
-                                <p className="mt-1 text-slate-500">{bucketInfo.arquivos} arquivo(s) · {formatarBytes(bucketInfo.bytes)}</p>
-                                <p className="mt-1 text-slate-400">{bucketInfo.ativosSistema} ativo(s) do sistema · {bucketInfo.emUso} em uso · {bucketInfo.semRegistro} sem vínculo</p>
-                            </div>
+                            <button
+                                type="button"
+                                key={bucketInfo.bucket}
+                                onClick={() =>
+                                    setFiltrosStorage((atual) => ({
+                                        ...atual,
+                                        bucket: bucketInfo.bucket,
+                                    }))
+                                }
+                                className="rounded-2xl bg-slate-50 p-3 text-left text-xs ring-1 ring-slate-200 transition hover:bg-slate-100"
+                            >
+                                <div className="flex items-start justify-between gap-2">
+                                    <p className="break-words font-black text-slate-700">
+                                        {bucketInfo.bucket}
+                                    </p>
+                                    <span className="shrink-0 rounded-full bg-white px-2 py-1 text-[10px] font-black text-slate-600 ring-1 ring-slate-200">
+                                        {bucketInfo.percentual}%
+                                    </span>
+                                </div>
+
+                                <p className="mt-1 text-slate-500">
+                                    {bucketInfo.arquivos} arquivo(s) · {formatarBytes(bucketInfo.bytes)}
+                                </p>
+
+                                <p className="mt-1 text-slate-400">
+                                    {bucketInfo.ativosSistema} ativo(s) · {bucketInfo.emUso} em uso · {bucketInfo.semRegistro} sem vínculo
+                                </p>
+                            </button>
                         ))}
                     </div>
-                </div>
+                </details>
             )}
 
             {maioresArquivosStorage.length > 0 && (
-                <div className="mt-4 rounded-3xl border border-slate-200 bg-white p-4">
-                    <h3 className="font-bold text-slate-950">Maiores arquivos</h3>
-                    <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                        {maioresArquivosStorage.map((arquivo) => (
-                            <div key={`${arquivo.bucket}-${arquivo.caminho}-maior`} className="rounded-2xl bg-slate-50 p-3 text-xs ring-1 ring-slate-200">
-                                <p className="break-words font-bold text-slate-700">{arquivo.nome}</p>
-                                <p className="mt-1 text-slate-500">{formatarBytes(arquivo.tamanho || 0)} · {arquivo.bucket || "storage"}</p>
-                            </div>
-                        ))}
+                <details open data-r10-collapse="storage-maiores" className="group mt-4 rounded-3xl border border-slate-200 bg-white p-4">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-xl py-2 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+            <span className="text-sm font-black text-slate-950 sm:text-base">
+                Maiores arquivos
+            </span>
+
+            <span
+                aria-hidden="true"
+                className="shrink-0 text-lg font-black text-slate-400 transition-transform duration-200 group-open:rotate-180"
+            >
+                ⌄
+            </span>
+        </summary>
+
+                    <div className="mt-3 grid gap-3 xl:grid-cols-2">
+                        {maioresArquivosStorage.map((arquivo, indice) => {
+                            const arquivoExcluivel =
+                                arquivoStoragePodeSerExcluido(arquivo);
+
+                            const situacao =
+                                arquivo.ativoSistema
+                                    ? "Ativo do sistema"
+                                    : arquivo.emUso
+                                        ? "Com vínculo"
+                                        : arquivoExcluivel
+                                            ? "Sem vínculo / apto"
+                                            : "Protegido";
+
+                            return (
+                                <div
+                                    key={`${arquivo.bucket}-${arquivo.caminho}-maior`}
+                                    className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200"
+                                >
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0">
+                                            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+                                                #{indice + 1}
+                                            </p>
+                                            <p className="mt-1 break-words text-sm font-black text-slate-900">
+                                                {arquivo.nome}
+                                            </p>
+                                        </div>
+
+                                        <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-black text-slate-900 ring-1 ring-slate-200">
+                                            {formatarBytes(arquivo.tamanho || 0)}
+                                        </span>
+                                    </div>
+
+                                    <div className="mt-3 grid gap-2 text-xs text-slate-600 sm:grid-cols-2">
+                                        <div>
+                                            <span className="font-black text-slate-500">
+                                                Tipo:
+                                            </span>{" "}
+                                            {obterTipoArquivoStorage(arquivo)}
+                                        </div>
+
+                                        <div>
+                                            <span className="font-black text-slate-500">
+                                                Situação:
+                                            </span>{" "}
+                                            {situacao}
+                                        </div>
+
+                                        <div>
+                                            <span className="font-black text-slate-500">
+                                                Empresa:
+                                            </span>{" "}
+                                            {obterEmpresaArquivoStorage(arquivo)}
+                                        </div>
+
+                                        <div>
+                                            <span className="font-black text-slate-500">
+                                                Colaborador:
+                                            </span>{" "}
+                                            {obterColaboradorArquivoStorage(arquivo)}
+                                        </div>
+                                    </div>
+
+                                    <p className="mt-2 break-words text-[11px] text-slate-400">
+                                        {arquivo.bucket || "storage"}/{arquivo.caminho || arquivo.nome}
+                                    </p>
+                                </div>
+                            );
+                        })}
                     </div>
-                </div>
+                </details>
             )}
 
             {arquivosStorage.length === 0 && !carregandoStorage && (
@@ -735,7 +1684,19 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
             )}
 
             {arquivosStorage.length > 0 && (
-                <div className="mt-4">
+                <details open data-r10-collapse="storage-arquivos" className="group mt-4 rounded-3xl border border-slate-200 bg-white p-4">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-xl py-2 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+            <span className="text-sm font-black text-slate-950 sm:text-base">
+                Arquivos encontrados
+            </span>
+
+            <span
+                aria-hidden="true"
+                className="shrink-0 text-lg font-black text-slate-400 transition-transform duration-200 group-open:rotate-180"
+            >
+                ⌄
+            </span>
+        </summary>
                     <div className="mb-3 flex flex-col justify-between gap-2 md:flex-row md:items-center">
                         <p className="text-sm font-bold text-slate-950">Arquivos encontrados: {arquivosFiltrados.length} de {arquivosStorage.length}</p>
                         <p className="text-xs text-slate-500">Exibindo {arquivosFiltradosVisiveis.length} por vez · Aptos à limpeza no filtro: {arquivosFiltradosSemVinculo.length} arquivo(s) · {formatarBytes(storageFiltradoSemVinculoBytes)}.</p>
@@ -837,7 +1798,9 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
                             </div>
                         </div>
                     )}
-                </div>
+                </details>
+            )}
+                        </>
             )}
         </Card>
     );
