@@ -162,7 +162,7 @@ test(
 
         assert.equal(
             result.url.hostname,
-            "www.safescanbrasil.com.br"
+            "controle-sst-qr.vercel.app"
         );
 
         assert.equal(
@@ -191,7 +191,7 @@ test(
 
         assert.equal(
             result.url.toString(),
-            "https://www.safescanbrasil.com.br/safescan-tenant-health.json"
+            "https://controle-sst-qr.vercel.app/safescan-tenant-health.json"
         );
     }
 );
