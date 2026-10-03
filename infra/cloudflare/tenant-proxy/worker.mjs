@@ -2,7 +2,7 @@ const BASE_DOMAIN =
     "safescanbrasil.com.br";
 
 const ORIGIN_HOST =
-    "www.safescanbrasil.com.br";
+    "controle-sst-qr.vercel.app";
 
 const RESERVED_LABELS =
     new Set([
