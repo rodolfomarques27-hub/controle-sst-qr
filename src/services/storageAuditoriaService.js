@@ -3122,10 +3122,8 @@ export async function excluirArquivoStorageTenantService({
             ""
         )
             .trim()
-            .replace(
-                /^\/+|\/+$/g,
-                ""
-            );
+            .replace(/^\/+/, "")
+            .replace(/\/+$/, "");
 
     if (!tenantIdNormalizado) {
         throw new Error(
@@ -3202,10 +3200,8 @@ export async function excluirArquivoStorageTenantService({
             ""
         )
             .trim()
-            .replace(
-                /^\/+|\/+$/g,
-                ""
-            );
+            .replace(/^\/+/, "")
+            .replace(/\/+$/, "");
 
     if (
         tenantConfirmado !==

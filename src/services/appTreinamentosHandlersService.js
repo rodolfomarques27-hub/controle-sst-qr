@@ -1351,7 +1351,7 @@ export async function salvarCertificadoTreinamentoAppService({
             };
         });
 
-        executarVerificacaoCertificadoSemBloquearFluxo({
+        void executarVerificacaoCertificadoSemBloquearFluxo({
             supabase,
             certificado: certificadoFluxo,
             certificadoNormalizado,

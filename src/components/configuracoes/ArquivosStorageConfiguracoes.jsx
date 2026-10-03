@@ -33,7 +33,7 @@ const arquivoStoragePodeSerExcluido = (arquivo) =>
 const arquivoStorageForaDePasta = (arquivo) => {
     const caminho = String(arquivo?.caminho || "")
         .trim()
-        .replace(/^\/+|\/+$/g, "");
+        .replace(/^\/+/, "").replace(/\/+$/, "");
 
     if (!caminho) return false;
 
@@ -660,7 +660,7 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
             return;
         }
 
-        limparArquivosStorageSemVinculoFiltrados();
+        void limparArquivosStorageSemVinculoFiltrados();
     };
 
     const cancelarPainelLimpezaStorage = () => {
@@ -688,7 +688,7 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
             return;
         }
 
-        limparArquivosStorageForaPastas();
+        void limparArquivosStorageForaPastas();
     };
 
     const cancelarPainelLimpezaForaPastas = () => {
@@ -729,29 +729,7 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
         <Card>
             {controleCard ? (
 <div
-                className={classNames(
-                    "flex flex-col gap-4 border-b border-slate-100 pb-4 lg:flex-row lg:items-start lg:justify-between",
-                    !controleCard && "cursor-pointer select-none"
-                )}
-                onClick={(evento) => {
-                    if (controleCard) return;
-
-                    const alvo =
-                        evento.target;
-
-                    if (
-                        alvo?.closest?.(
-                            "button, input, select, textarea, a, summary, [role='button']"
-                        )
-                    ) {
-                        return;
-                    }
-
-                    setStorageRecolhido(
-                        (atual) =>
-                            !atual
-                    );
-                }}
+                className="flex flex-col gap-4 border-b border-slate-100 pb-4 lg:flex-row lg:items-start lg:justify-between"
             >
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
