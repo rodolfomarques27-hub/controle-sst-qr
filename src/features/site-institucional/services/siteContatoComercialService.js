@@ -56,11 +56,7 @@ function mensagemErroEnvio(
             error?.context?.json?.erro,
             600,
         ) ||
-        textoSeguro(
-            error?.message,
-            600,
-        ) ||
-        "Não foi possível enviar sua solicitação. Tente novamente em alguns instantes."
+        "O canal comercial está temporariamente indisponível. Tente novamente em alguns instantes."
     );
 }
 

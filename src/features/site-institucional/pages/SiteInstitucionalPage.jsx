@@ -578,6 +578,72 @@ const fluxo =
         },
     ];
 
+function formatarWhatsappBrasileiro(
+    valor
+) {
+    const digitos =
+        String(
+            valor ?? ""
+        )
+            .replace(
+                /\D/g,
+                ""
+            )
+            .slice(
+                0,
+                11
+            );
+
+    if (!digitos) {
+        return "";
+    }
+
+    if (
+        digitos.length <= 2
+    ) {
+        return `(${digitos}`;
+    }
+
+    const ddd =
+        digitos.slice(
+            0,
+            2
+        );
+
+    const numero =
+        digitos.slice(
+            2
+        );
+
+    if (
+        numero.length <= 4
+    ) {
+        return `(${ddd}) ${numero}`;
+    }
+
+    if (
+        digitos.length <= 10
+    ) {
+        return (
+            `(${ddd}) ` +
+            `${numero.slice(0, 4)}-` +
+            numero.slice(
+                4,
+                8
+            )
+        );
+    }
+
+    return (
+        `(${ddd}) ` +
+        `${numero.slice(0, 5)}-` +
+        numero.slice(
+            5,
+            9
+        )
+    );
+}
+
 export function SiteInstitucionalPage() {
     function abrirContato(event) {
         if (window.matchMedia("(min-width: 1081px)").matches) {
@@ -793,7 +859,7 @@ export function SiteInstitucionalPage() {
         );
 
         setContatoMensagem(
-            "Enviando sua solicitação..."
+            "Aguarde enquanto enviamos seus dados para nossa equipe comercial."
         );
 
         try {
@@ -846,7 +912,7 @@ export function SiteInstitucionalPage() {
             );
 
             setContatoMensagem(
-                "Solicitação enviada com sucesso. Nossa equipe entrará em contato."
+                "Nossa equipe recebeu seus dados e entrará em contato."
             );
         } catch (
             error
@@ -2526,9 +2592,21 @@ export function SiteInstitucionalPage() {
                                 <input
                                     type="tel"
                                     name="whatsapp"
-                                    placeholder="WhatsApp"
+                                    placeholder="(DD) 99999-9999"
                                     aria-label="WhatsApp"
                                     autoComplete="tel"
+                                    inputMode="numeric"
+                                    maxLength={15}
+                                    onInput={
+                                        (
+                                            event
+                                        ) => {
+                                            event.currentTarget.value =
+                                                formatarWhatsappBrasileiro(
+                                                    event.currentTarget.value
+                                                );
+                                        }
+                                    }
                                     required
                                 />
 
@@ -2671,22 +2749,66 @@ export function SiteInstitucionalPage() {
                                     }
                                 </button>
 
-                                <div
-                                    className="ss-site__contact-form-note"
-                                    role="status"
-                                    aria-live="polite"
-                                >
-                                    {
-                                        contatoStatus === "erro"
-                                            ? <X size={15} />
-                                            : <ShieldCheck size={15} />
-                                    }
+                                {
+                                    contatoStatus && (
+                                        <div
+                                            className={
+                                                "ss-site__contact-feedback " +
+                                                `ss-site__contact-feedback--${contatoStatus}`
+                                            }
+                                            role={
+                                                contatoStatus === "erro"
+                                                    ? "alert"
+                                                    : "status"
+                                            }
+                                            aria-live={
+                                                contatoStatus === "erro"
+                                                    ? "assertive"
+                                                    : "polite"
+                                            }
+                                        >
+                                            <span className="ss-site__contact-feedback-icon">
+                                                {
+                                                    contatoStatus === "sucesso"
+                                                        ? (
+                                                            <CheckCircle2 size={20} />
+                                                        )
+                                                        : contatoStatus === "erro"
+                                                            ? (
+                                                                <X size={20} />
+                                                            )
+                                                            : (
+                                                                <ShieldCheck size={20} />
+                                                            )
+                                                }
+                                            </span>
+
+                                            <span className="ss-site__contact-feedback-copy">
+                                                <strong>
+                                                    {
+                                                        contatoStatus === "sucesso"
+                                                            ? "Solicitação enviada com sucesso"
+                                                            : contatoStatus === "erro"
+                                                                ? "Não foi possível enviar"
+                                                                : "Enviando sua solicitação"
+                                                    }
+                                                </strong>
+
+                                                <small>
+                                                    {
+                                                        contatoMensagem
+                                                    }
+                                                </small>
+                                            </span>
+                                        </div>
+                                    )
+                                }
+
+                                <div className="ss-site__contact-form-note">
+                                    <ShieldCheck size={15} />
 
                                     <span>
-                                        {
-                                            contatoMensagem ||
-                                            "Dados solicitados apenas para contato comercial."
-                                        }
+                                        Dados solicitados apenas para contato comercial.
                                     </span>
                                 </div>
                             </form>

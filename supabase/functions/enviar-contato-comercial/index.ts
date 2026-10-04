@@ -151,14 +151,63 @@ function emailValido(
   );
 }
 
+function normalizarWhatsapp(
+  valor: unknown,
+) {
+  return texto(
+    valor,
+    40,
+  ).replace(
+    /\D/g,
+    "",
+  );
+}
+
 function whatsappValido(
   valor: string,
 ) {
-  return (
-    valor.length >= 6 &&
-    valor.length <= 30 &&
-    /^[0-9+().\-\s]+$/.test(
+  return /^\d{10,11}$/.test(
+    valor,
+  );
+}
+
+function formatarWhatsappBrasileiro(
+  valor: string,
+) {
+  if (
+    !whatsappValido(
       valor,
+    )
+  ) {
+    return "";
+  }
+
+  const ddd =
+    valor.slice(
+      0,
+      2,
+    );
+
+  if (
+    valor.length ===
+      11
+  ) {
+    return (
+      `(${ddd}) ` +
+      `${valor.slice(2, 7)}-` +
+      valor.slice(
+        7,
+        11,
+      )
+    );
+  }
+
+  return (
+    `(${ddd}) ` +
+    `${valor.slice(2, 6)}-` +
+    valor.slice(
+      6,
+      10,
     )
   );
 }
@@ -325,9 +374,8 @@ function normalizarContato(
       ),
 
     whatsapp:
-      texto(
+      normalizarWhatsapp(
         recebido.whatsapp,
-        30,
       ),
 
     empresa:
@@ -434,7 +482,7 @@ function mensagemValidacao(
     codigo ===
       "WHATSAPP_INVALIDO"
   ) {
-    return "Informe um WhatsApp válido.";
+    return "Informe um WhatsApp com DDD e 10 ou 11 dígitos.";
   }
 
   if (
@@ -648,6 +696,11 @@ Deno.serve(
       `${contato.primeiroNome} ${contato.sobrenome}`
         .trim();
 
+    const whatsappFormatado =
+      formatarWhatsappBrasileiro(
+        contato.whatsapp,
+      );
+
     const solucaoRotulo =
       SOLUCOES.get(
         contato.solucao,
@@ -685,7 +738,7 @@ Deno.serve(
         "Nova solicitação comercial recebida pelo site SafeScan Brasil.",
         "",
         `Nome: ${nomeCompleto}`,
-        `WhatsApp: ${contato.whatsapp}`,
+        `WhatsApp: ${whatsappFormatado}`,
         `Empresa: ${contato.empresa}`,
         `Cargo: ${contato.cargo}`,
         `E-mail: ${contato.email}`,
@@ -703,7 +756,7 @@ Deno.serve(
           <p>Uma nova solicitação de demonstração foi recebida pelo site.</p>
           <table cellpadding="7" cellspacing="0" style="border-collapse:collapse">
             <tr><td><strong>Nome</strong></td><td>${escaparHtml(nomeCompleto)}</td></tr>
-            <tr><td><strong>WhatsApp</strong></td><td>${escaparHtml(contato.whatsapp)}</td></tr>
+            <tr><td><strong>WhatsApp</strong></td><td>${escaparHtml(whatsappFormatado)}</td></tr>
             <tr><td><strong>Empresa</strong></td><td>${escaparHtml(contato.empresa)}</td></tr>
             <tr><td><strong>Cargo</strong></td><td>${escaparHtml(contato.cargo)}</td></tr>
             <tr><td><strong>E-mail</strong></td><td>${escaparHtml(contato.email)}</td></tr>
