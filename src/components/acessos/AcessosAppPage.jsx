@@ -8,7 +8,6 @@ import {
     ClipboardList,
     ImagePlus,
     Info,
-    LockKeyhole,
     RefreshCw,
     ShieldCheck,
     Trash2,
@@ -469,6 +468,26 @@ function BadgeEtapa({ children, variante = "info" }) {
 
 function normalizarTextoAcesso(valor) {
     return String(valor || "").trim();
+}
+
+function usuarioEhOperacionalAcessoApp(item = {}) {
+    const membershipStatus =
+        normalizarTextoAcesso(
+            item?.membership_status
+        ).toLowerCase();
+
+    const perfil =
+        normalizarTextoAcesso(
+            item?.perfil
+        ).toLowerCase();
+
+    return (
+        !Boolean(item?.excluido)
+        && !Boolean(item?.bloqueado)
+        && membershipStatus !== "suspenso"
+        && membershipStatus !== "revogado"
+        && perfil !== "bloqueado"
+    );
 }
 
 function normalizarChaveAcessoApp(valor = "") {
@@ -1496,29 +1515,35 @@ function UsuariosCadastradosApp({
     const [excluindoId, setExcluindoId] = useState("");
     const [reenvioEmailPendenteId, setReenvioEmailPendenteId] = useState("");
 
+    const usuariosOperacionais = useMemo(() => (
+        usuarios.filter(
+            usuarioEhOperacionalAcessoApp
+        )
+    ), [usuarios]);
+
     const resumo = useMemo(() => ({
-        total: usuarios.length,
-        ativos: usuarios.filter((item) => item.ativo && !item.bloqueado).length,
-        administradores: usuarios.filter((item) => item.perfil === "administrador").length,
-        bloqueados: usuarios.filter((item) => item.bloqueado).length,
-    }), [usuarios]);
+        total: usuariosOperacionais.length,
+        ativos: usuariosOperacionais.filter((item) => item.ativo).length,
+        administradores: usuariosOperacionais.filter((item) => item.perfil === "administrador").length,
+        inativos: usuariosOperacionais.filter((item) => !item.ativo).length,
+    }), [usuariosOperacionais]);
 
     const emailsDuplicados = useMemo(() => {
         const mapa = new Map();
 
-        usuarios.forEach((item) => {
+        usuariosOperacionais.forEach((item) => {
             const email = normalizarTextoAcesso(item.email).toLowerCase();
             if (!email) return;
             mapa.set(email, [...(mapa.get(email) || []), item]);
         });
 
         return Array.from(mapa.entries()).filter(([, lista]) => lista.length > 1);
-    }, [usuarios]);
+    }, [usuariosOperacionais]);
 
     const emailsParecidos = useMemo(() => {
         const mapa = new Map();
 
-        usuarios.forEach((item) => {
+        usuariosOperacionais.forEach((item) => {
             const email = normalizarTextoAcesso(item.email).toLowerCase();
             const chave = obterChaveEmailSimilarAcessoApp(email);
             if (!email || !chave) return;
@@ -1528,27 +1553,27 @@ function UsuariosCadastradosApp({
         return Array.from(mapa.entries())
             .map(([chave, emails]) => [chave, Array.from(new Set(emails))])
             .filter(([, emails]) => emails.length > 1);
-    }, [usuarios]);
+    }, [usuariosOperacionais]);
 
 
 
     const empresasDisponiveis = useMemo(() => {
         return Array.from(new Set(
-            usuarios
+            usuariosOperacionais
                 .map((item) => normalizarTextoAcesso(item.empresa))
                 .filter(Boolean)
         )).sort((a, b) => a.localeCompare(b, "pt-BR"));
-    }, [usuarios]);
+    }, [usuariosOperacionais]);
 
     const usuariosFiltrados = useMemo(() => {
         const busca = normalizarTextoAcesso(filtroTexto).toLowerCase();
 
-        return usuarios.filter((item) => {
+        return usuariosOperacionais.filter((item) => {
             const textoBase = [item.nome, item.email, item.funcao, item.empresa, item.perfil]
                 .map((valor) => normalizarTextoAcesso(valor).toLowerCase())
                 .join(" ");
 
-            const status = item.bloqueado ? "bloqueado" : item.ativo ? "ativo" : "inativo";
+            const status = item.ativo ? "ativo" : "inativo";
             const loginAuth = usuarioTemLoginAuthAcessoApp(item) ? "com_login" : "sem_login";
 
             const passaTexto = !busca || textoBase.includes(busca);
@@ -1558,7 +1583,7 @@ function UsuariosCadastradosApp({
 
             return passaTexto && passaPerfil && passaEmpresa && passaStatus;
         });
-    }, [usuarios, filtroTexto, filtroPerfil, filtroStatus, filtroEmpresa]);
+    }, [usuariosOperacionais, filtroTexto, filtroPerfil, filtroStatus, filtroEmpresa]);
 
     const filtrosAtivos = Boolean(filtroTexto || filtroPerfil !== "todos" || filtroStatus !== "todos" || filtroEmpresa !== "todos");
 
@@ -1593,8 +1618,18 @@ function UsuariosCadastradosApp({
                             ? tenantIdNormalizado
                             : null,
                 });
+            const quantidadeOperacional =
+                lista.filter(
+                    usuarioEhOperacionalAcessoApp
+                ).length;
+
             setUsuarios(lista);
-            setMensagem(lista.length ? `${lista.length} pessoa(s) carregada(s). A lista principal mostra apenas acessos ativos por padrão.` : "Nenhum usuário cadastrado encontrado.");
+
+            setMensagem(
+                quantidadeOperacional > 0
+                    ? `${quantidadeOperacional} ${quantidadeOperacional === 1 ? "pessoa na lista operacional" : "pessoas na lista operacional"}.`
+                    : "Nenhum usuário disponível na lista operacional."
+            );
         } catch (error) {
             setUsuarios([]);
             setErro(error?.message || "Não foi possível carregar usuários cadastrados.");
@@ -2581,15 +2616,15 @@ function UsuariosCadastradosApp({
                     <p className="mt-1 text-xl font-black text-blue-800">{resumo.administradores}</p>
                 </div>
                 <div className="flex h-[78px] flex-col items-center justify-center rounded-2xl bg-rose-50 px-4 py-3 text-center ring-1 ring-rose-100">
-                    <p className="text-[10px] font-black uppercase tracking-wide text-rose-700">Bloqueados</p>
-                    <p className="mt-1 text-xl font-black text-rose-800">{resumo.bloqueados}</p>
+                    <p className="text-[10px] font-black uppercase tracking-wide text-rose-700">Inativos</p>
+                    <p className="mt-1 text-xl font-black text-rose-800">{resumo.inativos}</p>
                 </div>
             </div>
 
             {listaUsuariosAberta && !filtrosUsuariosAbertos && filtrosAtivos ? (
                 <div className="mt-5 flex flex-col gap-3 rounded-3xl bg-blue-50 px-4 py-3 ring-1 ring-blue-100 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-xs font-bold text-blue-800">
-                        Filtros aplicados. Mostrando {usuariosFiltrados.length} de {usuarios.length} pessoa(s).
+                        Filtros aplicados. Mostrando {usuariosFiltrados.length} de {usuariosOperacionais.length} pessoa(s).
                     </p>
                     <div className="flex flex-wrap gap-2">
                         <button
@@ -2658,7 +2693,6 @@ function UsuariosCadastradosApp({
                             >
                                 <option value="todos">Todos os status</option>
                                 <option value="ativo">Ativos</option>
-                                <option value="bloqueado">Bloqueados</option>
                                 <option value="inativo">Inativos</option>
                                 <option value="com_login">Com login Auth</option>
                                 <option value="sem_login">Sem vínculo Auth</option>
@@ -2667,7 +2701,7 @@ function UsuariosCadastradosApp({
                     </div>
                     <div className="flex flex-wrap items-center gap-2 xl:justify-end">
                         <span className="rounded-full bg-white px-3 py-2 text-[11px] font-black text-slate-500 ring-1 ring-slate-200">
-                            Mostrando {usuariosFiltrados.length} de {usuarios.length}
+                            Mostrando {usuariosFiltrados.length} de {usuariosOperacionais.length}
                         </span>
                         {filtrosAtivos ? (
                             <button
@@ -3899,7 +3933,7 @@ export function AcessosAppPage({
     const [solicitacaoParaPermissao, setSolicitacaoParaPermissao] = useState(null);
     const [resumoCabecalho, setResumoCabecalho] = useState({
         ativos: null,
-        bloqueados: null,
+        inativos: null,
         perfis: PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.length,
         pendentes: null,
     });
@@ -4015,20 +4049,22 @@ export function AcessosAppPage({
                     permissaoAtual
                 );
 
+                const usuariosOperacionaisResumo =
+                    usuarios.filter(
+                        usuarioEhOperacionalAcessoApp
+                    );
+
                 setResumoCabecalho({
                     ativos:
-                        usuarios.filter(
+                        usuariosOperacionaisResumo.filter(
                             (item) =>
-                                !item.excluido
-                                && item.ativo
-                                && !item.bloqueado
+                                item.ativo
                         ).length,
 
-                    bloqueados:
-                        usuarios.filter(
+                    inativos:
+                        usuariosOperacionaisResumo.filter(
                             (item) =>
-                                !item.excluido
-                                && item.bloqueado
+                                !item.ativo
                         ).length,
 
                     perfis:
@@ -4265,9 +4301,9 @@ export function AcessosAppPage({
                                 classeLinha="bg-blue-500"
                             />
                             <MiniResumoAcesso
-                                icon={LockKeyhole}
-                                valor={resumoCabecalho.bloqueados ?? "--"}
-                                label="Bloqueados"
+                                icon={UsersRound}
+                                valor={resumoCabecalho.inativos ?? "--"}
+                                label="Inativos"
                                 classeIcone="bg-rose-50 text-rose-700"
                                 classeLinha="bg-rose-500"
                             />
