@@ -4493,6 +4493,89 @@ html:has([role="dialog"][aria-modal="true"]) {
         0 15px 32px rgba(12, 135, 80, 0.24);
 }
 
+.ss-site__contact-submit:disabled {
+    cursor: wait;
+    transform: none;
+    filter: none;
+    opacity: 0.72;
+    box-shadow:
+        0 8px 18px rgba(12, 135, 80, 0.12);
+}
+
+.ss-site__contact-feedback {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    border: 1px solid #d8e3de;
+    border-radius: 14px;
+    padding: 12px 14px;
+    background: #f5f8f7;
+    color: #3f5b51;
+    text-align: left;
+}
+
+.ss-site__contact-feedback-icon {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    place-items: center;
+    border-radius: 10px;
+    background: #e9f0ed;
+    color: #506b61;
+}
+
+.ss-site__contact-feedback-copy {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+    padding-top: 1px;
+}
+
+.ss-site__contact-feedback-copy strong {
+    color: inherit;
+    font-size: 12px;
+    font-weight: 850;
+    line-height: 1.35;
+}
+
+.ss-site__contact-feedback-copy small {
+    color: inherit;
+    opacity: 0.82;
+    font-size: 10px;
+    line-height: 1.45;
+}
+
+.ss-site__contact-feedback--enviando {
+    border-color: #cfded8;
+    background: #f3f7f5;
+    color: #426157;
+}
+
+.ss-site__contact-feedback--sucesso {
+    border-color: #bfe8d0;
+    background: #edf9f2;
+    color: #11663d;
+}
+
+.ss-site__contact-feedback--sucesso
+.ss-site__contact-feedback-icon {
+    background: #d8f3e4;
+    color: #0f7a46;
+}
+
+.ss-site__contact-feedback--erro {
+    border-color: #f0c7c7;
+    background: #fff3f3;
+    color: #a12d35;
+}
+
+.ss-site__contact-feedback--erro
+.ss-site__contact-feedback-icon {
+    background: #fde1e2;
+    color: #bb2f39;
+}
+
 .ss-site__contact-form-note {
     display: flex;
     align-items: center;

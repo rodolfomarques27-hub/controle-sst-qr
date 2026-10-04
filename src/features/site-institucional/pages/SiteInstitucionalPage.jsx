@@ -27,6 +27,10 @@ import { QRCodeSVG } from "qrcode.react";
 
 import accessModalHero from "../../../assets/nova-auditoria-hero-bg.webp";
 
+import {
+    enviarContatoComercialService,
+} from "../services/siteContatoComercialService.js";
+
 
 
 import "../styles/site-institucional.css";
@@ -574,6 +578,72 @@ const fluxo =
         },
     ];
 
+function formatarWhatsappBrasileiro(
+    valor
+) {
+    const digitos =
+        String(
+            valor ?? ""
+        )
+            .replace(
+                /\D/g,
+                ""
+            )
+            .slice(
+                0,
+                11
+            );
+
+    if (!digitos) {
+        return "";
+    }
+
+    if (
+        digitos.length <= 2
+    ) {
+        return `(${digitos}`;
+    }
+
+    const ddd =
+        digitos.slice(
+            0,
+            2
+        );
+
+    const numero =
+        digitos.slice(
+            2
+        );
+
+    if (
+        numero.length <= 4
+    ) {
+        return `(${ddd}) ${numero}`;
+    }
+
+    if (
+        digitos.length <= 10
+    ) {
+        return (
+            `(${ddd}) ` +
+            `${numero.slice(0, 4)}-` +
+            numero.slice(
+                4,
+                8
+            )
+        );
+    }
+
+    return (
+        `(${ddd}) ` +
+        `${numero.slice(0, 5)}-` +
+        numero.slice(
+            5,
+            9
+        )
+    );
+}
+
 export function SiteInstitucionalPage() {
     function abrirContato(event) {
         if (window.matchMedia("(min-width: 1081px)").matches) {
@@ -680,6 +750,30 @@ export function SiteInstitucionalPage() {
             ""
         );
 
+    const [
+        contatoEnviando,
+        setContatoEnviando,
+    ] =
+        useState(
+            false
+        );
+
+    const [
+        contatoStatus,
+        setContatoStatus,
+    ] =
+        useState(
+            ""
+        );
+
+    const [
+        contatoMensagem,
+        setContatoMensagem,
+    ] =
+        useState(
+            ""
+        );
+
     function abrirAcesso() {
         setErroAcesso(
             ""
@@ -735,6 +829,107 @@ export function SiteInstitucionalPage() {
         window.location.assign(
             destino
         );
+    }
+
+    async function enviarContatoComercial(
+        event
+    ) {
+        event.preventDefault();
+
+        if (
+            contatoEnviando
+        ) {
+            return;
+        }
+
+        const formulario =
+            event.currentTarget;
+
+        const dados =
+            new FormData(
+                formulario
+            );
+
+        setContatoEnviando(
+            true
+        );
+
+        setContatoStatus(
+            "enviando"
+        );
+
+        setContatoMensagem(
+            "Aguarde enquanto enviamos seus dados para nossa equipe comercial."
+        );
+
+        try {
+            await enviarContatoComercialService({
+                primeiroNome:
+                    dados.get(
+                        "primeiroNome"
+                    ),
+
+                sobrenome:
+                    dados.get(
+                        "sobrenome"
+                    ),
+
+                whatsapp:
+                    dados.get(
+                        "whatsapp"
+                    ),
+
+                empresa:
+                    dados.get(
+                        "empresa"
+                    ),
+
+                cargo:
+                    dados.get(
+                        "cargo"
+                    ),
+
+                email:
+                    dados.get(
+                        "email"
+                    ),
+
+                solucao:
+                    dados.get(
+                        "solucao"
+                    ),
+
+                origem:
+                    dados.get(
+                        "origem"
+                    ),
+            });
+
+            formulario.reset();
+
+            setContatoStatus(
+                "sucesso"
+            );
+
+            setContatoMensagem(
+                "Nossa equipe recebeu seus dados e entrará em contato."
+            );
+        } catch (
+            error
+        ) {
+            setContatoStatus(
+                "erro"
+            );
+
+            setContatoMensagem(
+                error?.message ||
+                "Não foi possível enviar sua solicitação. Tente novamente em alguns instantes."
+            );
+        } finally {
+            setContatoEnviando(
+                false
+            );
+        }
     }
 
     return (
@@ -2371,16 +2566,7 @@ export function SiteInstitucionalPage() {
                             <form
                                 className="ss-site__contact-form"
                                 onSubmit={
-                                    (
-                                        event
-                                    ) => {
-                                        event.preventDefault();
-
-                                        window.alert(
-                                            "Formulário comercial em homologação DEV. " +
-                                            "O canal de envio será conectado antes da publicação."
-                                        );
-                                    }
+                                    enviarContatoComercial
                                 }
                             >
                                 <div className="ss-site__contact-form-row">
@@ -2406,9 +2592,21 @@ export function SiteInstitucionalPage() {
                                 <input
                                     type="tel"
                                     name="whatsapp"
-                                    placeholder="WhatsApp"
+                                    placeholder="(DD) 99999-9999"
                                     aria-label="WhatsApp"
                                     autoComplete="tel"
+                                    inputMode="numeric"
+                                    maxLength={15}
+                                    onInput={
+                                        (
+                                            event
+                                        ) => {
+                                            event.currentTarget.value =
+                                                formatarWhatsappBrasileiro(
+                                                    event.currentTarget.value
+                                                );
+                                        }
+                                    }
                                     required
                                 />
 
@@ -2520,10 +2718,91 @@ export function SiteInstitucionalPage() {
                                 <button
                                     type="submit"
                                     className="ss-site__contact-submit"
+                                    disabled={
+                                        contatoEnviando
+                                    }
+                                    aria-busy={
+                                        contatoEnviando
+                                    }
+                                    style={
+                                        contatoEnviando
+                                            ? {
+                                                opacity:
+                                                    0.72,
+
+                                                cursor:
+                                                    "wait",
+                                            }
+                                            : undefined
+                                    }
                                 >
-                                    Solicitar demonstração
-                                    <ArrowRight size={19} />
+                                    {
+                                        contatoEnviando
+                                            ? "Enviando..."
+                                            : "Solicitar demonstração"
+                                    }
+
+                                    {
+                                        !contatoEnviando && (
+                                            <ArrowRight size={19} />
+                                        )
+                                    }
                                 </button>
+
+                                {
+                                    contatoStatus && (
+                                        <div
+                                            className={
+                                                "ss-site__contact-feedback " +
+                                                `ss-site__contact-feedback--${contatoStatus}`
+                                            }
+                                            role={
+                                                contatoStatus === "erro"
+                                                    ? "alert"
+                                                    : "status"
+                                            }
+                                            aria-live={
+                                                contatoStatus === "erro"
+                                                    ? "assertive"
+                                                    : "polite"
+                                            }
+                                        >
+                                            <span className="ss-site__contact-feedback-icon">
+                                                {
+                                                    contatoStatus === "sucesso"
+                                                        ? (
+                                                            <CheckCircle2 size={20} />
+                                                        )
+                                                        : contatoStatus === "erro"
+                                                            ? (
+                                                                <X size={20} />
+                                                            )
+                                                            : (
+                                                                <ShieldCheck size={20} />
+                                                            )
+                                                }
+                                            </span>
+
+                                            <span className="ss-site__contact-feedback-copy">
+                                                <strong>
+                                                    {
+                                                        contatoStatus === "sucesso"
+                                                            ? "Solicitação enviada com sucesso"
+                                                            : contatoStatus === "erro"
+                                                                ? "Não foi possível enviar"
+                                                                : "Enviando sua solicitação"
+                                                    }
+                                                </strong>
+
+                                                <small>
+                                                    {
+                                                        contatoMensagem
+                                                    }
+                                                </small>
+                                            </span>
+                                        </div>
+                                    )
+                                }
 
                                 <div className="ss-site__contact-form-note">
                                     <ShieldCheck size={15} />
