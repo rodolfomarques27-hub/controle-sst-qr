@@ -27,6 +27,10 @@ import { QRCodeSVG } from "qrcode.react";
 
 import accessModalHero from "../../../assets/nova-auditoria-hero-bg.webp";
 
+import {
+    enviarContatoComercialService,
+} from "../services/siteContatoComercialService.js";
+
 
 
 import "../styles/site-institucional.css";
@@ -680,6 +684,30 @@ export function SiteInstitucionalPage() {
             ""
         );
 
+    const [
+        contatoEnviando,
+        setContatoEnviando,
+    ] =
+        useState(
+            false
+        );
+
+    const [
+        contatoStatus,
+        setContatoStatus,
+    ] =
+        useState(
+            ""
+        );
+
+    const [
+        contatoMensagem,
+        setContatoMensagem,
+    ] =
+        useState(
+            ""
+        );
+
     function abrirAcesso() {
         setErroAcesso(
             ""
@@ -735,6 +763,107 @@ export function SiteInstitucionalPage() {
         window.location.assign(
             destino
         );
+    }
+
+    async function enviarContatoComercial(
+        event
+    ) {
+        event.preventDefault();
+
+        if (
+            contatoEnviando
+        ) {
+            return;
+        }
+
+        const formulario =
+            event.currentTarget;
+
+        const dados =
+            new FormData(
+                formulario
+            );
+
+        setContatoEnviando(
+            true
+        );
+
+        setContatoStatus(
+            "enviando"
+        );
+
+        setContatoMensagem(
+            "Enviando sua solicitação..."
+        );
+
+        try {
+            await enviarContatoComercialService({
+                primeiroNome:
+                    dados.get(
+                        "primeiroNome"
+                    ),
+
+                sobrenome:
+                    dados.get(
+                        "sobrenome"
+                    ),
+
+                whatsapp:
+                    dados.get(
+                        "whatsapp"
+                    ),
+
+                empresa:
+                    dados.get(
+                        "empresa"
+                    ),
+
+                cargo:
+                    dados.get(
+                        "cargo"
+                    ),
+
+                email:
+                    dados.get(
+                        "email"
+                    ),
+
+                solucao:
+                    dados.get(
+                        "solucao"
+                    ),
+
+                origem:
+                    dados.get(
+                        "origem"
+                    ),
+            });
+
+            formulario.reset();
+
+            setContatoStatus(
+                "sucesso"
+            );
+
+            setContatoMensagem(
+                "Solicitação enviada com sucesso. Nossa equipe entrará em contato."
+            );
+        } catch (
+            error
+        ) {
+            setContatoStatus(
+                "erro"
+            );
+
+            setContatoMensagem(
+                error?.message ||
+                "Não foi possível enviar sua solicitação. Tente novamente em alguns instantes."
+            );
+        } finally {
+            setContatoEnviando(
+                false
+            );
+        }
     }
 
     return (
@@ -2371,16 +2500,7 @@ export function SiteInstitucionalPage() {
                             <form
                                 className="ss-site__contact-form"
                                 onSubmit={
-                                    (
-                                        event
-                                    ) => {
-                                        event.preventDefault();
-
-                                        window.alert(
-                                            "Formulário comercial em homologação DEV. " +
-                                            "O canal de envio será conectado antes da publicação."
-                                        );
-                                    }
+                                    enviarContatoComercial
                                 }
                             >
                                 <div className="ss-site__contact-form-row">
@@ -2520,16 +2640,53 @@ export function SiteInstitucionalPage() {
                                 <button
                                     type="submit"
                                     className="ss-site__contact-submit"
+                                    disabled={
+                                        contatoEnviando
+                                    }
+                                    aria-busy={
+                                        contatoEnviando
+                                    }
+                                    style={
+                                        contatoEnviando
+                                            ? {
+                                                opacity:
+                                                    0.72,
+
+                                                cursor:
+                                                    "wait",
+                                            }
+                                            : undefined
+                                    }
                                 >
-                                    Solicitar demonstração
-                                    <ArrowRight size={19} />
+                                    {
+                                        contatoEnviando
+                                            ? "Enviando..."
+                                            : "Solicitar demonstração"
+                                    }
+
+                                    {
+                                        !contatoEnviando && (
+                                            <ArrowRight size={19} />
+                                        )
+                                    }
                                 </button>
 
-                                <div className="ss-site__contact-form-note">
-                                    <ShieldCheck size={15} />
+                                <div
+                                    className="ss-site__contact-form-note"
+                                    role="status"
+                                    aria-live="polite"
+                                >
+                                    {
+                                        contatoStatus === "erro"
+                                            ? <X size={15} />
+                                            : <ShieldCheck size={15} />
+                                    }
 
                                     <span>
-                                        Dados solicitados apenas para contato comercial.
+                                        {
+                                            contatoMensagem ||
+                                            "Dados solicitados apenas para contato comercial."
+                                        }
                                     </span>
                                 </div>
                             </form>
