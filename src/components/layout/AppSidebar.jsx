@@ -274,7 +274,7 @@ export function AppSidebar({
             setFotoUsuarioUrl(resultado.url || "");
         }
 
-        carregarFotoUsuario();
+        void carregarFotoUsuario();
 
         return () => {
             cancelado = true;
@@ -427,12 +427,16 @@ export function AppSidebar({
                         ? grupo.itens.filter((item) => !menuExpandido && item.id === tela)
                         : grupo.itens;
 
+                    if (!menuExpandido && itensVisiveis.length === 0) {
+                        return null;
+                    }
+
                     return (
                         <div
                             key={grupo.titulo}
                             className={classNames(
                                 "app-sidebar-nav-group",
-                                indiceGrupo > 0 && (menuExpandido ? "mt-4 border-t border-white/10 pt-3" : "mt-3 border-t border-white/10 pt-3")
+                                indiceGrupo > 0 && menuExpandido && "mt-4 border-t border-white/10 pt-3"
                             )}
                         >
                             {menuExpandido && (
