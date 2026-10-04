@@ -311,7 +311,7 @@ function FotoPessoaAcessoApp({
             }
         }
 
-        carregarUrl();
+        void carregarUrl();
 
         return () => {
             cancelado = true;
@@ -846,7 +846,7 @@ function SolicitacoesAcessoApp({ onPrepararPermissao = null, usuario = null }) {
 
 
     useEffect(() => {
-        carregarSolicitacoes();
+        void carregarSolicitacoes();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -2524,7 +2524,7 @@ function UsuariosCadastradosApp({
     }
 
     useEffect(() => {
-        carregarUsuarios();
+        void carregarUsuarios();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -3292,7 +3292,7 @@ function RevisaoPerfisPadrao({ usuario = null }) {
             }
         }
 
-        carregarPerfisEditaveis();
+        void carregarPerfisEditaveis();
 
         return () => {
             ativo = false;
@@ -4111,7 +4111,7 @@ export function AcessosAppPage({
             }
         }
 
-        carregarResumoCabecalho();
+        void carregarResumoCabecalho();
 
         return () => {
             ativo = false;
