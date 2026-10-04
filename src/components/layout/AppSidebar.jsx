@@ -2,9 +2,17 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronsLeft, LogOut, ShieldCheck } from "lucide-react";
 import { classNames } from "../../utils/sstUtils";
 import { supabase } from "../../lib/supabaseClient";
+import { useTenantRuntimeContext } from "./TenantRuntimeContext.js";
+import { resolverBrandingLoginRuntimeService } from "../../services/tenantBrandingService.js";
+import { obterUrlLogoContratanteLoginPublicoService } from "../../services/fundoLoginPublicoService.js";
 import sidebarBackground from "../../assets/sidebar-construcao.webp";
 
 const BUCKET_FOTOS_USUARIOS_SIDEBAR = "fotos-colaboradores";
+
+const URL_LOGO_CONTRATANTE_SIDEBAR =
+    obterUrlLogoContratanteLoginPublicoService({
+        supabase,
+    });
 
 const PERFIS_USUARIO_LABEL = {
     administrador: "Administrador",
@@ -232,6 +240,22 @@ export function AppSidebar({
     const [fotoUsuarioComErro, setFotoUsuarioComErro] = useState(false);
     const menuExpandido = menuLateralAberto || expandidoPorHover;
 
+    const {
+        branding,
+    } = useTenantRuntimeContext();
+
+    const brandingSidebarRuntime =
+        resolverBrandingLoginRuntimeService({
+            branding,
+        });
+
+    const logoContratanteTenantUrl =
+        brandingSidebarRuntime.logoContratanteUrl || "";
+
+    const logoContratanteSidebarUrl =
+        logoContratanteTenantUrl ||
+        URL_LOGO_CONTRATANTE_SIDEBAR;
+
     const emailUsuario = usuario?.email || "e-mail n\u00e3o informado";
     const nomeUsuario = obterNomeUsuario(usuario, emailUsuario);
     const funcaoUsuario = usuario?.funcao || usuario?.cargo || "Fun\u00e7\u00e3o n\u00e3o informada";
@@ -240,6 +264,23 @@ export function AppSidebar({
     const fotoUsuario = obterFotoUsuarioSidebar(usuario);
     const mostrarFotoUsuario = Boolean(fotoUsuarioUrl && !fotoUsuarioComErro);
     const iniciaisUsuario = obterIniciaisUsuario(nomeUsuario, emailUsuario);
+
+    const tratarErroLogoContratanteSidebar = (event) => {
+        const imagem = event.currentTarget;
+
+        if (
+            logoContratanteTenantUrl
+            && URL_LOGO_CONTRATANTE_SIDEBAR
+            && logoContratanteTenantUrl !== URL_LOGO_CONTRATANTE_SIDEBAR
+            && imagem.dataset.fallbackGlobal !== "true"
+        ) {
+            imagem.dataset.fallbackGlobal = "true";
+            imagem.src = URL_LOGO_CONTRATANTE_SIDEBAR;
+            return;
+        }
+
+        imagem.style.display = "none";
+    };
 
     useEffect(() => {
         let cancelado = false;
@@ -396,11 +437,21 @@ export function AppSidebar({
             >
                 <div
                     className={classNames(
-                        "app-sidebar-brand-icon flex shrink-0 items-center justify-center rounded-2xl bg-[#1E7C3A] shadow-sm shadow-black/30",
+                        "app-sidebar-brand-icon relative flex shrink-0 items-center justify-center overflow-hidden bg-[#1E7C3A]",
                         menuExpandido ? "h-9 w-9" : "h-12 w-12"
                     )}
                 >
                     <ShieldCheck className={classNames("shrink-0", menuExpandido ? "h-5 w-5" : "h-5 w-5")} />
+
+                    {logoContratanteSidebarUrl ? (
+                        <img
+                            key={logoContratanteSidebarUrl}
+                            src={logoContratanteSidebarUrl}
+                            alt="Logo da empresa contratante"
+                            className="absolute inset-0 h-full w-full object-contain"
+                            onError={tratarErroLogoContratanteSidebar}
+                        />
+                    ) : null}
                 </div>
 
                 {menuExpandido && (
