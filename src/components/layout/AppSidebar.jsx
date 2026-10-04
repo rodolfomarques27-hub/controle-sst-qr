@@ -274,7 +274,7 @@ export function AppSidebar({
             setFotoUsuarioUrl(resultado.url || "");
         }
 
-        carregarFotoUsuario();
+        void carregarFotoUsuario();
 
         return () => {
             cancelado = true;
