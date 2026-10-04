@@ -7,6 +7,10 @@ import {
   resolverTransportadorEmailParaEnvio,
 } from "../_shared/emailProvedorResolver.ts";
 
+import {
+  criarPublicEndpointHttp,
+} from "../_shared/publicEndpointHttp.ts";
+
 type Registro =
   Record<string, unknown>;
 
@@ -212,89 +216,14 @@ function formatarWhatsappBrasileiro(
   );
 }
 
-function origemPermitida(
-  origin: string,
-) {
-  if (
-    ORIGENS_DEV.has(
-      origin,
-    )
-  ) {
-    return true;
-  }
-
-  try {
-    const url =
-      new URL(
-        origin,
-      );
-
-    if (
-      url.protocol !==
-        "https:"
-    ) {
-      return false;
-    }
-
-    const hostname =
-      url.hostname
-        .toLowerCase();
-
-    return (
-      hostname ===
-        "safescanbrasil.com.br" ||
-      hostname.endsWith(
-        ".safescanbrasil.com.br",
-      )
-    );
-  } catch {
-    return false;
-  }
-}
-
-function cors(
-  origin: string,
-) {
-  return {
-    "Access-Control-Allow-Origin":
-      origin,
-
-    "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type",
-
-    "Access-Control-Allow-Methods":
-      "POST, OPTIONS",
-
-    "Cache-Control":
-      "no-store",
-
-    "Vary":
-      "Origin",
-  };
-}
-
-function resposta(
-  origin: string,
-  status: number,
-  dados: Registro,
-) {
-  return new Response(
-    JSON.stringify(
-      dados,
-    ),
-    {
-      status,
-      headers: {
-        ...cors(
-          origin,
-        ),
-
-        "Content-Type":
-          "application/json; charset=utf-8",
-      },
-    },
+const {
+  origemPermitida,
+  cors,
+  resposta,
+} =
+  criarPublicEndpointHttp(
+    ORIGENS_DEV,
   );
-}
 
 function respostaSemCors(
   status: number,
