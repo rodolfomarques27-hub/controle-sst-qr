@@ -99,7 +99,7 @@ export function SafeScanFeedbackHost() {
         <div
             aria-live="polite"
             aria-relevant="additions"
-            className="pointer-events-none fixed right-4 top-4 z-[300] flex w-[min(420px,calc(100vw-2rem))] flex-col gap-3 sm:right-6 sm:top-6"
+            className="pointer-events-none fixed left-1/2 top-1/2 z-[300] flex w-[min(420px,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 flex-col gap-3"
         >
             {feedbacks.map((item) => {
                 const configuracao = CONFIGURACAO_FEEDBACK[item.tipo];

@@ -3,6 +3,9 @@ import { registrarImpressaoQrColaboradores } from "../../services/colaboradoresQ
 import {
     confirmarSafeScan,
 } from "../../services/safeScanConfirmService.js";
+import {
+    emitirFeedbackSafeScan,
+} from "../../services/safeScanFeedbackService.js";
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
@@ -771,8 +774,23 @@ function ConsultaQRDesktop({
 
         if (selecionadoAindaExiste) return;
 
-        setIdColaboradorConsultaSelecionado(obterIdColaboradorConsulta(colaboradoresFiltrados[0]));
-    }, [colaboradoresFiltrados, idColaboradorConsultaSelecionado]);
+        const primeiroColaboradorFiltrado =
+            colaboradoresFiltrados[0];
+
+        setIdColaboradorConsultaSelecionado(
+            obterIdColaboradorConsulta(
+                primeiroColaboradorFiltrado
+            )
+        );
+
+        onSelecionarColaborador?.(
+            primeiroColaboradorFiltrado
+        );
+    }, [
+        colaboradoresFiltrados,
+        idColaboradorConsultaSelecionado,
+        onSelecionarColaborador,
+    ]);
 
     useEffect(() => {
         if (
@@ -1104,9 +1122,13 @@ function ConsultaQRDesktop({
         ];
 
         if (!ids.length) {
-            window.alert(
-                "Não foi possível identificar o colaborador para registrar a impressão."
-            );
+            emitirFeedbackSafeScan({
+                tipo: "erro",
+                titulo:
+                    "Não foi possível registrar a impressão",
+                mensagem:
+                    "Não foi possível identificar o colaborador para registrar a impressão.",
+            });
 
             return;
         }
@@ -1163,11 +1185,15 @@ Somente confirme se a impressão realmente foi concluída.`;
                 error
             );
 
-            window.alert(
-                `Não foi possível registrar a impressão no SafeScan.
+            emitirFeedbackSafeScan({
+                tipo: "erro",
+                titulo:
+                    "Não foi possível registrar a impressão",
+                mensagem:
+                    `Não foi possível registrar a impressão no SafeScan.
 
-${error?.message || "Erro desconhecido."}`
-            );
+${error?.message || "Erro desconhecido."}`,
+            });
 
             return;
         }
