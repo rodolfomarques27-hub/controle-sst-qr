@@ -1,5 +1,8 @@
 import "../../styles/pages/consulta-qr-responsivo.css";
 import { registrarImpressaoQrColaboradores } from "../../services/colaboradoresQrImpressoesService";
+import {
+    confirmarSafeScan,
+} from "../../services/safeScanConfirmService.js";
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
@@ -1129,9 +1132,17 @@ Somente confirme se a impressão realmente foi concluída.`
 Somente confirme se a impressão realmente foi concluída.`;
 
         const confirmado =
-            window.confirm(
-                mensagem
-            );
+            await confirmarSafeScan({
+                titulo:
+                    "Confirmar impressão",
+                mensagem,
+                confirmarTexto:
+                    "Confirmar impressão",
+                cancelarTexto:
+                    "Cancelar",
+                variante:
+                    "padrao",
+            });
 
         if (!confirmado) {
             return;
