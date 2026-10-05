@@ -5008,18 +5008,23 @@ export function DdsPage({
                 "responsavelConfirmado",
                 "origemTemaConfirmado",
                 "origemDocumentalTemaConfirmado",
-                "entrada",
-                "saida",
-                "inicioAlmoco",
-                "fimAlmoco",
-                "inicioDds",
-                "fimDds",
+                "horaEntrada",
+                "horaSaida",
+                "horaInicioAlmoco",
+                "horaFimAlmoco",
+                "horaInicioDds",
+                "horaFimDds",
             ];
             const pontosTexto = camposTexto.reduce(
                 (subtotal, campo) => subtotal + String(item?.[campo] || "").trim().length,
                 0
             );
-            return total + pontosTexto + (item?.semAtividadeConfirmada === true ? 20 : 0);
+            const pontosEstado =
+                item?.semAtividadeConfirmada === true ||
+                item?.chuvaConfirmada === true
+                    ? 20
+                    : 0;
+            return total + pontosTexto + pontosEstado;
         }, 0);
     }
 

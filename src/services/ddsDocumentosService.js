@@ -564,7 +564,9 @@ export function montarFrequenciasEstruturadasDds({
             ? dias.filter(
                 (dia) =>
                     dia?.semAtividadeConfirmada !== true &&
-                    dia?.semAtividade !== true
+                    dia?.semAtividade !== true &&
+                    dia?.chuvaConfirmada !== true &&
+                    dia?.chuva !== true
             )
             : [];
 
@@ -848,6 +850,10 @@ export function montarTemasEstruturadosDds({
                         ?.semAtividadeConfirmada === true ||
                     confirmado
                         ?.semAtividade === true,
+                chuvaConfirmada:
+                    dia?.chuvaConfirmada === true ||
+                    confirmado
+                        ?.chuvaConfirmada === true,
             };
         })
         .filter(Boolean);
