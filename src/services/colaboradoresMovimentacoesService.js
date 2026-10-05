@@ -15,6 +15,9 @@ const RPCS_MOVIMENTACAO_COLABORADOR =
         READMISSAO:
             "readmitir_colaborador",
 
+        ALTERACAO_SITUACAO_OBRA:
+            "alterar_situacao_obra_colaborador",
+
         REGULARIZACAO_DEMISSAO_LEGADA:
             "regularizar_demissao_legada_colaborador",
 
@@ -26,6 +29,7 @@ const TIPOS_MOVIMENTACAO_COM_STATUS_NOVO =
     new Set([
         "REMOBILIZACAO",
         "READMISSAO",
+        "ALTERACAO_SITUACAO_OBRA",
         "CORRECAO_INATIVACAO_LEGADA",
     ]);
 
@@ -646,6 +650,27 @@ async function executarMovimentacaoColaborador({
         data,
         tipo
     );
+}
+
+export async function alterarSituacaoObraColaborador({
+    supabase,
+    colaboradorId,
+    dataEvento,
+    motivo,
+    observacao = "",
+    statusMobilizacaoNovo,
+}) {
+    return executarMovimentacaoColaborador({
+        supabase,
+        tipoMovimentacao:
+            "ALTERACAO_SITUACAO_OBRA",
+
+        colaboradorId,
+        dataEvento,
+        motivo,
+        observacao,
+        statusMobilizacaoNovo,
+    });
 }
 
 export async function desligarColaboradorOperacao({

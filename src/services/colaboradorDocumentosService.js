@@ -1467,22 +1467,44 @@ export function classeClassificacaoColaborador(status) {
 
 export function statusGeral(colaborador) {
     const avaliacao = avaliarTreinamentosColaborador(colaborador);
-    const statusVinculoClassificacao = normalizarTextoBusca(
-        colaborador?.status || ""
+
+    const statusVinculo = normalizarTextoBusca(
+        colaborador?.status ||
+        ""
     );
 
-    const vinculoFormalInativo =
-        statusVinculoClassificacao.includes("inativo") ||
-        statusVinculoClassificacao.includes("inativa");
+    const statusMobilizacao = normalizarTextoBusca(
+        colaborador?.statusMobilizacao ||
+        colaborador?.status_mobilizacao ||
+        ""
+    );
 
-    const textoSituacao =
-        vinculoFormalInativo
-            ? statusVinculoClassificacao
-            : normalizarTextoBusca(
-                `${colaborador?.status || ""} ${colaborador?.statusMobilizacao || ""} ${colaborador?.status_mobilizacao || ""}`
-            );
+    const possuiDemissaoFormal =
+        Boolean(
+            colaborador?.dataDemissao ||
+            colaborador?.data_demissao
+        );
 
-    if (textoSituacao.includes("desmobilizado") || textoSituacao.includes("desmobilizada")) {
+    const vinculoInativoOuDemitido =
+        possuiDemissaoFormal ||
+        statusVinculo.includes("inativo") ||
+        statusVinculo.includes("inativa") ||
+        statusVinculo.includes("demitido") ||
+        statusVinculo.includes("demitida");
+
+    if (vinculoInativoOuDemitido) {
+        return {
+            texto: "Inativo",
+            classe: classeClassificacaoColaborador("Inativo"),
+            detalhe: "Colaborador sem vínculo ativo na obra.",
+            avaliacao,
+        };
+    }
+
+    if (
+        statusMobilizacao.includes("desmobilizado") ||
+        statusMobilizacao.includes("desmobilizada")
+    ) {
         return {
             texto: "Desmobilizado",
             classe: classeClassificacaoColaborador("Desmobilizado"),
@@ -1491,73 +1513,62 @@ export function statusGeral(colaborador) {
         };
     }
 
-    if (textoSituacao.includes("inativo") || textoSituacao.includes("inativa")) {
-        return {
-            texto: "Inativo",
-            classe: classeClassificacaoColaborador("Inativo"),
-            detalhe: "Colaborador cadastrado, mas sem mobilização ativa.",
-            avaliacao,
-        };
-    }
+    const vencidosBloqueantes =
+        avaliacao.vencidos.filter(
+            itemDocumentoCriticoColaborador
+        );
 
-    const possuiDocumentoEmAnalise = avaliacao.itens.some(documentoEmAnaliseColaborador);
-
-    if (
-        textoSituacao.includes("em analise") ||
-        textoSituacao.includes("em análise") ||
-        textoSituacao.includes("aguardando conferencia") ||
-        textoSituacao.includes("aguardando conferência") ||
-        possuiDocumentoEmAnalise
-    ) {
-        return {
-            texto: "Em análise",
-            classe: classeClassificacaoColaborador("Em análise"),
-            detalhe: "Documento enviado, mas aguardando conferência.",
-            avaliacao,
-        };
-    }
-
-    const documentosCriticosFaltantes = avaliacao.pendentes.filter(itemDocumentoCriticoColaborador);
-    const documentacaoCompleta = avaliacao.total === 0 || avaliacao.concluidos.length === avaliacao.total;
-    const bloqueioManualInformado = textoSituacao.includes("bloqueado") || textoSituacao.includes("bloqueada") || textoSituacao.includes("impedido") || textoSituacao.includes("impedida");
-    const bloqueadoPorStatus = bloqueioManualInformado && !documentacaoCompleta;
-
-    if (bloqueadoPorStatus || avaliacao.vencidos.length > 0 || documentosCriticosFaltantes.length > 0) {
-        const motivos = [];
-
-        if (bloqueadoPorStatus) motivos.push("status manual bloqueado");
-        if (avaliacao.vencidos.length > 0) motivos.push(`${avaliacao.vencidos.length} documento(s) ou treinamento(s) obrigatório(s) vencido(s)`);
-        if (documentosCriticosFaltantes.length > 0) motivos.push(`${documentosCriticosFaltantes.length} documento(s) crítico(s) faltante(s)`);
+    if (vencidosBloqueantes.length > 0) {
+        const nomes =
+            vencidosBloqueantes
+                .map(
+                    (item) =>
+                        item?.treinamento?.nome ||
+                        item?.nomeTreinamento ||
+                        item?.tipoTreinamento ||
+                        ""
+                )
+                .filter(Boolean);
 
         return {
             texto: "Bloqueado",
             classe: classeClassificacaoColaborador("Bloqueado"),
-            detalhe: motivos.join("; ") || "Existe pendência bloqueante.",
+            detalhe:
+                nomes.length > 0
+                    ? `Documento importante vencido: ${nomes.slice(0, 3).join(", ")}`
+                    : `${vencidosBloqueantes.length} documento(s) importante(s) vencido(s).`,
             avaliacao,
         };
     }
 
-    const pendenciasNaoBloqueantes = avaliacao.pendentes.filter((item) => !itemDocumentoCriticoColaborador(item));
-
-    if (pendenciasNaoBloqueantes.length > 0) {
-        const detalhes = [];
-
-        const nomesPendenciasNaoBloqueantes = pendenciasNaoBloqueantes
-            .map((item) => item?.treinamento?.nome || item?.nomeTreinamento || item?.tipoTreinamento || "")
-            .filter(Boolean);
-
-        detalhes.push(
-            nomesPendenciasNaoBloqueantes.length > 0
-                ? `Pendência não bloqueante: ${nomesPendenciasNaoBloqueantes.slice(0, 3).join(", ")}`
-                : `${pendenciasNaoBloqueantes.length} pendência(s) não bloqueante(s)`
+    const vencidosNaoBloqueantes =
+        avaliacao.vencidos.filter(
+            (item) =>
+                !itemDocumentoCriticoColaborador(item)
         );
 
-        if (avaliacao.vencendo.length > 0) detalhes.push(`${avaliacao.vencendo.length} item(ns) a vencer em até 30 dias`);
+    if (
+        avaliacao.pendentes.length > 0 ||
+        vencidosNaoBloqueantes.length > 0
+    ) {
+        const detalhes = [];
+
+        if (avaliacao.pendentes.length > 0) {
+            detalhes.push(
+                `${avaliacao.pendentes.length} documento(s) obrigatório(s) pendente(s)`
+            );
+        }
+
+        if (vencidosNaoBloqueantes.length > 0) {
+            detalhes.push(
+                `${vencidosNaoBloqueantes.length} documento(s) vencido(s) não bloqueante(s)`
+            );
+        }
 
         return {
             texto: "Com pendência",
             classe: classeClassificacaoColaborador("Com pendência"),
-            detalhe: detalhes.join("; ") || "Existe pendência, mas não bloqueia a mobilização.",
+            detalhe: detalhes.join("; "),
             avaliacao,
         };
     }
@@ -1566,7 +1577,8 @@ export function statusGeral(colaborador) {
         return {
             texto: "Liberado",
             classe: classeClassificacaoColaborador("Liberado"),
-            detalhe: `Documentação válida e colaborador liberado. Alerta preventivo: ${avaliacao.vencendo.length} item(ns) a vencer em até 30 dias.`,
+            detalhe:
+                `Documentação completa. ${avaliacao.vencendo.length} item(ns) a vencer em até 30 dias.`,
             avaliacao,
         };
     }
@@ -1574,7 +1586,7 @@ export function statusGeral(colaborador) {
     return {
         texto: "Liberado",
         classe: classeClassificacaoColaborador("Liberado"),
-        detalhe: "Documentos e treinamentos obrigatórios em dia.",
+        detalhe: "Documentos e treinamentos obrigatórios completos e válidos.",
         avaliacao,
     };
 }
