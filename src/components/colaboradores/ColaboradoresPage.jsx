@@ -638,19 +638,30 @@ export function Colaboradores({
                             empresaNormalizada
                         );
 
+                    const foraDaOperacao =
+                        [
+                            "Desmobilizado",
+                            "Inativo",
+                        ].includes(
+                            geral.texto
+                        );
+
                     const bateClassificacao =
                         classificacaoNormalizada ===
                             "todos"
-                            ? ![
-                                  "Desmobilizado",
-                                  "Inativo",
-                              ].includes(
-                                  geral.texto
-                              )
-                            : normalizarTextoBusca(
-                                  geral.texto
-                              ) ===
-                              classificacaoNormalizada;
+                            ? !foraDaOperacao
+                            : classificacaoNormalizada ===
+                                  "a vencer"
+                                ? !foraDaOperacao &&
+                                  Array.isArray(
+                                      avaliacao.vencendo
+                                  ) &&
+                                  avaliacao.vencendo.length >
+                                      0
+                                : normalizarTextoBusca(
+                                      geral.texto
+                                  ) ===
+                                  classificacaoNormalizada;
 
                     return (
                         bateBusca &&
@@ -1253,18 +1264,27 @@ export function Colaboradores({
                             empresaNormalizada
                         );
 
+                    const foraDaOperacao =
+                        [
+                            "Desmobilizado",
+                            "Inativo",
+                        ].includes(
+                            geral.texto
+                        );
+
                     const bateClassificacao =
                         classificacaoNormalizada === "todos"
-                            ? ![
-                                  "Desmobilizado",
-                                  "Inativo",
-                              ].includes(
-                                  geral.texto
-                              )
-                            : normalizarTextoBusca(
-                                  geral.texto
-                              ) ===
-                              classificacaoNormalizada;
+                            ? !foraDaOperacao
+                            : classificacaoNormalizada === "a vencer"
+                                ? !foraDaOperacao &&
+                                  Array.isArray(
+                                      avaliacao.vencendo
+                                  ) &&
+                                  avaliacao.vencendo.length > 0
+                                : normalizarTextoBusca(
+                                      geral.texto
+                                  ) ===
+                                  classificacaoNormalizada;
 
                     return (
                         bateBusca &&
@@ -1289,7 +1309,13 @@ export function Colaboradores({
             const logoUrl = logoRaw ? obterUrlLogoEmpresa(logoRaw) : "";
 
             avaliacao.itens
-                .filter((item) => ["pendente", "vencido"].includes(item.status.chave))
+                .filter((item) =>
+                    classificacaoNormalizada === "a vencer"
+                        ? item.status.chave === "vencendo"
+                        : ["pendente", "vencido"].includes(
+                              item.status.chave
+                          )
+                )
                 .forEach((item) => {
                     pendencias.push({
                         colaboradorId: c.id,
