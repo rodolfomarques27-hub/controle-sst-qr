@@ -17,6 +17,7 @@ import {
 import { formatDate, classNames } from "../../utils/sstUtils";
 import { VerificacaoCertificadoTreinamento } from "./VerificacaoCertificadoTreinamento";
 import { criarUrlAssinadaStorage } from "../../services/supabaseServices";
+import { emitirFeedbackSafeScan } from "../../services/safeScanFeedbackService";
 import { supabase } from "../../lib/supabaseClient";
 import {
     listarEvidenciasCertificadosEmLoteService,
@@ -177,12 +178,20 @@ function FotoColaboradorBase({ colaborador = {} }) {
             : valoresAtuais.vencimento || "";
 
         if (realizadoDigitado && !realizadoIso) {
-            alert("Data de admissão/registro inválida. Use o formato dd/mm/aaaa.");
+            emitirFeedbackSafeScan({
+                tipo: "atencao",
+                titulo: "Data inválida",
+                mensagem: "Data de admissão/registro inválida. Use o formato dd/mm/aaaa.",
+            });
             return;
         }
 
         if (vencimentoDigitado && !vencimentoIso) {
-            alert("Data de vencimento inválida. Use o formato dd/mm/aaaa.");
+            emitirFeedbackSafeScan({
+                tipo: "atencao",
+                titulo: "Data inválida",
+                mensagem: "Data de vencimento inválida. Use o formato dd/mm/aaaa.",
+            });
             return;
         }
 
@@ -2124,12 +2133,20 @@ export function BaseCertificadosTreinamentos({
                                                                             : valores.vencimento || "");
 
                                                                     if (realizadoDigitado && !realizadoIso) {
-                                                                        alert("Data de admissão/registro inválida. Use o formato dd/mm/aaaa.");
+                                                                        emitirFeedbackSafeScan({
+                                                                            tipo: "atencao",
+                                                                            titulo: "Data inválida",
+                                                                            mensagem: "Data de admissão/registro inválida. Use o formato dd/mm/aaaa.",
+                                                                        });
                                                                         return;
                                                                     }
 
                                                                     if (!semValidade && vencimentoDigitado && !vencimentoIso) {
-                                                                        alert("Data de vencimento inválida. Use o formato dd/mm/aaaa.");
+                                                                        emitirFeedbackSafeScan({
+                                                                            tipo: "atencao",
+                                                                            titulo: "Data inválida",
+                                                                            mensagem: "Data de vencimento inválida. Use o formato dd/mm/aaaa.",
+                                                                        });
                                                                         return;
                                                                     }
 

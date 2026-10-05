@@ -29,6 +29,7 @@ import {
 } from "./components/layout/AppSystemStates";
 import { atualizarLimitesCarregamentoSistemaAppService } from "./services/appConfiguracoesHandlersService";
 import { carregarLimitesCarregamentoSistema } from "./constants/sistemaLimitesConstants";
+import { emitirFeedbackSafeScan } from "./services/safeScanFeedbackService";
 
 import { validarArquivoAntesUpload } from "./components/FileUploadAviso";
 import { CarregandoTela } from "./components/CarregandoTela";
@@ -721,7 +722,11 @@ export default function App() {
             );
         } catch (error) {
             console.warn("Erro ao atualizar informações do Dashboard SST:", error?.message || error);
-            alert(`Erro ao atualizar informações do Dashboard SST: ${error?.message || String(error)}`);
+            emitirFeedbackSafeScan({
+                tipo: "erro",
+                titulo: "Erro ao atualizar Dashboard SST",
+                mensagem: `Erro ao atualizar informações do Dashboard SST: ${error?.message || String(error)}`,
+            });
         } finally {
             setAtualizandoDashboardSst(false);
         }

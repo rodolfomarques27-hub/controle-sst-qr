@@ -8,6 +8,7 @@ import {
     perfisUpload,
 } from "../constants/sistemaConstants";
 import { classNames, formatarBytes } from "../utils/sstUtils";
+import { emitirFeedbackSafeScan } from "../services/safeScanFeedbackService";
 
 function obterPerfilUpload(tipo = "documentoSimples") {
     return perfisUpload[tipo] || perfisUpload.documentoSimples;
@@ -86,7 +87,11 @@ export function validarArquivoAntesUpload(arquivo, tipo = "documentoSimples") {
     const analise = analisarTamanhoArquivoUpload(arquivo, tipo);
 
     if (!analise.ok) {
-        alert(analise.texto);
+        emitirFeedbackSafeScan({
+            tipo: "atencao",
+            titulo: "Arquivo não permitido",
+            mensagem: analise.texto,
+        });
         return false;
     }
 

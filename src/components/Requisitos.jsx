@@ -20,6 +20,7 @@ import {
     UserRound,
 } from "lucide-react";
 import { Card, Header } from "./commonComponents";
+import { emitirFeedbackSafeScan } from "../services/safeScanFeedbackService";
 
 const ASSUNTOS_AJUDA = [
     {
@@ -428,7 +429,11 @@ export function Requisitos() {
             window.setTimeout(() => setCopiado(false), 2200);
         } catch (erro) {
             console.error("Erro ao copiar passo a passo:", erro);
-            alert("Não foi possível copiar agora. Tente novamente pelo navegador.");
+            emitirFeedbackSafeScan({
+                tipo: "erro",
+                titulo: "Não foi possível copiar",
+                mensagem: "Não foi possível copiar agora. Tente novamente pelo navegador.",
+            });
         }
     }
 

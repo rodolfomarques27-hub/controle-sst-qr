@@ -3724,22 +3724,73 @@ export function ConfiguracoesTenant({
                     </div>
 
                     <div className="flex min-w-0 items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3">
-                        <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
-                            <BadgeCheck className="h-4.5 w-4.5" />
-                        </span>
 
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                             <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
                                 Novidades desta versão
                             </p>
 
-                            <p className="mt-1 text-sm font-black text-slate-950">
-                                Aniversariantes
-                            </p>
+                            <div className="mt-2 grid gap-2 lg:grid-cols-2">
+                                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                                    <p className="text-sm font-black text-slate-950">
+                                        Identidade visual personalizada
+                                    </p>
 
-                            <p className="mt-0.5 text-sm leading-5 text-slate-600">
-                                Bloqueados, Inativos e Desmobilizados deixam de aparecer na lista, indicadores e relatório de aniversários.
-                            </p>
+                                    <p className="mt-0.5 text-sm leading-5 text-slate-600">
+                                        Personalize a aparência do ambiente com logo da contratante, fundo do login e identidade visual própria.
+                                    </p>
+                                </div>
+
+                                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                                    <p className="text-sm font-black text-slate-950">
+                                        Situação na obra dos colaboradores
+                                    </p>
+
+                                    <p className="mt-0.5 text-sm leading-5 text-slate-600">
+                                        Novo controle visual identifica rapidamente colaboradores Liberados, Com pendência, Bloqueados, Desmobilizados ou Inativos conforme sua condição documental e operacional.
+                                    </p>
+                                </div>
+
+                                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                                    <p className="text-sm font-black text-slate-950">
+                                        Gestão do Storage
+                                    </p>
+
+                                    <p className="mt-0.5 text-sm leading-5 text-slate-600">
+                                        O ambiente passa a contar com gerenciamento dos próprios arquivos e informações de armazenamento de forma isolada e segura.
+                                    </p>
+                                </div>
+
+                                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                                    <p className="text-sm font-black text-slate-950">
+                                        Navegação e Configurações
+                                    </p>
+
+                                    <p className="mt-0.5 text-sm leading-5 text-slate-600">
+                                        Sidebar mais compacta, identificação da contratante e memorização dos cards abertos ou recolhidos nas Configurações.
+                                    </p>
+                                </div>
+
+                                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                                    <p className="text-sm font-black text-slate-950">
+                                        Avisos padronizados
+                                    </p>
+
+                                    <p className="mt-0.5 text-sm leading-5 text-slate-600">
+                                        O SafeScan passa a utilizar feedbacks visuais próprios de sucesso, erro, atenção e informação em substituição gradual aos alertas nativos do navegador.
+                                    </p>
+                                </div>
+
+                                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                                    <p className="text-sm font-black text-slate-950">
+                                        Aniversariantes
+                                    </p>
+
+                                    <p className="mt-0.5 text-sm leading-5 text-slate-600">
+                                        Bloqueados, Inativos e Desmobilizados deixam de aparecer na lista, indicadores e relatório de aniversários.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
