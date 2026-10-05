@@ -20,6 +20,10 @@ import {
 } from "./components/feedback/SafeScanFeedbackHost.jsx";
 
 import {
+    SafeScanConfirmHost,
+} from "./components/feedback/SafeScanConfirmHost.jsx";
+
+import {
     deveRenderizarPainelAdmin,
     deveRenderizarPortalAcesso,
     deveRenderizarSiteInstitucionalDev,
@@ -160,6 +164,7 @@ createRoot(
 ).render(
     <StrictMode>
         <SafeScanFeedbackHost />
+        <SafeScanConfirmHost />
 
         <Suspense
             fallback={

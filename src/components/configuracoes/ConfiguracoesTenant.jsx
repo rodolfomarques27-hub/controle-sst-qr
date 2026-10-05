@@ -3777,7 +3777,7 @@ export function ConfiguracoesTenant({
                                     </p>
 
                                     <p className="mt-0.5 text-sm leading-5 text-slate-600">
-                                        O SafeScan passa a utilizar feedbacks visuais próprios de sucesso, erro, atenção e informação em substituição gradual aos alertas nativos do navegador.
+                                        O SafeScan passa a utilizar feedbacks visuais próprios de sucesso, erro, atenção, informação e confirmação, substituindo gradualmente alertas e confirmações nativas do navegador.
                                     </p>
                                 </div>
 
