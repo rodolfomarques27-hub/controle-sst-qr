@@ -12,6 +12,10 @@ import "./index.css";
 import "./styles/app-layout-global.css";
 
 import {
+    AppCarregandoSistema,
+} from "./components/layout/AppSystemStates.jsx";
+
+import {
     deveRenderizarPainelAdmin,
     deveRenderizarPortalAcesso,
     deveRenderizarSiteInstitucionalDev,
@@ -151,7 +155,15 @@ createRoot(
     )
 ).render(
     <StrictMode>
-        <Suspense fallback={null}>
+        <Suspense
+            fallback={
+                renderizarPainelAdmin
+                || renderizarPortalAcesso
+                || renderizarSiteInstitucionalDev
+                    ? null
+                    : <AppCarregandoSistema />
+            }
+        >
             {superficie}
         </Suspense>
     </StrictMode>

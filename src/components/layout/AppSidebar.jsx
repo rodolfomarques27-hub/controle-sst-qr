@@ -238,6 +238,7 @@ export function AppSidebar({
     const [gruposFechados, setGruposFechados] = useState(() => lerGruposFechadosSidebarSalvos() || construirGruposFechadosPadrao(nav));
     const [fotoUsuarioUrl, setFotoUsuarioUrl] = useState("");
     const [fotoUsuarioComErro, setFotoUsuarioComErro] = useState(false);
+    const [logoContratanteSidebarErroUrl, setLogoContratanteSidebarErroUrl] = useState("");
     const menuExpandido = menuLateralAberto || expandidoPorHover;
 
     const {
@@ -255,6 +256,11 @@ export function AppSidebar({
     const logoContratanteSidebarUrl =
         logoContratanteTenantUrl ||
         URL_LOGO_CONTRATANTE_SIDEBAR;
+
+    const mostrarLogoContratanteSidebar =
+        Boolean(logoContratanteSidebarUrl)
+        && logoContratanteSidebarErroUrl !==
+            logoContratanteSidebarUrl;
 
     const emailUsuario = usuario?.email || "e-mail n\u00e3o informado";
     const nomeUsuario = obterNomeUsuario(usuario, emailUsuario);
@@ -279,7 +285,9 @@ export function AppSidebar({
             return;
         }
 
-        imagem.style.display = "none";
+        setLogoContratanteSidebarErroUrl(
+            logoContratanteSidebarUrl
+        );
     };
 
     useEffect(() => {
@@ -430,6 +438,11 @@ export function AppSidebar({
             }}
         >
             <div
+                data-brand-logo-valid={
+                    mostrarLogoContratanteSidebar
+                        ? "true"
+                        : "false"
+                }
                 className={classNames(
                     "app-sidebar-brand flex min-w-0 items-center text-white",
                     menuExpandido ? "w-full gap-2 px-0 py-1" : "mx-auto h-12 w-12 justify-center p-0"
@@ -437,13 +450,12 @@ export function AppSidebar({
             >
                 <div
                     className={classNames(
-                        "app-sidebar-brand-icon relative flex shrink-0 items-center justify-center overflow-hidden bg-[#1E7C3A]",
+                        "app-sidebar-brand-icon relative flex shrink-0 items-center justify-center overflow-hidden",
+                        !mostrarLogoContratanteSidebar && "bg-[#1E7C3A]",
                         menuExpandido ? "h-9 w-9" : "h-12 w-12"
                     )}
                 >
-                    <ShieldCheck className={classNames("shrink-0", menuExpandido ? "h-5 w-5" : "h-5 w-5")} />
-
-                    {logoContratanteSidebarUrl ? (
+                    {mostrarLogoContratanteSidebar ? (
                         <img
                             key={logoContratanteSidebarUrl}
                             src={logoContratanteSidebarUrl}
@@ -451,7 +463,14 @@ export function AppSidebar({
                             className="absolute inset-0 h-full w-full object-contain"
                             onError={tratarErroLogoContratanteSidebar}
                         />
-                    ) : null}
+                    ) : (
+                        <ShieldCheck
+                            className={classNames(
+                                "shrink-0",
+                                menuExpandido ? "h-5 w-5" : "h-5 w-5"
+                            )}
+                        />
+                    )}
                 </div>
 
                 {menuExpandido && (

@@ -131,6 +131,7 @@ export function AppLayout({
     const erroPermissaoSistemaMenu = erroPermissaoSistemaUsuario;
     const [telaEmTransicao, setTelaEmTransicao] = useState(false);
     const temporizadorTransicaoRef = useRef(null);
+    const telaAnteriorRef = useRef(tela);
 
     const iniciarTransicaoTela = useCallback(() => {
         setTelaEmTransicao(true);
@@ -141,8 +142,25 @@ export function AppLayout({
     }, []);
 
     useEffect(() => {
+        const telaAnterior =
+            telaAnteriorRef.current;
+
+        telaAnteriorRef.current =
+            tela;
+
+        if (telaAnterior === tela) {
+            return () =>
+                window.clearTimeout(
+                    temporizadorTransicaoRef.current
+                );
+        }
+
         iniciarTransicaoTela();
-        return () => window.clearTimeout(temporizadorTransicaoRef.current);
+
+        return () =>
+            window.clearTimeout(
+                temporizadorTransicaoRef.current
+            );
     }, [tela, iniciarTransicaoTela]);
 
 
@@ -168,7 +186,6 @@ export function AppLayout({
             return;
         }
 
-        iniciarTransicaoTela();
         onSelecionarTela(id, label);
     };
 

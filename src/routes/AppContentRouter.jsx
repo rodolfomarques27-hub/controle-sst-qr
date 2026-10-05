@@ -64,7 +64,8 @@ function obterPrimeiraTelaPermitidaParaUsuario(
 ) {
     return ORDEM_REDIRECIONAMENTO_TELAS_PERMITIDAS.find(
         (telaCandidata) =>
-            (
+            telaCandidata !== "certidaoMensalDocumental"
+            && (
                 !aplicarGateModulosTenantRuntime
                 || telaDisponivelTenantRuntime(
                     modulosTenantRuntime,
@@ -633,6 +634,7 @@ function TrocaSenhaTemporariaObrigatoria({ usuario, permissao, onSenhaAtualizada
 export function AppContentRouter({
     supabaseClient,
     tela,
+    telaInicialEstabilizada = false,
     tenantAdminPodeGerenciarAcessos = false,
     colaboradores,
     empresasBanco,
@@ -710,8 +712,19 @@ export function AppContentRouter({
     const [permissaoSistemaTela, setPermissaoSistemaTela] = useState(() => normalizarPermissaoSistema(permissaoSistemaUsuario || null));
     const [carregandoPermissaoSistemaTela, setCarregandoPermissaoSistemaTela] = useState(() => Boolean(carregandoPermissaoSistemaUsuario || (usuario?.email && !permissaoSistemaUsuario)));
     const [erroPermissaoSistemaTela, setErroPermissaoSistemaTela] = useState(() => erroPermissaoSistemaUsuario || "");
-    const [telaComModuloPronto, setTelaComModuloPronto] = useState("");
-    const [preparandoTelaPermitida, setPreparandoTelaPermitida] = useState(() => Boolean(usuario?.email));
+    const [telaComModuloPronto, setTelaComModuloPronto] = useState(
+        () =>
+            telaInicialEstabilizada
+                ? tela
+                : ""
+    );
+    const [preparandoTelaPermitida, setPreparandoTelaPermitida] = useState(
+        () =>
+            Boolean(
+                usuario?.email
+                && !telaInicialEstabilizada
+            )
+    );
     const ultimoRedirecionamentoAutomaticoRef = useRef("");
 
     useEffect(() => {
@@ -985,6 +998,14 @@ export function AppContentRouter({
     );
 
     useEffect(() => {
+        if (
+            telaInicialEstabilizada
+            && telaComModuloPronto === tela
+            && !deveRedirecionarParaTelaPermitida
+        ) {
+            return undefined;
+        }
+
         if (!usuario?.email) {
             setTelaComModuloPronto("");
             setPreparandoTelaPermitida(false);
@@ -1097,6 +1118,7 @@ export function AppContentRouter({
         primeiraTelaPermitidaSistema,
         tela,
         telaComModuloPronto,
+        telaInicialEstabilizada,
         telaControladaPorRecursoOperacional,
         trocaSenhaTemporariaObrigatoria,
         usuario?.email,

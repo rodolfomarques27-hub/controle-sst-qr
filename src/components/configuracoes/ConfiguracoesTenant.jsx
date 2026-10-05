@@ -21,6 +21,9 @@ import {
     useTenantRuntimeContext,
 } from "../layout/TenantRuntimeContext.js";
 import {
+    TenantAdminBrandingPanel,
+} from "../../features/tenant-admin/components/TenantAdminBrandingPanel.jsx";
+import {
     CertidaoMensalEmailConfiguracoes,
 } from "./CertidaoMensalEmailConfiguracoes";
 import {
@@ -73,6 +76,7 @@ const ESTADO_PADRAO_CARDS_CONFIGURACOES_TENANT =
         acessoAtual: true,
         empresasVinculadas: true,
         recursosDisponiveis: true,
+        identidadeVisual: true,
         planoBase: true,
         versaoSafescan: true,
         arquivosStorage: true,
@@ -341,6 +345,7 @@ export function ConfiguracoesTenant({
         tenant,
         hostname,
         dominioCanonico,
+        recarregarBrandingTenant,
     } =
         useTenantRuntimeContext();
 
@@ -468,6 +473,10 @@ export function ConfiguracoesTenant({
         "administrador";
 
     const podeAlterarRecursosOperacionais =
+        perfilUsuarioChave ===
+        "administrador";
+
+    const podeAlterarIdentidadeVisual =
         perfilUsuarioChave ===
         "administrador";
 
@@ -2879,6 +2888,61 @@ export function ConfiguracoesTenant({
 
 </div></details>
             </section>
+
+            {podeAlterarIdentidadeVisual ? (
+                <details
+                    open={estadoCardsConfiguracoesAtivo.identidadeVisual}
+                    onToggle={(evento) => {
+                        const aberto =
+                            evento.currentTarget.open;
+
+                        if (
+                            aberto ===
+                            estadoCardsConfiguracoesAtivo.identidadeVisual
+                        ) {
+                            return;
+                        }
+
+                        atualizarEstadoCardConfiguracoes(
+                            "identidadeVisual",
+                            aberto
+                        );
+                    }}
+                    data-r10-collapse="identidade-visual"
+                    className="group scroll-mt-24 self-start overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                >
+                    <summary className="flex h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+                        <span className="text-sm font-black text-slate-950 sm:text-base">
+                            Identidade visual / Aparência do login
+                        </span>
+
+                        <span
+                            aria-hidden="true"
+                            className="shrink-0 text-lg font-black text-slate-400 transition-transform duration-200 group-open:rotate-180"
+                        >
+                            ⌄
+                        </span>
+                    </summary>
+
+                    <div
+                        data-r10-body="identidade-visual"
+                        className="border-t border-slate-200"
+                    >
+                        <TenantAdminBrandingPanel
+                            tenant={{
+                                tenant_id:
+                                    tenantId,
+                                tenant_nome:
+                                    tenantNome,
+                            }}
+                            modoEmbutido
+                            onBrandingAtualizado={
+                                recarregarBrandingTenant
+                            }
+                        />
+                    </div>
+                </details>
+            ) : null}
 
             <details
                 open={estadoCardsConfiguracoesAtivo.planoBase}

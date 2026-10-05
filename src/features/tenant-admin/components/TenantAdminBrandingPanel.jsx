@@ -102,6 +102,8 @@ function confirmarAcao(
 
 export function TenantAdminBrandingPanel({
     tenant,
+    modoEmbutido = false,
+    onBrandingAtualizado = null,
 }) {
     const tenantId =
         String(
@@ -495,6 +497,17 @@ export function TenantAdminBrandingPanel({
         );
     }
 
+    async function sincronizarBrandingRuntime() {
+        if (
+            typeof onBrandingAtualizado !==
+            "function"
+        ) {
+            return;
+        }
+
+        await onBrandingAtualizado();
+    }
+
     async function salvarAparencia() {
         if (
             salvando ||
@@ -581,6 +594,7 @@ export function TenantAdminBrandingPanel({
             );
 
             await recarregar();
+            await sincronizarBrandingRuntime();
 
             setMensagem(
                 "Identidade visual atualizada. O login deste tenant usará a nova configuração."
@@ -637,6 +651,7 @@ export function TenantAdminBrandingPanel({
             );
 
             await recarregar();
+            await sincronizarBrandingRuntime();
 
             setMensagem(
                 "Fundo personalizado removido."
@@ -689,6 +704,7 @@ export function TenantAdminBrandingPanel({
             );
 
             await recarregar();
+            await sincronizarBrandingRuntime();
 
             setMensagem(
                 "Logo personalizada removida."
@@ -719,7 +735,14 @@ export function TenantAdminBrandingPanel({
 
     if (carregando) {
         return (
-            <section className="mt-5 flex items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm" style={{ minHeight: 260 }}>
+            <section
+                className={
+                    modoEmbutido
+                        ? "flex items-center justify-center bg-white"
+                        : "mt-5 flex items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm"
+                }
+                style={{ minHeight: 260 }}
+            >
                 <div className="flex items-center gap-3 text-sm font-semibold text-slate-500">
                     <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
 
@@ -730,16 +753,30 @@ export function TenantAdminBrandingPanel({
     }
 
     return (
-        <section className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <section
+            className={
+                modoEmbutido
+                    ? "bg-white"
+                    : "mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+            }
+        >
+            <div
+                className={
+                    modoEmbutido
+                        ? "flex flex-col gap-3 px-5 pt-4 sm:flex-row sm:items-center sm:justify-between"
+                        : "flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+                }
+            >
                 <div>
-                    <div className="flex items-center gap-2">
-                        <Palette className="h-4 w-4 text-emerald-700" />
+                    {!modoEmbutido ? (
+                        <div className="flex items-center gap-2">
+                            <Palette className="h-4 w-4 text-emerald-700" />
 
-                        <h2 className="text-sm font-bold text-slate-900">
-                            Identidade visual / Aparência do login
-                        </h2>
-                    </div>
+                            <h2 className="text-sm font-bold text-slate-900">
+                                Identidade visual / Aparência do login
+                            </h2>
+                        </div>
+                    ) : null}
 
                     <p className="mt-1 text-xs leading-5 text-slate-500">
                         Personalização exclusiva de {textoSeguro(
