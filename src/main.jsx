@@ -16,6 +16,10 @@ import {
 } from "./components/layout/AppSystemStates.jsx";
 
 import {
+    SafeScanFeedbackHost,
+} from "./components/feedback/SafeScanFeedbackHost.jsx";
+
+import {
     deveRenderizarPainelAdmin,
     deveRenderizarPortalAcesso,
     deveRenderizarSiteInstitucionalDev,
@@ -155,6 +159,8 @@ createRoot(
     )
 ).render(
     <StrictMode>
+        <SafeScanFeedbackHost />
+
         <Suspense
             fallback={
                 renderizarPainelAdmin

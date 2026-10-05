@@ -6,6 +6,7 @@ import { Card, FotoColaborador, Header, obterFotoColaboradorSrc } from "../commo
 import { baixarRelatorioAniversariantesPDF } from "../../services/exportacaoService";
 import { classNames, formatarAniversario, normalizarTextoBusca } from "../../utils/sstUtils";
 import { obterUrlLogoEmpresa } from "../../services/supabaseServices";
+import { emitirFeedbackSafeScan } from "../../services/safeScanFeedbackService";
 import aniversariantesHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import {
     obterDataAniversarioColaborador,
@@ -383,10 +384,16 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
         try {
             window.localStorage.setItem(CHAVE_FILTROS_ANIVERSARIANTES, JSON.stringify(filtrosAtuaisAniversariantes));
             setVersaoFiltroSalvo((valor) => valor + 1);
-            alert("Filtros de aniversariantes salvos.");
+            emitirFeedbackSafeScan({
+                tipo: "sucesso",
+                mensagem: "Filtros de aniversariantes salvos.",
+            });
         } catch (error) {
             console.error("Erro ao salvar filtros de aniversariantes:", error);
-            alert("N\u00e3o foi poss\u00edvel salvar os filtros de aniversariantes.");
+            emitirFeedbackSafeScan({
+                tipo: "erro",
+                mensagem: "N\u00e3o foi poss\u00edvel salvar os filtros de aniversariantes.",
+            });
         }
     };
 
@@ -394,7 +401,10 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
         const filtrosSalvos = carregarFiltrosSalvosAniversariantes();
 
         if (!filtrosSalvos) {
-            alert("Nenhum filtro salvo encontrado para aniversariantes.");
+            emitirFeedbackSafeScan({
+                tipo: "informacao",
+                mensagem: "Nenhum filtro salvo encontrado para aniversariantes.",
+            });
             return;
         }
 
@@ -410,7 +420,10 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
 
         window.localStorage.removeItem(CHAVE_FILTROS_ANIVERSARIANTES);
         setVersaoFiltroSalvo((valor) => valor + 1);
-        alert("Filtros salvos de aniversariantes removidos.");
+        emitirFeedbackSafeScan({
+            tipo: "sucesso",
+            mensagem: "Filtros salvos de aniversariantes removidos.",
+        });
     };
 
     const obterEmpresaRelatorio = (colaborador = {}) => {
@@ -428,7 +441,10 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
         if (exportandoPDF) return;
 
         if (!filtrados.length) {
-            alert("Nenhum aniversariante encontrado para gerar o relatório.");
+            emitirFeedbackSafeScan({
+                tipo: "atencao",
+                mensagem: "Nenhum aniversariante encontrado para gerar o relatório.",
+            });
             return;
         }
 
@@ -478,7 +494,10 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
             });
         } catch (error) {
             console.error("Erro ao gerar relatório de aniversariantes:", error);
-            alert("Não foi possível gerar o PDF de aniversariantes.");
+            emitirFeedbackSafeScan({
+                tipo: "erro",
+                mensagem: "Não foi possível gerar o PDF de aniversariantes.",
+            });
         } finally {
             setExportandoPDF(false);
         }
