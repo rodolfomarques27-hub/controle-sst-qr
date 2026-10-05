@@ -30,6 +30,7 @@ import {
 import {
     carregarHistoricoProfissionalColaborador,
 } from "../../services/colaboradoresHistoricoProfissionalService.js";
+import { emitirFeedbackSafeScan } from "../../services/safeScanFeedbackService";
 
 function apenasDigitosColaborador(valor = "") {
     return String(valor || "").replace(/\D/g, "");
@@ -794,7 +795,11 @@ export function ModalRevisaoColaborador({
         }
     };
     const salvarRevisaoColaborador = async () => {        if (!colaboradorEdicao?.nome?.trim() || !colaboradorEdicao?.empresaNome?.trim() || !colaboradorEdicao?.funcao?.trim()) {
-            alert("Preencha nome, empresa e função.");
+            emitirFeedbackSafeScan({
+                tipo: "atencao",
+                titulo: "Campos obrigatórios",
+                mensagem: "Preencha nome, empresa e função.",
+            });
             return;
         }
 

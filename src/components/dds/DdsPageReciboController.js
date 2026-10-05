@@ -1,3 +1,5 @@
+import { emitirFeedbackSafeScan } from "../../services/safeScanFeedbackService";
+
 export default function criarControladorReciboDds({
     codigoConferenciaDds,
     dadosDds,
@@ -240,7 +242,11 @@ export default function criarControladorReciboDds({
         const janela = window.open("", "_blank", "width=1100,height=760");
 
         if (!janela) {
-            alert("Não foi possível abrir a janela de impressão. Verifique o bloqueador de pop-up do navegador.");
+            emitirFeedbackSafeScan({
+                tipo: "atencao",
+                titulo: "Janela de impressão bloqueada",
+                mensagem: "Não foi possível abrir a janela de impressão. Verifique o bloqueador de pop-up do navegador.",
+            });
             return;
         }
 

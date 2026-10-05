@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, Download, FileSpreadsheet, Upload, X } from "lucide-react";
 import { classNames } from "../../utils/sstUtils";
+import { emitirFeedbackSafeScan } from "../../services/safeScanFeedbackService";
 
 const COLUNAS_MODELO_IMPORTACAO = [
     "nome",
@@ -477,19 +478,31 @@ export function ImportacaoMassaColaboradores({
 
     const importar = async () => {
         if (!podeCadastrar) {
-            if (typeof window !== "undefined") window.alert(mensagemBloqueio);
+            emitirFeedbackSafeScan({
+                tipo: "atencao",
+                titulo: "Importação não permitida",
+                mensagem: mensagemBloqueio,
+            });
             return;
         }
 
         const validos = linhas.filter((linha) => linha.valido);
 
         if (validos.length === 0) {
-            if (typeof window !== "undefined") window.alert("Nenhuma linha válida para importar.");
+            emitirFeedbackSafeScan({
+                tipo: "atencao",
+                titulo: "Nenhuma linha válida",
+                mensagem: "Nenhuma linha válida para importar.",
+            });
             return;
         }
 
         if (!empresaSelecionada) {
-            if (typeof window !== "undefined") window.alert("Selecione a empresa do lote antes de importar.");
+            emitirFeedbackSafeScan({
+                tipo: "atencao",
+                titulo: "Empresa do lote não selecionada",
+                mensagem: "Selecione a empresa do lote antes de importar.",
+            });
             return;
         }
 
