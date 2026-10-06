@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, Camera, CheckCircle2, ImagePlus, Loader2, Trash2, Upload, XCircle } from "lucide-react";
 import { Card } from "../commonComponents";
 import { classNames } from "../../utils/sstUtils";
+import { emitirFeedbackSafeScan } from "../../services/safeScanFeedbackService";
 
 const EXTENSOES_IMAGEM_PERMITIDAS = ["jpg", "jpeg", "png", "webp"];
 
@@ -29,6 +30,12 @@ function normalizarChaveTexto(valor = "") {
 
 function normalizarChaveCompacta(valor = "") {
     return normalizarChaveTexto(valor).replace(/\s+/g, "");
+}
+
+function removerMarcadorFotoFinal(valor = "") {
+    return String(valor || "")
+        .replace(/[\s_\-–—.,;:]+FOTO$/i, "")
+        .trim();
 }
 
 function criarAssinaturaColaborador(colaborador = {}) {
@@ -59,6 +66,10 @@ function localizarColaboradorPorArquivo(arquivo, mapaColaboradores = []) {
     const nomeBase = removerExtensao(arquivo?.name || "");
     const nomeTexto = normalizarChaveTexto(nomeBase);
     const nomeCompacto = normalizarChaveCompacta(nomeBase);
+    const nomeBaseSemMarcadorFoto = removerMarcadorFotoFinal(nomeBase);
+    const possuiMarcadorFotoFinal = nomeBaseSemMarcadorFoto !== nomeBase;
+    const nomeTextoSemMarcadorFoto = normalizarChaveTexto(nomeBaseSemMarcadorFoto);
+    const nomeCompactoSemMarcadorFoto = normalizarChaveCompacta(nomeBaseSemMarcadorFoto);
     const digitosArquivo = apenasDigitos(nomeBase);
 
     const tentar = (criterio, prioridade) => {
@@ -110,6 +121,20 @@ function localizarColaboradorPorArquivo(arquivo, mapaColaboradores = []) {
     );
     if (porNome) return porNome;
 
+    if (possuiMarcadorFotoFinal && nomeTextoSemMarcadorFoto) {
+        const porNomeSemMarcadorFoto = tentar(
+            (assinatura) =>
+                assinatura.nome &&
+                (
+                    assinatura.nome === nomeTextoSemMarcadorFoto ||
+                    assinatura.nomeCompacto === nomeCompactoSemMarcadorFoto
+                ),
+            "nome"
+        );
+
+        if (porNomeSemMarcadorFoto) return porNomeSemMarcadorFoto;
+    }
+
     return {
         status: "erro",
         colaborador: null,
@@ -146,25 +171,25 @@ function analisarFotosSelecionadas(arquivos = [], colaboradores = []) {
         };
     });
 
-    const porColaborador = resultadosBase.reduce((acc, item) => {
-        if (item.status === "valido" && item.colaborador?.id) {
-            const chave = String(item.colaborador.id);
-            if (!acc[chave]) acc[chave] = [];
-            acc[chave].push(item);
-        }
-        return acc;
-    }, {});
+    const colaboradoresComFotoValida = new Set();
 
     return resultadosBase.map((item) => {
-        if (item.status === "valido" && item.colaborador?.id && porColaborador[String(item.colaborador.id)]?.length > 1) {
-            return {
-                ...item,
-                status: "erro",
-                mensagem: "Mais de uma foto foi selecionada para este colaborador. Deixe apenas uma imagem.",
-            };
+        if (item.status !== "valido" || !item.colaborador?.id) {
+            return item;
         }
 
-        return item;
+        const chave = String(item.colaborador.id);
+
+        if (!colaboradoresComFotoValida.has(chave)) {
+            colaboradoresComFotoValida.add(chave);
+            return item;
+        }
+
+        return {
+            ...item,
+            status: "erro",
+            mensagem: "Outra foto deste colaborador já foi selecionada. A primeira imagem válida será mantida para envio.",
+        };
     });
 }
 
@@ -176,8 +201,10 @@ export function ImportacaoFotosMassaColaboradores({
     enviando = false,
 }) {
     const inputRef = useRef(null);
+    const envioFotosRef = useRef(false);
     const [resultados, setResultados] = useState([]);
     const [resultadoEnvio, setResultadoEnvio] = useState(null);
+    const [confirmacaoEnvioAberta, setConfirmacaoEnvioAberta] = useState(false);
 
     useEffect(() => {
         return () => {
@@ -197,51 +224,122 @@ export function ImportacaoFotosMassaColaboradores({
     }, [resultados]);
 
     const limparSelecao = () => {
+        if (enviando || envioFotosRef.current) return;
+
         resultados.forEach((item) => {
             if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
         });
+
+        setConfirmacaoEnvioAberta(false);
         setResultados([]);
         setResultadoEnvio(null);
+
         if (inputRef.current) inputRef.current.value = "";
     };
-
     const selecionarFotos = (evento) => {
+        if (enviando || envioFotosRef.current) {
+            if (evento?.target) evento.target.value = "";
+            return;
+        }
+
         const arquivos = Array.from(evento.target.files || []);
+
         resultados.forEach((item) => {
             if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
         });
+
+        setConfirmacaoEnvioAberta(false);
         setResultadoEnvio(null);
         setResultados(analisarFotosSelecionadas(arquivos, colaboradores));
     };
+    const enviarValidas = () => {
+        if (envioFotosRef.current || enviando) return;
 
-    const enviarValidas = async () => {
         if (!podeEnviar) {
-            if (typeof window !== "undefined") window.alert(mensagemBloqueio);
+            emitirFeedbackSafeScan({
+                tipo: "atencao",
+                titulo: "Envio de fotos bloqueado",
+                mensagem: mensagemBloqueio,
+            });
             return;
         }
 
-        const validas = resultados.filter((item) => item.status === "valido");
+        const validas =
+            resultados.filter(
+                (item) => item.status === "valido"
+            );
 
         if (validas.length === 0) {
-            if (typeof window !== "undefined") window.alert("Nenhuma foto válida para enviar.");
+            emitirFeedbackSafeScan({
+                tipo: "atencao",
+                titulo: "Nenhuma foto válida",
+                mensagem: "Selecione ao menos uma foto válida antes de iniciar o envio.",
+            });
             return;
         }
 
-        const confirmado = typeof window === "undefined" || window.confirm(
-            `Enviar ${validas.length} foto(s) e atualizar os colaboradores correspondentes?\n\nFotos atuais serão substituídas quando já existir imagem cadastrada.`
-        );
-
-        if (!confirmado) return;
-
-        const retorno = await onEnviarFotos?.(validas.map((item) => ({
-            colaborador: item.colaborador,
-            arquivo: item.arquivo,
-            criterio: item.criterio,
-        })));
-
-        setResultadoEnvio(retorno || null);
+        setConfirmacaoEnvioAberta(true);
     };
 
+    const confirmarEnvio = async () => {
+        if (envioFotosRef.current || enviando) return;
+
+        const validas =
+            resultados.filter(
+                (item) => item.status === "valido"
+            );
+
+        if (validas.length === 0) {
+            setConfirmacaoEnvioAberta(false);
+
+            emitirFeedbackSafeScan({
+                tipo: "atencao",
+                titulo: "Nenhuma foto válida",
+                mensagem: "Não existem fotos válidas disponíveis para envio.",
+            });
+
+            return;
+        }
+
+        envioFotosRef.current = true;
+        setConfirmacaoEnvioAberta(false);
+        setResultadoEnvio(null);
+
+        try {
+            const retorno =
+                await onEnviarFotos?.(
+                    validas.map((item) => ({
+                        colaborador: item.colaborador,
+                        arquivo: item.arquivo,
+                        criterio: item.criterio,
+                    }))
+                );
+
+            setResultadoEnvio(
+                retorno || {
+                    sucesso: 0,
+                    erros: [],
+                }
+            );
+        } catch (error) {
+            const mensagem =
+                error?.message ||
+                "Não foi possível concluir o envio das fotos.";
+
+            setResultadoEnvio({
+                sucesso: 0,
+                erros: [mensagem],
+            });
+
+            emitirFeedbackSafeScan({
+                tipo: "erro",
+                titulo: "Falha no envio de fotos",
+                mensagem,
+            });
+        } finally {
+            envioFotosRef.current = false;
+        }
+    };
     return (
         <Card className="colaboradores-importacao-card colaboradores-importacao-card--fotos border-slate-200 bg-white">
             <div className="colaboradores-importacao-card__header flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -267,6 +365,7 @@ export function ImportacaoFotosMassaColaboradores({
                         accept="image/jpeg,image/png,image/webp"
                         multiple
                         className="hidden"
+                        disabled={!podeEnviar || enviando}
                         onChange={selecionarFotos}
                     />
                     <button
@@ -378,17 +477,55 @@ export function ImportacaoFotosMassaColaboradores({
                     {resumo.erros > 0 && (
                         <div className="flex items-start gap-2 rounded-2xl bg-red-50 p-3 text-sm font-semibold text-red-700 ring-1 ring-red-100">
                             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                            Corrija os arquivos com erro antes de enviar. Somente fotos válidas serão processadas.
+                            Arquivos com erro serão ignorados. Somente fotos válidas serão processadas.
                         </div>
                     )}
 
                     {resultadoEnvio && (
-                        <div className="rounded-2xl bg-slate-50 p-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200">
-                            Envio concluído: <strong>{resultadoEnvio.sucesso || 0}</strong> foto(s) enviada(s)
-                            {resultadoEnvio.erros?.length ? `, ${resultadoEnvio.erros.length} erro(s).` : "."}
+                        <div className="space-y-3 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <div className="rounded-2xl bg-emerald-50 p-3 text-center ring-1 ring-emerald-100">
+                                    <p className="text-xs font-bold text-emerald-700">
+                                        Enviadas
+                                    </p>
+                                    <p className="text-2xl font-black text-emerald-700">
+                                        {resultadoEnvio.sucesso || 0}
+                                    </p>
+                                </div>
+
+                                <div className="rounded-2xl bg-red-50 p-3 text-center ring-1 ring-red-100">
+                                    <p className="text-xs font-bold text-red-700">
+                                        Não enviadas
+                                    </p>
+                                    <p className="text-2xl font-black text-red-700">
+                                        {resultadoEnvio.erros?.length || 0}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {resultadoEnvio.erros?.length > 0 && (
+                                <div className="rounded-2xl bg-white p-3 ring-1 ring-slate-200">
+                                    <p className="text-xs font-black uppercase tracking-wide text-slate-600">
+                                        Principais erros
+                                    </p>
+
+                                    <ul className="mt-2 space-y-1 text-xs font-semibold text-red-700">
+                                        {resultadoEnvio.erros.slice(0, 8).map((erro, indice) => (
+                                            <li key={`${indice}-${erro}`}>
+                                                • {erro}
+                                            </li>
+                                        ))}
+                                    </ul>
+
+                                    {resultadoEnvio.erros.length > 8 && (
+                                        <p className="mt-2 text-xs font-semibold text-slate-500">
+                                            + {resultadoEnvio.erros.length - 8} erro(s) adicional(is).
+                                        </p>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
-
                     <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                         <button
                             type="button"
@@ -399,6 +536,66 @@ export function ImportacaoFotosMassaColaboradores({
                             {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                             {enviando ? "Enviando fotos..." : `Enviar ${resumo.validos} foto(s) válida(s)`}
                         </button>
+                    </div>
+                </div>
+            )}
+            {confirmacaoEnvioAberta && (
+                <div
+                    className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="confirmacao-envio-fotos-titulo"
+                >
+                    <div className="w-full max-w-lg rounded-3xl bg-white p-5 shadow-2xl ring-1 ring-slate-200">
+                        <div className="flex items-start gap-3">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-sky-700 ring-1 ring-sky-100">
+                                <Camera className="h-5 w-5" />
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                                <p className="text-xs font-black uppercase tracking-wide text-sky-700">
+                                    Confirmação
+                                </p>
+
+                                <h3
+                                    id="confirmacao-envio-fotos-titulo"
+                                    className="mt-1 text-lg font-black text-slate-950"
+                                >
+                                    Enviar fotos dos colaboradores?
+                                </h3>
+
+                                <p className="mt-2 text-sm leading-6 text-slate-600">
+                                    Serão processadas {resumo.validos} foto(s) válida(s).
+                                    Arquivos com erro serão ignorados e fotos já cadastradas poderão ser substituídas.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                            <button
+                                type="button"
+                                onClick={() => setConfirmacaoEnvioAberta(false)}
+                                disabled={enviando}
+                                className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                Cancelar
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={confirmarEnvio}
+                                disabled={enviando}
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-sky-700 px-4 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                            >
+                                {enviando ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Upload className="h-4 w-4" />
+                                )}
+
+                                Confirmar envio
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
