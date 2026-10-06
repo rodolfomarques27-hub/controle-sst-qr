@@ -25,6 +25,7 @@ import {
   obterUrlAssinadaPlantaMapa,
   removerPlantaMapaStorage,
   validarArquivoPlantaMapa,
+  verificarExistenciaPlantaMapaStorage,
 } from "../../services/mapaObraStorageService";
 import {
   carregarExtintoresCadastro,
@@ -157,6 +158,20 @@ async function hidratarReferenciaImagemMapa(
     return referencia;
   }
 
+  const existeNoStorage =
+    await verificarExistenciaPlantaMapaStorage({
+      supabase: clienteSupabase,
+      caminho: referencia.path,
+      obraId,
+    });
+
+  if (!existeNoStorage) {
+    return {
+      ...referencia,
+      url: "",
+    };
+  }
+
   const url = await obterUrlAssinadaPlantaMapa({
     supabase: clienteSupabase,
     caminho: referencia.path,
@@ -203,6 +218,45 @@ async function hidratarMapaObraComUrls(
     pontos,
   };
 }
+
+function obterAvisoPlantasAusentesMapa(mapa) {
+  const plantaGeralAusente = Boolean(
+    mapa?.planta?.path &&
+    !mapa?.planta?.url,
+  );
+
+  const totalPlantasDetalhadasAusentes =
+    (Array.isArray(mapa?.pontos)
+      ? mapa.pontos
+      : []
+    ).filter(
+      (ponto) =>
+        ponto?.plantaDetalhada?.path &&
+        !ponto?.plantaDetalhada?.url,
+    ).length;
+
+  if (
+    plantaGeralAusente &&
+    totalPlantasDetalhadasAusentes > 0
+  ) {
+    return "A planta geral e uma ou mais plantas detalhadas não estão mais disponíveis no armazenamento. Os demais dados do mapa foram mantidos. Envie novamente as imagens ausentes para restaurar a visualização.";
+  }
+
+  if (plantaGeralAusente) {
+    return "A planta cadastrada não está mais disponível no armazenamento. Os demais dados do mapa foram mantidos. Envie novamente a planta para restaurar a visualização.";
+  }
+
+  if (totalPlantasDetalhadasAusentes === 1) {
+    return "Mapa carregado. Uma planta detalhada não está mais disponível no armazenamento. Os demais dados foram mantidos. Envie novamente essa planta para restaurar a visualização.";
+  }
+
+  if (totalPlantasDetalhadasAusentes > 1) {
+    return `Mapa carregado. ${totalPlantasDetalhadasAusentes} plantas detalhadas não estão mais disponíveis no armazenamento. Os demais dados foram mantidos. Envie novamente essas plantas para restaurar a visualização.`;
+  }
+
+  return "";
+}
+
 function ResumoMapaCard({ label, value, detail, tone = "sky" }) {
   const tones = {
     sky: "border-sky-100 bg-sky-50/70 text-sky-700",
@@ -669,10 +723,16 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
             return;
           }
 
+          const avisoPlantasAusentes =
+            obterAvisoPlantasAusentesMapa(
+              hidratado,
+            );
+
           setMapa(hidratado);
           salvarMapaObraLocal(hidratado);
           setAlteracoesPendentes(false);
           setMensagem(
+            avisoPlantasAusentes ||
             "Mapa carregado do banco de dados.",
           );
 
@@ -744,11 +804,15 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
           possuiDadosLocais,
         );
 
+        console.warn(
+          "Falha ao sincronizar o mapa remoto; recuperação local aplicada.",
+          error,
+        );
+
         setMensagem(
-          `Não foi possível carregar o mapa remoto. Recuperação local utilizada: ${
-            error?.message ||
-            "erro não identificado"
-          }`,
+          possuiDadosLocais
+            ? "Não foi possível sincronizar o mapa com o servidor agora. Os dados locais foram preservados. Tente novamente."
+            : "Não foi possível carregar o mapa agora. Tente novamente em instantes.",
         );
       } finally {
         if (
