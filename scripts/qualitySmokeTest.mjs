@@ -1160,8 +1160,8 @@ assert.match(
 
 assert.match(
     codigoColaboradoresPage,
-    /\.filter\(\(item\) => \["pendente", "vencido"\]\.includes\(item\.status\.chave\)\)/,
-    "O relatório de pendências deve considerar somente ausentes e vencidos."
+    /\.filter\(\(item\) =>\s*classificacaoNormalizada === "a vencer"\s*\?\s*item\.status\.chave === "vencendo"\s*:\s*\["pendente", "vencido"\]\.includes\(\s*item\.status\.chave\s*\)\s*\)/,
+    "O relatório deve separar itens a vencer e manter o fluxo padrão restrito a ausentes e vencidos."
 );
 
 assert.doesNotMatch(
