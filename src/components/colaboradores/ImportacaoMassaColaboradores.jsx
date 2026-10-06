@@ -375,10 +375,12 @@ export function ImportacaoMassaColaboradores({
     importando = false,
 }) {
     const inputRef = useRef(null);
+    const disparoImportacaoRef = useRef(false);
     const [arquivoNome, setArquivoNome] = useState("");
     const [linhas, setLinhas] = useState([]);
     const [erroLeitura, setErroLeitura] = useState("");
     const [resultado, setResultado] = useState(null);
+    const [progressoImportacao, setProgressoImportacao] = useState(null);
     const [empresaSelecionadaId, setEmpresaSelecionadaId] = useState("");
 
     const cpfsExistentes = useMemo(() => {
@@ -435,10 +437,13 @@ export function ImportacaoMassaColaboradores({
     }, [linhas]);
 
     const limpar = () => {
+        if (importando || disparoImportacaoRef.current) return;
+
         setArquivoNome("");
         setLinhas([]);
         setErroLeitura("");
         setResultado(null);
+        setProgressoImportacao(null);
 
         if (inputRef.current) {
             inputRef.current.value = "";
@@ -446,10 +451,16 @@ export function ImportacaoMassaColaboradores({
     };
 
     const processarArquivo = async (evento) => {
+        if (importando || disparoImportacaoRef.current) {
+            if (evento?.target) evento.target.value = "";
+            return;
+        }
+
         const arquivo = evento.target.files?.[0];
 
         setErroLeitura("");
         setResultado(null);
+        setProgressoImportacao(null);
         setLinhas([]);
 
         if (!arquivo) return;
@@ -477,6 +488,8 @@ export function ImportacaoMassaColaboradores({
     };
 
     const importar = async () => {
+        if (disparoImportacaoRef.current || importando) return;
+
         if (!podeCadastrar) {
             emitirFeedbackSafeScan({
                 tipo: "atencao",
@@ -512,9 +525,91 @@ export function ImportacaoMassaColaboradores({
             empresaNome: empresaSelecionada.nome,
         }));
 
-        const resposta = await onImportar?.(validosComEmpresa);
+        disparoImportacaoRef.current = true;
+        setResultado(null);
+        setProgressoImportacao({
+            total: validosComEmpresa.length,
+            processados: 0,
+            cadastrados: 0,
+            erros: 0,
+            percentual: 0,
+        });
 
-        setResultado(resposta || null);
+        try {
+            const resposta = await onImportar?.(
+                validosComEmpresa,
+                (progressoAtual = {}) => {
+                    const total =
+                        Number(progressoAtual.total) ||
+                        validosComEmpresa.length;
+
+                    const processados =
+                        Number(progressoAtual.processados) ||
+                        0;
+
+                    const cadastrados =
+                        Number(progressoAtual.cadastrados) ||
+                        0;
+
+                    const erros =
+                        Number(progressoAtual.erros) ||
+                        0;
+
+                    let percentual =
+                        Number(progressoAtual.percentual);
+
+                    if (!Number.isFinite(percentual)) {
+                        percentual =
+                            total > 0
+                                ? Math.round((processados / total) * 100)
+                                : 0;
+                    }
+
+                    percentual =
+                        Math.min(
+                            100,
+                            Math.max(
+                                0,
+                                percentual
+                            )
+                        );
+
+                    setProgressoImportacao({
+                        total,
+                        processados,
+                        cadastrados,
+                        erros,
+                        percentual,
+                    });
+                }
+            );
+
+            setResultado(resposta || null);
+
+            if (resposta) {
+                const totalErros =
+                    Array.isArray(resposta.erros)
+                        ? resposta.erros.length
+                        : 0;
+
+                emitirFeedbackSafeScan({
+                    tipo:
+                        totalErros > 0
+                            ? "atencao"
+                            : "sucesso",
+                    titulo:
+                        totalErros > 0
+                            ? "Importação concluída com ressalvas"
+                            : "Importação concluída",
+                    mensagem:
+                        totalErros > 0
+                            ? `Cadastrados: ${resposta.sucesso || 0}. Não cadastrados: ${totalErros}.`
+                            : `${resposta.sucesso || 0} colaborador(es) cadastrado(s) com sucesso.`,
+                });
+            }
+        } finally {
+            disparoImportacaoRef.current = false;
+        }
     };
 
     return (
@@ -560,6 +655,7 @@ export function ImportacaoMassaColaboradores({
                 type="file"
                 accept=".csv,text/csv,.txt"
                 onChange={processarArquivo}
+                disabled={importando}
                 className="hidden"
             />
 
@@ -572,7 +668,8 @@ export function ImportacaoMassaColaboradores({
                         <button
                             type="button"
                             onClick={limpar}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                            disabled={importando}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             <X className="h-3.5 w-3.5" />
                             Limpar
@@ -676,6 +773,54 @@ export function ImportacaoMassaColaboradores({
                         </p>
                     )}
 
+                    {progressoImportacao && (
+                        <div className="rounded-2xl bg-blue-50 p-4 ring-1 ring-blue-100">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-sm font-black text-slate-950">
+                                        {importando ? "Importação em andamento" : "Progresso da última importação"}
+                                    </p>
+                                    <p className="mt-1 text-xs font-semibold text-slate-500">
+                                        Acompanhe o lote sem sair desta tela.
+                                    </p>
+                                </div>
+
+                                <span className="rounded-full bg-white px-3 py-1 text-sm font-black text-blue-700 ring-1 ring-blue-100">
+                                    {progressoImportacao.percentual || 0}%
+                                </span>
+                            </div>
+
+                            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white ring-1 ring-blue-100">
+                                <div
+                                    className="h-full rounded-full bg-blue-700 transition-all duration-200"
+                                    style={{ width: `${progressoImportacao.percentual || 0}%` }}
+                                />
+                            </div>
+
+                            <div className="mt-4 grid gap-3 sm:grid-cols-4">
+                                <div className="rounded-xl bg-white p-3 text-center ring-1 ring-slate-200">
+                                    <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">Total</p>
+                                    <p className="mt-1 text-xl font-black text-slate-950">{progressoImportacao.total || 0}</p>
+                                </div>
+
+                                <div className="rounded-xl bg-white p-3 text-center ring-1 ring-slate-200">
+                                    <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">Processados</p>
+                                    <p className="mt-1 text-xl font-black text-blue-700">{progressoImportacao.processados || 0}</p>
+                                </div>
+
+                                <div className="rounded-xl bg-white p-3 text-center ring-1 ring-slate-200">
+                                    <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">Cadastrados</p>
+                                    <p className="mt-1 text-xl font-black text-emerald-700">{progressoImportacao.cadastrados || 0}</p>
+                                </div>
+
+                                <div className="rounded-xl bg-white p-3 text-center ring-1 ring-slate-200">
+                                    <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">Erros</p>
+                                    <p className="mt-1 text-xl font-black text-red-700">{progressoImportacao.erros || 0}</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="flex flex-col gap-3 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200 lg:flex-row lg:items-center lg:justify-between">
                         <div>
                             <p className="text-sm font-black text-slate-950">Salvar colaboradores válidos</p>
@@ -699,9 +844,73 @@ export function ImportacaoMassaColaboradores({
             )}
 
             {resultado && (
-                <div className="mt-4 rounded-2xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-100">
-                    Resultado: {resultado.sucesso || 0} colaborador(es) cadastrado(s)
-                    {resultado.erros?.length ? `, ${resultado.erros.length} não cadastrado(s).` : "."}
+                <div
+                    className={classNames(
+                        "mt-4 rounded-2xl p-4 ring-1",
+                        resultado.erros?.length
+                            ? "bg-amber-50 text-amber-900 ring-amber-100"
+                            : "bg-emerald-50 text-emerald-800 ring-emerald-100"
+                    )}
+                >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <p className="text-sm font-black">
+                                {resultado.erros?.length ? "Importação concluída com ressalvas" : "Importação concluída"}
+                            </p>
+
+                            <p className="mt-1 text-xs font-semibold opacity-80">
+                                O resumo permanece visível até selecionar outro arquivo ou limpar esta importação.
+                            </p>
+                        </div>
+
+                        <span className="rounded-full bg-white px-3 py-1 text-xs font-black ring-1 ring-slate-200">
+                            Lote finalizado
+                        </span>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-xl bg-white p-3 text-center ring-1 ring-emerald-100">
+                            <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
+                                Cadastrados
+                            </p>
+
+                            <p className="mt-1 text-2xl font-black text-emerald-700">
+                                {resultado.sucesso || 0}
+                            </p>
+                        </div>
+
+                        <div className="rounded-xl bg-white p-3 text-center ring-1 ring-red-100">
+                            <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
+                                Não cadastrados
+                            </p>
+
+                            <p className="mt-1 text-2xl font-black text-red-700">
+                                {resultado.erros?.length || 0}
+                            </p>
+                        </div>
+                    </div>
+
+                    {resultado.erros?.length > 0 && (
+                        <div className="mt-4 rounded-xl bg-white p-3 text-sm text-slate-700 ring-1 ring-slate-200">
+                            <p className="font-black text-slate-950">
+                                Principais ocorrências
+                            </p>
+
+                            <ul className="mt-2 space-y-1 text-xs font-semibold text-slate-600">
+                                {resultado.erros.slice(0, 8).map((erro, indice) => (
+                                    <li key={`${indice}-${erro}`}>
+                                        • {erro}
+                                    </li>
+                                ))}
+                            </ul>
+
+                            {resultado.erros.length > 8 && (
+                                <p className="mt-2 text-xs font-bold text-slate-500">
+                                    + {resultado.erros.length - 8} ocorrência(s) adicional(is).
+                                </p>
+                            )}
+                        </div>
+                    )}
                 </div>
             )}
         </section>

@@ -224,6 +224,7 @@ export function Colaboradores({
     ] =
         useState(false);
     const [importandoMassa, setImportandoMassa] = useState(false);
+    const importandoMassaRef = useRef(false);
     const [importandoFotosMassa, setImportandoFotosMassa] = useState(false);
     const [colaboradorEdicao, setColaboradorEdicao] = useState(null);
     const [colaboradorExclusao, setColaboradorExclusao] = useState(null);
@@ -1429,22 +1430,59 @@ export function Colaboradores({
         }
     };
 
-    const importarColaboradoresEmMassa = async (itens = []) => {
-        if (!podeCadastrarColaboradoresSistema) {
-            if (typeof window !== "undefined") window.alert(mensagemBloqueioCadastroColaboradores);
-            return { sucesso: 0, erros: [mensagemBloqueioCadastroColaboradores] };
+    const importarColaboradoresEmMassa = async (itens = [], onProgresso) => {
+        if (importandoMassaRef.current) {
+            return {
+                sucesso: 0,
+                erros: ["Já existe uma importação de colaboradores em andamento."],
+                bloqueado: true,
+            };
         }
 
-        const lista = Array.isArray(itens) ? itens : [];
+        if (!podeCadastrarColaboradoresSistema) {
+            return {
+                sucesso: 0,
+                erros: [mensagemBloqueioCadastroColaboradores],
+            };
+        }
+
+        const lista =
+            Array.isArray(itens)
+                ? itens
+                : [];
 
         if (lista.length === 0) {
-            return { sucesso: 0, erros: ["Nenhum colaborador válido para importar."] };
+            return {
+                sucesso: 0,
+                erros: ["Nenhum colaborador válido para importar."],
+            };
         }
 
+        importandoMassaRef.current = true;
         setImportandoMassa(true);
 
         let sucesso = 0;
+        let processados = 0;
+
         const erros = [];
+        const total = lista.length;
+
+        const publicarProgresso = () => {
+            if (typeof onProgresso !== "function") return;
+
+            onProgresso({
+                total,
+                processados,
+                cadastrados: sucesso,
+                erros: erros.length,
+                percentual:
+                    total > 0
+                        ? Math.round((processados / total) * 100)
+                        : 0,
+            });
+        };
+
+        publicarProgresso();
 
         try {
             const empresasPorId = new Map(
@@ -1460,15 +1498,40 @@ export function Colaboradores({
             );
 
             for (const [indice, item] of lista.entries()) {
-                const linha = item.linha || indice + 2;
-                const empresaIdInformada = String(item.empresaId || item.empresa_id || "").trim();
-                const empresaInformada = String(item.empresaNome || "").trim();
-                const empresaExistente = empresaIdInformada
-                    ? empresasPorId.get(empresaIdInformada)
-                    : empresasPorNomeNormalizado.get(normalizarTextoBusca(empresaInformada));
+                const linha =
+                    item.linha ||
+                    indice + 2;
+
+                const empresaIdInformada =
+                    String(
+                        item.empresaId ||
+                        item.empresa_id ||
+                        ""
+                    ).trim();
+
+                const empresaInformada =
+                    String(
+                        item.empresaNome ||
+                        ""
+                    ).trim();
+
+                const empresaExistente =
+                    empresaIdInformada
+                        ? empresasPorId.get(empresaIdInformada)
+                        : empresasPorNomeNormalizado.get(
+                            normalizarTextoBusca(
+                                empresaInformada
+                            )
+                        );
 
                 if (!empresaExistente) {
-                    erros.push(`Linha ${linha}: empresa "${empresaInformada || "não informada"}" não encontrada no cadastro. Cadastre/corrija a empresa antes de importar.`);
+                    erros.push(
+                        `Linha ${linha}: empresa "${empresaInformada || "não informada"}" não encontrada no cadastro. Cadastre/corrija a empresa antes de importar.`
+                    );
+
+                    processados += 1;
+                    publicarProgresso();
+
                     continue;
                 }
 
@@ -1496,22 +1559,23 @@ export function Colaboradores({
                 if (ok) {
                     sucesso += 1;
                 } else {
-                    erros.push(`Linha ${linha}: não foi possível cadastrar este colaborador.`);
-                }
-            }
-
-            if (typeof window !== "undefined") {
-                if (erros.length) {
-                    window.alert(
-                        `Importação concluída com ressalvas.\n\nCadastrados: ${sucesso}\nNão cadastrados: ${erros.length}\n\n${erros.slice(0, 8).join("\n")}`
+                    erros.push(
+                        `Linha ${linha}: não foi possível cadastrar este colaborador.`
                     );
-                } else {
-                    window.alert(`Importação concluída. ${sucesso} colaborador(es) cadastrado(s).`);
                 }
+
+                processados += 1;
+                publicarProgresso();
             }
 
-            return { sucesso, erros };
+            return {
+                sucesso,
+                erros,
+                total,
+                processados,
+            };
         } finally {
+            importandoMassaRef.current = false;
             setImportandoMassa(false);
         }
     };
