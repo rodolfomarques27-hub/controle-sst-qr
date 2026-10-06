@@ -30,6 +30,7 @@ import {
   carregarExtintoresCadastro,
   salvarExtintorCadastro,
 } from "../../services/extintoresCadastroSyncService";
+import { confirmarSafeScan } from "../../services/safeScanConfirmService.js";
 import { AmbientesControleTabela } from "./AmbientesControleTabela";
 import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import mapaAlertaHero from "../../assets/mapa-alerta-hero.webp";
@@ -1539,7 +1540,7 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
     });
   }
 
-  function excluirTipoAlertaPersonalizado(tipo) {
+  async function excluirTipoAlertaPersonalizado(tipo) {
     const nome = String(tipo || "").trim();
     if (!nome || !tiposAlertaPersonalizados.includes(nome)) return;
 
@@ -1558,12 +1559,19 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
       ? ` ${totalEmUso} alerta(s) existente(s) manterão este tipo.`
       : "";
 
-    if (
-      !window.confirm(
-        `Remover "${nome}" da lista de tipos personalizados?${complemento}`,
-      )
-    )
+    const confirmado =
+      await confirmarSafeScan({
+        titulo: "Remover tipo de alerta",
+        mensagem:
+          `Remover "${nome}" da lista de tipos personalizados?${complemento}`,
+        confirmarTexto: "Remover tipo",
+        cancelarTexto: "Cancelar",
+        variante: "atencao",
+      });
+
+    if (!confirmado) {
       return;
+    }
 
     atualizarMapa({
       ...mapa,
@@ -1815,9 +1823,15 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
         ? ` ${totalEmUso} ponto(s) existente(s) continuarão com esse tipo.`
         : "";
 
-    const confirmado = window.confirm(
-      `Excluir o tipo personalizado "${tipoExistente}" da lista?${textoEmUso}`,
-    );
+    const confirmado =
+      await confirmarSafeScan({
+        titulo: "Excluir tipo de ponto",
+        mensagem:
+          `Excluir o tipo personalizado "${tipoExistente}" da lista?${textoEmUso}`,
+        confirmarTexto: "Excluir tipo",
+        cancelarTexto: "Cancelar",
+        variante: "atencao",
+      });
 
     if (!confirmado) {
       return;
@@ -1907,9 +1921,14 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
     }
 
     const confirmado =
-      window.confirm(
-        `Excluir ${ponto.nome}?`,
-      );
+      await confirmarSafeScan({
+        titulo: "Excluir ponto",
+        mensagem:
+          `Excluir ${ponto.nome}?`,
+        confirmarTexto: "Excluir ponto",
+        cancelarTexto: "Cancelar",
+        variante: "perigo",
+      });
 
     if (!confirmado) {
       return;

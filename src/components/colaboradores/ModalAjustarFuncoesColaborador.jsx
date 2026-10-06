@@ -32,6 +32,9 @@ import {
     salvarFuncaoTreinamentosRemota,
 } from "../../services/funcoesTreinamentosService.js";
 import {
+    confirmarSafeScan,
+} from "../../services/safeScanConfirmService.js";
+import {
     normalizarTextoBusca,
 } from "../../utils/sstUtils";
 
@@ -681,9 +684,18 @@ export function ModalAjustarFuncoesColaborador({
                 funcaoSelecionada.origem === "local"
             ) {
                 const confirmado =
-                    window.confirm(
-                        `Excluir a função local "${funcaoSelecionada.rotulo}"?`
-                    );
+                    await confirmarSafeScan({
+                        titulo:
+                            "Excluir função",
+                        mensagem:
+                            `Excluir a função local "${funcaoSelecionada.rotulo}"?`,
+                        confirmarTexto:
+                            "Excluir função",
+                        cancelarTexto:
+                            "Cancelar",
+                        variante:
+                            "perigo",
+                    });
 
                 if (!confirmado) {
                     return;
@@ -731,9 +743,23 @@ export function ModalAjustarFuncoesColaborador({
                 : `Restaurar a matriz padrão da função "${funcaoSelecionada.rotulo}"?`;
 
         const confirmado =
-            window.confirm(
-                mensagem
-            );
+            await confirmarSafeScan({
+                titulo:
+                    personalizada
+                        ? "Excluir função"
+                        : "Restaurar matriz padrão",
+                mensagem,
+                confirmarTexto:
+                    personalizada
+                        ? "Excluir função"
+                        : "Restaurar padrão",
+                cancelarTexto:
+                    "Cancelar",
+                variante:
+                    personalizada
+                        ? "perigo"
+                        : "atencao",
+            });
 
         if (!confirmado) {
             return;

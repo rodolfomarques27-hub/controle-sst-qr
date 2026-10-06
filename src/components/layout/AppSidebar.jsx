@@ -5,6 +5,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { useTenantRuntimeContext } from "./TenantRuntimeContext.js";
 import { resolverBrandingLoginRuntimeService } from "../../services/tenantBrandingService.js";
 import { obterUrlLogoContratanteLoginPublicoService } from "../../services/fundoLoginPublicoService.js";
+import { carregarFotoSistemaAtualService } from "../../services/usuariosPermissoesSistemaService.js";
 import sidebarBackground from "../../assets/sidebar-construcao.webp";
 
 const BUCKET_FOTOS_USUARIOS_SIDEBAR = "fotos-colaboradores";
@@ -142,32 +143,7 @@ async function buscarFotoUsuarioSidebarPorEmail(email = "") {
     if (!emailTratado || !emailTratado.includes("@")) return "";
 
     try {
-        const { data, error } = await supabase.rpc("admin_listar_usuarios_permissoes_sistema");
-
-        if (!error && Array.isArray(data)) {
-            const usuarioComFoto = data.find((item) =>
-                String(item?.email || "").trim().toLowerCase() === emailTratado
-                && obterFotoUsuarioSidebar(item)
-            );
-
-            const foto = obterFotoUsuarioSidebar(usuarioComFoto);
-
-            if (foto) return foto;
-        }
-    } catch {
-        // Mantem fallback para iniciais.
-    }
-
-    try {
-        const { data, error } = await supabase
-            .from("usuarios_permissoes_sistema")
-            .select("*")
-            .eq("email", emailTratado)
-            .maybeSingle();
-
-        if (!error) {
-            return obterFotoUsuarioSidebar(data);
-        }
+        return await carregarFotoSistemaAtualService({ supabase });
     } catch {
         // Mantem fallback para iniciais.
     }

@@ -36,6 +36,7 @@ import { normalizarTextoBusca, formatDate, formatarDataHora, classNames } from "
 import { LIMITE_QRCODES_CAMPO_POR_CARGA } from "../../constants/sistemaLimitesConstants";
 import { QrCodeComLogo, obterLogoQrCodeAtual } from "../qr/QrCodeComLogo";
 import { carregarTokenAuditoriaPublicaAtivoPadrao } from "../../services/auditoriaPublicaTokenService";
+import { confirmarSafeScan } from "../../services/safeScanConfirmService.js";
 import { obterOrigemPublicaSistema } from "../../utils/urlPublicaUtils.js";
 
 
@@ -1930,9 +1931,19 @@ export function DashboardAuditoriaCampo({
         if (!item) return;
 
         const identificacao = item.identificacao || item.codigo || "QR Code selecionado";
-        const confirmar = window.confirm(
-            `Deseja realmente excluir o QR Code ${identificacao}?\n\nEssa ação remove o QR Code da lista ativa e preserva o histórico de auditorias já vinculadas.`
-        );
+        const confirmar =
+            await confirmarSafeScan({
+                titulo:
+                    "Remover QR Code",
+                mensagem:
+                    `Deseja realmente excluir o QR Code ${identificacao}?\n\nEssa ação remove o QR Code da lista ativa e preserva o histórico de auditorias já vinculadas.`,
+                confirmarTexto:
+                    "Remover QR Code",
+                cancelarTexto:
+                    "Cancelar",
+                variante:
+                    "perigo",
+            });
 
         if (!confirmar) return;
 

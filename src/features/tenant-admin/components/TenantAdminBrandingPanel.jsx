@@ -26,6 +26,10 @@ import {
 } from "../../../services/imagemService";
 
 import {
+    confirmarSafeScan,
+} from "../../../services/safeScanConfirmService.js";
+
+import {
     carregarBrandingTenantAdminService,
     normalizarAjusteBrandingTenantAdmin,
     obterLimitesBrandingTenantAdmin,
@@ -88,16 +92,17 @@ function formatarData(
 function confirmarAcao(
     mensagem
 ) {
-    if (
-        typeof globalThis.confirm !==
-        "function"
-    ) {
-        return true;
-    }
-
-    return globalThis.confirm(
-        mensagem
-    );
+    return confirmarSafeScan({
+        titulo:
+            "Confirmar remoção",
+        mensagem,
+        confirmarTexto:
+            "Remover",
+        cancelarTexto:
+            "Cancelar",
+        variante:
+            "perigo",
+    });
 }
 
 export function TenantAdminBrandingPanel({
@@ -620,11 +625,17 @@ export function TenantAdminBrandingPanel({
     async function removerFundo() {
         if (
             !tenantId ||
-            salvando ||
-            !confirmarAcao(
-                "Remover o fundo personalizado deste tenant?"
-            )
+            salvando
         ) {
+            return;
+        }
+
+        const confirmado =
+            await confirmarAcao(
+                "Remover o fundo personalizado deste tenant?"
+            );
+
+        if (!confirmado) {
             return;
         }
 
@@ -673,11 +684,17 @@ export function TenantAdminBrandingPanel({
     async function removerLogo() {
         if (
             !tenantId ||
-            salvando ||
-            !confirmarAcao(
-                "Remover a logo personalizada deste tenant?"
-            )
+            salvando
         ) {
+            return;
+        }
+
+        const confirmado =
+            await confirmarAcao(
+                "Remover a logo personalizada deste tenant?"
+            );
+
+        if (!confirmado) {
             return;
         }
 

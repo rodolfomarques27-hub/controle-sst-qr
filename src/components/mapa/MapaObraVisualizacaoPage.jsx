@@ -19,6 +19,7 @@ import {
 } from "../../services/mapaObraService";
 import {
   obterUrlAssinadaPlantaMapa,
+  verificarExistenciaPlantaMapaStorage,
 } from "../../services/mapaObraStorageService";
 import {
   carregarExtintoresCadastro,
@@ -592,6 +593,20 @@ async function hidratarReferenciaImagemVisualizacao(
 
   if (!referencia.path) {
     return referencia;
+  }
+
+  const existeNoStorage =
+    await verificarExistenciaPlantaMapaStorage({
+      supabase,
+      caminho: referencia.path,
+      obraId,
+    });
+
+  if (!existeNoStorage) {
+    return {
+      ...referencia,
+      url: "",
+    };
   }
 
   const url =

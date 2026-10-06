@@ -19,6 +19,7 @@ import {
     salvarExtintorCadastro,
     selecionarMapaCadastroExtintores,
 } from "../../services/extintoresCadastroSyncService";
+import { confirmarSafeScan } from "../../services/safeScanConfirmService.js";
 import { supabase } from "../../lib/supabaseClient";
 import { gerarRelatorioExtintoresPDF } from "../../services/relatorioExtintoresService";
 import { QrCodeComLogo } from "../qr/QrCodeComLogo";
@@ -696,11 +697,21 @@ export function ExtintoresPage({ empresasBanco = [] }) {
             return;
         }
 
-        if (
-            !window.confirm(
-                `Excluir ${item.codigo}?`,
-            )
-        ) {
+        const confirmado =
+            await confirmarSafeScan({
+                titulo:
+                    "Excluir extintor",
+                mensagem:
+                    `Excluir ${item.codigo}?`,
+                confirmarTexto:
+                    "Excluir extintor",
+                cancelarTexto:
+                    "Cancelar",
+                variante:
+                    "perigo",
+            });
+
+        if (!confirmado) {
             return;
         }
 
@@ -762,11 +773,21 @@ export function ExtintoresPage({ empresasBanco = [] }) {
             return;
         }
 
-        if (
-            !window.confirm(
-                `Migrar ${locaisPendentes} registro(s) local(is) desta obra para o Supabase?`,
-            )
-        ) {
+        const confirmado =
+            await confirmarSafeScan({
+                titulo:
+                    "Migrar registros locais",
+                mensagem:
+                    `Migrar ${locaisPendentes} registro(s) local(is) desta obra para o Supabase?`,
+                confirmarTexto:
+                    "Migrar registros",
+                cancelarTexto:
+                    "Cancelar",
+                variante:
+                    "atencao",
+            });
+
+        if (!confirmado) {
             return;
         }
 
