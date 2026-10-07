@@ -1190,6 +1190,67 @@ export function BaseCertificadosTreinamentos({
 
                     const certificados = grupo.certificados || [];
                     const pendentes = grupo.pendentes || [];
+                    const fichaEpiAtualCard =
+                        (
+                            Array.isArray(
+                                colaborador?.treinamentos
+                            )
+                                ? colaborador.treinamentos
+                                : []
+                        ).find(
+                            (item) =>
+                                Number(
+                                    item?.treinamentoId ??
+                                    item?.treinamento_id ??
+                                    item?.treinamentoCodigo ??
+                                    item?.treinamento_codigo ??
+                                    0
+                                ) === 14
+                        ) ||
+                        null;
+
+                    const dataFichaEpiCard =
+                        String(
+                            fichaEpiAtualCard?.realizado ||
+                            fichaEpiAtualCard?.data_realizacao ||
+                            fichaEpiAtualCard?.dataRealizacao ||
+                            ""
+                        ).trim();
+
+                    const dataFichaEpiExibicaoCard =
+                        (() => {
+                            if (!dataFichaEpiCard) {
+                                return "";
+                            }
+
+                            const iso =
+                                dataFichaEpiCard.match(
+                                    /^(\d{4})-(\d{2})-(\d{2})/
+                                );
+
+                            if (iso) {
+                                return `${iso[3]}/${iso[2]}/${iso[1]}`;
+                            }
+
+                            const br =
+                                dataFichaEpiCard.match(
+                                    /^(\d{2})\/(\d{2})\/(\d{4})/
+                                );
+
+                            if (br) {
+                                return `${br[1]}/${br[2]}/${br[3]}`;
+                            }
+
+                            return "";
+                        })();
+
+                    const ultimaFichaEpiCard =
+                        !fichaEpiAtualCard
+                            ? "Não cadastrada"
+                            : (
+                                dataFichaEpiExibicaoCard ||
+                                "Data não informada"
+                            );
                     const situacaoHistorica =
                         grupo.avaliacao?.situacaoHistorica ||
                         obterSituacaoHistoricaTreinamentosColaborador(colaborador);
@@ -1304,7 +1365,6 @@ export function BaseCertificadosTreinamentos({
                                 role={!grupoAberto ? "button" : undefined}
                                 tabIndex={!grupoAberto ? 0 : undefined}
                                 onClick={(evento) => {
-
                                     const alvoInterativo = evento.target.closest?.(
                                         "button, a, input, select, textarea, label, [data-base-certificados-acao]"
                                     );
@@ -1314,137 +1374,168 @@ export function BaseCertificadosTreinamentos({
                                     alternarGrupoTreinamentosComPar();
                                 }}
                                 onKeyDown={(evento) => {
-                                        if (evento.key !== "Enter" && evento.key !== " ") return;
+                                    if (evento.key !== "Enter" && evento.key !== " ") return;
 
                                     evento.preventDefault();
                                     alternarGrupoTreinamentosComPar();
                                 }}
                                 className={classNames(
-                                    "treinamentos-base-certificados-card__cabecalho-colaborador flex flex-col justify-between gap-4 lg:flex-row lg:items-start",
+                                    "treinamentos-base-certificados-card__cabecalho-colaborador treinamentos-base-certificados-card__cabecalho-compacto",
                                     !grupoAberto && "treinamentos-base-certificados-card__cabecalho-colaborador--clicavel"
                                 )}
                             >
-                                <div className="flex min-w-0 items-start gap-3">
-                                    <FotoColaboradorBase colaborador={colaborador} />
-
-                                    <div className="min-w-0">
-                                        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Colaborador</p>
-                                        <p className="mt-1 break-words text-lg font-bold leading-snug text-slate-950">
-                                            {colaborador.nome}
-                                        </p>
-                                        <p
-                                            className="mt-1 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[12px] font-medium leading-5 text-slate-500 sm:text-[13px]"
-                                            title={obterRotuloEmpresaCompactoBaseCertificados(
-                                                colaborador
-                                            )}
-                                        >
-                                            {obterRotuloEmpresaCompactoBaseCertificados(
-                                                colaborador
-                                            )}
-                                        </p>
-                                        <p className="mt-1 break-words text-xs font-semibold text-slate-600">
-                                            Função: {colaborador.funcao || colaborador.cargo || "Não informada"}
-                                        </p>
-                                        <p className="mt-1 text-xs font-semibold text-slate-500">
-                                            Código: {colaborador.codigoFuncionario}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col gap-2 lg:min-w-[360px] lg:items-end">
-                                    <div className="flex flex-wrap gap-2 lg:flex-nowrap lg:justify-end">
-                                        <span className="whitespace-nowrap rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                                            {certificados.length} certificado(s)
+                                <div className="treinamentos-base-certificados-card__linha-topo">
+                                    <div className="treinamentos-base-certificados-card__topo-identidade">
+                                        <span className="treinamentos-base-certificados-card__rotulo-colaborador">
+                                            COLABORADOR
                                         </span>
 
-                                        {totalAdicionaisEnviados > 0 && (
-                                            <span className="whitespace-nowrap rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700 ring-1 ring-violet-200">
-                                                {totalAdicionaisEnviados} adicional(is)
-                                            </span>
-                                        )}
-
-                                        {foraControleOperacional && (
-                                            <span
-                                                className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-300"
-                                                title="Certificados mantidos para consulta histórica, fora de pendências, vencimentos e alertas operacionais."
-                                            >
-                                                Histórico · {situacaoHistorica}
-                                            </span>
-                                        )}
-
-                                        {pendentes.length > 0 && (
-                                            <span className="whitespace-nowrap rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">
-                                                {pendentes.length} faltando
-                                            </span>
-                                        )}
-
-                                        {resumoStatus.emDia > 0 && (
-                                            <span className="whitespace-nowrap rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
-                                                {resumoStatus.emDia} em dia
-                                            </span>
-                                        )}
-
-                                        {resumoStatus.aVencer > 0 && (
-                                            <span className="whitespace-nowrap rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 ring-1 ring-orange-200">
-                                                {resumoStatus.aVencer} a vencer
-                                            </span>
-                                        )}
-
-                                        {resumoStatus.vencidos > 0 && (
-                                            <span className="whitespace-nowrap rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200">
-                                                {resumoStatus.vencidos} vencido(s)
-                                            </span>
-                                        )}
+                                        <p className="treinamentos-base-certificados-card__nome-colaborador">
+                                            {colaborador.nome}
+                                        </p>
                                     </div>
-                                    <div className="treinamentos-base-certificados-card__acoes-colaborador flex flex-wrap justify-end gap-2">
-                                        {grupoAberto && pendentes.length > 0 && (
-                                            <button
-                                                type="button"
-                                                onClick={() => enviarDocumentosPendentesEmLote?.(colaborador)}
-                                                className="treinamentos-base-certificados-card__acao-lote inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700"
-                                            >
-                                                <Upload className="h-4 w-4" />
-                                                Enviar documentos em massa
-                                            </button>
+
+                                    <button
+                                        type="button"
+                                        data-base-certificados-acao
+                                        onClick={alternarGrupoTreinamentosComPar}
+                                        className="treinamentos-base-certificados-card__acao-treinamentos treinamentos-base-certificados-card__acao-toggle-topo inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                                    >
+                                        {grupoAberto ? (
+                                            <>
+                                                <ChevronUp className="h-4 w-4" />
+                                                Recolher lista de treinamentos
+                                            </>
+                                        ) : (
+                                            <>
+                                                <ChevronDown className="h-4 w-4" />
+                                                Abrir lista de treinamentos
+                                            </>
                                         )}
+                                    </button>
+                                </div>
 
-                                        <button
-                                            type="button"
-                                            data-base-certificados-acao
-                                            data-revisao-treinamentos-trigger
-                                            onClick={(evento) => {
-                                                evento.stopPropagation();
-                                                onRevisarTreinamentos?.(colaborador);
-                                            }}
-                                            title="Abrir painel de revisão dos treinamentos deste colaborador."
-                                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-50 px-4 py-2.5 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200 transition hover:bg-emerald-100"
-                                        >
-                                            <FileText className="h-4 w-4" />
-                                            Revisar treinamentos
-                                        </button>
+                                <div className="treinamentos-base-certificados-card__corpo-compacto">
+                                    <div className="treinamentos-base-certificados-card__foto-colaborador">
+                                        <FotoColaboradorBase colaborador={colaborador} />
+                                    </div>
 
-                                        <button
-                                            type="button"
-                                            onClick={alternarGrupoTreinamentosComPar}
-                                            className="treinamentos-base-certificados-card__acao-treinamentos inline-flex min-w-[220px] items-center justify-center gap-2 rounded-xl bg-slate-950 px-6 py-2.5 text-xs font-semibold text-white hover:bg-slate-800"
-                                        >
-                                            {grupoAberto ? (
-                                                <>
-                                                    <ChevronUp className="h-4 w-4" />
-                                                    Recolher treinamentos
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <ChevronDown className="h-4 w-4" />
-                                                    Ver treinamentos
-                                                </>
-                                            )}
-                                        </button>
+                                    <div className="treinamentos-base-certificados-card__dados-compactos">
+                                        <div className="treinamentos-base-certificados-card__linha-dados treinamentos-base-certificados-card__linha-empresa">
+                                            <p
+                                                className="treinamentos-base-certificados-card__empresa"
+                                                title={obterRotuloEmpresaCompactoBaseCertificados(
+                                                    colaborador
+                                                )}
+                                            >
+                                                <span className="treinamentos-base-certificados-card__rotulo-dado">
+                                                    Empresa:
+                                                </span>{" "}
+                                                {obterRotuloEmpresaCompactoBaseCertificados(
+                                                    colaborador
+                                                )}
+                                            </p>
+
+                                            <div className="treinamentos-base-certificados-card__indicadores">
+                                                <span className="whitespace-nowrap rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                                                    {certificados.length} {certificados.length === 1 ? "certificado" : "certificados"}
+                                                </span>
+
+                                                {totalAdicionaisEnviados > 0 && (
+                                                    <span className="whitespace-nowrap rounded-full bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700 ring-1 ring-violet-200">
+                                                        {totalAdicionaisEnviados} {totalAdicionaisEnviados === 1 ? "adicional" : "adicionais"}
+                                                    </span>
+                                                )}
+
+                                                {foraControleOperacional && (
+                                                    <span
+                                                        className="whitespace-nowrap rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-300"
+                                                        title="Certificados mantidos para consulta histórica, fora de pendências, vencimentos e alertas operacionais."
+                                                    >
+                                                        Histórico · {situacaoHistorica}
+                                                    </span>
+                                                )}
+
+                                                {pendentes.length > 0 && (
+                                                    <span className="whitespace-nowrap rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">
+                                                        {pendentes.length} faltando
+                                                    </span>
+                                                )}
+
+                                                {resumoStatus.emDia > 0 && (
+                                                    <span className="whitespace-nowrap rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                                                        {resumoStatus.emDia} em dia
+                                                    </span>
+                                                )}
+
+                                                {resumoStatus.aVencer > 0 && (
+                                                    <span className="whitespace-nowrap rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 ring-1 ring-orange-200">
+                                                        {resumoStatus.aVencer} a vencer
+                                                    </span>
+                                                )}
+
+                                                {resumoStatus.vencidos > 0 && (
+                                                    <span className="whitespace-nowrap rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200">
+                                                        {resumoStatus.vencidos} {resumoStatus.vencidos === 1 ? "vencido" : "vencidos"}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="treinamentos-base-certificados-card__linha-dados treinamentos-base-certificados-card__linha-funcao">
+                                            <p className="treinamentos-base-certificados-card__funcao">
+                                                <span className="treinamentos-base-certificados-card__rotulo-dado">
+                                                    Função:
+                                                </span>{" "}
+                                                {colaborador.funcao || colaborador.cargo || "Não informada"}
+                                            </p>
+
+                                            <div className="treinamentos-base-certificados-card__acoes-colaborador">
+                                                {grupoAberto && pendentes.length > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => enviarDocumentosPendentesEmLote?.(colaborador)}
+                                                        className="treinamentos-base-certificados-card__acao-lote inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+                                                    >
+                                                        <Upload className="h-4 w-4" />
+                                                        Enviar doc em massa
+                                                    </button>
+                                                )}
+
+                                                <button
+                                                    type="button"
+                                                    data-base-certificados-acao
+                                                    data-revisao-treinamentos-trigger
+                                                    onClick={(evento) => {
+                                                        evento.stopPropagation();
+                                                        onRevisarTreinamentos?.(colaborador);
+                                                    }}
+                                                    title="Abrir painel de revisão dos treinamentos deste colaborador."
+                                                    className="treinamentos-base-certificados-card__acao-revisar inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-50 px-4 py-2.5 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200 transition hover:bg-emerald-100"
+                                                >
+                                                    <FileText className="h-4 w-4" />
+                                                    Revisar treinamentos
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <p className="treinamentos-base-certificados-card__codigo">
+                                            <span className="treinamentos-base-certificados-card__rotulo-dado">
+                                                Código:
+                                            </span>{" "}
+                                            {colaborador.codigoFuncionario}
+                                        </p>
+
+                                        <p className="treinamentos-base-certificados-card__ultima-ficha-epi">
+                                            <span className="treinamentos-base-certificados-card__rotulo-dado">
+                                                Última ficha de EPI:
+                                            </span>{" "}
+                                            {ultimaFichaEpiCard}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
-
-                            {grupoAberto && (
+{grupoAberto && (
                                 <div className="treinamentos-base-certificados-card__detalhes mt-4 space-y-3 border-t border-slate-100 pt-4">
                                     {pendentes.length > 0 && (
                                         <div className="treinamentos-base-certificados-card__pendentes rounded-2xl border border-dashed border-blue-200 bg-blue-50 p-3">

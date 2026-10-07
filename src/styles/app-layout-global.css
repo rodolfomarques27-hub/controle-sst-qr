@@ -11846,45 +11846,6 @@
   grid-column: 1 / -1 !important;
 }
 
-.treinamentos-base-certificados-card__colaborador > div:first-child {
-  min-height: 5.45rem !important;
-  align-items: center !important;
-}
-
-.treinamentos-base-certificados-card__colaborador > div:first-child > div:first-child {
-  align-items: center !important;
-}
-
-.treinamentos-base-certificados-card__colaborador > div:first-child > div:first-child > div:first-child {
-  width: 5.25rem !important;
-  height: 5.25rem !important;
-  min-width: 5.25rem !important;
-  min-height: 5.25rem !important;
-  flex: 0 0 5.25rem !important;
-  border-radius: 999px !important;
-  box-shadow:
-    0 0 0 4px #ffffff,
-    0 0 0 5px #dbe7f2,
-    0 12px 24px rgba(15, 23, 42, 0.1) !important;
-}
-
-.treinamentos-base-certificados-card__colaborador > div:first-child > div:first-child > div:first-child img {
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: cover !important;
-}
-
-.treinamentos-base-certificados-card__colaborador > div:first-child > div:first-child > div:nth-child(2) {
-  display: flex !important;
-  min-height: 5.25rem !important;
-  flex-direction: column !important;
-  justify-content: center !important;
-}
-
-.treinamentos-base-certificados-card__colaborador > div:first-child > div:first-child > div:nth-child(2) p:first-child {
-  margin-top: 0 !important;
-}
-
 @media (max-width: 1180px) {
   .treinamentos-base-certificados-card__lista {
     grid-template-columns: 1fr !important;
@@ -11893,10 +11854,6 @@
 /* MICROETAPA 4F.3 - base certificados acoes colaborador */
 .treinamentos-base-certificados-card__colaborador--aberto {
   grid-column: auto !important;
-}
-
-.treinamentos-base-certificados-card__colaborador > div:first-child > div:last-child {
-  min-width: 10.5rem !important;
 }
 
 .treinamentos-base-certificados-card__acao-treinamentos,
@@ -11936,15 +11893,6 @@
   .treinamentos-base-certificados-card__lista {
     grid-template-columns: 1fr !important;
   }
-}
-
-@media (max-width: 760px) {
-  .treinamentos-base-certificados-card__colaborador > div:first-child > div:last-child {
-    min-width: 0 !important;
-    width: 100% !important;
-  }
-
-
 }
 /* MICROETAPA 4F.4 - abertura em par e envio em massa */
 .treinamentos-base-certificados-card__acoes {
@@ -17630,4 +17578,387 @@
         clip-path: none !important;
         overflow: visible !important;
     }
+}
+
+/* SST R6 - base certificados cabecalho compacto aprovado */
+.treinamentos-base-certificados-card__colaborador {
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.65rem !important;
+}
+
+.treinamentos-base-certificados-card__cabecalho-compacto {
+  width: 100% !important;
+  min-height: 0 !important;
+  display: block !important;
+}
+
+.treinamentos-base-certificados-card__linha-topo {
+  width: 100% !important;
+  min-width: 0 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  column-gap: 0.65rem !important;
+  margin-bottom: 0.22rem !important;
+}
+
+.treinamentos-base-certificados-card__topo-identidade {
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex: 1 1 auto !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0.55rem !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.treinamentos-base-certificados-card__rotulo-colaborador {
+  flex: 0 0 auto !important;
+  color: #94a3b8 !important;
+  font-size: 0.6rem !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  letter-spacing: 0.035em !important;
+  text-transform: uppercase !important;
+  white-space: nowrap !important;
+}
+
+.treinamentos-base-certificados-card__nome-colaborador {
+  min-width: 0 !important;
+  margin: 0 !important;
+  color: #0f172a !important;
+  font-size: 1rem !important;
+  font-weight: 800 !important;
+  line-height: 1.15 !important;
+}
+
+.treinamentos-base-certificados-card__corpo-compacto {
+  width: 100% !important;
+  min-width: 0 !important;
+  display: grid !important;
+  grid-template-columns: 4.55rem minmax(0, 1fr) !important;
+  align-items: center !important;
+  column-gap: 0.65rem !important;
+}
+
+.treinamentos-base-certificados-card__foto-colaborador {
+  width: 4.55rem !important;
+  min-width: 4.55rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.treinamentos-base-certificados-card__foto-colaborador > div:first-child {
+  width: 4.45rem !important;
+  height: 4.45rem !important;
+  min-width: 4.45rem !important;
+  min-height: 4.45rem !important;
+  flex: 0 0 4.45rem !important;
+  overflow: hidden !important;
+  border-radius: 999px !important;
+  box-shadow:
+    0 0 0 3px #ffffff,
+    0 0 0 4px #dbe7f2,
+    0 8px 18px rgba(15, 23, 42, 0.1) !important;
+}
+
+.treinamentos-base-certificados-card__foto-colaborador > div:first-child img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+.treinamentos-base-certificados-card__dados-compactos {
+  width: 100% !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  gap: 0.12rem !important;
+}
+
+.treinamentos-base-certificados-card__linha-dados {
+  width: 100% !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.3rem !important;
+}
+
+.treinamentos-base-certificados-card__empresa {
+  min-width: 0 !important;
+  margin: 0 !important;
+  color: #64748b !important;
+  font-size: 0.72rem !important;
+  font-weight: 500 !important;
+  line-height: 1.05rem !important;
+}
+
+.treinamentos-base-certificados-card__funcao {
+  min-width: 0 !important;
+  margin: 0 !important;
+  color: #475569 !important;
+  font-size: 0.68rem !important;
+  font-weight: 500 !important;
+  line-height: 1rem !important;
+}
+
+.treinamentos-base-certificados-card__codigo {
+  margin: 0 !important;
+  color: #64748b !important;
+  font-size: 0.67rem !important;
+  font-weight: 500 !important;
+  line-height: 1rem !important;
+}
+
+.treinamentos-base-certificados-card__ultima-ficha-epi {
+  margin: 0 !important;
+  color: #64748b !important;
+  font-size: 0.66rem !important;
+  font-weight: 500 !important;
+  line-height: 1rem !important;
+}
+
+.treinamentos-base-certificados-card__rotulo-dado {
+  color: #475569 !important;
+  font-weight: 800 !important;
+}
+
+.treinamentos-base-certificados-card__indicadores {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 0.3rem !important;
+}
+
+.treinamentos-base-certificados-card__acoes-colaborador {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
+}
+
+@media (min-width: 1321px) {
+  .treinamentos-base-certificados-card__colaborador {
+    padding-bottom: 0.48rem !important;
+  }
+
+  .treinamentos-base-certificados-card__linha-topo {
+    grid-template-columns:
+      4.55rem
+      minmax(0, 1fr)
+      auto !important;
+    column-gap: 0.65rem !important;
+    align-items: center !important;
+    margin-bottom: 0.48rem !important;
+  }
+
+  .treinamentos-base-certificados-card__topo-identidade {
+    display: contents !important;
+  }
+
+  .treinamentos-base-certificados-card__rotulo-colaborador {
+    grid-column: 1 !important;
+    align-self: center !important;
+    justify-self: start !important;
+    font-size: 0.54rem !important;
+    line-height: 1 !important;
+    letter-spacing: 0.025em !important;
+  }
+
+  .treinamentos-base-certificados-card__nome-colaborador {
+    grid-column: 2 !important;
+    align-self: center !important;
+    margin: 0 !important;
+  }
+
+  .treinamentos-base-certificados-card__cabecalho-compacto
+    .treinamentos-base-certificados-card__linha-topo
+    > .treinamentos-base-certificados-card__acao-toggle-topo {
+    grid-column: 3 !important;
+    width: 14.25rem !important;
+    min-width: 14.25rem !important;
+    max-width: 14.25rem !important;
+    flex: 0 0 14.25rem !important;
+    box-sizing: border-box !important;
+    justify-self: end !important;
+    align-self: center !important;
+    min-height: 2.25rem !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding: 0.46rem 0.85rem !important;
+    border-radius: 999px !important;
+    font-size: 0.64rem !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    transform: translateY(3px) !important;
+  }
+
+  .treinamentos-base-certificados-card__corpo-compacto {
+    align-items: start !important;
+  }
+
+  .treinamentos-base-certificados-card__dados-compactos {
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    gap: 0.02rem !important;
+    min-height: 4.45rem !important;
+    padding-right: 20.5rem !important;
+  }
+
+  .treinamentos-base-certificados-card__linha-dados {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .treinamentos-base-certificados-card__empresa,
+  .treinamentos-base-certificados-card__funcao,
+  .treinamentos-base-certificados-card__codigo,
+  .treinamentos-base-certificados-card__ultima-ficha-epi {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
+  .treinamentos-base-certificados-card__empresa {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    line-height: 1rem !important;
+  }
+
+  .treinamentos-base-certificados-card__funcao {
+    line-height: 1rem !important;
+  }
+
+  .treinamentos-base-certificados-card__codigo,
+  .treinamentos-base-certificados-card__ultima-ficha-epi {
+    line-height: 0.98rem !important;
+  }
+
+  .treinamentos-base-certificados-card__indicadores {
+    position: absolute !important;
+    top: 0.08rem !important;
+    right: 0 !important;
+    width: auto !important;
+    max-width: 20rem !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 0.22rem !important;
+    margin: 0 !important;
+  }
+
+  .treinamentos-base-certificados-card__indicadores > span {
+    flex: 0 0 auto !important;
+    padding: 0.14rem 0.36rem !important;
+    font-size: 0.57rem !important;
+    line-height: 0.95rem !important;
+    white-space: nowrap !important;
+  }
+
+  .treinamentos-base-certificados-card__acoes-colaborador {
+    position: absolute !important;
+    top: 1.66rem !important;
+    right: 0 !important;
+    width: auto !important;
+    max-width: 20rem !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 0.28rem !important;
+    margin: 0 !important;
+  }
+
+  .treinamentos-base-certificados-card__acoes-colaborador
+    .treinamentos-base-certificados-card__acao-lote {
+    width: auto !important;
+    min-width: 8.5rem !important;
+    max-width: none !important;
+    min-height: 2.15rem !important;
+    padding: 0.42rem 0.55rem !important;
+    border-radius: 999px !important;
+    font-size: 0.61rem !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+  }
+
+  .treinamentos-base-certificados-card__acoes-colaborador
+    .treinamentos-base-certificados-card__acao-revisar {
+    width: auto !important;
+    min-width: 8.9rem !important;
+    max-width: none !important;
+    min-height: 2.15rem !important;
+    padding: 0.42rem 0.55rem !important;
+    border-radius: 999px !important;
+    font-size: 0.61rem !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+  }
+}
+
+@media (max-width: 1320px) {
+  .treinamentos-base-certificados-card__linha-topo {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+
+  .treinamentos-base-certificados-card__linha-dados {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .treinamentos-base-certificados-card__indicadores,
+  .treinamentos-base-certificados-card__acoes-colaborador {
+    flex-wrap: wrap !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .treinamentos-base-certificados-card__linha-topo {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .treinamentos-base-certificados-card__topo-identidade {
+    flex-wrap: wrap !important;
+  }
+
+  .treinamentos-base-certificados-card__acao-toggle-topo {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .treinamentos-base-certificados-card__corpo-compacto {
+    grid-template-columns: 1fr !important;
+    row-gap: 0.65rem !important;
+  }
+
+  .treinamentos-base-certificados-card__foto-colaborador {
+    margin: 0 auto !important;
+  }
+
+  .treinamentos-base-certificados-card__acoes-colaborador
+    .treinamentos-base-certificados-card__acao-lote,
+  .treinamentos-base-certificados-card__acoes-colaborador
+    .treinamentos-base-certificados-card__acao-revisar {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
 }
