@@ -707,9 +707,10 @@ to authenticated;
 -- 5. BACKEND — SEGREDO PARA TESTE SMTP
 -- ============================================================================
 
-create or replace function public.backend_obter_configuracao_email_usuario_para_teste(
+create or replace function private.backend_obter_configuracao_email_usuario_base(
     p_tenant_id uuid,
-    p_user_id uuid
+    p_user_id uuid,
+    p_exigir_aprovada boolean
 )
 returns table (
     provedor text,
@@ -748,7 +749,65 @@ as $function$
           )
       and config.tenant_id = p_tenant_id
       and config.user_id = p_user_id
+      and (
+          not coalesce(
+              p_exigir_aprovada,
+              true
+          )
+          or (
+              config.ativo = true
+              and config.ultimo_teste_status = 'APROVADO'
+              and config.credencial_vault_id is not null
+          )
+      )
     limit 1;
+$function$;
+
+revoke all
+on function private.backend_obter_configuracao_email_usuario_base(
+    uuid,
+    uuid,
+    boolean
+)
+from public, anon, authenticated, service_role;
+
+create or replace function public.backend_obter_configuracao_email_usuario_para_teste(
+    p_tenant_id uuid,
+    p_user_id uuid
+)
+returns table (
+    provedor text,
+    host text,
+    porta integer,
+    modo_seguranca text,
+    usuario_smtp text,
+    remetente_email text,
+    remetente_nome_padrao text,
+    responder_para_padrao text,
+    credencial text,
+    versao integer
+)
+language sql
+stable
+security definer
+set search_path to 'pg_catalog', 'public', 'private', 'vault'
+as $function$
+    select
+        configuracao.provedor,
+        configuracao.host,
+        configuracao.porta,
+        configuracao.modo_seguranca,
+        configuracao.usuario_smtp,
+        configuracao.remetente_email,
+        configuracao.remetente_nome_padrao,
+        configuracao.responder_para_padrao,
+        configuracao.credencial,
+        configuracao.versao
+    from private.backend_obter_configuracao_email_usuario_base(
+        p_tenant_id,
+        p_user_id,
+        false
+    ) as configuracao;
 $function$;
 
 revoke all
@@ -984,29 +1043,21 @@ security definer
 set search_path to 'pg_catalog', 'public', 'private', 'vault'
 as $function$
     select
-        config.provedor,
-        config.host,
-        config.porta,
-        config.modo_seguranca,
-        config.usuario_smtp,
-        config.remetente_email,
-        config.remetente_nome_padrao,
-        config.responder_para_padrao,
-        segredo.decrypted_secret as credencial,
-        config.versao
-    from private.usuario_email_configuracao as config
-    join vault.decrypted_secrets as segredo
-      on segredo.id = config.credencial_vault_id
-    where private.usuario_email_usuario_elegivel(
-              p_tenant_id,
-              p_user_id
-          )
-      and config.tenant_id = p_tenant_id
-      and config.user_id = p_user_id
-      and config.ativo = true
-      and config.ultimo_teste_status = 'APROVADO'
-      and config.credencial_vault_id is not null
-    limit 1;
+        configuracao.provedor,
+        configuracao.host,
+        configuracao.porta,
+        configuracao.modo_seguranca,
+        configuracao.usuario_smtp,
+        configuracao.remetente_email,
+        configuracao.remetente_nome_padrao,
+        configuracao.responder_para_padrao,
+        configuracao.credencial,
+        configuracao.versao
+    from private.backend_obter_configuracao_email_usuario_base(
+        p_tenant_id,
+        p_user_id,
+        true
+    ) as configuracao;
 $function$;
 
 revoke all
@@ -1033,7 +1084,7 @@ to service_role;
 --
 -- RPCs backend:
 -- - são service_role only;
--- - decrypted_secret aparece somente nos contratos de teste/envio.
+-- - decrypted_secret aparece somente no helper privado compartilhado de teste/envio.
 --
 -- Nenhum DDL/DML desta migration altera tenant_email_configuracao,
 -- email_provedor_configuracao, Edge Functions, resolver ou interface.
