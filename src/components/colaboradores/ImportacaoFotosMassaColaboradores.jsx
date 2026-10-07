@@ -32,10 +32,50 @@ function normalizarChaveCompacta(valor = "") {
     return normalizarChaveTexto(valor).replace(/\s+/g, "");
 }
 
+const SEPARADORES_MARCADOR_FOTO = new Set([
+    "_",
+    "-",
+    "–",
+    "—",
+    ".",
+    ",",
+    ";",
+    ":",
+]);
+
+function ehSeparadorMarcadorFoto(caractere = "") {
+    return Boolean(caractere) && (
+        SEPARADORES_MARCADOR_FOTO.has(caractere) ||
+        caractere.trim() === ""
+    );
+}
+
 function removerMarcadorFotoFinal(valor = "") {
-    return String(valor || "")
-        .replace(/[\s_\-–—.,;:]+FOTO$/i, "")
-        .trim();
+    const texto = String(valor || "");
+    const marcador = "FOTO";
+    const inicioMarcador = texto.length - marcador.length;
+
+    if (
+        inicioMarcador <= 0 ||
+        texto.slice(inicioMarcador).toUpperCase() !== marcador
+    ) {
+        return texto.trim();
+    }
+
+    let inicioSeparadores = inicioMarcador;
+
+    while (
+        inicioSeparadores > 0 &&
+        ehSeparadorMarcadorFoto(texto[inicioSeparadores - 1])
+    ) {
+        inicioSeparadores -= 1;
+    }
+
+    if (inicioSeparadores === inicioMarcador) {
+        return texto.trim();
+    }
+
+    return texto.slice(0, inicioSeparadores).trim();
 }
 
 function criarAssinaturaColaborador(colaborador = {}) {

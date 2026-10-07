@@ -266,7 +266,7 @@ export function ModalRevisaoColaborador({
             });
         };
 
-        hidratarDemissaoFormalParaReadmissao();
+        void hidratarDemissaoFormalParaReadmissao();
 
         return () => {
             cancelado = true;

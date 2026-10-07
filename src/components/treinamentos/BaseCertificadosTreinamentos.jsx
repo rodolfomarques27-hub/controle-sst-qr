@@ -121,7 +121,7 @@ function FotoColaboradorBase({ colaborador = {} }) {
         setFotoComErro(false);
         setFotoUrlResolvida("");
 
-        gerarUrlFotoColaboradorBase(fotoOrigem).then((url) => {
+        void gerarUrlFotoColaboradorBase(fotoOrigem).then((url) => {
             if (ativo) setFotoUrlResolvida(url || "");
         });
 

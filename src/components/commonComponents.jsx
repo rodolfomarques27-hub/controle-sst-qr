@@ -107,7 +107,7 @@ function processarFilaListagensFotosColaboradores() {
 
         listagensFotosColaboradoresAtivas += 1;
 
-        Promise.resolve()
+        void Promise.resolve()
             .then(item.executar)
             .then(item.resolve, item.reject)
             .finally(() => {
@@ -239,7 +239,7 @@ export function FotoColaborador({ src, colaborador = null, colaboradorId = "", n
             }
         }
 
-        buscarFotoPorPastaColaborador();
+        void buscarFotoPorPastaColaborador();
 
         return () => {
             ativo = false;

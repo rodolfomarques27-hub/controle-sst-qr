@@ -313,7 +313,7 @@ export function TenantContextGate({
                 }
             }
 
-            resolver();
+            void resolver();
 
             return () => {
                 ativo =

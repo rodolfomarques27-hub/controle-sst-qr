@@ -825,7 +825,7 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
       }
     }
 
-    carregarMapaSelecionado();
+    void carregarMapaSelecionado();
 
     return () => {
       ativo = false;
@@ -3001,7 +3001,7 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
                               onClick={(evento) => {
                                 evento.stopPropagation();
 
-                                removerTipoPontoPersonalizado(
+                                void removerTipoPontoPersonalizado(
                                   tipo,
                                 );
                               }}

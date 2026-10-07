@@ -749,7 +749,7 @@ export function MapaObraVisualizacaoPage({ auditoriasCampo = [] }) {
       }
     }
 
-    carregarMapaRemoto();
+    void carregarMapaRemoto();
 
     return () => {
       ativo = false;

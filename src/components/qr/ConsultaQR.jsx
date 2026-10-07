@@ -148,7 +148,7 @@ function ScannerQrMobile() {
             } catch { /* continua tentando enquanto a câmera estiver aberta */ }
             if (!cancelado) window.setTimeout(ler, 350);
         };
-        ler();
+        void ler();
         return () => { cancelado = true; };
     }, [ativo]);
 
@@ -625,7 +625,7 @@ function ConsultaQRDesktop({
             setMensagemTokenAuditoriaPublica(resultado?.erro || "Token público da auditoria não encontrado no Supabase.");
         }
 
-        carregarTokenAuditoriaPublica();
+        void carregarTokenAuditoriaPublica();
 
         return () => {
             ativo = false;

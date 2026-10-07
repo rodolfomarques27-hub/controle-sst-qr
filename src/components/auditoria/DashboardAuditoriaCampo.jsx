@@ -735,7 +735,7 @@ export function DashboardAuditoriaCampo({
             }
         }
 
-        carregarTokenAuditoriaCampo();
+        void carregarTokenAuditoriaCampo();
 
         return () => {
             componenteAtivo = false;

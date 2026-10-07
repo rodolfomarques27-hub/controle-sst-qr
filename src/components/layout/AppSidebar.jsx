@@ -443,7 +443,7 @@ export function AppSidebar({
                         <ShieldCheck
                             className={classNames(
                                 "shrink-0",
-                                menuExpandido ? "h-5 w-5" : "h-5 w-5"
+                                "h-5 w-5"
                             )}
                         />
                     )}

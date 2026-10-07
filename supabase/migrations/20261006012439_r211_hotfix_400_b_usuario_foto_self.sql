@@ -19,7 +19,7 @@ declare
 begin
     if
         v_uid is null
-        and v_email = ''
+        and nullif(v_email, '') is null
     then
         return null;
     end if;
@@ -43,7 +43,7 @@ begin
         )
         or
         (
-            v_email <> ''
+            nullif(v_email, '') is not null
             and lower(
                 btrim(
                     coalesce(
