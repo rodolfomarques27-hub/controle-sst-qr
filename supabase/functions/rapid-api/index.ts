@@ -554,6 +554,32 @@ serve(async (req) => {
       );
     }
 
+    const camposIdentidadeUsuarioProibidos =
+      [
+        "actorUserId",
+        "actor_user_id",
+        "userId",
+        "user_id",
+      ];
+
+    const identidadeUsuarioNoBody =
+      camposIdentidadeUsuarioProibidos.some(
+        (campo) =>
+          Object.prototype.hasOwnProperty.call(
+            dadosRecebidos,
+            campo,
+          ),
+      );
+
+    if (
+      identidadeUsuarioNoBody
+    ) {
+      throw new ErroHttp(
+        400,
+        "Campos de identidade do usuário não são aceitos no corpo da solicitação.",
+      );
+    }
+
     const para =
       dadosRecebidos.para;
 
@@ -748,6 +774,14 @@ serve(async (req) => {
       Boolean(
         dadosUsuario?.user?.id,
       );
+
+    const actorUserId =
+      usuarioAutenticado
+        ? textoSeguro(
+            dadosUsuario?.user?.id,
+            80,
+          ).toLowerCase()
+        : "";
 
     if (usuarioAutenticado) {
       if (
@@ -1126,6 +1160,14 @@ serve(async (req) => {
         "tipoModelo ausente ou inválido para o envio SST.",
       );
     }
+
+    const actorUserIdParaEnvio =
+      usuarioAutenticado &&
+      !solicitacaoAuditoriaPublica &&
+      tipoModeloTratado ===
+        "alerta_auditoria"
+        ? actorUserId
+        : "";
 
     // R22_E3_D2A_DRY_RUN_DESTINATARIO_SST_EMPRESA
     const regraCanalEmpresa =
@@ -1522,6 +1564,14 @@ serve(async (req) => {
             canal:
               "TENANT",
             tenantId,
+
+            ...(actorUserIdParaEnvio
+              ? {
+                  actorUserId:
+                    actorUserIdParaEnvio,
+                }
+              : {}),
+
             nomeRemetenteFallback:
               nomeRemetente,
           },
