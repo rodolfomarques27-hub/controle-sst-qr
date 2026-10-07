@@ -17602,3 +17602,32 @@
     overflow: visible !important;
   }
 }
+
+/* SST R2.11 P3-P3C
+   Logo válida da contratante: remove somente a moldura estrutural
+   da marca e preserva integralmente o fallback técnico sem logo. */
+@media (min-width: 1024px) {
+    .app-sidebar .app-sidebar-brand[data-brand-logo-valid="true"] {
+        background: transparent !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+    }
+
+    .app-sidebar .app-sidebar-brand[data-brand-logo-valid="true"] .app-sidebar-brand-icon {
+        background: transparent !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+    }
+
+    .app-sidebar .app-sidebar-brand[data-brand-logo-valid="true"] .app-sidebar-brand-icon img {
+        border: 0 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        clip-path: none !important;
+        overflow: visible !important;
+    }
+}

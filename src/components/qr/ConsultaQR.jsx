@@ -1,5 +1,11 @@
 import "../../styles/pages/consulta-qr-responsivo.css";
 import { registrarImpressaoQrColaboradores } from "../../services/colaboradoresQrImpressoesService";
+import {
+    confirmarSafeScan,
+} from "../../services/safeScanConfirmService.js";
+import {
+    emitirFeedbackSafeScan,
+} from "../../services/safeScanFeedbackService.js";
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
@@ -142,7 +148,7 @@ function ScannerQrMobile() {
             } catch { /* continua tentando enquanto a câmera estiver aberta */ }
             if (!cancelado) window.setTimeout(ler, 350);
         };
-        ler();
+        void ler();
         return () => { cancelado = true; };
     }, [ativo]);
 
@@ -619,7 +625,7 @@ function ConsultaQRDesktop({
             setMensagemTokenAuditoriaPublica(resultado?.erro || "Token público da auditoria não encontrado no Supabase.");
         }
 
-        carregarTokenAuditoriaPublica();
+        void carregarTokenAuditoriaPublica();
 
         return () => {
             ativo = false;
@@ -768,8 +774,23 @@ function ConsultaQRDesktop({
 
         if (selecionadoAindaExiste) return;
 
-        setIdColaboradorConsultaSelecionado(obterIdColaboradorConsulta(colaboradoresFiltrados[0]));
-    }, [colaboradoresFiltrados, idColaboradorConsultaSelecionado]);
+        const primeiroColaboradorFiltrado =
+            colaboradoresFiltrados[0];
+
+        setIdColaboradorConsultaSelecionado(
+            obterIdColaboradorConsulta(
+                primeiroColaboradorFiltrado
+            )
+        );
+
+        onSelecionarColaborador?.(
+            primeiroColaboradorFiltrado
+        );
+    }, [
+        colaboradoresFiltrados,
+        idColaboradorConsultaSelecionado,
+        onSelecionarColaborador,
+    ]);
 
     useEffect(() => {
         if (
@@ -1101,9 +1122,13 @@ function ConsultaQRDesktop({
         ];
 
         if (!ids.length) {
-            window.alert(
-                "Não foi possível identificar o colaborador para registrar a impressão."
-            );
+            emitirFeedbackSafeScan({
+                tipo: "erro",
+                titulo:
+                    "Não foi possível registrar a impressão",
+                mensagem:
+                    "Não foi possível identificar o colaborador para registrar a impressão.",
+            });
 
             return;
         }
@@ -1129,9 +1154,17 @@ Somente confirme se a impressão realmente foi concluída.`
 Somente confirme se a impressão realmente foi concluída.`;
 
         const confirmado =
-            window.confirm(
-                mensagem
-            );
+            await confirmarSafeScan({
+                titulo:
+                    "Confirmar impressão",
+                mensagem,
+                confirmarTexto:
+                    "Confirmar impressão",
+                cancelarTexto:
+                    "Cancelar",
+                variante:
+                    "padrao",
+            });
 
         if (!confirmado) {
             return;
@@ -1152,11 +1185,15 @@ Somente confirme se a impressão realmente foi concluída.`;
                 error
             );
 
-            window.alert(
-                `Não foi possível registrar a impressão no SafeScan.
+            emitirFeedbackSafeScan({
+                tipo: "erro",
+                titulo:
+                    "Não foi possível registrar a impressão",
+                mensagem:
+                    `Não foi possível registrar a impressão no SafeScan.
 
-${error?.message || "Erro desconhecido."}`
-            );
+${error?.message || "Erro desconhecido."}`,
+            });
 
             return;
         }

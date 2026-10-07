@@ -1,6 +1,7 @@
 import "../../styles/app-layout-operational-suffix.css";
 
 import {
+    useCallback,
     useEffect,
     useMemo,
     useState,
@@ -17,9 +18,6 @@ import {
     supabase,
 } from "../../lib/supabaseClient.js";
 
-import {
-    AppCarregandoSistema,
-} from "./AppSystemStates.jsx";
 
 import {
     TenantRuntimeContext,
@@ -315,7 +313,7 @@ export function TenantContextGate({
                 }
             }
 
-            resolver();
+            void resolver();
 
             return () => {
                 ativo =
@@ -333,6 +331,106 @@ export function TenantContextGate({
         ESTADOS_CONTEXTO_TENANT.RESOLVIDO
             ? contextoTenant
             : null;
+
+    const resolvendoTenant =
+        Boolean(
+            requerResolucaoTenant
+            && contextoTenant?.estado ===
+                ESTADOS_CONTEXTO_TENANT.CARREGANDO
+        );
+
+    const tenantResolvidoId =
+        String(
+            tenantResolvido?.tenant?.id || ""
+        );
+
+    const recarregarBrandingTenant =
+        useCallback(
+            async () => {
+                if (
+                    !requerResolucaoTenant
+                    || !hostnameTenantValido(
+                        hostnameResolucao
+                    )
+                    || !tenantResolvidoId
+                ) {
+                    return null;
+                }
+
+                const {
+                    data,
+                    error,
+                } =
+                    await supabase.rpc(
+                        "resolver_branding_tenant_por_hostname",
+                        criarParametrosResolucaoHostnameTenant(
+                            hostnameResolucao
+                        )
+                    );
+
+                if (error) {
+                    throw new Error(
+                        error.message
+                        || "Não foi possível atualizar o branding do tenant."
+                    );
+                }
+
+                const contextoAtualizado =
+                    normalizarContextoTenantRpc(
+                        data,
+                        hostnameResolucao
+                    );
+
+                const tenantAtualizadoId =
+                    String(
+                        contextoAtualizado?.tenant?.id || ""
+                    );
+
+                if (
+                    contextoAtualizado?.estado !==
+                        ESTADOS_CONTEXTO_TENANT.RESOLVIDO
+                    || tenantAtualizadoId !==
+                        tenantResolvidoId
+                ) {
+                    throw new Error(
+                        "O tenant retornado durante a atualização do branding não corresponde ao tenant atual."
+                    );
+                }
+
+                const brandingAtualizado =
+                    data?.branding
+                    && typeof data.branding === "object"
+                        ? data.branding
+                        : null;
+
+                setContextoTenant(
+                    (contextoAtual) => {
+                        if (
+                            contextoAtual?.estado !==
+                                ESTADOS_CONTEXTO_TENANT.RESOLVIDO
+                            || String(
+                                contextoAtual?.tenant?.id || ""
+                            ) !== tenantResolvidoId
+                        ) {
+                            return contextoAtual;
+                        }
+
+                        return {
+                            ...contextoAtual,
+                            branding:
+                                brandingAtualizado,
+                        };
+                    }
+                );
+
+                return brandingAtualizado;
+            },
+            [
+                hostnameResolucao,
+                requerResolucaoTenant,
+                tenantResolvidoId,
+            ]
+        );
 
     const valorContexto =
         useMemo(
@@ -367,6 +465,8 @@ export function TenantContextGate({
                     tenantResolvido?.branding
                     ?? null,
 
+                recarregarBrandingTenant,
+
                 compatibilidade:
                     classificacao.tipo ===
                     TIPOS_AMBIENTE_RUNTIME_TENANT
@@ -389,6 +489,8 @@ export function TenantContextGate({
                     TIPOS_AMBIENTE_RUNTIME_TENANT
                         .PREVIEW,
 
+                resolvendoTenant,
+
                 tenantResolvido:
                     Boolean(
                         tenantResolvido
@@ -399,6 +501,8 @@ export function TenantContextGate({
                 entradaDevOperacional,
                 hostnameResolucao,
                 hostnameTenantDev,
+                recarregarBrandingTenant,
+                resolvendoTenant,
                 tenantResolvido,
             ]
         );
@@ -433,12 +537,13 @@ export function TenantContextGate({
         );
     }
 
-    if (
-        contextoTenant?.estado ===
-        ESTADOS_CONTEXTO_TENANT.CARREGANDO
-    ) {
+    if (resolvendoTenant) {
         return (
-            <AppCarregandoSistema />
+            <TenantRuntimeContext.Provider
+                value={valorContexto}
+            >
+                {children}
+            </TenantRuntimeContext.Provider>
         );
     }
 

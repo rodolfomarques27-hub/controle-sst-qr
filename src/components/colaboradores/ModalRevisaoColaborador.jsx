@@ -17,6 +17,7 @@ import {
     demitirColaborador,
     remobilizarColaborador,
     readmitirColaborador,
+    alterarSituacaoObraColaborador,
     obterMensagemErroMovimentacaoColaborador,
 } from "../../services/colaboradoresMovimentacoesService";
 import {
@@ -29,6 +30,7 @@ import {
 import {
     carregarHistoricoProfissionalColaborador,
 } from "../../services/colaboradoresHistoricoProfissionalService.js";
+import { emitirFeedbackSafeScan } from "../../services/safeScanFeedbackService";
 
 function apenasDigitosColaborador(valor = "") {
     return String(valor || "").replace(/\D/g, "");
@@ -264,7 +266,7 @@ export function ModalRevisaoColaborador({
             });
         };
 
-        hidratarDemissaoFormalParaReadmissao();
+        void hidratarDemissaoFormalParaReadmissao();
 
         return () => {
             cancelado = true;
@@ -399,6 +401,23 @@ export function ModalRevisaoColaborador({
         !possuiDemissaoFormal &&
         possuiCondicaoTemporariaAberta;
 
+    const situacaoOperacionalControlada =
+        [
+            "em análise",
+            "liberado",
+            "com pendência",
+            "bloqueado",
+        ].includes(
+            statusMobilizacaoChave
+        );
+
+    const podeAlterarSituacaoObra =
+        vinculoAtivo &&
+        !possuiDemissaoFormal &&
+        !estaDesmobilizado &&
+        !possuiCondicaoTemporariaAberta &&
+        situacaoOperacionalControlada;
+
     const podeDesmobilizar =
         vinculoAtivo &&
         !estaDesmobilizado &&
@@ -420,6 +439,12 @@ export function ModalRevisaoColaborador({
 
     const configuracaoAcaoCiclo =
         {
+            ALTERAR_SITUACAO: {
+                titulo: "Alterar situação na obra",
+                rotuloData: "Data da alteração",
+                exigeStatusNovo: true,
+                exigeMotivo: true,
+            },
             DESMOBILIZAR: {
                 titulo: "Desmobilizar da obra",
                 rotuloData: "Data da desmobilização",
@@ -510,7 +535,11 @@ export function ModalRevisaoColaborador({
         setDataEventoCiclo("");
         setMotivoCiclo("");
         setObservacaoCiclo("");
-        setStatusMobilizacaoNovoCiclo("Em análise");
+        setStatusMobilizacaoNovoCiclo(
+            acao === "ALTERAR_SITUACAO"
+                ? statusMobilizacao
+                : "Em análise"
+        );
         setTipoCondicaoCiclo("FERIAS");
         setDataFimPrevistaCondicaoCiclo("");
         setErroCiclo("");
@@ -541,6 +570,7 @@ export function ModalRevisaoColaborador({
 
         const acaoPermitida =
             {
+                ALTERAR_SITUACAO: podeAlterarSituacaoObra,
                 DESMOBILIZAR: podeDesmobilizar,
                 REMOBILIZAR: podeRemobilizar,
                 DEMITIR: podeDemitir,
@@ -576,6 +606,21 @@ export function ModalRevisaoColaborador({
         }
 
         if (
+            acaoCiclo === "ALTERAR_SITUACAO" &&
+            String(
+                statusMobilizacaoNovoCiclo || ""
+            )
+                .trim()
+                .toLocaleLowerCase("pt-BR") ===
+                statusMobilizacaoChave
+        ) {
+            setErroCiclo(
+                "Selecione uma situação diferente da situação atual."
+            );
+            return;
+        }
+
+        if (
             configuracaoAcaoCiclo?.exigeTipoCondicao &&
             !tipoCondicaoCiclo
         ) {
@@ -605,7 +650,15 @@ export function ModalRevisaoColaborador({
 
             let resultado;
 
-            if (acaoCiclo === "DESMOBILIZAR") {
+            if (acaoCiclo === "ALTERAR_SITUACAO") {
+                resultado =
+                    await alterarSituacaoObraColaborador({
+                        ...parametrosBase,
+                        statusMobilizacaoNovo:
+                            statusMobilizacaoNovoCiclo,
+                    });
+            }
+            else if (acaoCiclo === "DESMOBILIZAR") {
                 resultado =
                     await desligarColaboradorOperacao(
                         parametrosBase
@@ -695,6 +748,7 @@ export function ModalRevisaoColaborador({
 
             const mensagemSucesso =
                 {
+                    ALTERAR_SITUACAO: "Situação na obra alterada com sucesso.",
                     DESMOBILIZAR: "Colaborador desmobilizado da obra com sucesso.",
                     REMOBILIZAR: "Colaborador remobilizado com sucesso.",
                     DEMITIR: "Demissão registrada com sucesso.",
@@ -741,7 +795,11 @@ export function ModalRevisaoColaborador({
         }
     };
     const salvarRevisaoColaborador = async () => {        if (!colaboradorEdicao?.nome?.trim() || !colaboradorEdicao?.empresaNome?.trim() || !colaboradorEdicao?.funcao?.trim()) {
-            alert("Preencha nome, empresa e função.");
+            emitirFeedbackSafeScan({
+                tipo: "atencao",
+                titulo: "Campos obrigatórios",
+                mensagem: "Preencha nome, empresa e função.",
+            });
             return;
         }
 
@@ -880,12 +938,27 @@ export function ModalRevisaoColaborador({
                                 </div>
 
                                 <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                                        Situação na obra
-                                    </p>
-                                    <p className="mt-1 text-sm font-bold text-slate-900">
-                                        {statusMobilizacao}
-                                    </p>
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="min-w-0">
+                                            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                                                Situação na obra
+                                            </p>
+                                            <p className="mt-1 truncate text-sm font-bold text-slate-900">
+                                                {statusMobilizacao}
+                                            </p>
+                                        </div>
+
+                                        {podeAlterarSituacaoObra ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => abrirAcaoCiclo("ALTERAR_SITUACAO")}
+                                                disabled={!podeEditar || salvandoCiclo}
+                                                className="shrink-0 rounded-xl border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-[11px] font-bold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                Alterar situação
+                                            </button>
+                                        ) : null}
+                                    </div>
                                 </div>
 
                                 <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 sm:col-span-2">
@@ -928,6 +1001,7 @@ export function ModalRevisaoColaborador({
                                 ) : null}
 
                                 <div className="mt-3 flex flex-wrap gap-2">
+
                                     {podeDesmobilizar ? (
                                         <button
                                             type="button"

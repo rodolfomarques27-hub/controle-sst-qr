@@ -1,14 +1,14 @@
 import React from "react";
-import { QrCode, ShieldCheck, XCircle } from "lucide-react";
+import { QrCode, XCircle } from "lucide-react";
+import { CarregandoTela } from "../CarregandoTela";
 
 export function AppCarregandoSistema() {
     return (
-        <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
-            <div className="rounded-3xl bg-white/10 p-6 text-center">
-                <ShieldCheck className="mx-auto mb-3 h-8 w-8" />
-                <p className="font-semibold">Carregando sistema...</p>
-            </div>
-        </div>
+        <CarregandoTela
+            mensagem="Carregando área..."
+            subtitulo="Preparando as informações desta seção."
+            telaCheia
+        />
     );
 }
 

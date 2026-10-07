@@ -779,9 +779,13 @@ export default function useDdsScannerConferenciaDerivados({
             const responsavelConfirmadoPreenchido =
                 responsavelConfirmado.trim();
 
-            const chuvaConfirmada = confirmado?.chuvaConfirmada === true;
+            const chuvaConfirmada =
+                confirmado?.chuvaConfirmada === true;
             const semAtividadeConfirmada =
-                confirmado?.semAtividadeConfirmada === true || chuvaConfirmada;
+                confirmado?.semAtividadeConfirmada === true &&
+                !chuvaConfirmada;
+            const diaSemJornada =
+                semAtividadeConfirmada || chuvaConfirmada;
 
             const padraoJornadaDds =
                 obterPadraoJornadaDds(posicao);
@@ -833,15 +837,17 @@ export default function useDdsScannerConferenciaDerivados({
                     minutosNormais:
                         padraoJornadaDds.minutosNormais,
                     semAtividade:
-                        semAtividadeConfirmada,
+                        diaSemJornada,
                 });
 
-            const statusTranscricao = semAtividadeConfirmada
-                ? "sem_atividade"
-                : temaConfirmadoPreenchido &&
-                  responsavelConfirmadoPreenchido
-                    ? "confirmado"
-                    : "pendente";
+            const statusTranscricao = chuvaConfirmada
+                ? "chuva"
+                : semAtividadeConfirmada
+                    ? "sem_atividade"
+                    : temaConfirmadoPreenchido &&
+                      responsavelConfirmadoPreenchido
+                        ? "confirmado"
+                        : "pendente";
 
             return {
                 ...dia,
@@ -922,7 +928,9 @@ export default function useDdsScannerConferenciaDerivados({
 
     const diasAtivosConferenciaAssistidaDds = useMemo(
         () => diasConferenciaAssistidaDds.filter(
-            (dia) => !dia.semAtividadeConfirmada
+            (dia) =>
+                !dia.semAtividadeConfirmada &&
+                !dia.chuvaConfirmada
         ),
         [diasConferenciaAssistidaDds]
     );
@@ -931,7 +939,9 @@ export default function useDdsScannerConferenciaDerivados({
         useMemo(() => {
             const ativos =
                 diasConferenciaAssistidaDds.filter(
-                    (dia) => !dia.semAtividadeConfirmada
+                    (dia) =>
+                        !dia.semAtividadeConfirmada &&
+                        !dia.chuvaConfirmada
                 );
 
             const pendentes = ativos.filter(

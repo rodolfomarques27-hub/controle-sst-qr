@@ -1,3 +1,5 @@
+import { emitirFeedbackSafeScan } from "../../services/safeScanFeedbackService";
+
 export default function criarControladorTemasDds({
     criarTemasEditaveisDds,
     dadosDds,
@@ -61,9 +63,11 @@ export default function criarControladorTemasDds({
         ).trim();
 
         if (!responsavelGeral) {
-            window.alert(
-                "O responsável geral do DDS não está preenchido."
-            );
+            emitirFeedbackSafeScan({
+                tipo: "atencao",
+                titulo: "Responsável não preenchido",
+                mensagem: "O responsável geral do DDS não está preenchido.",
+            });
             return;
         }
 

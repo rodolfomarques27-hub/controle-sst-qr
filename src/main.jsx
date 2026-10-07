@@ -12,6 +12,18 @@ import "./index.css";
 import "./styles/app-layout-global.css";
 
 import {
+    AppCarregandoSistema,
+} from "./components/layout/AppSystemStates.jsx";
+
+import {
+    SafeScanFeedbackHost,
+} from "./components/feedback/SafeScanFeedbackHost.jsx";
+
+import {
+    SafeScanConfirmHost,
+} from "./components/feedback/SafeScanConfirmHost.jsx";
+
+import {
     deveRenderizarPainelAdmin,
     deveRenderizarPortalAcesso,
     deveRenderizarSiteInstitucionalDev,
@@ -151,7 +163,18 @@ createRoot(
     )
 ).render(
     <StrictMode>
-        <Suspense fallback={null}>
+        <SafeScanFeedbackHost />
+        <SafeScanConfirmHost />
+
+        <Suspense
+            fallback={
+                renderizarPainelAdmin
+                || renderizarPortalAcesso
+                || renderizarSiteInstitucionalDev
+                    ? null
+                    : <AppCarregandoSistema />
+            }
+        >
             {superficie}
         </Suspense>
     </StrictMode>

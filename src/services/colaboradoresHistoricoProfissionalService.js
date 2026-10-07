@@ -23,6 +23,9 @@ const ROTULOS_MOVIMENTACAO =
         READMISSAO:
             "Readmissão registrada",
 
+        ALTERACAO_SITUACAO_OBRA:
+            "Situação na obra alterada",
+
         CORRECAO_CADASTRAL:
             "Correção cadastral",
 

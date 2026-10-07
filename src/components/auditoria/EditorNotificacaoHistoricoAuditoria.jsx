@@ -12,6 +12,8 @@ import {
     montarMensagemFluidaAuditoriaCampo,
     montarPreviewNotificacaoAuditoriaCampo,
 } from "../../services/auditoriaCampoService";
+import { confirmarSafeScan } from "../../services/safeScanConfirmService.js";
+import { emitirFeedbackSafeScan } from "../../services/safeScanFeedbackService.js";
 import { formatDate, classNames } from "../../utils/sstUtils";
 
 export function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
@@ -47,6 +49,10 @@ export function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualiza
 
     const [motivoExclusao, setMotivoExclusao] = useState("");
     const [excluindo, setExcluindo] = useState(false);
+    const [feedbackExclusao, setFeedbackExclusao] = useState({
+        tipo: "",
+        mensagem: "",
+    });
     const [enviandoEmailAuditoria, setEnviandoEmailAuditoria] = useState(false);
     const [observacoesStatus, setObservacoesStatus] = useState({
         status: desvioPrincipal?.status || auditoria.statusDesvio || "Aberto",
@@ -246,6 +252,33 @@ export function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualiza
     };
 
     const verificarPermissaoExclusaoAuditoria = async (usuario) => {
+        if (tenantIdRuntime) {
+            try {
+                const {
+                    data: podeGerenciarTenant,
+                    error: erroTenant,
+                } = await supabase.rpc(
+                    "usuario_pode_gerenciar_tenant",
+                    {
+                        p_tenant_id: tenantIdRuntime,
+                    },
+                );
+
+                if (erroTenant) {
+                    throw erroTenant;
+                }
+
+                if (podeGerenciarTenant) {
+                    return;
+                }
+            } catch (error) {
+                throw new Error(
+                    error?.message ||
+                    "Não foi possível validar a administração deste ambiente.",
+                );
+            }
+        }
+
         try {
             const { data, error } = await supabase.rpc("usuario_pode_acessar_auditoria");
 
@@ -295,96 +328,89 @@ export function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualiza
         }
     };
 
-    const registrarExclusaoAuditoriaSistema = async ({ usuario, motivo }) => {
-        const descricao = [
-            `Auditoria de campo excluída por ${usuario.email}.`,
-            `Auditoria: ${auditoria.numeroAuditoria || auditoria.id}.`,
-            `Alvo: ${alvoAuditoria.titulo || auditoria.titulo || "Não informado"}.`,
-            motivo ? `Motivo: ${motivo}.` : "Motivo não informado.",
-        ].join(" ");
-
-        const payloadCompleto = {
-            acao: "DELETE",
-            tabela: "auditorias_campo",
-            descricao,
-            usuario_email: usuario.email,
-            usuario_id: usuario.id,
-            registro_id: String(auditoria.id),
-            detalhes: {
-                auditoriaId: auditoria.id,
-                numeroAuditoria: auditoria.numeroAuditoria || auditoria.numero_auditoria || "",
-                alvo: alvoAuditoria.titulo || auditoria.titulo || "",
-                motivo,
-                confirmadoPorSenha: true,
-                excluidoEm: new Date().toISOString(),
-            },
-        };
-
-        const payloadMinimo = {
-            acao: "DELETE",
-            tabela: "auditorias_campo",
-            descricao,
-        };
-
-        try {
-            const { error } = await supabase.from("auditoria_sistema").insert(payloadCompleto);
-
-            if (!error) return;
-
-            const { error: erroFallback } = await supabase.from("auditoria_sistema").insert(payloadMinimo);
-
-            if (erroFallback) {
-                console.warn("Não foi possível registrar log manual de exclusão da auditoria:", erroFallback.message || erroFallback);
-            }
-        } catch (error) {
-            console.warn("Não foi possível registrar log manual de exclusão da auditoria:", error?.message || error);
-        }
-    };
-
     const excluirAuditoria = async () => {
+        const definirFeedbackExclusao = (tipo, texto) => {
+            const mensagemTratada = String(texto || "").trim();
+
+            setFeedbackExclusao({
+                tipo,
+                mensagem: mensagemTratada,
+            });
+
+            return mensagemTratada;
+        };
+
         if (!auditoria.id) {
-            setMensagem("Não foi possível excluir: auditoria sem ID.");
+            definirFeedbackExclusao("erro", "Não foi possível excluir: auditoria sem ID.");
             return;
         }
 
         if (confirmacaoExclusao.trim().toUpperCase() !== "EXCLUIR") {
-            setMensagem("Digite EXCLUIR para confirmar a exclusão.");
+            definirFeedbackExclusao("erro", "Digite EXCLUIR para confirmar a exclusão.");
             return;
         }
 
         const motivoTratado = motivoExclusao.trim();
 
         if (!motivoTratado) {
-            setMensagem("Informe o motivo da exclusão para manter a rastreabilidade.");
+            definirFeedbackExclusao("erro", "Informe o motivo da exclusão para manter a rastreabilidade.");
             return;
         }
 
-        const confirmou = window.confirm("Confirma a exclusão definitiva desta auditoria de campo? A senha do usuário logado será validada antes da remoção.");
-        if (!confirmou) return;
+        const confirmou = await confirmarSafeScan({
+            titulo: "Excluir auditoria",
+            mensagem: "Confirma a exclusão definitiva desta auditoria de campo? A senha do usuário logado será validada antes da remoção.",
+            confirmarTexto: "Excluir auditoria",
+            cancelarTexto: "Cancelar",
+            variante: "perigo",
+        });
+
+        if (!confirmou) {
+            definirFeedbackExclusao("informacao", "Exclusão cancelada.");
+            return;
+        }
 
         setExcluindo(true);
-        setMensagem("");
+        definirFeedbackExclusao("informacao", "Validando usuário, permissão e senha...");
 
         try {
             const usuario = await obterUsuarioLogadoParaExclusao();
 
             await verificarPermissaoExclusaoAuditoria(usuario);
             await validarSenhaUsuarioExclusao(usuario);
-            await registrarExclusaoAuditoriaSistema({ usuario, motivo: motivoTratado });
 
-            const { error: erroDesvios } = await supabase
-                .from("auditoria_campo_desvios")
-                .delete()
-                .eq("auditoria_id", auditoria.id);
+            definirFeedbackExclusao("informacao", "Senha validada. Excluindo auditoria...");
 
-            if (erroDesvios) throw erroDesvios;
+            const { data, error } = await supabase.rpc(
+                "excluir_auditoria_campo_segura",
+                {
+                    p_auditoria_id: auditoria.id,
+                    p_motivo: motivoTratado,
+                },
+            );
 
-            const { error: erroAuditoria } = await supabase
-                .from("auditorias_campo")
-                .delete()
-                .eq("id", auditoria.id);
+            if (error) {
+                throw new Error(
+                    error.message || "Não foi possível concluir a exclusão da auditoria.",
+                );
+            }
 
-            if (erroAuditoria) throw erroAuditoria;
+            if (data?.ok === false) {
+                throw new Error(
+                    data?.erro || "Não foi possível concluir a exclusão da auditoria.",
+                );
+            }
+
+            const mensagemSucesso =
+                `Auditoria excluída com sucesso por ${usuario.email}.`;
+
+            definirFeedbackExclusao("sucesso", mensagemSucesso);
+
+            emitirFeedbackSafeScan({
+                tipo: "sucesso",
+                titulo: "Auditoria excluída",
+                mensagem: mensagemSucesso,
+            });
 
             if (typeof onAtualizada === "function") {
                 onAtualizada({
@@ -398,9 +424,18 @@ export function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualiza
             setConfirmacaoExclusao("");
             setSenhaExclusao("");
             setMotivoExclusao("");
-            setMensagem(`Auditoria excluída com sucesso por ${usuario.email}.`);
         } catch (error) {
-            setMensagem(`Erro ao excluir auditoria: ${error.message}`);
+            const mensagemErro = String(
+                error?.message || "Não foi possível excluir a auditoria.",
+            ).trim();
+
+            definirFeedbackExclusao("erro", mensagemErro);
+
+            emitirFeedbackSafeScan({
+                tipo: "erro",
+                titulo: "Exclusão não concluída",
+                mensagem: mensagemErro,
+            });
         } finally {
             setExcluindo(false);
         }
@@ -492,6 +527,22 @@ export function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualiza
                     </div>
 
                     <p className="mt-2 text-[11px] font-semibold text-red-700">A exclusão só continua se o usuário estiver logado, autorizado na Auditoria de sistema e a senha informada estiver correta.</p>
+
+                    {feedbackExclusao.mensagem && (
+                        <div
+                            role={feedbackExclusao.tipo === "erro" ? "alert" : "status"}
+                            aria-live={feedbackExclusao.tipo === "erro" ? "assertive" : "polite"}
+                            aria-atomic="true"
+                            className={classNames(
+                                "mt-3 rounded-2xl px-3 py-2 text-xs font-bold ring-1",
+                                feedbackExclusao.tipo === "erro" && "bg-red-100 text-red-800 ring-red-200",
+                                feedbackExclusao.tipo === "sucesso" && "bg-emerald-50 text-emerald-700 ring-emerald-200",
+                                feedbackExclusao.tipo === "informacao" && "bg-blue-50 text-blue-700 ring-blue-200",
+                            )}
+                        >
+                            {feedbackExclusao.mensagem}
+                        </div>
+                    )}
                 </div>
             )}
 

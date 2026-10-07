@@ -1,3 +1,5 @@
+import { emitirFeedbackSafeScan } from "../../services/safeScanFeedbackService";
+
 export default function criarControladorImpressaoDds({
     aniversariantesSemanaDds,
     carregarRegistroDdsPorCodigo,
@@ -119,7 +121,13 @@ export default function criarControladorImpressaoDds({
         } catch (error) {
             const mensagem = error?.message || "Não foi possível gerar o QR de conferência do DDS.";
             setErroRegistroDds(mensagem);
-            if (!silencioso) window.alert(mensagem);
+            if (!silencioso) {
+                emitirFeedbackSafeScan({
+                    tipo: "erro",
+                    titulo: "Erro ao gerar QR do DDS",
+                    mensagem,
+                });
+            }
             return null;
         } finally {
             setSalvandoRegistroDds(false);

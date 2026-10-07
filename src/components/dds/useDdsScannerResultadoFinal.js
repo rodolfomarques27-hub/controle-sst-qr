@@ -115,6 +115,10 @@ export default function useDdsScannerResultadoFinal({
                             temasDiasSalvos[indice] ||
                             salvoPorDataOuDia ||
                             {};
+
+                        const chuvaConfirmada =
+                            salvo?.chuvaConfirmada === true;
+
                         return {
                             temaConfirmado: String(
                                 salvo?.temaConfirmado || ""
@@ -134,9 +138,11 @@ export default function useDdsScannerResultadoFinal({
                                     salvo?.origemDocumentalTemaConfirmado ||
                                         ""
                                 ),
+                            chuvaConfirmada,
                             semAtividadeConfirmada:
                                 salvo?.semAtividadeConfirmada ===
-                                true,
+                                    true &&
+                                !chuvaConfirmada,
                             jornadaTipo:
                                 String(
                                     salvo?.jornadaTipo ||
@@ -334,6 +340,7 @@ export default function useDdsScannerResultadoFinal({
                             responsavelConfirmado: "",
                             origemTemaConfirmado: "",
                             origemDocumentalTemaConfirmado: "",
+                            chuvaConfirmada: false,
                             semAtividadeConfirmada:
                                 Boolean(
                                     conferenciaSalva &&
@@ -376,6 +383,7 @@ export default function useDdsScannerResultadoFinal({
                 responsavelConfirmado: "",
                 origemTemaConfirmado: "",
                 origemDocumentalTemaConfirmado: "",
+                chuvaConfirmada: false,
                 semAtividadeConfirmada: false,
             }))
         );

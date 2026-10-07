@@ -15,6 +15,9 @@ import {
     removerAssinaturaModeloEmailSstService,
     salvarAssinaturaModeloEmailSstService,
 } from "../../services/modelosEmailSstAssinaturaService";
+import {
+    confirmarSafeScan,
+} from "../../services/safeScanConfirmService.js";
 import { classNames } from "../../utils/sstUtils";
 
 function obterClasseMensagem(tipo = "informacao") {
@@ -567,11 +570,18 @@ export function AssinaturaModeloEmailSstConfiguracoes({
             }
 
             const confirmado =
-                typeof window ===
-                    "undefined" ||
-                window.confirm(
-                    "Remover a assinatura em imagem deste modelo? O conteúdo textual não será alterado."
-                );
+                await confirmarSafeScan({
+                    titulo:
+                        "Remover assinatura em imagem",
+                    mensagem:
+                        "Remover a assinatura em imagem deste modelo? O conteúdo textual não será alterado.",
+                    confirmarTexto:
+                        "Remover imagem",
+                    cancelarTexto:
+                        "Cancelar",
+                    variante:
+                        "perigo",
+                });
 
             if (!confirmado) {
                 setMensagem({

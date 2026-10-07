@@ -21,6 +21,9 @@ import {
     useTenantRuntimeContext,
 } from "../layout/TenantRuntimeContext.js";
 import {
+    TenantAdminBrandingPanel,
+} from "../../features/tenant-admin/components/TenantAdminBrandingPanel.jsx";
+import {
     CertidaoMensalEmailConfiguracoes,
 } from "./CertidaoMensalEmailConfiguracoes";
 import {
@@ -73,6 +76,7 @@ const ESTADO_PADRAO_CARDS_CONFIGURACOES_TENANT =
         acessoAtual: true,
         empresasVinculadas: true,
         recursosDisponiveis: true,
+        identidadeVisual: true,
         planoBase: true,
         versaoSafescan: true,
         arquivosStorage: true,
@@ -341,6 +345,7 @@ export function ConfiguracoesTenant({
         tenant,
         hostname,
         dominioCanonico,
+        recarregarBrandingTenant,
     } =
         useTenantRuntimeContext();
 
@@ -468,6 +473,10 @@ export function ConfiguracoesTenant({
         "administrador";
 
     const podeAlterarRecursosOperacionais =
+        perfilUsuarioChave ===
+        "administrador";
+
+    const podeAlterarIdentidadeVisual =
         perfilUsuarioChave ===
         "administrador";
 
@@ -2880,6 +2889,61 @@ export function ConfiguracoesTenant({
 </div></details>
             </section>
 
+            {podeAlterarIdentidadeVisual ? (
+                <details
+                    open={estadoCardsConfiguracoesAtivo.identidadeVisual}
+                    onToggle={(evento) => {
+                        const aberto =
+                            evento.currentTarget.open;
+
+                        if (
+                            aberto ===
+                            estadoCardsConfiguracoesAtivo.identidadeVisual
+                        ) {
+                            return;
+                        }
+
+                        atualizarEstadoCardConfiguracoes(
+                            "identidadeVisual",
+                            aberto
+                        );
+                    }}
+                    data-r10-collapse="identidade-visual"
+                    className="group scroll-mt-24 self-start overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                >
+                    <summary className="flex h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+                        <span className="text-sm font-black text-slate-950 sm:text-base">
+                            Identidade visual / Aparência do login
+                        </span>
+
+                        <span
+                            aria-hidden="true"
+                            className="shrink-0 text-lg font-black text-slate-400 transition-transform duration-200 group-open:rotate-180"
+                        >
+                            ⌄
+                        </span>
+                    </summary>
+
+                    <div
+                        data-r10-body="identidade-visual"
+                        className="border-t border-slate-200"
+                    >
+                        <TenantAdminBrandingPanel
+                            tenant={{
+                                tenant_id:
+                                    tenantId,
+                                tenant_nome:
+                                    tenantNome,
+                            }}
+                            modoEmbutido
+                            onBrandingAtualizado={
+                                recarregarBrandingTenant
+                            }
+                        />
+                    </div>
+                </details>
+            ) : null}
+
             <details
                 open={estadoCardsConfiguracoesAtivo.planoBase}
                 onToggle={(evento) => {
@@ -3660,22 +3724,73 @@ export function ConfiguracoesTenant({
                     </div>
 
                     <div className="flex min-w-0 items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3">
-                        <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
-                            <BadgeCheck className="h-4.5 w-4.5" />
-                        </span>
 
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                             <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
                                 Novidades desta versão
                             </p>
 
-                            <p className="mt-1 text-sm font-black text-slate-950">
-                                Aniversariantes
-                            </p>
+                            <div className="mt-2 grid gap-2 lg:grid-cols-2">
+                                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                                    <p className="text-sm font-black text-slate-950">
+                                        Identidade visual personalizada
+                                    </p>
 
-                            <p className="mt-0.5 text-sm leading-5 text-slate-600">
-                                Bloqueados, Inativos e Desmobilizados deixam de aparecer na lista, indicadores e relatório de aniversários.
-                            </p>
+                                    <p className="mt-0.5 text-sm leading-5 text-slate-600">
+                                        Personalize a aparência do ambiente com logo da contratante, fundo do login e identidade visual própria.
+                                    </p>
+                                </div>
+
+                                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                                    <p className="text-sm font-black text-slate-950">
+                                        Situação na obra dos colaboradores
+                                    </p>
+
+                                    <p className="mt-0.5 text-sm leading-5 text-slate-600">
+                                        Novo controle visual identifica rapidamente colaboradores Liberados, Com pendência, Bloqueados, Desmobilizados ou Inativos conforme sua condição documental e operacional.
+                                    </p>
+                                </div>
+
+                                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                                    <p className="text-sm font-black text-slate-950">
+                                        Gestão do Storage
+                                    </p>
+
+                                    <p className="mt-0.5 text-sm leading-5 text-slate-600">
+                                        O ambiente passa a contar com gerenciamento dos próprios arquivos e informações de armazenamento de forma isolada e segura.
+                                    </p>
+                                </div>
+
+                                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                                    <p className="text-sm font-black text-slate-950">
+                                        Navegação e Configurações
+                                    </p>
+
+                                    <p className="mt-0.5 text-sm leading-5 text-slate-600">
+                                        Sidebar mais compacta, identificação da contratante e memorização dos cards abertos ou recolhidos nas Configurações.
+                                    </p>
+                                </div>
+
+                                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                                    <p className="text-sm font-black text-slate-950">
+                                        Avisos padronizados
+                                    </p>
+
+                                    <p className="mt-0.5 text-sm leading-5 text-slate-600">
+                                        O SafeScan passa a utilizar feedbacks visuais próprios de sucesso, erro, atenção, informação e confirmação, substituindo gradualmente alertas e confirmações nativas do navegador.
+                                    </p>
+                                </div>
+
+                                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+                                    <p className="text-sm font-black text-slate-950">
+                                        Aniversariantes
+                                    </p>
+
+                                    <p className="mt-0.5 text-sm leading-5 text-slate-600">
+                                        Bloqueados, Inativos e Desmobilizados deixam de aparecer na lista, indicadores e relatório de aniversários.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>

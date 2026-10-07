@@ -29,6 +29,7 @@ import {
 } from "./components/layout/AppSystemStates";
 import { atualizarLimitesCarregamentoSistemaAppService } from "./services/appConfiguracoesHandlersService";
 import { carregarLimitesCarregamentoSistema } from "./constants/sistemaLimitesConstants";
+import { emitirFeedbackSafeScan } from "./services/safeScanFeedbackService";
 
 import { validarArquivoAntesUpload } from "./components/FileUploadAviso";
 import { CarregandoTela } from "./components/CarregandoTela";
@@ -40,6 +41,7 @@ import {
 } from "./routes/appRoutesService";
 import {
     ORDEM_TELAS_INICIAIS_PERMITIDAS_APP,
+    precarregarModuloTelaSistema,
 } from "./routes/appScreensConfig";
 import { consultarDdsPublico, obterTokenDdsPublicoUrl } from "./services/ddsRegistrosService";
 import { sanitizarNomeArquivo } from "./utils/sstUtils";
@@ -92,12 +94,16 @@ const carregarConsultaPublicaQrHandlers = () => import("./services/consultaPubli
 const carregarEmpresaDocumentosHandlers = () => import("./services/empresaDocumentosService");
 const carregarObrasEmpresasService = () => import("./services/obrasService");
 
+const importarCertidaoUploadMassaJobProvider =
+    () =>
+        import(
+            "./features/certidao-mensal-documental/contexts/CertidaoUploadMassaJobContext.jsx"
+        );
+
 const CertidaoUploadMassaJobProvider =
     React.lazy(
         () =>
-            import(
-                "./features/certidao-mensal-documental/contexts/CertidaoUploadMassaJobContext.jsx"
-            ).then(
+            importarCertidaoUploadMassaJobProvider().then(
                 (modulo) => ({
                     default:
                         modulo
@@ -105,6 +111,25 @@ const CertidaoUploadMassaJobProvider =
                 })
             )
     );
+
+function precarregarShellAutenticadoApp(
+    telaInicial = "dashboard",
+    {
+        tenant = false,
+    } = {}
+) {
+    return Promise.allSettled([
+        importarAppLayout(),
+        importarAppContentRouter(),
+        importarCertidaoUploadMassaJobProvider(),
+        precarregarModuloTelaSistema(
+            telaInicial,
+            {
+                tenant,
+            }
+        ),
+    ]);
+}
 
 const hoje = new Date();
 const CHAVE_SIDEBAR_COLAPSADA = "safescan:sidebar:collapsed";
@@ -154,7 +179,8 @@ function obterPrimeiraTelaPermitidaApp(
 ) {
     return ORDEM_TELAS_INICIAIS_PERMITIDAS_APP.find(
         (telaCandidata) =>
-            (
+            telaCandidata !== "certidaoMensalDocumental"
+            && (
                 !aplicarGateModulosTenant
                 || telaDisponivelTenantRuntime(
                     modulosTenantRuntime,
@@ -191,6 +217,7 @@ export default function App() {
     const {
         tenant,
         tenantResolvido,
+        resolvendoTenant = false,
     } = useTenantRuntimeContext();
 
     const [
@@ -210,6 +237,10 @@ export default function App() {
     const [usuario, setUsuario] = useState(null);
     const [recuperacaoSenhaEvento, setRecuperacaoSenhaEvento] = useState(false);
     const chaveCargaInicialUsuarioRef = useRef("");
+    const [
+        chaveTelaInicialRuntimeEstabilizada,
+        setChaveTelaInicialRuntimeEstabilizada,
+    ] = useState("");
     const chaveUsuarioSessao = String(usuario?.id || usuario?.email || "").trim();
     const [carregandoSessao, setCarregandoSessao] = useState(() => SUPABASE_CONFIGURADO);
     const [tela, setTela] = useState("dashboard");
@@ -260,6 +291,25 @@ export default function App() {
         tenantResolvido
         && tenant?.id
     );
+
+    useEffect(() => {
+        if (!usuario?.id) {
+            return;
+        }
+
+        void precarregarShellAutenticadoApp(
+            "dashboard",
+            {
+                tenant:
+                    Boolean(
+                        tenant?.id
+                    ),
+            }
+        );
+    }, [
+        tenant?.id,
+        usuario?.id,
+    ]);
 
     const aplicarGateModulosTenantRuntime = Boolean(
         ambienteTenantRuntime
@@ -672,7 +722,11 @@ export default function App() {
             );
         } catch (error) {
             console.warn("Erro ao atualizar informações do Dashboard SST:", error?.message || error);
-            alert(`Erro ao atualizar informações do Dashboard SST: ${error?.message || String(error)}`);
+            emitirFeedbackSafeScan({
+                tipo: "erro",
+                titulo: "Erro ao atualizar Dashboard SST",
+                mensagem: `Erro ao atualizar informações do Dashboard SST: ${error?.message || String(error)}`,
+            });
         } finally {
             setAtualizandoDashboardSst(false);
         }
@@ -1914,8 +1968,153 @@ export default function App() {
             )
         );
 
+    const chaveTelaInicialRuntimeAtual =
+        usuario?.id
+        && !resolvendoTenant
+            ? `${String(
+                tenant?.id
+                || "global"
+            ).trim()}:${String(
+                usuario.id
+            ).trim()}`
+            : "";
+
+    const telaInicialRuntimeEstabilizada =
+        Boolean(
+            chaveTelaInicialRuntimeAtual
+            && chaveTelaInicialRuntimeEstabilizada ===
+                chaveTelaInicialRuntimeAtual
+        );
+
+    const bootstrapInicialRuntimePronto =
+        Boolean(
+            usuario?.id
+            && !resolvendoTenant
+            && !carregandoSessao
+            && (
+                !ambienteTenantRuntime
+                || acessoTenantRuntime.estado ===
+                    "autorizado"
+            )
+            && !carregandoPermissaoRuntimeUsuario
+        );
+
+    useEffect(() => {
+        let ativo = true;
+
+        async function estabilizarTelaInicialRuntime() {
+            if (
+                !bootstrapInicialRuntimePronto
+                || !chaveTelaInicialRuntimeAtual
+                || telaInicialRuntimeEstabilizada
+            ) {
+                return;
+            }
+
+            if (
+                trocaSenhaTemporariaPendenteApp
+                || erroPermissaoRuntimeUsuario
+                || !contextoPermissaoProntoApp
+            ) {
+                if (ativo) {
+                    setChaveTelaInicialRuntimeEstabilizada(
+                        chaveTelaInicialRuntimeAtual
+                    );
+                }
+
+                return;
+            }
+
+            const dashboardDisponivelNoContrato =
+                !aplicarGateModulosTenantRuntime
+                || telaDisponivelTenantRuntime(
+                    modulosTenantRuntime,
+                    "dashboard"
+                );
+
+            const dashboardDisponivelNoRecurso =
+                !aplicarGateRecursosOperacionaisTenantRuntime
+                || !telaTemMapeamentoRecursoOperacional(
+                    "dashboard"
+                )
+                || (
+                    recursosOperacionaisTenantRuntimeProntos
+                    && telaDisponivelRecursoOperacionalTenantRuntime(
+                        recursosOperacionaisTenantRuntime,
+                        "dashboard"
+                    )
+                );
+
+            const dashboardPermitido =
+                Boolean(
+                    dashboardDisponivelNoContrato
+                    && dashboardDisponivelNoRecurso
+                    && usuarioPodeAcessarTelaSistema(
+                        permissaoSistemaRuntimeUsuario,
+                        "dashboard"
+                    )
+                );
+
+            const telaDestino =
+                dashboardPermitido
+                    ? "dashboard"
+                    : primeiraTelaPermitidaApp;
+
+            if (!telaDestino) {
+                if (ativo) {
+                    setChaveTelaInicialRuntimeEstabilizada(
+                        chaveTelaInicialRuntimeAtual
+                    );
+                }
+
+                return;
+            }
+
+            await precarregarShellAutenticadoApp(
+                telaDestino,
+                {
+                    tenant:
+                        aplicarGateModulosTenantRuntime,
+                }
+            );
+
+            if (!ativo) {
+                return;
+            }
+
+            setTela(
+                telaDestino
+            );
+
+            setChaveTelaInicialRuntimeEstabilizada(
+                chaveTelaInicialRuntimeAtual
+            );
+        }
+
+        void estabilizarTelaInicialRuntime();
+
+        return () => {
+            ativo = false;
+        };
+    }, [
+        aplicarGateModulosTenantRuntime,
+        aplicarGateRecursosOperacionaisTenantRuntime,
+        bootstrapInicialRuntimePronto,
+        chaveTelaInicialRuntimeAtual,
+        contextoPermissaoProntoApp,
+        erroPermissaoRuntimeUsuario,
+        modulosTenantRuntime,
+        permissaoSistemaRuntimeUsuario,
+        primeiraTelaPermitidaApp,
+        recursosOperacionaisTenantRuntime,
+        recursosOperacionaisTenantRuntimeProntos,
+        telaInicialRuntimeEstabilizada,
+        trocaSenhaTemporariaPendenteApp,
+    ]);
+
     const aguardandoTelaPermitidaApp = Boolean(
-        usuario?.email
+        telaInicialRuntimeEstabilizada
+        && usuario?.email
         && contextoPermissaoProntoApp
         && !trocaSenhaTemporariaPendenteApp
         && primeiraTelaPermitidaApp
@@ -1988,6 +2187,42 @@ export default function App() {
         return <SupabaseConfiguracaoPendente />;
     }
 
+    const acessoTenantRuntimePendenteVisual =
+        Boolean(
+            tenantResolvido
+            && usuario?.id
+            && (
+                acessoTenantRuntime.estado ===
+                    "inativo"
+                || acessoTenantRuntime.estado ===
+                    "carregando"
+            )
+        );
+
+    const acessoTenantRuntimePodeContinuarBootstrap =
+        Boolean(
+            !tenantResolvido
+            || !usuario?.id
+            || acessoTenantRuntime.estado ===
+                "autorizado"
+        );
+
+    const bootstrapVisualInicialAtivo =
+        Boolean(
+            resolvendoTenant
+            || carregandoSessao
+            || acessoTenantRuntimePendenteVisual
+            || (
+                usuario?.id
+                && acessoTenantRuntimePodeContinuarBootstrap
+                && !telaInicialRuntimeEstabilizada
+            )
+        );
+
+    if (bootstrapVisualInicialAtivo) {
+        return <AppCarregandoSistema />;
+    }
+
     if (
         tenantResolvido
         && usuario?.id
@@ -2000,9 +2235,6 @@ export default function App() {
             || acessoTenantRuntime.estado ===
                 "carregando";
 
-        if (validandoAcessoTenant) {
-            return <AppCarregandoSistema />;
-        }
 
         const tituloAcessoTenant =
             validandoAcessoTenant
@@ -2119,9 +2351,6 @@ export default function App() {
                 </div>
             </div>
         );
-    }
-    if (carregandoSessao) {
-        return <AppCarregandoSistema />;
     }
 
     const tokenQrPublico = obterTokenQrPublicoApp();
@@ -2348,16 +2577,6 @@ export default function App() {
         );
     }
 
-    if (
-        usuario
-        && carregandoPermissaoRuntimeUsuario
-    ) {
-        return <AppTransicaoInterna />;
-    }
-
-    if (aguardandoTelaPermitidaApp) {
-        return <AppTransicaoInterna />;
-    }
 
 
     return (
@@ -2381,6 +2600,9 @@ export default function App() {
                     <AppContentRouter
                         supabaseClient={supabase}
                         tela={tela}
+                        telaInicialEstabilizada={
+                            telaInicialRuntimeEstabilizada
+                        }
                         tenantAdminPodeGerenciarAcessos={tenantAdminPodeGerenciarAcessos}
                         colaboradores={colaboradores}
                         empresasBanco={empresasBanco}

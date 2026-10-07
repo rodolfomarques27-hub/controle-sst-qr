@@ -348,13 +348,13 @@ export default function DdsConferenciaAssistidaSection({
                                 >
                                     <div className="flex items-center justify-between gap-2">
                                         <span className="text-xs font-black text-slate-950">{dia.data || dia.curto}</span>
-                                        <span className={`h-2 w-2 shrink-0 rounded-full ${semAtividade ? "bg-amber-500" : confirmado ? "bg-emerald-500" : "bg-red-500"}`} />
+                                        <span className={`h-2 w-2 shrink-0 rounded-full ${chuva ? "bg-blue-500" : semAtividade ? "bg-amber-500" : confirmado ? "bg-emerald-500" : "bg-red-500"}`} />
                                     </div>
                                     <p className="mt-2 truncate text-[10px] font-black uppercase text-slate-700">
                                         {chuva ? "Dia com chuva" : semAtividade ? "Sem atividade" : dia.temaConfirmado || dia.temaPlanejado || "Tema pendente"}
                                     </p>
                                     <div className="mt-2 flex items-center justify-between gap-2 text-[9px] font-bold text-slate-500">
-                                        <span className="truncate">{semAtividade ? "—" : dia.responsavelConfirmado || "Sem responsável"}</span>
+                                        <span className="truncate">{(semAtividade || chuva) ? "—" : dia.responsavelConfirmado || "Sem responsável"}</span>
                                         <span className="shrink-0">{Number(dia.horasTrabalhadas || 0).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} h</span>
                                     </div>
                                 </button>
@@ -366,16 +366,18 @@ export default function DdsConferenciaAssistidaSection({
                 <div className="mt-3">
                              {diasConferenciaAssistidaDds.map((dia, indiceDia) => {
                                 if (indiceDia !== indiceDiaSelecionadoDds) return null;
-                                const semAtividade =
-                                    dia.semAtividadeConfirmada;
                                 const chuva = dia.chuvaConfirmada;
+                                const semAtividadeReal =
+                                    dia.semAtividadeConfirmada;
+                                const semAtividade =
+                                    semAtividadeReal || chuva;
 
                                 const confirmado =
                                     dia.statusTranscricao === "confirmado";
 
                                     const statusTexto = chuva
                                     ? "Dia com chuva"
-                                    : semAtividade
+                                    : semAtividadeReal
                                     ? "Sem atividade"
                                     : confirmado
                                         ? "Confirmado"
@@ -388,11 +390,13 @@ export default function DdsConferenciaAssistidaSection({
                                 return (
                                     <article
                                         key={`tema-confirmado-${dia.chaveAssistida}`}
-                                        className={`rounded-xl border p-4 ${semAtividade
-                                            ? "border-amber-200 bg-amber-50/70"
-                                            : confirmado
-                                                ? "border-emerald-200 bg-emerald-50/40"
-                                                : "border-red-200 bg-red-50/30"}`}
+                                        className={`rounded-xl border p-4 ${chuva
+                                            ? "border-blue-200 bg-blue-50/70"
+                                            : semAtividade
+                                                ? "border-amber-200 bg-amber-50/70"
+                                                : confirmado
+                                                    ? "border-emerald-200 bg-emerald-50/40"
+                                                    : "border-red-200 bg-red-50/30"}`}
                                     >
                                         <div className="flex items-start justify-between gap-2">
                                             <div>
@@ -405,11 +409,13 @@ export default function DdsConferenciaAssistidaSection({
                                             </div>
 
                                             <span
-                                                className={`rounded-full px-2.5 py-1 text-[8px] font-black uppercase tracking-wide ${semAtividade
-                                                    ? "bg-amber-100 text-amber-800"
-                                                    : confirmado
-                                                        ? "bg-emerald-100 text-emerald-800"
-                                                        : "bg-red-100 text-red-800"}`}
+                                                className={`rounded-full px-2.5 py-1 text-[8px] font-black uppercase tracking-wide ${chuva
+                                                    ? "bg-blue-100 text-blue-800"
+                                                    : semAtividade
+                                                        ? "bg-amber-100 text-amber-800"
+                                                        : confirmado
+                                                            ? "bg-emerald-100 text-emerald-800"
+                                                            : "bg-red-100 text-red-800"}`}
                                             >
                                                 {statusTexto}
                                             </span>
@@ -489,9 +495,11 @@ export default function DdsConferenciaAssistidaSection({
                                                     semAtividade
                                                 }
                                                 placeholder={
-                                                    semAtividade
-                                                        ? "Dia sem atividade"
-                                                        : "Transcreva o tema registrado na folha"
+                                                    chuva
+                                                        ? "Dia com chuva"
+                                                        : semAtividadeReal
+                                                            ? "Dia sem atividade"
+                                                            : "Transcreva o tema registrado na folha"
                                                 }
                                                  className="mt-1 h-10 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold leading-5 text-slate-800 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                                             />
@@ -604,9 +612,11 @@ export default function DdsConferenciaAssistidaSection({
                                                     semAtividade
                                                 }
                                                 placeholder={
-                                                    semAtividade
-                                                        ? "Não se aplica"
-                                                        : "Transcreva o responsável registrado"
+                                                    chuva
+                                                        ? "Não se aplica - dia com chuva"
+                                                        : semAtividadeReal
+                                                            ? "Não se aplica"
+                                                            : "Transcreva o responsável registrado"
                                                 }
                                                 className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-800 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                                             />
@@ -859,7 +869,7 @@ export default function DdsConferenciaAssistidaSection({
                                                 }
                                                 className="rounded-lg border border-amber-200 bg-amber-50 px-2 py-2 text-[9px] font-black uppercase tracking-wide text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
                                             >
-                                                {semAtividade
+                                                {semAtividadeReal
                                                     ? "Retomar atividade"
                                                     : "Não houve atividade"}
                                             </button>

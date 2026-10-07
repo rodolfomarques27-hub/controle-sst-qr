@@ -374,6 +374,22 @@ function obterFotoPermissaoSistema(permissao = null) {
         || ""
     );
 }
+export async function carregarFotoSistemaAtualService({ supabase }) {
+    if (!supabase) {
+        throw new Error("Cliente Supabase não informado para carregar a foto do usuário atual.");
+    }
+
+    const { data, error } = await supabase.rpc("usuario_foto_sistema_atual");
+
+    if (error) {
+        throw new Error(error.message || "Erro ao carregar a foto do usuário atual.");
+    }
+
+    const foto = Array.isArray(data) ? data[0] : data;
+
+    return normalizarTexto(foto);
+}
+
 export async function carregarPermissaoSistemaAtualService({ supabase }) {
     if (!supabase) {
         throw new Error("Cliente Supabase não informado para carregar permissões do sistema.");
@@ -393,30 +409,17 @@ export async function carregarPermissaoSistemaAtualService({ supabase }) {
     }
 
     try {
-        const { data: usuarios, error: erroUsuarios } = await supabase.rpc("admin_listar_usuarios_permissoes_sistema");
+        const fotoAtual = await carregarFotoSistemaAtualService({ supabase });
 
-        if (!erroUsuarios && Array.isArray(usuarios)) {
-            const emailAtual = normalizarEmail(permissaoNormalizada.email);
-            const usuarioComFoto = usuarios.find((usuario) =>
-                normalizarEmail(usuario?.email) === emailAtual
-                && obterFotoPermissaoSistema(usuario)
-            );
-
-            const usuarioComFotoNormalizado = normalizarPermissaoSistema(usuarioComFoto || null);
-            const fotoUsuarioComFoto = obterFotoPermissaoSistema(usuarioComFotoNormalizado);
-
-            if (fotoUsuarioComFoto) {
-                return {
-                    ...permissaoNormalizada,
-                    foto_url: permissaoNormalizada.foto_url || usuarioComFotoNormalizado?.foto_url || fotoUsuarioComFoto,
-                    fotoUrl: permissaoNormalizada.fotoUrl || usuarioComFotoNormalizado?.fotoUrl || usuarioComFotoNormalizado?.foto_url || fotoUsuarioComFoto,
-                    avatar_url: permissaoNormalizada.avatar_url || usuarioComFotoNormalizado?.avatar_url || usuarioComFotoNormalizado?.avatarUrl || "",
-                    avatarUrl: permissaoNormalizada.avatarUrl || usuarioComFotoNormalizado?.avatarUrl || usuarioComFotoNormalizado?.avatar_url || "",
-                };
-            }
+        if (fotoAtual) {
+            return {
+                ...permissaoNormalizada,
+                foto_url: permissaoNormalizada.foto_url || fotoAtual,
+                fotoUrl: permissaoNormalizada.fotoUrl || permissaoNormalizada.foto_url || fotoAtual,
+            };
         }
     } catch {
-        // Mantem a permissao atual se a listagem administrativa nao estiver disponivel.
+        // Mantem a permissao atual se a foto self-scoped nao estiver disponivel.
     }
 
     return permissaoNormalizada;

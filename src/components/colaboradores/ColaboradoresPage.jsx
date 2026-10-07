@@ -73,6 +73,7 @@ import {
     usuarioPodeExecutarAcaoSistema,
     usuarioPodeExcluirSistema,
 } from "../../services/usuariosPermissoesSistemaService";
+import { emitirFeedbackSafeScan } from "../../services/safeScanFeedbackService";
 
 const CHAVE_NOVO_COLABORADOR_RECOLHIDO = "controleSstColaboradoresNovoColaboradorRecolhido";
 const CHAVE_INFO_COLABORADORES_RECOLHIDA = "controleSstColaboradoresInformacoesRecolhidas";
@@ -224,7 +225,9 @@ export function Colaboradores({
     ] =
         useState(false);
     const [importandoMassa, setImportandoMassa] = useState(false);
+    const importandoMassaRef = useRef(false);
     const [importandoFotosMassa, setImportandoFotosMassa] = useState(false);
+    const importandoFotosMassaRef = useRef(false);
     const [colaboradorEdicao, setColaboradorEdicao] = useState(null);
     const [colaboradorExclusao, setColaboradorExclusao] = useState(null);
     const permissaoSistemaAtual = permissaoSistemaUsuario;
@@ -638,19 +641,30 @@ export function Colaboradores({
                             empresaNormalizada
                         );
 
+                    const foraDaOperacao =
+                        [
+                            "Desmobilizado",
+                            "Inativo",
+                        ].includes(
+                            geral.texto
+                        );
+
                     const bateClassificacao =
                         classificacaoNormalizada ===
                             "todos"
-                            ? ![
-                                  "Desmobilizado",
-                                  "Inativo",
-                              ].includes(
-                                  geral.texto
-                              )
-                            : normalizarTextoBusca(
-                                  geral.texto
-                              ) ===
-                              classificacaoNormalizada;
+                            ? !foraDaOperacao
+                            : classificacaoNormalizada ===
+                                  "a vencer"
+                                ? !foraDaOperacao &&
+                                  Array.isArray(
+                                      avaliacao.vencendo
+                                  ) &&
+                                  avaliacao.vencendo.length >
+                                      0
+                                : normalizarTextoBusca(
+                                      geral.texto
+                                  ) ===
+                                  classificacaoNormalizada;
 
                     return (
                         bateBusca &&
@@ -1253,18 +1267,27 @@ export function Colaboradores({
                             empresaNormalizada
                         );
 
+                    const foraDaOperacao =
+                        [
+                            "Desmobilizado",
+                            "Inativo",
+                        ].includes(
+                            geral.texto
+                        );
+
                     const bateClassificacao =
                         classificacaoNormalizada === "todos"
-                            ? ![
-                                  "Desmobilizado",
-                                  "Inativo",
-                              ].includes(
-                                  geral.texto
-                              )
-                            : normalizarTextoBusca(
-                                  geral.texto
-                              ) ===
-                              classificacaoNormalizada;
+                            ? !foraDaOperacao
+                            : classificacaoNormalizada === "a vencer"
+                                ? !foraDaOperacao &&
+                                  Array.isArray(
+                                      avaliacao.vencendo
+                                  ) &&
+                                  avaliacao.vencendo.length > 0
+                                : normalizarTextoBusca(
+                                      geral.texto
+                                  ) ===
+                                  classificacaoNormalizada;
 
                     return (
                         bateBusca &&
@@ -1289,7 +1312,13 @@ export function Colaboradores({
             const logoUrl = logoRaw ? obterUrlLogoEmpresa(logoRaw) : "";
 
             avaliacao.itens
-                .filter((item) => ["pendente", "vencido"].includes(item.status.chave))
+                .filter((item) =>
+                    classificacaoNormalizada === "a vencer"
+                        ? item.status.chave === "vencendo"
+                        : ["pendente", "vencido"].includes(
+                              item.status.chave
+                          )
+                )
                 .forEach((item) => {
                     pendencias.push({
                         colaboradorId: c.id,
@@ -1403,22 +1432,59 @@ export function Colaboradores({
         }
     };
 
-    const importarColaboradoresEmMassa = async (itens = []) => {
-        if (!podeCadastrarColaboradoresSistema) {
-            if (typeof window !== "undefined") window.alert(mensagemBloqueioCadastroColaboradores);
-            return { sucesso: 0, erros: [mensagemBloqueioCadastroColaboradores] };
+    const importarColaboradoresEmMassa = async (itens = [], onProgresso) => {
+        if (importandoMassaRef.current) {
+            return {
+                sucesso: 0,
+                erros: ["Já existe uma importação de colaboradores em andamento."],
+                bloqueado: true,
+            };
         }
 
-        const lista = Array.isArray(itens) ? itens : [];
+        if (!podeCadastrarColaboradoresSistema) {
+            return {
+                sucesso: 0,
+                erros: [mensagemBloqueioCadastroColaboradores],
+            };
+        }
+
+        const lista =
+            Array.isArray(itens)
+                ? itens
+                : [];
 
         if (lista.length === 0) {
-            return { sucesso: 0, erros: ["Nenhum colaborador válido para importar."] };
+            return {
+                sucesso: 0,
+                erros: ["Nenhum colaborador válido para importar."],
+            };
         }
 
+        importandoMassaRef.current = true;
         setImportandoMassa(true);
 
         let sucesso = 0;
+        let processados = 0;
+
         const erros = [];
+        const total = lista.length;
+
+        const publicarProgresso = () => {
+            if (typeof onProgresso !== "function") return;
+
+            onProgresso({
+                total,
+                processados,
+                cadastrados: sucesso,
+                erros: erros.length,
+                percentual:
+                    total > 0
+                        ? Math.round((processados / total) * 100)
+                        : 0,
+            });
+        };
+
+        publicarProgresso();
 
         try {
             const empresasPorId = new Map(
@@ -1434,15 +1500,40 @@ export function Colaboradores({
             );
 
             for (const [indice, item] of lista.entries()) {
-                const linha = item.linha || indice + 2;
-                const empresaIdInformada = String(item.empresaId || item.empresa_id || "").trim();
-                const empresaInformada = String(item.empresaNome || "").trim();
-                const empresaExistente = empresaIdInformada
-                    ? empresasPorId.get(empresaIdInformada)
-                    : empresasPorNomeNormalizado.get(normalizarTextoBusca(empresaInformada));
+                const linha =
+                    item.linha ||
+                    indice + 2;
+
+                const empresaIdInformada =
+                    String(
+                        item.empresaId ||
+                        item.empresa_id ||
+                        ""
+                    ).trim();
+
+                const empresaInformada =
+                    String(
+                        item.empresaNome ||
+                        ""
+                    ).trim();
+
+                const empresaExistente =
+                    empresaIdInformada
+                        ? empresasPorId.get(empresaIdInformada)
+                        : empresasPorNomeNormalizado.get(
+                            normalizarTextoBusca(
+                                empresaInformada
+                            )
+                        );
 
                 if (!empresaExistente) {
-                    erros.push(`Linha ${linha}: empresa "${empresaInformada || "não informada"}" não encontrada no cadastro. Cadastre/corrija a empresa antes de importar.`);
+                    erros.push(
+                        `Linha ${linha}: empresa "${empresaInformada || "não informada"}" não encontrada no cadastro. Cadastre/corrija a empresa antes de importar.`
+                    );
+
+                    processados += 1;
+                    publicarProgresso();
+
                     continue;
                 }
 
@@ -1470,43 +1561,75 @@ export function Colaboradores({
                 if (ok) {
                     sucesso += 1;
                 } else {
-                    erros.push(`Linha ${linha}: não foi possível cadastrar este colaborador.`);
-                }
-            }
-
-            if (typeof window !== "undefined") {
-                if (erros.length) {
-                    window.alert(
-                        `Importação concluída com ressalvas.\n\nCadastrados: ${sucesso}\nNão cadastrados: ${erros.length}\n\n${erros.slice(0, 8).join("\n")}`
+                    erros.push(
+                        `Linha ${linha}: não foi possível cadastrar este colaborador.`
                     );
-                } else {
-                    window.alert(`Importação concluída. ${sucesso} colaborador(es) cadastrado(s).`);
                 }
+
+                processados += 1;
+                publicarProgresso();
             }
 
-            return { sucesso, erros };
+            return {
+                sucesso,
+                erros,
+                total,
+                processados,
+            };
         } finally {
+            importandoMassaRef.current = false;
             setImportandoMassa(false);
         }
     };
 
     const enviarFotosColaboradoresEmMassa = async (itens = []) => {
+        if (importandoFotosMassaRef.current) {
+            return {
+                sucesso: 0,
+                erros: ["Já existe um envio de fotos em andamento."],
+                bloqueado: true,
+            };
+        }
+
         if (!podeUploadColaboradoresSistema) {
-            if (typeof window !== "undefined") window.alert(mensagemBloqueioUploadColaboradores);
-            return { sucesso: 0, erros: [mensagemBloqueioUploadColaboradores] };
+            emitirFeedbackSafeScan({
+                tipo: "atencao",
+                titulo: "Envio de fotos bloqueado",
+                mensagem: mensagemBloqueioUploadColaboradores,
+            });
+
+            return {
+                sucesso: 0,
+                erros: [mensagemBloqueioUploadColaboradores],
+            };
         }
 
         if (!podeEditarColaboradoresSistema) {
-            if (typeof window !== "undefined") window.alert(mensagemBloqueioEdicaoColaboradores);
-            return { sucesso: 0, erros: [mensagemBloqueioEdicaoColaboradores] };
+            emitirFeedbackSafeScan({
+                tipo: "atencao",
+                titulo: "Envio de fotos bloqueado",
+                mensagem: mensagemBloqueioEdicaoColaboradores,
+            });
+
+            return {
+                sucesso: 0,
+                erros: [mensagemBloqueioEdicaoColaboradores],
+            };
         }
 
-        const lista = Array.isArray(itens) ? itens : [];
+        const lista =
+            Array.isArray(itens)
+                ? itens
+                : [];
 
         if (lista.length === 0) {
-            return { sucesso: 0, erros: ["Nenhuma foto válida para enviar."] };
+            return {
+                sucesso: 0,
+                erros: ["Nenhuma foto válida para enviar."],
+            };
         }
 
+        importandoFotosMassaRef.current = true;
         setImportandoFotosMassa(true);
 
         let sucesso = 0;
@@ -1514,67 +1637,99 @@ export function Colaboradores({
 
         try {
             for (const [indice, item] of lista.entries()) {
-                const colaborador = item.colaborador || {};
-                const arquivo = item.arquivo;
-                const nomeReferencia = colaborador.nome || arquivo?.name || `foto ${indice + 1}`;
+                const colaborador =
+                    item.colaborador || {};
+
+                const arquivo =
+                    item.arquivo;
+
+                const nomeReferencia =
+                    colaborador.nome ||
+                    arquivo?.name ||
+                    `foto ${indice + 1}`;
 
                 if (!colaborador.id || !arquivo) {
-                    erros.push(`${nomeReferencia}: colaborador ou arquivo inválido.`);
+                    erros.push(
+                        `${nomeReferencia}: colaborador ou arquivo inválido.`
+                    );
                     continue;
                 }
 
-                const ok = await onAtualizarColaborador?.({
-                    ...colaborador,
-                    id: colaborador.id,
-                    nome: colaborador.nome || "",
-                    empresaNome: colaborador.empresa || colaborador.empresaNome || "",
-                    funcao: colaborador.funcao || "",
-                    matricula: colaborador.matriculaEsocial || colaborador.matricula || "",
-                    cpf: colaborador.cpf || "",
-                    telefone: colaborador.telefone || "",
-                    contatoEmergenciaNome: colaborador.contatoEmergenciaNome || "",
-                    contatoEmergenciaParentesco: colaborador.contatoEmergenciaParentesco || "",
-                    contatoEmergenciaTelefone: colaborador.contatoEmergenciaTelefone || "",
-                    dataAdmissao: colaborador.dataAdmissao || "",
-                    dataNascimento: colaborador.dataNascimento || "",
-                    mostrarAniversarioDashboard: colaborador.mostrarAniversarioDashboard !== false,
-                    status: colaborador.status || "Ativo",
-                    statusMobilizacao: colaborador.statusMobilizacao || obterStatusInicialColaborador(),
-                    treinamentosRemovidos: colaborador.treinamentosRemovidos || [],
-                    treinamentosAdicionais: colaborador.treinamentosAdicionais || [],
-                    fotoAtual: obterFotoColaboradorSrc(colaborador),
-                    fotoNomeAtual: colaborador.fotoNome || colaborador.foto_nome || "",
-                    foto: arquivo,
-                });
+                try {
+                    const ok =
+                        await onAtualizarColaborador?.({
+                            ...colaborador,
+                            id: colaborador.id,
+                            nome: colaborador.nome || "",
+                            empresaNome: colaborador.empresa || colaborador.empresaNome || "",
+                            funcao: colaborador.funcao || "",
+                            matricula: colaborador.matriculaEsocial || colaborador.matricula || "",
+                            cpf: colaborador.cpf || "",
+                            telefone: colaborador.telefone || "",
+                            contatoEmergenciaNome: colaborador.contatoEmergenciaNome || "",
+                            contatoEmergenciaParentesco: colaborador.contatoEmergenciaParentesco || "",
+                            contatoEmergenciaTelefone: colaborador.contatoEmergenciaTelefone || "",
+                            dataAdmissao: colaborador.dataAdmissao || "",
+                            dataNascimento: colaborador.dataNascimento || "",
+                            mostrarAniversarioDashboard: colaborador.mostrarAniversarioDashboard !== false,
+                            status: colaborador.status || "Ativo",
+                            statusMobilizacao: colaborador.statusMobilizacao || obterStatusInicialColaborador(),
+                            treinamentosRemovidos: colaborador.treinamentosRemovidos || [],
+                            treinamentosAdicionais: colaborador.treinamentosAdicionais || [],
+                            fotoAtual: obterFotoColaboradorSrc(colaborador),
+                            fotoNomeAtual: colaborador.fotoNome || colaborador.foto_nome || "",
+                            foto: arquivo,
+                        });
 
-                if (ok) {
-                    sucesso += 1;
-                } else {
-                    erros.push(`${nomeReferencia}: não foi possível atualizar a foto.`);
-                }
-            }
+                    if (ok) {
+                        sucesso += 1;
+                    } else {
+                        erros.push(
+                            `${nomeReferencia}: não foi possível atualizar a foto.`
+                        );
+                    }
+                } catch (error) {
+                    const detalheErro =
+                        error?.message ||
+                        "falha inesperada ao atualizar a foto.";
 
-            if (typeof window !== "undefined") {
-                if (erros.length) {
-                    window.alert(
-                        `Envio de fotos concluído com ressalvas.
-
-Enviadas: ${sucesso}
-Não enviadas: ${erros.length}
-
-${erros.slice(0, 8).join("\n")}`
+                    erros.push(
+                        `${nomeReferencia}: ${detalheErro}`
                     );
-                } else {
-                    window.alert(`Envio de fotos concluído. ${sucesso} foto(s) atualizada(s).`);
                 }
             }
 
-            return { sucesso, erros };
+            if (erros.length > 0) {
+                emitirFeedbackSafeScan({
+                    tipo:
+                        sucesso > 0
+                            ? "atencao"
+                            : "erro",
+                    titulo:
+                        sucesso > 0
+                            ? "Envio concluído com ressalvas"
+                            : "Falha no envio de fotos",
+                    mensagem:
+                        `Enviadas: ${sucesso}. Não enviadas: ${erros.length}.`,
+                });
+            } else {
+                emitirFeedbackSafeScan({
+                    tipo: "sucesso",
+                    titulo: "Envio de fotos concluído",
+                    mensagem: `${sucesso} foto(s) atualizada(s) com sucesso.`,
+                });
+            }
+
+            return {
+                sucesso,
+                erros,
+                total: lista.length,
+            };
         } finally {
+            importandoFotosMassaRef.current = false;
             setImportandoFotosMassa(false);
         }
     };
-
     const funcoesSugeridas = obterTodasMatrizesFuncao().filter((item) => item.chave !== "geral");
     void versaoFuncoes;
 

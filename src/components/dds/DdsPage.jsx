@@ -2957,7 +2957,7 @@ export function DdsPage({
             }
         }
 
-        carregarTodosRegistrosDisponiveisDds();
+        void carregarTodosRegistrosDisponiveisDds();
 
         return () => {
             componenteAtivo = false;
@@ -5008,18 +5008,23 @@ export function DdsPage({
                 "responsavelConfirmado",
                 "origemTemaConfirmado",
                 "origemDocumentalTemaConfirmado",
-                "entrada",
-                "saida",
-                "inicioAlmoco",
-                "fimAlmoco",
-                "inicioDds",
-                "fimDds",
+                "horaEntrada",
+                "horaSaida",
+                "horaInicioAlmoco",
+                "horaFimAlmoco",
+                "horaInicioDds",
+                "horaFimDds",
             ];
             const pontosTexto = camposTexto.reduce(
                 (subtotal, campo) => subtotal + String(item?.[campo] || "").trim().length,
                 0
             );
-            return total + pontosTexto + (item?.semAtividadeConfirmada === true ? 20 : 0);
+            const pontosEstado =
+                item?.semAtividadeConfirmada === true ||
+                item?.chuvaConfirmada === true
+                    ? 20
+                    : 0;
+            return total + pontosTexto + pontosEstado;
         }, 0);
     }
 
@@ -5917,7 +5922,7 @@ export function DdsPage({
                         onClick={alternarNovoDdsComPersistencia}
                         role="button"
                         tabIndex={0}
-                        onKeyDown={(evento) => { if (evento.key === "Enter" || evento.key === " ") alternarNovoDdsComPersistencia(); }}
+                        onKeyDown={(evento) => { if (evento.key === "Enter" || evento.key === " ") void alternarNovoDdsComPersistencia(); }}
                         className="flex min-h-[52px] cursor-default items-center justify-between gap-3 rounded-xl transition hover:bg-slate-50"
                     >
                         <div className="flex items-center gap-3">
@@ -5931,7 +5936,7 @@ export function DdsPage({
                     </div>
                         <button
                             type="button"
-                            onClick={(evento) => { evento.stopPropagation(); alternarNovoDdsComPersistencia(); }}
+                            onClick={(evento) => { evento.stopPropagation(); void alternarNovoDdsComPersistencia(); }}
                             className="shrink-0"
                         >
                             <BotaoAlternarCardDds aberto={cardDdsAberto("novo")} />

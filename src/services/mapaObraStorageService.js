@@ -253,6 +253,71 @@ async function otimizarArquivoPlanta(arquivo) {
     return arquivoOtimizado;
 }
 
+export async function verificarExistenciaPlantaMapaStorage({
+    supabase,
+    caminho,
+    obraId = "",
+} = {}) {
+    exigirSupabase(supabase);
+
+    const caminhoSeguro =
+        validarPertencimentoCaminho(
+            caminho,
+            obraId,
+        );
+
+    const indiceUltimaBarra =
+        caminhoSeguro.lastIndexOf("/");
+
+    const pasta =
+        caminhoSeguro.slice(
+            0,
+            indiceUltimaBarra,
+        );
+
+    const nomeArquivo =
+        caminhoSeguro.slice(
+            indiceUltimaBarra + 1,
+        );
+
+    if (!pasta || !nomeArquivo) {
+        throw new Error(
+            "O caminho da planta não possui pasta e arquivo válidos.",
+        );
+    }
+
+    const { data, error } =
+        await supabase.storage
+            .from(BUCKET_MAPAS_OBRAS)
+            .list(
+                pasta,
+                {
+                    limit: 100,
+                    search: nomeArquivo,
+                    sortBy: {
+                        column: "name",
+                        order: "asc",
+                    },
+                },
+            );
+
+    if (error) {
+        throw new Error(
+            `Erro ao verificar a planta no Storage: ${error.message}`,
+        );
+    }
+
+    return (
+        Array.isArray(data)
+            ? data
+            : []
+    ).some(
+        (item) =>
+            textoSeguro(item?.name) ===
+            nomeArquivo,
+    );
+}
+
 export async function obterUrlAssinadaPlantaMapa({
     supabase,
     caminho,

@@ -91,6 +91,106 @@ function escolherArquivoFotoMaisRecente(arquivos = []) {
     return imagens[0] || (arquivos || []).find((arquivo) => arquivo?.name && !arquivo.name.endsWith("/")) || null;
 }
 
+const LIMITE_LISTAGENS_FOTOS_COLABORADORES = 4;
+const cacheCaminhoFallbackFotoColaborador = new Map();
+const filaListagensFotosColaboradores = [];
+let listagensFotosColaboradoresAtivas = 0;
+
+function processarFilaListagensFotosColaboradores() {
+    while (
+        listagensFotosColaboradoresAtivas < LIMITE_LISTAGENS_FOTOS_COLABORADORES
+        && filaListagensFotosColaboradores.length > 0
+    ) {
+        const item = filaListagensFotosColaboradores.shift();
+
+        if (!item) return;
+
+        listagensFotosColaboradoresAtivas += 1;
+
+        void Promise.resolve()
+            .then(item.executar)
+            .then(item.resolve, item.reject)
+            .finally(() => {
+                listagensFotosColaboradoresAtivas = Math.max(
+                    0,
+                    listagensFotosColaboradoresAtivas - 1
+                );
+
+                processarFilaListagensFotosColaboradores();
+            });
+    }
+}
+
+function executarListagemFotoColaboradorComLimite(executar) {
+    return new Promise((resolve, reject) => {
+        filaListagensFotosColaboradores.push({
+            executar,
+            resolve,
+            reject,
+        });
+
+        processarFilaListagensFotosColaboradores();
+    });
+}
+
+function buscarCaminhoFallbackFotoColaborador(idParaBusca = "") {
+    const idTratado = String(idParaBusca || "").trim();
+
+    if (!idTratado) {
+        return Promise.resolve("");
+    }
+
+    const promessaExistente =
+        cacheCaminhoFallbackFotoColaborador.get(idTratado);
+
+    if (promessaExistente) {
+        return promessaExistente;
+    }
+
+    const promessa = executarListagemFotoColaboradorComLimite(
+        async () => {
+            const { data, error } = await supabase.storage
+                .from("fotos-colaboradores")
+                .list(idTratado, {
+                    limit: 50,
+                    sortBy: {
+                        column: "created_at",
+                        order: "desc",
+                    },
+                });
+
+            if (error) {
+                throw error;
+            }
+
+            const arquivo =
+                escolherArquivoFotoMaisRecente(data || []);
+
+            return arquivo?.name
+                ? `${idTratado}/${arquivo.name}`
+                : "";
+        }
+    );
+
+    cacheCaminhoFallbackFotoColaborador.set(
+        idTratado,
+        promessa
+    );
+
+    promessa.catch(() => {
+        if (
+            cacheCaminhoFallbackFotoColaborador.get(idTratado)
+            === promessa
+        ) {
+            cacheCaminhoFallbackFotoColaborador.delete(
+                idTratado
+            );
+        }
+    });
+
+    return promessa;
+}
+
 export function FotoColaborador({ src, colaborador = null, colaboradorId = "", nome, className = "h-12 w-12", iconClassName = "h-5 w-5", imageStyle = null, loading = "lazy" }) {
     const origem = colaborador || src;
     const idParaBusca = obterIdColaboradorFoto(origem, colaboradorId);
@@ -124,25 +224,22 @@ export function FotoColaborador({ src, colaborador = null, colaboradorId = "", n
             setTentouFallback(true);
 
             try {
-                const { data, error } = await supabase.storage
-                    .from("fotos-colaboradores")
-                    .list(idParaBusca, {
-                        limit: 50,
-                        sortBy: { column: "created_at", order: "desc" },
-                    });
+                const caminhoEncontrado =
+                    await buscarCaminhoFallbackFotoColaborador(
+                        idParaBusca
+                    );
 
-                if (error || !ativo) return;
+                if (!ativo) return;
 
-                const arquivo = escolherArquivoFotoMaisRecente(data || []);
-                if (arquivo?.name) {
-                    setCaminhoFallback(`${idParaBusca}/${arquivo.name}`);
+                if (caminhoEncontrado) {
+                    setCaminhoFallback(caminhoEncontrado);
                 }
             } catch {
                 // Mantém o placeholder quando não houver política de leitura/listagem para o bucket.
             }
         }
 
-        buscarFotoPorPastaColaborador();
+        void buscarFotoPorPastaColaborador();
 
         return () => {
             ativo = false;

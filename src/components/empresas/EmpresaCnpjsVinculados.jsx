@@ -23,6 +23,10 @@ import {
     listarCnpjsEmpresa,
 } from "../../services/empresaCnpjsService";
 
+import {
+    confirmarSafeScan,
+} from "../../services/safeScanConfirmService.js";
+
 const FORMULARIO_INICIAL = {
     cnpj: "",
     tipo: "FILIAL",
@@ -225,10 +229,18 @@ function VinculoCnpjCard({
             }
 
             const confirmado =
-                typeof window !== "undefined" &&
-                window.confirm(
-                    `Excluir o vínculo do CNPJ ${cnpjVisual}?`
-                );
+                await confirmarSafeScan({
+                    titulo:
+                        "Excluir vínculo de CNPJ",
+                    mensagem:
+                        `Excluir o vínculo do CNPJ ${cnpjVisual}?`,
+                    confirmarTexto:
+                        "Excluir vínculo",
+                    cancelarTexto:
+                        "Cancelar",
+                    variante:
+                        "perigo",
+                });
 
             if (!confirmado) {
                 return;

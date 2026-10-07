@@ -19,6 +19,7 @@ import {
 } from "../../services/mapaObraService";
 import {
   obterUrlAssinadaPlantaMapa,
+  verificarExistenciaPlantaMapaStorage,
 } from "../../services/mapaObraStorageService";
 import {
   carregarExtintoresCadastro,
@@ -594,6 +595,20 @@ async function hidratarReferenciaImagemVisualizacao(
     return referencia;
   }
 
+  const existeNoStorage =
+    await verificarExistenciaPlantaMapaStorage({
+      supabase,
+      caminho: referencia.path,
+      obraId,
+    });
+
+  if (!existeNoStorage) {
+    return {
+      ...referencia,
+      url: "",
+    };
+  }
+
   const url =
     await obterUrlAssinadaPlantaMapa({
       supabase,
@@ -734,7 +749,7 @@ export function MapaObraVisualizacaoPage({ auditoriasCampo = [] }) {
       }
     }
 
-    carregarMapaRemoto();
+    void carregarMapaRemoto();
 
     return () => {
       ativo = false;

@@ -25,11 +25,13 @@ import {
   obterUrlAssinadaPlantaMapa,
   removerPlantaMapaStorage,
   validarArquivoPlantaMapa,
+  verificarExistenciaPlantaMapaStorage,
 } from "../../services/mapaObraStorageService";
 import {
   carregarExtintoresCadastro,
   salvarExtintorCadastro,
 } from "../../services/extintoresCadastroSyncService";
+import { confirmarSafeScan } from "../../services/safeScanConfirmService.js";
 import { AmbientesControleTabela } from "./AmbientesControleTabela";
 import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import mapaAlertaHero from "../../assets/mapa-alerta-hero.webp";
@@ -156,6 +158,20 @@ async function hidratarReferenciaImagemMapa(
     return referencia;
   }
 
+  const existeNoStorage =
+    await verificarExistenciaPlantaMapaStorage({
+      supabase: clienteSupabase,
+      caminho: referencia.path,
+      obraId,
+    });
+
+  if (!existeNoStorage) {
+    return {
+      ...referencia,
+      url: "",
+    };
+  }
+
   const url = await obterUrlAssinadaPlantaMapa({
     supabase: clienteSupabase,
     caminho: referencia.path,
@@ -202,6 +218,45 @@ async function hidratarMapaObraComUrls(
     pontos,
   };
 }
+
+function obterAvisoPlantasAusentesMapa(mapa) {
+  const plantaGeralAusente = Boolean(
+    mapa?.planta?.path &&
+    !mapa?.planta?.url,
+  );
+
+  const totalPlantasDetalhadasAusentes =
+    (Array.isArray(mapa?.pontos)
+      ? mapa.pontos
+      : []
+    ).filter(
+      (ponto) =>
+        ponto?.plantaDetalhada?.path &&
+        !ponto?.plantaDetalhada?.url,
+    ).length;
+
+  if (
+    plantaGeralAusente &&
+    totalPlantasDetalhadasAusentes > 0
+  ) {
+    return "A planta geral e uma ou mais plantas detalhadas não estão mais disponíveis no armazenamento. Os demais dados do mapa foram mantidos. Envie novamente as imagens ausentes para restaurar a visualização.";
+  }
+
+  if (plantaGeralAusente) {
+    return "A planta cadastrada não está mais disponível no armazenamento. Os demais dados do mapa foram mantidos. Envie novamente a planta para restaurar a visualização.";
+  }
+
+  if (totalPlantasDetalhadasAusentes === 1) {
+    return "Mapa carregado. Uma planta detalhada não está mais disponível no armazenamento. Os demais dados foram mantidos. Envie novamente essa planta para restaurar a visualização.";
+  }
+
+  if (totalPlantasDetalhadasAusentes > 1) {
+    return `Mapa carregado. ${totalPlantasDetalhadasAusentes} plantas detalhadas não estão mais disponíveis no armazenamento. Os demais dados foram mantidos. Envie novamente essas plantas para restaurar a visualização.`;
+  }
+
+  return "";
+}
+
 function ResumoMapaCard({ label, value, detail, tone = "sky" }) {
   const tones = {
     sky: "border-sky-100 bg-sky-50/70 text-sky-700",
@@ -668,10 +723,16 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
             return;
           }
 
+          const avisoPlantasAusentes =
+            obterAvisoPlantasAusentesMapa(
+              hidratado,
+            );
+
           setMapa(hidratado);
           salvarMapaObraLocal(hidratado);
           setAlteracoesPendentes(false);
           setMensagem(
+            avisoPlantasAusentes ||
             "Mapa carregado do banco de dados.",
           );
 
@@ -743,11 +804,15 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
           possuiDadosLocais,
         );
 
+        console.warn(
+          "Falha ao sincronizar o mapa remoto; recuperação local aplicada.",
+          error,
+        );
+
         setMensagem(
-          `Não foi possível carregar o mapa remoto. Recuperação local utilizada: ${
-            error?.message ||
-            "erro não identificado"
-          }`,
+          possuiDadosLocais
+            ? "Não foi possível sincronizar o mapa com o servidor agora. Os dados locais foram preservados. Tente novamente."
+            : "Não foi possível carregar o mapa agora. Tente novamente em instantes.",
         );
       } finally {
         if (
@@ -760,7 +825,7 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
       }
     }
 
-    carregarMapaSelecionado();
+    void carregarMapaSelecionado();
 
     return () => {
       ativo = false;
@@ -1539,7 +1604,7 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
     });
   }
 
-  function excluirTipoAlertaPersonalizado(tipo) {
+  async function excluirTipoAlertaPersonalizado(tipo) {
     const nome = String(tipo || "").trim();
     if (!nome || !tiposAlertaPersonalizados.includes(nome)) return;
 
@@ -1558,12 +1623,19 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
       ? ` ${totalEmUso} alerta(s) existente(s) manterão este tipo.`
       : "";
 
-    if (
-      !window.confirm(
-        `Remover "${nome}" da lista de tipos personalizados?${complemento}`,
-      )
-    )
+    const confirmado =
+      await confirmarSafeScan({
+        titulo: "Remover tipo de alerta",
+        mensagem:
+          `Remover "${nome}" da lista de tipos personalizados?${complemento}`,
+        confirmarTexto: "Remover tipo",
+        cancelarTexto: "Cancelar",
+        variante: "atencao",
+      });
+
+    if (!confirmado) {
       return;
+    }
 
     atualizarMapa({
       ...mapa,
@@ -1815,9 +1887,15 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
         ? ` ${totalEmUso} ponto(s) existente(s) continuarão com esse tipo.`
         : "";
 
-    const confirmado = window.confirm(
-      `Excluir o tipo personalizado "${tipoExistente}" da lista?${textoEmUso}`,
-    );
+    const confirmado =
+      await confirmarSafeScan({
+        titulo: "Excluir tipo de ponto",
+        mensagem:
+          `Excluir o tipo personalizado "${tipoExistente}" da lista?${textoEmUso}`,
+        confirmarTexto: "Excluir tipo",
+        cancelarTexto: "Cancelar",
+        variante: "atencao",
+      });
 
     if (!confirmado) {
       return;
@@ -1907,9 +1985,14 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
     }
 
     const confirmado =
-      window.confirm(
-        `Excluir ${ponto.nome}?`,
-      );
+      await confirmarSafeScan({
+        titulo: "Excluir ponto",
+        mensagem:
+          `Excluir ${ponto.nome}?`,
+        confirmarTexto: "Excluir ponto",
+        cancelarTexto: "Cancelar",
+        variante: "perigo",
+      });
 
     if (!confirmado) {
       return;
@@ -2918,7 +3001,7 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
                               onClick={(evento) => {
                                 evento.stopPropagation();
 
-                                removerTipoPontoPersonalizado(
+                                void removerTipoPontoPersonalizado(
                                   tipo,
                                 );
                               }}
