@@ -15,7 +15,8 @@ type ClienteRpcPrivado = {
 export type OrigemProvedorEmail =
   | "CENTRAL"
   | "LEGADO_GMAIL"
-  | "TENANT_CLIENTE";
+  | "TENANT_CLIENTE"
+  | "USUARIO_CLIENTE";
 
 export type CanalEmail =
   | "PLATAFORMA"
