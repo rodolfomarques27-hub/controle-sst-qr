@@ -859,7 +859,7 @@ assert.match(
 
 assert.match(
     codigoBaseCertificadosTreinamentos,
-    /Função: \{colaborador\.funcao \|\| colaborador\.cargo \|\| "Não informada"\}/,
+    /<p className="treinamentos-base-certificados-card__funcao">\s*<span className="treinamentos-base-certificados-card__rotulo-dado">\s*Função:\s*<\/span>\s*\{" "\}\s*\{colaborador\.funcao \|\| colaborador\.cargo \|\| "Não informada"\}/,
     "O cartão da Base deve exibir a função do colaborador."
 );
 
