@@ -234,11 +234,52 @@ assert.match(
   "A autorização deve receber o tenant explícito.",
 );
 
-assert.match(
-  edge,
-  /ACOES_TECNICAS\.has\([\s\S]*?podeGerenciarTenant\([\s\S]*?tenantId,[\s\S]*?\)[\s\S]*?PERMISSAO_NEGADA/,
-  "As operações técnicas devem continuar protegidas por autorização tenant-scoped.",
+const inicioGateTenant = edge.indexOf(
+  "ACOES_TECNICAS.has(",
 );
+
+const fimGateTenant = edge.indexOf(
+  "return await acaoSalvar(",
+  inicioGateTenant,
+);
+
+assert.ok(
+  inicioGateTenant >= 0 &&
+    fimGateTenant > inicioGateTenant,
+  "O gate tenant-scoped deve anteceder o salvamento.",
+);
+
+const blocoGateTenant = edge.slice(
+  inicioGateTenant,
+  fimGateTenant,
+);
+
+const marcadoresGateTenant = [
+  "ACOES_TECNICAS.has(",
+  "podeGerenciarTenant(",
+  "userClient,",
+  "tenantId,",
+  "!permitido",
+  "throw new ErroHttp(",
+  "403,",
+  '"PERMISSAO_NEGADA"',
+];
+
+let posicaoGateTenant = 0;
+
+for (const marcador of marcadoresGateTenant) {
+  const posicaoMarcador = blocoGateTenant.indexOf(
+    marcador,
+    posicaoGateTenant,
+  );
+
+  assert.ok(
+    posicaoMarcador >= 0,
+    "Gate tenant-scoped incompleto: " + marcador,
+  );
+
+  posicaoGateTenant = posicaoMarcador + marcador.length;
+}
 
 assert.doesNotMatch(
   edge,

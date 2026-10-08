@@ -234,15 +234,20 @@ function booleano(
 function emailValido(
   valor: string,
 ) {
+  const arroba =
+    valor.indexOf("@");
+
+  const ponto =
+    valor.indexOf(".", arroba + 2);
+
   return (
-    valor.length >=
-      3 &&
-    valor.length <=
-      254 &&
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/i
-      .test(
-        valor,
-      )
+    valor.length >= 3 &&
+    valor.length <= 254 &&
+    arroba > 0 &&
+    arroba === valor.lastIndexOf("@") &&
+    ponto > arroba + 1 &&
+    ponto < valor.length - 1 &&
+    !/\s/.test(valor)
   );
 }
 
