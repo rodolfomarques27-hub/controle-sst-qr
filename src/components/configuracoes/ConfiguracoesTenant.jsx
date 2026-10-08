@@ -24,11 +24,15 @@ import {
     TenantAdminBrandingPanel,
 } from "../../features/tenant-admin/components/TenantAdminBrandingPanel.jsx";
 import {
+    TenantAdminEmailProviderPanel,
+} from "../../features/tenant-admin/components/TenantAdminEmailProviderPanel.jsx";
+import {
     CertidaoMensalEmailConfiguracoes,
 } from "./CertidaoMensalEmailConfiguracoes";
 import {
     ModelosEmailSstConfiguracoes,
 } from "./ModelosEmailSstConfiguracoes";
+import { ProvedorEmailUsuarioConfiguracoes } from "./ProvedorEmailUsuarioConfiguracoes.jsx";
 import {
     TIPOS_MODELO_EMAIL_SST,
 } from "../../constants/modelosEmailSstConstants";
@@ -477,6 +481,10 @@ export function ConfiguracoesTenant({
         "administrador";
 
     const podeAlterarIdentidadeVisual =
+        perfilUsuarioChave ===
+        "administrador";
+
+    const podeGerenciarEmailTenant =
         perfilUsuarioChave ===
         "administrador";
 
@@ -3659,6 +3667,54 @@ export function ConfiguracoesTenant({
                 </section>
             ) : null}
 
+            {podeGerenciarEmailTenant && tenantId ? (
+                <section
+                    id="config-smtp-empresa"
+                    className="scroll-mt-24"
+                >
+                    <details
+                        name="configuracoes-tenant"
+                        className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                    >
+                        <summary className="flex h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+                            <span className="text-sm font-black text-slate-950 sm:text-base">
+                                SMTP da empresa
+                            </span>
+                            <ChevronDown
+                                aria-hidden="true"
+                                className="h-5 w-5 shrink-0 text-slate-500 transition-transform group-open:rotate-180"
+                            />
+                        </summary>
+                        <div className="border-t border-slate-100 bg-slate-50/40 p-3 sm:p-4">
+                            <p className="mb-3 text-xs leading-5 text-slate-600">
+                                Configuração compartilhada por este ambiente. A Conta Mestre SafeScan também pode administrá-la.
+                            </p>
+                            <TenantAdminEmailProviderPanel
+                                key={tenantId}
+                                ocultarModosAlternativos
+                                tenant={{
+                                    tenant_id: tenantId,
+                                    tenant_nome: tenantNome,
+                                }}
+                            />
+                        </div>
+                    </details>
+                </section>
+            ) : null}
+
+            {auditoriaDisponivel && tenantId ? (
+                <section id="config-meu-provedor-email" className="scroll-mt-24">
+                    <details name="configuracoes-tenant" className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <summary className="flex h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+                            <span className="text-sm font-black text-slate-950 sm:text-base">Meu provedor de e-mail</span>
+                            <ChevronDown aria-hidden="true" className="h-5 w-5 text-slate-500 transition-transform group-open:rotate-180" />
+                        </summary>
+                        <div className="border-t border-slate-100 bg-slate-50/40">
+                            <ProvedorEmailUsuarioConfiguracoes key={tenantId} tenantId={tenantId} supabaseClient={supabaseClient} emailUsuario={emailUsuario} nomeUsuario={nomeUsuario} />
+                        </div>
+                    </details>
+                </section>
+            ) : null}
             <details
                 open={estadoCardsConfiguracoesAtivo.versaoSafescan}
                 onToggle={(evento) => {

@@ -22,6 +22,10 @@ import {
     testarConfiguracaoEmailTenantAdminService,
 } from "../services/tenantAdminEmailProviderService.js";
 
+import {
+    mensagemTesteEmailTenant,
+} from "../services/tenantAdminEmailMensagens.js";
+
 const FORMULARIO_PADRAO =
     Object.freeze({
         provedor:
@@ -241,6 +245,7 @@ function StatusTag({
 
 export function TenantAdminEmailProviderPanel({
     tenant,
+    ocultarModosAlternativos = false,
 }) {
     const tenantId =
         texto(
@@ -701,9 +706,9 @@ export function TenantAdminEmailProviderPanel({
             }
             else {
                 setErro(
-                    resultado.teste?.codigo
-                        ? `Teste SMTP reprovado (${resultado.teste.codigo}).`
-                        : "Teste SMTP reprovado.",
+                    mensagemTesteEmailTenant(
+                        resultado.teste?.codigo,
+                    ),
                 );
             }
         }
@@ -848,7 +853,7 @@ export function TenantAdminEmailProviderPanel({
                             </h2>
 
                             <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">
-                                Configuração técnica exclusiva da Conta Mestre SafeScan.
+                                Configuração disponível à Conta Mestre e ao administrador autorizado deste tenant.
                                 Credenciais são gravadas de forma write-only e nunca são
                                 devolvidas para esta tela.
                             </p>
@@ -1339,7 +1344,12 @@ export function TenantAdminEmailProviderPanel({
                                     permitido:
                                         true,
                                 },
-                            ].map(
+                            ].filter(
+                                (opcao) =>
+                                    !ocultarModosAlternativos ||
+                                    opcao.modo ===
+                                        "PROVEDOR_CLIENTE",
+                            ).map(
                                 (
                                     opcao,
                                 ) => {

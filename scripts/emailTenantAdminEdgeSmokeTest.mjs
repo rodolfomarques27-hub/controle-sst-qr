@@ -10,7 +10,7 @@ const migration =
       import.meta.url,
     ),
     "utf8",
-  );
+  ).replace(/\r\n?/g, "\n");
 
 const edge =
   readFileSync(
@@ -224,14 +224,122 @@ assert.match(
 
 assert.match(
   edge,
-  /usuario_admin_global/,
-  "Operações técnicas devem depender de usuario_admin_global().",
+  /"usuario_pode_gerenciar_tenant"/,
+  "Operações técnicas devem consultar a autorização administrativa do tenant.",
 );
 
 assert.match(
   edge,
+  /p_tenant_id:\s*tenantId/,
+  "A autorização deve receber o tenant explícito.",
+);
+
+const inicioGateTenant = edge.indexOf(
+  "ACOES_TECNICAS.has(",
+);
+
+const fimGateTenant = edge.indexOf(
+  "return await acaoSalvar(",
+  inicioGateTenant,
+);
+
+assert.ok(
+  inicioGateTenant >= 0 &&
+    fimGateTenant > inicioGateTenant,
+  "O gate tenant-scoped deve anteceder o salvamento.",
+);
+
+const blocoGateTenant = edge.slice(
+  inicioGateTenant,
+  fimGateTenant,
+);
+
+const marcadoresGateTenant = [
+  "ACOES_TECNICAS.has(",
+  "podeGerenciarTenant(",
+  "userClient,",
+  "tenantId,",
+  "!permitido",
+  "throw new ErroHttp(",
+  "403,",
+  '"PERMISSAO_NEGADA"',
+];
+
+let posicaoGateTenant = 0;
+
+for (const marcador of marcadoresGateTenant) {
+  const posicaoMarcador = blocoGateTenant.indexOf(
+    marcador,
+    posicaoGateTenant,
+  );
+
+  assert.ok(
+    posicaoMarcador >= 0,
+    "Gate tenant-scoped incompleto: " + marcador,
+  );
+
+  posicaoGateTenant = posicaoMarcador + marcador.length;
+}
+
+assert.doesNotMatch(
+  edge,
   /Operação técnica de SMTP restrita à Conta Mestre SafeScan/,
-  "Edge deve bloquear operações técnicas fora da Conta Mestre.",
+  "A exclusividade anterior da Conta Mestre não pode permanecer.",
+);
+
+const inicioR11A3 =
+  edge.indexOf(
+    "async function acaoDefinirModo(",
+  );
+
+const restoR11A3 =
+  edge.slice(
+    Math.max(0, inicioR11A3),
+  );
+
+const fimRelativoR11A3 =
+  restoR11A3.search(
+    /\r?\nDeno\.serve\(/,
+  );
+
+assert.ok(
+  inicioR11A3 >= 0 &&
+    fimRelativoR11A3 > 0,
+  "R11-A3: função definir_modo deve estar localizada.",
+);
+
+const blocoR11A3 =
+  restoR11A3.slice(
+    0,
+    fimRelativoR11A3,
+  );
+
+assert.match(
+  blocoR11A3,
+  /modoEnvio\s*!==\s*"PROVEDOR_CLIENTE"[\s\S]*?await userClient\.rpc\(\s*"usuario_admin_global"/,
+  "R11-A3: modos alternativos exigem autorização global.",
+);
+
+assert.match(
+  blocoR11A3,
+  /!erroAdminGlobal[\s\S]*?adminGlobal === true[\s\S]*?Array\.isArray\(adminGlobal\)[\s\S]*?adminGlobal\[0\] === true/,
+  "R11-A3: erro de RPC deve negar acesso.",
+);
+
+assert.match(
+  blocoR11A3,
+  /if\s*\(\s*!permitido\s*\)[\s\S]*?403,[\s\S]*?"PERMISSAO_NEGADA"[\s\S]*?backend_definir_modo_email_tenant/,
+  "R11-A3: acesso negado deve bloquear escrita de modo.",
+);
+
+assert.match(
+  edge,
+  /ACOES_TECNICAS\.has\([\s\S]*?podeGerenciarTenant\([\s\S]*?tenantId/,
+  "R11-A3: gate administrativo do tenant deve ser preservado.",
+);
+
+console.log(
+  "R11A3_MASTER_ONLY_MODES=GREEN",
 );
 
 assert.match(
@@ -402,7 +510,7 @@ console.log(
 );
 
 console.log(
-  "TECNICO_MASTER_ONLY=SIM",
+  "TECNICO_GLOBAL_OU_ADMIN_TENANT=SIM",
 );
 
 console.log(
