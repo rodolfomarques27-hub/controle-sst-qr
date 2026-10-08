@@ -867,15 +867,20 @@ function normalizarConfiguracaoSegura(
   };
 }
 
-async function podeGerenciarGlobal(
+async function podeGerenciarTenant(
   userClient: any,
+  tenantId: string,
 ) {
   const {
     data,
     error,
   } =
     await userClient.rpc(
-      "usuario_admin_global",
+      "usuario_pode_gerenciar_tenant",
+      {
+        p_tenant_id:
+          tenantId,
+      },
     );
 
   if (error) {
@@ -1251,6 +1256,37 @@ async function acaoDefinirModo(
     );
   }
 
+  // R11-A3: modos alternativos exclusivos da Conta Mestre.
+  if (
+    modoEnvio !==
+    "PROVEDOR_CLIENTE"
+  ) {
+    const {
+      data: adminGlobal,
+      error: erroAdminGlobal,
+    } = await userClient.rpc(
+      "usuario_admin_global",
+    );
+
+    const permitido =
+      !erroAdminGlobal &&
+      (
+        adminGlobal === true ||
+        (
+          Array.isArray(adminGlobal) &&
+          adminGlobal[0] === true
+        )
+      );
+
+    if (!permitido) {
+      throw new ErroHttp(
+        403,
+        "PERMISSAO_NEGADA",
+        "Somente a Conta Mestre SafeScan pode selecionar este modo operacional.",
+      );
+    }
+  }
+
   const versaoEsperada =
     versaoOpcional(
       corpo.versaoEsperada ??
@@ -1512,8 +1548,9 @@ Deno.serve(
         )
       ) {
         const permitido =
-          await podeGerenciarGlobal(
+          await podeGerenciarTenant(
             userClient,
+            tenantId,
           );
 
         if (
@@ -1522,7 +1559,7 @@ Deno.serve(
           throw new ErroHttp(
             403,
             "PERMISSAO_NEGADA",
-            "Operação técnica de SMTP restrita à Conta Mestre SafeScan.",
+            "Sem permissão administrativa para configurar o SMTP deste tenant.",
           );
         }
       }

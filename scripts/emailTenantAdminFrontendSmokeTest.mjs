@@ -66,12 +66,7 @@ exigir(
 );
 
 exigir(
-    page.includes(
-        'abaAtiva ===\n                            "email"',
-    ) ||
-    page.includes(
-        'abaAtiva ===\r\n                            "email"',
-    ),
+    /\babaAtiva\s*===\s*"email"\s*\?\s*\(\s*<TenantAdminEmailProviderPanel\b/s.test(page),
     "Renderização da aba E-mail não encontrada.",
 );
 

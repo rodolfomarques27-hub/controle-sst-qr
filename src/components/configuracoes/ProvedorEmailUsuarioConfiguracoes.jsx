@@ -22,7 +22,15 @@ const BOTAO = "inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text
 function formularioDe(c, emailUsuario = "", nomeUsuario = "") {
     if (!c) {
         const email = String(emailUsuario || "").trim();
-        const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        const posicaoArroba = email.indexOf("@");
+        const dominio = posicaoArroba >= 0 ? email.slice(posicaoArroba + 1) : "";
+        const posicaoPonto = dominio.lastIndexOf(".");
+        const emailValido =
+            posicaoArroba > 0 &&
+            posicaoArroba === email.lastIndexOf("@") &&
+            posicaoPonto > 0 &&
+            posicaoPonto < dominio.length - 1 &&
+            !/\s/.test(email);
         const nome = String(nomeUsuario || "").trim();
 
         return {
@@ -78,7 +86,7 @@ export function ProvedorEmailUsuarioConfiguracoes({ tenantId, supabaseClient, em
 
     useEffect(() => {
         let valido = true;
-        Promise.resolve().then(async () => {
+        void Promise.resolve().then(async () => {
             if (!valido) return;
 
             setLoading(true);
@@ -123,8 +131,9 @@ export function ProvedorEmailUsuarioConfiguracoes({ tenantId, supabaseClient, em
         setForm((anterior) => ({ ...anterior, ...padrao, provedor }));
     };
 
-    const alterado = JSON.stringify(form) !== JSON.stringify(formularioDe(config));
+    const alterado = consultado && JSON.stringify(form) !== JSON.stringify(formularioDe(config, emailUsuario, nomeUsuario));
     const bloqueado = loading || Boolean(busy) || !consultado;
+    const edicaoBloqueada = loading || Boolean(busy);
     const temSenha = config?.credencialConfigurada === true;
     const podeTestar = temSenha && config?.ativo === true && !bloqueado && !alterado && !novaSenha;
     const custom = form.provedor === "SMTP_PERSONALIZADO";
@@ -212,7 +221,7 @@ export function ProvedorEmailUsuarioConfiguracoes({ tenantId, supabaseClient, em
                         Não altera o SMTP central nem o provedor do tenant.
                     </p>
                 </div>
-                <button type="button" disabled={bloqueado} onClick={atualizar}
+                <button type="button" disabled={loading || Boolean(busy)} onClick={atualizar}
                     className={BOTAO + " border-slate-200 bg-white text-slate-700"}>
                     <RefreshCw className="h-4 w-4" /> Atualizar
                 </button>
@@ -247,7 +256,7 @@ export function ProvedorEmailUsuarioConfiguracoes({ tenantId, supabaseClient, em
                 <div className="grid gap-4 md:grid-cols-2">
                     <label className="text-xs font-bold text-slate-600">
                         Provedor
-                        <select name="provedor" value={form.provedor} disabled={bloqueado}
+                        <select name="provedor" value={form.provedor} disabled={edicaoBloqueada}
                             onChange={(e) => trocarProvedor(e.target.value)} className={INPUT}>
                             <option value="GMAIL_SMTP">Gmail SMTP</option>
                             <option value="MICROSOFT_365_SMTP">Microsoft 365 SMTP</option>
@@ -257,7 +266,7 @@ export function ProvedorEmailUsuarioConfiguracoes({ tenantId, supabaseClient, em
                     <label className="text-xs font-bold text-slate-600">
                         Segurança
                         <select name="modoSeguranca" value={form.modoSeguranca}
-                            disabled={bloqueado || form.provedor === "MICROSOFT_365_SMTP"}
+                            disabled={edicaoBloqueada || form.provedor === "MICROSOFT_365_SMTP"}
                             onChange={(e) => {
                                 const modo = e.target.value;
                                 setForm((anterior) => ({
@@ -271,22 +280,22 @@ export function ProvedorEmailUsuarioConfiguracoes({ tenantId, supabaseClient, em
                         </select>
                     </label>
                     <Campo id="host" label="Servidor SMTP" value={form.host}
-                        onChange={alterar} disabled={bloqueado || !custom} required />
+                        onChange={alterar} disabled={edicaoBloqueada || !custom} required />
                     <Campo id="porta" label="Porta" type="number" value={form.porta}
-                        onChange={alterar} disabled={bloqueado || !custom} required />
+                        onChange={alterar} disabled={edicaoBloqueada || !custom} required />
                     <Campo id="usuarioSmtp" label="Usuário SMTP" value={form.usuarioSmtp}
-                        onChange={alterar} disabled={bloqueado} required />
+                        onChange={alterar} disabled={edicaoBloqueada} required />
                     <Campo id="remetenteEmail" label="E-mail remetente" type="email"
-                        value={form.remetenteEmail} onChange={alterar} disabled={bloqueado} required />
+                        value={form.remetenteEmail} onChange={alterar} disabled={edicaoBloqueada} required />
                     <Campo id="remetenteNomePadrao" label="Nome do remetente"
-                        value={form.remetenteNomePadrao} onChange={alterar} disabled={bloqueado} required />
+                        value={form.remetenteNomePadrao} onChange={alterar} disabled={edicaoBloqueada} required />
                     <Campo id="responderParaPadrao" label="Responder para (opcional)" type="email"
-                        value={form.responderParaPadrao} onChange={alterar} disabled={bloqueado} />
+                        value={form.responderParaPadrao} onChange={alterar} disabled={edicaoBloqueada} />
 
                     <label className="text-xs font-bold text-slate-600 md:col-span-2">
                         {temSenha ? "Nova senha (deixe vazio para manter)" : "Senha de aplicativo / SMTP"}
                         <input ref={senhaRef} name="credencialNova" type="password"
-                            autoComplete="off" maxLength={500} disabled={bloqueado}
+                            autoComplete="off" maxLength={500} disabled={edicaoBloqueada}
                             onChange={(e) => setNovaSenha(Boolean(e.target.value))}
                             className={INPUT} />
                         <span className="mt-1 block text-[11px] font-normal text-slate-500">
@@ -295,7 +304,14 @@ export function ProvedorEmailUsuarioConfiguracoes({ tenantId, supabaseClient, em
                     </label>
                 </div>
 
-                {(alterado || novaSenha) && (
+                {!consultado && !loading && (
+                    <p className="text-xs font-medium text-slate-600">
+                        Você pode editar os campos para preparar um rascunho.
+                        Sem uma conta ativa e autorizada neste tenant, não será
+                        possível salvar nem testar a conexão. O rascunho não é armazenado.
+                    </p>
+                )}
+                {consultado && (alterado || novaSenha) && (
                     <p className="text-xs font-bold text-amber-700">
                         Existem alterações não salvas. Salve antes de testar.
                     </p>

@@ -1237,9 +1237,41 @@ assert.match(
 
 assert.doesNotMatch(
     codigoConfiguracoesTenant,
-    /lib\/supabaseClient|\.rpc\(|\.from\(|\.storage\b|auditoriaPublica|storageAuditoria|ProvedorEmail|obrasService|fundoLogin|carregarConfiguracao/i,
+    /lib\/supabaseClient|\.rpc\(|\.from\(|\.storage\b|auditoriaPublica|storageAuditoria|obrasService|fundoLogin|carregarConfiguracao/i,
     "ConfiguracoesTenant não pode importar ou executar serviços globais, Supabase direto, RPC ou Storage administrativo."
 );
+
+assert.ok(
+    codigoConfiguracoesTenant.includes(
+        'import { ProvedorEmailUsuarioConfiguracoes } from "./ProvedorEmailUsuarioConfiguracoes.jsx";'
+    ),
+    "A integração SMTP pessoal deve importar somente o componente isolado autorizado."
+);
+
+assert.ok(
+    codigoConfiguracoesTenant.includes(
+        '<ProvedorEmailUsuarioConfiguracoes key={tenantId} tenantId={tenantId} supabaseClient={supabaseClient}'
+    ),
+    "A integração SMTP pessoal deve receber o tenant e o client já resolvidos."
+);
+assert.match(
+    codigoConfiguracoesTenant,
+    /features\/tenant-admin\/components\/TenantAdminEmailProviderPanel\.jsx/,
+    "SMTP da empresa deve reutilizar o painel administrativo existente."
+);
+
+assert.match(
+    codigoConfiguracoesTenant,
+    /podeGerenciarEmailTenant\s*&&\s*tenantId\s*\?[\s\S]*?TenantAdminEmailProviderPanel[\s\S]*?tenant_id:\s*tenantId/,
+    "SMTP da empresa deve exigir perfil administrativo e receber o tenant do runtime."
+);
+
+assert.match(
+    codigoConfiguracoesTenant,
+    /key=\{tenantId\}[\s\S]*?tenant_id:\s*tenantId/,
+    "O painel SMTP deve ser reconstruído na troca de tenant."
+);
+
 assert.match(
     codigoConfiguracoesSistema,
     /const permissaoSistemaAtual = permissaoSistemaUsuario;/,

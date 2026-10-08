@@ -2,6 +2,11 @@ import {
     supabase,
 } from "../../../lib/supabaseClient.js";
 
+import {
+    mensagemErroEdgeEmailTenant,
+    mensagemFalhaEmailTenant,
+} from "./tenantAdminEmailMensagens.js";
+
 const EDGE_EMAIL_TENANT =
     "admin-gerenciar-provedor-email-tenant";
 
@@ -215,8 +220,7 @@ async function invocarEdgeTenant(
 
     if (error) {
         throw new Error(
-            error?.message ||
-            "Não foi possível concluir a operação de e-mail do tenant.",
+            await mensagemErroEdgeEmailTenant(error),
         );
     }
 
@@ -225,10 +229,7 @@ async function invocarEdgeTenant(
         true
     ) {
         throw new Error(
-            textoSeguro(
-                data?.erro,
-            ) ||
-            "A operação de e-mail do tenant não foi confirmada.",
+            mensagemFalhaEmailTenant(null, data?.codigo),
         );
     }
 
