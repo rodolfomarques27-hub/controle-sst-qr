@@ -29,6 +29,7 @@ import {
 import {
     ModelosEmailSstConfiguracoes,
 } from "./ModelosEmailSstConfiguracoes";
+import { ProvedorEmailUsuarioConfiguracoes } from "./ProvedorEmailUsuarioConfiguracoes.jsx";
 import {
     TIPOS_MODELO_EMAIL_SST,
 } from "../../constants/modelosEmailSstConstants";
@@ -3659,6 +3660,19 @@ export function ConfiguracoesTenant({
                 </section>
             ) : null}
 
+            {auditoriaDisponivel && tenantId ? (
+                <section id="config-meu-provedor-email" className="scroll-mt-24">
+                    <details name="configuracoes-tenant" className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <summary className="flex h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+                            <span className="text-sm font-black text-slate-950 sm:text-base">Meu provedor de e-mail</span>
+                            <ChevronDown aria-hidden="true" className="h-5 w-5 text-slate-500 transition-transform group-open:rotate-180" />
+                        </summary>
+                        <div className="border-t border-slate-100 bg-slate-50/40">
+                            <ProvedorEmailUsuarioConfiguracoes key={tenantId} tenantId={tenantId} supabaseClient={supabaseClient} emailUsuario={emailUsuario} nomeUsuario={nomeUsuario} />
+                        </div>
+                    </details>
+                </section>
+            ) : null}
             <details
                 open={estadoCardsConfiguracoesAtivo.versaoSafescan}
                 onToggle={(evento) => {
