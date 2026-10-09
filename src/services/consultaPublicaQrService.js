@@ -105,9 +105,10 @@ export async function carregarConsultaPublicaQrService({ supabase, tokenQr } = {
     });
 }
 
-export async function validarContatoEmergenciaQrService({ supabase, tokenQr, senha } = {}) {
+export async function validarContatoEmergenciaQrService({ supabase, tokenQr, senha, email } = {}) {
     const tokenSeguro = String(tokenQr || "").trim();
     const senhaSegura = String(senha || "").trim();
+    const emailSeguro = String(email || "").trim().toLowerCase();
 
     if (!tokenSeguro) {
         throw new Error("Token do QR Code não informado.");
@@ -120,6 +121,7 @@ export async function validarContatoEmergenciaQrService({ supabase, tokenQr, sen
     const { data, error } = await supabase.rpc("validar_contato_emergencia_qr", {
         p_token: tokenSeguro,
         p_senha: senhaSegura,
+        ...(emailSeguro ? { p_email: emailSeguro } : {}),
     });
 
     if (error) {
