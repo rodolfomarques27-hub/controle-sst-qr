@@ -160,7 +160,9 @@ export function ConsultaQRPublica({ dados }) {
             }
         }
 
-        carregarTokenPublicoAuditoria();
+        carregarTokenPublicoAuditoria().catch((error) => {
+            console.warn("Falha ao carregar token público de auditoria:", error);
+        });
 
         return () => {
             ativo = false;
