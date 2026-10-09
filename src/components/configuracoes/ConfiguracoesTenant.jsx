@@ -33,7 +33,7 @@ import {
     ModelosEmailSstConfiguracoes,
 } from "./ModelosEmailSstConfiguracoes";
 import { ProvedorEmailUsuarioConfiguracoes } from "./ProvedorEmailUsuarioConfiguracoes.jsx";
-import { ModoEmergenciaQrEmpresaTenant } from "./ModoEmergenciaQrEmpresaTenant.jsx";
+import { EmergenciaQrPinCard } from "./EmergenciaQrPinCard.jsx";
 import { PinEmergenciaUsuarioTenant } from "./PinEmergenciaUsuarioTenant.jsx";
 import {
     TIPOS_MODELO_EMAIL_SST,
@@ -3670,12 +3670,25 @@ export function ConfiguracoesTenant({
             ) : null}
 
             {podeGerenciarEmailTenant && tenantId ? (
-                <ModoEmergenciaQrEmpresaTenant
-                    key={tenantId}
-                    empresasBanco={empresas}
-                    supabaseClient={supabaseClient}
-                />
+                <section
+                    id="config-pin-emergencia-empresa"
+                    className="scroll-mt-24"
+                >
+                    <EmergenciaQrPinCard
+                        empresasBanco={empresas}
+                    />
+                </section>
             ) : null}
+
+            {tenantId && supabaseClient ? (
+                <section id="config-pin-emergencia-usuario" className="scroll-mt-24">
+                    <PinEmergenciaUsuarioTenant
+                        tenantId={tenantId}
+                        supabaseClient={supabaseClient}
+                    />
+                </section>
+            ) : null}
+
             {podeGerenciarEmailTenant && tenantId ? (
                 <section
                     id="config-smtp-empresa"
@@ -3711,14 +3724,6 @@ export function ConfiguracoesTenant({
                 </section>
             ) : null}
 
-            {tenantId && supabaseClient ? (
-                <section id="config-pin-emergencia-usuario" className="scroll-mt-24">
-                    <PinEmergenciaUsuarioTenant
-                        tenantId={tenantId}
-                        supabaseClient={supabaseClient}
-                    />
-                </section>
-            ) : null}
             {auditoriaDisponivel && tenantId ? (
                 <section id="config-meu-provedor-email" className="scroll-mt-24">
                     <details name="configuracoes-tenant" className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">

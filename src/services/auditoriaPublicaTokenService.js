@@ -140,58 +140,104 @@ export async function resolverTokenAuditoriaPublicaPadrao({ tokens = [] } = {}) 
     };
 }
 
-export async function validarAcessoAuditoriaPublicaPadrao({ senha = "", tokens = [] } = {}) {
-    const senhaSegura = texto(senha);
+export async function validarAcessoAuditoriaPublicaPadrao({
+    senha = "",
+    tokens = [],
+} = {}) {
+    const senhaSegura =
+        texto(senha);
 
     if (!senhaSegura) {
         return {
             ok: false,
             autorizado: false,
             tokenValidado: "",
-            mensagem: "Informe a senha de acesso da auditoria.",
+            mensagem:
+                "Informe seu PIN de acesso.",
         };
     }
 
-    const resolucao = await resolverTokenAuditoriaPublicaPadrao({ tokens });
+    const resolucao =
+        await resolverTokenAuditoriaPublicaPadrao({
+            tokens,
+        });
 
-    if (!resolucao.candidatos.length) {
+    if (
+        !resolucao.candidatos.length
+    ) {
         return {
             ok: false,
             autorizado: false,
             tokenValidado: "",
-            mensagem: resolucao.erro || "Token público da auditoria não configurado.",
+            mensagem:
+                resolucao.erro ||
+                "Token público da auditoria não configurado.",
         };
     }
 
-    let ultimaMensagem = "Token público da auditoria inválido, inativo ou expirado.";
+    let ultimaMensagem =
+        "Token público da auditoria inválido, inativo ou expirado.";
 
-    for (const tokenTentativa of resolucao.candidatos) {
+    for (
+        const tokenTentativa
+        of resolucao.candidatos
+    ) {
         try {
-            const { data, error } = await supabase.rpc("validar_acesso_auditoria_publica", {
-                p_token: tokenTentativa,
-                p_senha: senhaSegura,
-            });
+            const {
+                data,
+                error,
+            } =
+                await supabase.rpc(
+                    "validar_acesso_auditoria_publica",
+                    {
+                        p_token:
+                            tokenTentativa,
+
+                        p_email:
+                            null,
+
+                        p_pin:
+                            senhaSegura,
+                    }
+                );
 
             if (error) {
-                ultimaMensagem = error.message || ultimaMensagem;
+                ultimaMensagem =
+                    error.message ||
+                    ultimaMensagem;
+
                 continue;
             }
 
-            const autorizado = Boolean(data?.autorizado || data?.ok === true);
+            const autorizado =
+                Boolean(
+                    data?.autorizado ||
+                    data?.ok === true
+                );
 
             if (autorizado) {
                 return {
                     ...(data || {}),
                     ok: true,
                     autorizado: true,
-                    tokenValidado: tokenTentativa,
-                    mensagem: data?.mensagem || "Acesso liberado.",
+
+                    tokenValidado:
+                        tokenTentativa,
+
+                    mensagem:
+                        data?.mensagem ||
+                        "Acesso liberado.",
                 };
             }
 
-            ultimaMensagem = data?.mensagem || ultimaMensagem;
-        } catch (error) {
-            ultimaMensagem = error?.message || ultimaMensagem;
+            ultimaMensagem =
+                data?.mensagem ||
+                ultimaMensagem;
+        }
+        catch (error) {
+            ultimaMensagem =
+                error?.message ||
+                ultimaMensagem;
         }
     }
 
@@ -199,9 +245,11 @@ export async function validarAcessoAuditoriaPublicaPadrao({ senha = "", tokens =
         ok: false,
         autorizado: false,
         tokenValidado: "",
-        mensagem: ultimaMensagem,
+        mensagem:
+            ultimaMensagem,
     };
 }
+
 
 function normalizarEmpresaAuditoriaPublica(item = {}) {
     return {
@@ -224,47 +272,97 @@ function normalizarEmpresaAuditoriaPublica(item = {}) {
     };
 }
 
-export async function carregarEmpresasAuditoriaPublicaControlada({ token = "", senha = "" } = {}) {
-    const tokenSeguro = normalizarTokenAuditoriaPublica(token);
-    const senhaSegura = texto(senha);
+export async function carregarEmpresasAuditoriaPublicaControlada({
+    token = "",
+    senha = "",
+} = {}) {
+    const tokenSeguro =
+        normalizarTokenAuditoriaPublica(
+            token
+        );
 
-    if (!tokenSeguro || !senhaSegura) {
+    const senhaSegura =
+        texto(senha);
+
+    if (
+        !tokenSeguro ||
+        !senhaSegura
+    ) {
         return {
             ok: false,
             empresas: [],
-            mensagem: "Token e senha são obrigatórios para carregar a lista controlada de empresas.",
+            mensagem:
+                "Token e PIN são obrigatórios para carregar a lista controlada de empresas.",
         };
     }
 
     try {
-        const { data, error } = await supabase.rpc("listar_empresas_auditoria_publica", {
-            p_token: tokenSeguro,
-            p_senha: senhaSegura,
-        });
+        const {
+            data,
+            error,
+        } =
+            await supabase.rpc(
+                "listar_empresas_auditoria_publica",
+                {
+                    p_token:
+                        tokenSeguro,
+
+                    p_email:
+                        null,
+
+                    p_pin:
+                        senhaSegura,
+                }
+            );
 
         if (error) {
             return {
                 ok: false,
                 empresas: [],
-                mensagem: error.message || "Não foi possível carregar empresas pela RPC pública controlada.",
+                mensagem:
+                    error.message ||
+                    "Não foi possível carregar empresas pela RPC pública controlada.",
             };
         }
 
-        const empresas = (Array.isArray(data) ? data : [])
-            .map(normalizarEmpresaAuditoriaPublica)
-            .filter((empresa) => empresa.nome)
-            .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+        const empresas =
+            (
+                Array.isArray(data)
+                    ? data
+                    : []
+            )
+                .map(
+                    normalizarEmpresaAuditoriaPublica
+                )
+                .filter(
+                    (empresa) =>
+                        empresa.nome
+                )
+                .sort(
+                    (a, b) =>
+                        a.nome.localeCompare(
+                            b.nome,
+                            "pt-BR"
+                        )
+                );
 
         return {
             ok: true,
             empresas,
-            mensagem: empresas.length ? "Empresas e contatos carregados com segurança." : "Nenhuma empresa cadastrada foi retornada pela consulta controlada.",
+
+            mensagem:
+                empresas.length
+                    ? "Empresas e contatos carregados com segurança."
+                    : "Nenhuma empresa cadastrada foi retornada pela consulta controlada.",
         };
-    } catch (error) {
+    }
+    catch (error) {
         return {
             ok: false,
             empresas: [],
-            mensagem: error?.message || "Não foi possível carregar a lista controlada de empresas.",
+            mensagem:
+                error?.message ||
+                "Não foi possível carregar a lista controlada de empresas.",
         };
     }
 }

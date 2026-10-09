@@ -73,7 +73,6 @@ export function ConsultaQRPublica({ dados }) {
     const geral = statusGeralConsultaPublica(colaborador, treinamentos);
     const [contatoEmergenciaAberto, setContatoEmergenciaAberto] = useState(false);
     const [senhaEmergenciaQr, setSenhaEmergenciaQr] = useState("");
-    const [emailEmergenciaQr, setEmailEmergenciaQr] = useState("");
     const [contatoEmergenciaLiberado, setContatoEmergenciaLiberado] = useState(null);
     const [erroContatoEmergencia, setErroContatoEmergencia] = useState("");
     const [carregandoContatoEmergencia, setCarregandoContatoEmergencia] = useState(false);
@@ -112,7 +111,7 @@ export function ConsultaQRPublica({ dados }) {
         const senhaTratada = String(senhaEmergenciaQr || "").trim();
 
         if (!senhaTratada) {
-            setErroContatoEmergencia("Informe o PIN de emergência.");
+            setErroContatoEmergencia("Informe o PIN de emergência da empresa.");
             return;
         }
 
@@ -124,7 +123,6 @@ export function ConsultaQRPublica({ dados }) {
                 supabase,
                 tokenQr: tokenContatoEmergenciaQr,
                 senha: senhaTratada,
-                email: emailEmergenciaQr,
             });
 
             const contato = resultado?.contatoEmergencia || {};
@@ -315,17 +313,8 @@ export function ConsultaQRPublica({ dados }) {
                 </div>
             ) : (
                 <form onSubmit={validarSenhaContatoEmergenciaPublica} className="mt-2 grid gap-2 sm:grid-cols-[1fr_140px]">
-                    <input
-                        type="email"
-                        value={emailEmergenciaQr}
-                        onChange={(evento) => setEmailEmergenciaQr(evento.target.value)}
-                        placeholder="E-mail de login (PIN individual)"
-                        aria-label="E-mail de login para PIN individual"
-                        autoComplete="username"
-                        className="sm:col-span-2 h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none focus:ring-2 focus:ring-emerald-200"
-                    />
                     <p className="sm:col-span-2 text-xs text-slate-500">
-                        PIN individual: informe o e-mail de login. PIN empresarial: deixe o e-mail vazio.
+                        Informe o PIN de emergência configurado para a empresa deste colaborador.
                     </p>
                     <PasswordInput
                                 value={senhaEmergenciaQr}
@@ -334,7 +323,7 @@ export function ConsultaQRPublica({ dados }) {
                                         evento.target.value
                                     )
                                 }
-                                placeholder="PIN de emergência"
+                                placeholder="PIN de emergência da empresa"
                                 autoComplete="off"
                                 inputClassName="!h-11 !py-0 text-sm font-bold text-slate-950 focus:!ring-2 focus:!ring-slate-100"
                             />

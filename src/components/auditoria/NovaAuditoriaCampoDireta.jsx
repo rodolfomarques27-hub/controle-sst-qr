@@ -493,8 +493,15 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     const validarSenhaAuditoriaPublica = async (evento) => {
         evento?.preventDefault?.();
 
-        if (!senhaAcessoAuditoria.trim()) {
-            setMensagemAcessoAuditoria("Informe a senha de acesso da auditoria.");
+        const pinTratado =
+            String(senhaAcessoAuditoria || "")
+                .trim();
+
+        if (!pinTratado) {
+            setMensagemAcessoAuditoria(
+                "Informe seu PIN de acesso."
+            );
+
             return;
         }
 
@@ -503,7 +510,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
 
         try {
             const resultado = await validarAcessoAuditoriaPublicaPadrao({
-                senha: senhaAcessoAuditoria.trim(),
+                senha: pinTratado,
                 tokens: [
                     tokenAuditoriaPublicaSupabase,
                     tokenAuditoriaPublicaValidado,
@@ -518,7 +525,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
             if (!autorizado) {
                 setTokenAuditoriaPublicaValidado("");
                 setAcessoAuditoriaValidado(false);
-                setMensagemAcessoAuditoria(resultado?.mensagem || "Senha inválida ou token público inativo.");
+                setMensagemAcessoAuditoria(resultado?.mensagem || "PIN de acesso inválido.");
                 return;
             }
 
@@ -528,7 +535,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         } catch (error) {
             setTokenAuditoriaPublicaValidado("");
             setAcessoAuditoriaValidado(false);
-            setMensagemAcessoAuditoria(error?.message || "Erro ao validar senha da auditoria.");
+            setMensagemAcessoAuditoria(error?.message || "Erro ao validar o PIN de acesso.");
         } finally {
             setValidandoAcessoAuditoria(false);
         }
@@ -547,14 +554,18 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
 
             const tokenSeguro = tokenAuditoriaPublicaValidado || tokenAuditoriaQrCampoSalvo || tokenAuditoriaPublicaSupabase || tokenParametro || "";
 
-            if (!acessoAuditoriaValidado || !tokenSeguro || !senhaAcessoAuditoria.trim()) {
+            if (
+                !acessoAuditoriaValidado ||
+                !tokenSeguro ||
+                !senhaAcessoAuditoria.trim()
+            ) {
                 setEmpresasPublicasAuditoriaCampo([]);
                 setMensagemEmpresasPublicasAuditoria("");
                 return;
             }
 
             setCarregandoEmpresasPublicasAuditoria(true);
-            setMensagemEmpresasPublicasAuditoria("Carregando empresas cadastradas após validação da senha...");
+            setMensagemEmpresasPublicasAuditoria("Carregando empresas cadastradas após validação do PIN...");
 
             try {
                 const resultado = await carregarEmpresasAuditoriaPublicaControlada({
@@ -1319,7 +1330,8 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
 
                 const parametrosPublicos = {
                     p_token: tokenAuditoriaCampo,
-                    p_senha: senhaAcessoAuditoria.trim(),
+                    p_email: null,
+                    p_pin: senhaAcessoAuditoria.trim(),
                     p_dados: payload,
                     ...(possuiFotosExtras ? { p_fotos: fotosCarregadas } : {}),
                 };
@@ -1592,25 +1604,26 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                             </div>
                             <h1 className="mt-4 text-2xl font-black">Acesso à auditoria</h1>
                             <p className="mt-2 text-sm leading-relaxed text-slate-300">
-                                Informe a senha autorizada para abrir a Nova Auditoria de Campo.
+                                Informe o mesmo PIN de acesso configurado no SafeScan.
                             </p>
                         </div>
 
                         <form onSubmit={validarSenhaAuditoriaPublica} className="space-y-4">
                             <div>
                                 <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
-                                    Senha da auditoria
+                                    PIN de acesso
                                 </label>
+
                                 <PasswordInput
-                            value={senhaAcessoAuditoria}
-                            onChange={(e) =>
-                                setSenhaAcessoAuditoria(
-                                    e.target.value
-                                )
-                            }
-                            placeholder="Digite a senha de acesso"
-                            autoComplete="current-password"
-                        />
+                                    value={senhaAcessoAuditoria}
+                                    onChange={(e) =>
+                                        setSenhaAcessoAuditoria(
+                                            e.target.value
+                                        )
+                                    }
+                                    placeholder="Digite seu PIN de acesso"
+                                    autoComplete="off"
+                                />
                             </div>
 
                             {mensagemAcessoAuditoria && (
@@ -1630,7 +1643,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                         </form>
 
                         <p className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500 ring-1 ring-slate-100">
-                            A consulta pública do QR do funcionário continua liberada sem senha. Esta senha protege somente a abertura da Nova Auditoria de Campo e deve estar cadastrada no Supabase/RPC.
+                            O QR público continua disponível normalmente. O PIN de acesso protege as ações restritas da auditoria.
                         </p>
                     </Card>
                 </div>

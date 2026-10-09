@@ -123,7 +123,7 @@ export function PinEmergenciaUsuarioTenant({
 
             setPin("");
             setConfirmacao("");
-            setMensagem(data.mensagem || "PIN individual atualizado.");
+            setMensagem("PIN de acesso atualizado.");
         } catch {
             setErro("Não foi possível salvar o PIN individual. Confira a configuração do serviço.");
         } finally {
@@ -135,17 +135,16 @@ export function PinEmergenciaUsuarioTenant({
         <details name="configuracoes-tenant" className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <summary className="flex h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
                 <span className="text-sm font-black text-slate-950 sm:text-base">
-                    Meu PIN individual de emergência
+                    Meu PIN de acesso
                 </span>
                 <ChevronDown aria-hidden="true" className="h-5 w-5 shrink-0 text-slate-500 transition-transform group-open:rotate-180" />
             </summary>
             <div className="border-t border-slate-100 bg-slate-50/40 p-3 sm:p-4">
-                <p className="mb-4 text-sm text-slate-600">Configure seu PIN pessoal para acessar contatos de emergência autorizados.</p>
+                <p className="mb-4 text-sm text-slate-600">Configure seu PIN pessoal para liberar auditorias e vistorias protegidas pelo QR Code. O contato de emergência utiliza o PIN da empresa.</p>
 
             {!habilitadoSeguro && (
                 <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
-                    Cadastro indisponível. A gravação será liberada após
-                    a implantação segura da validação individual.
+                    Seu usuário ainda não está habilitado para cadastrar o PIN de acesso para auditorias neste ambiente.
                 </p>
             )}
 
@@ -156,7 +155,7 @@ export function PinEmergenciaUsuarioTenant({
                         checked={ativo}
                         onChange={(event) => setAtivo(event.target.checked)}
                     />
-                    PIN individual ativo
+                    PIN de acesso ativo
                 </label>
 
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -194,7 +193,7 @@ export function PinEmergenciaUsuarioTenant({
                     className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-40"
                 >
                     <KeyRound className="h-4 w-4" />
-                    {salvando ? "Salvando..." : "Salvar PIN individual"}
+                    {salvando ? "Salvando..." : "Salvar PIN de acesso"}
                 </button>
             </form>
             </div>

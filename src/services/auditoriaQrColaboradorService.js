@@ -57,20 +57,32 @@ async function arquivoParaBase64Payload(arquivo) {
 }
 
 export async function validarSenhaAuditoriaQr({
-    tokenAuditoria = obterTokenAuditoriaQrColaboradorConfigurado(),
+    tokenAuditoria =
+        obterTokenAuditoriaQrColaboradorConfigurado(),
+
     senha = "",
 } = {}) {
-    const resultado = await validarAcessoAuditoriaPublicaPadrao({
-        senha,
-        tokens: [tokenAuditoria, obterTokenAuditoriaQrColaboradorConfigurado()],
-    });
+    const resultado =
+        await validarAcessoAuditoriaPublicaPadrao({
+            senha,
 
-    return resultado || {
-        ok: false,
-        autorizado: false,
-        mensagem: "Resposta inválida ao validar acesso da auditoria.",
-    };
+            tokens: [
+                tokenAuditoria,
+                obterTokenAuditoriaQrColaboradorConfigurado(),
+            ],
+        });
+
+    return (
+        resultado ||
+        {
+            ok: false,
+            autorizado: false,
+            mensagem:
+                "Resposta inválida ao validar o PIN de acesso.",
+        }
+    );
 }
+
 
 export async function gerarNumeroAuditoriaQr() {
     const { data, error } = await supabase.rpc("gerar_numero_auditoria_campo");
@@ -86,87 +98,217 @@ export async function gerarNumeroAuditoriaQr() {
 }
 
 export async function salvarAuditoriaQrColaborador({
-    tokenAuditoria = obterTokenAuditoriaQrColaboradorConfigurado(),
+    tokenAuditoria =
+        obterTokenAuditoriaQrColaboradorConfigurado(),
+
     senha = "",
     tokenQr = "",
     auditoria = {},
     desvio = null,
     fotos = {},
 } = {}) {
-    const validacao = await validarAcessoAuditoriaPublicaPadrao({
-        senha,
-        tokens: [tokenAuditoria, obterTokenAuditoriaQrColaboradorConfigurado()],
-    });
-    const tokenAuditoriaSeguro = texto(validacao?.tokenValidado) || await resolverTokenAuditoriaQrColaborador(tokenAuditoria);
-    const senhaSegura = texto(senha);
-    const tokenQrSeguro = texto(tokenQr || auditoria?.token_qr);
+    const senhaSegura =
+        texto(
+            senha
+        );
+
+    const tokenQrSeguro =
+        texto(
+            tokenQr ||
+            auditoria?.token_qr
+        );
+
+    if (!senhaSegura) {
+        throw new Error(
+            "Informe seu PIN de acesso antes de salvar."
+        );
+    }
+
+    const validacao =
+        await validarAcessoAuditoriaPublicaPadrao({
+            senha:
+                senhaSegura,
+
+            tokens: [
+                tokenAuditoria,
+                obterTokenAuditoriaQrColaboradorConfigurado(),
+            ],
+        });
+
+    const tokenAuditoriaSeguro =
+        texto(
+            validacao?.tokenValidado
+        ) ||
+        await resolverTokenAuditoriaQrColaborador(
+            tokenAuditoria
+        );
 
     if (!tokenAuditoriaSeguro) {
-        throw new Error("Token público da auditoria não informado.");
+        throw new Error(
+            "Token público da auditoria não informado."
+        );
     }
 
     if (!validacao?.autorizado) {
-        throw new Error(validacao?.mensagem || "Senha da auditoria inválida.");
-    }
-
-    if (!senhaSegura) {
-        throw new Error("Informe a senha da auditoria antes de salvar.");
+        throw new Error(
+            validacao?.mensagem ||
+            "PIN de acesso inválido."
+        );
     }
 
     if (!tokenQrSeguro) {
-        throw new Error("Token QR do colaborador não informado.");
+        throw new Error(
+            "Token QR do colaborador não informado."
+        );
     }
 
-    const extrasAntes = Array.isArray(fotos?.extrasAntes) ? fotos.extrasAntes : [];
-    const extrasDepois = Array.isArray(fotos?.extrasDepois) ? fotos.extrasDepois : [];
+    const extrasAntes =
+        Array.isArray(
+            fotos?.extrasAntes
+        )
+            ? fotos.extrasAntes
+            : [];
 
-    if ((extrasAntes.length || extrasDepois.length) && !desvio) {
-        throw new Error("As fotos adicionais precisam estar vinculadas a um desvio.");
+    const extrasDepois =
+        Array.isArray(
+            fotos?.extrasDepois
+        )
+            ? fotos.extrasDepois
+            : [];
+
+    if (
+        (
+            extrasAntes.length ||
+            extrasDepois.length
+        ) &&
+        !desvio
+    ) {
+        throw new Error(
+            "As fotos adicionais precisam estar vinculadas a um desvio."
+        );
     }
 
     if (
-        extrasAntes.length + Number(Boolean(fotos?.antes)) > LIMITE_FOTOS_POR_FASE ||
-        extrasDepois.length + Number(Boolean(fotos?.depois)) > LIMITE_FOTOS_POR_FASE
+        extrasAntes.length +
+            Number(
+                Boolean(
+                    fotos?.antes
+                )
+            ) >
+            LIMITE_FOTOS_POR_FASE ||
+
+        extrasDepois.length +
+            Number(
+                Boolean(
+                    fotos?.depois
+                )
+            ) >
+            LIMITE_FOTOS_POR_FASE
     ) {
-        throw new Error("Limite de oito fotos por fase excedido.");
+        throw new Error(
+            "Limite de oito fotos por fase excedido."
+        );
     }
 
-    const fotoAntesPayload = desvio ? await arquivoParaBase64Payload(fotos?.antes) : null;
-    const fotoDepoisPayload = desvio ? await arquivoParaBase64Payload(fotos?.depois) : null;
+    const fotoAntesPayload =
+        desvio
+            ? await arquivoParaBase64Payload(
+                fotos?.antes
+            )
+            : null;
 
-    const extrasAntesPayload = [];
-    const extrasDepoisPayload = [];
+    const fotoDepoisPayload =
+        desvio
+            ? await arquivoParaBase64Payload(
+                fotos?.depois
+            )
+            : null;
 
-    for (const arquivo of extrasAntes) {
-        extrasAntesPayload.push(await arquivoParaBase64Payload(arquivo));
+    const extrasAntesPayload =
+        [];
+
+    const extrasDepoisPayload =
+        [];
+
+    for (
+        const arquivo
+        of extrasAntes
+    ) {
+        extrasAntesPayload.push(
+            await arquivoParaBase64Payload(
+                arquivo
+            )
+        );
     }
 
-    for (const arquivo of extrasDepois) {
-        extrasDepoisPayload.push(await arquivoParaBase64Payload(arquivo));
+    for (
+        const arquivo
+        of extrasDepois
+    ) {
+        extrasDepoisPayload.push(
+            await arquivoParaBase64Payload(
+                arquivo
+            )
+        );
     }
 
-    const possuiExtras = extrasAntesPayload.length > 0 || extrasDepoisPayload.length > 0;
+    const possuiExtras =
+        extrasAntesPayload.length > 0 ||
+        extrasDepoisPayload.length > 0;
 
-    const { data, error } = await supabase.functions.invoke("salvar-auditoria-qr-colaborador", {
-        body: {
-            tokenAuditoria: tokenAuditoriaSeguro,
-            senha: senhaSegura,
-            tokenQr: tokenQrSeguro,
-            auditoria,
-            desvio,
-            fotos: {
-                antes: fotoAntesPayload,
-                depois: fotoDepoisPayload,
-                ...(possuiExtras ? {
-                    extrasAntes: extrasAntesPayload,
-                    extrasDepois: extrasDepoisPayload,
-                } : {}),
-            },
-        },
-    });
+    const {
+        data,
+        error,
+    } =
+        await supabase.functions.invoke(
+            "salvar-auditoria-qr-colaborador",
+            {
+                body: {
+                    tokenAuditoria:
+                        tokenAuditoriaSeguro,
 
-    if (error || data?.ok === false) {
-        throw new Error(error?.message || data?.erro || data?.mensagem || "Falha ao salvar auditoria pública do colaborador.");
+                    senha:
+                        senhaSegura,
+
+                    tokenQr:
+                        tokenQrSeguro,
+
+                    auditoria,
+                    desvio,
+
+                    fotos: {
+                        antes:
+                            fotoAntesPayload,
+
+                        depois:
+                            fotoDepoisPayload,
+
+                        ...(
+                            possuiExtras
+                                ? {
+                                    extrasAntes:
+                                        extrasAntesPayload,
+
+                                    extrasDepois:
+                                        extrasDepoisPayload,
+                                }
+                                : {}
+                        ),
+                    },
+                },
+            }
+        );
+
+    if (
+        error ||
+        data?.ok === false
+    ) {
+        throw new Error(
+            error?.message ||
+            data?.erro ||
+            data?.mensagem ||
+            "Falha ao salvar auditoria pública do colaborador."
+        );
     }
 
     return data;
