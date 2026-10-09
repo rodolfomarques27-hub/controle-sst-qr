@@ -1304,8 +1304,8 @@ assert.doesNotMatch(
 );
 assert.match(
     codigoEmergenciaQrPinCard,
-    /controleCard[\s\S]*definir_senha_emergencia_empresa[\s\S]*Protegido por RPC/,
-    "O card PIN deve preservar a RPC e receber o controle visual do painel."
+    /definir_senha_emergencia_empresa[\s\S]*<details[\s\S]*name="configuracoes-tenant"[\s\S]*PIN de emergência da empresa/,
+    "O card PIN deve preservar a RPC e usar o acordeão visual padrão de Configurações."
 );
 assert.match(
     codigoConfiguracoesSistema,
@@ -1314,8 +1314,18 @@ assert.match(
 );
 assert.match(
     codigoEmergenciaQrPinCard,
-    /onAlternarRecolhido = null[\s\S]*<button[\s\S]*type="button"[\s\S]*onClick=\{\(\) => onAlternarRecolhido\?\.\(\)\}[\s\S]*aria-label="Recolher Senha\/PIN do contato de emergência"[\s\S]*Senha\/PIN do contato de emergência/,
-    "Título e descrição do PIN devem formar o controle clicável do cabeçalho."
+    /<summary[\s\S]*PIN de emergência da empresa[\s\S]*<ChevronDown/,
+    "O PIN de emergência deve usar o próprio summary do acordeão como cabeçalho clicável."
+);
+assert.doesNotMatch(
+    codigoEmergenciaQrPinCard,
+    /controleCard|onAlternarRecolhido|Protegido por RPC/,
+    "O card PIN não pode depender do controle visual legado nem exibir o badge RPC removido."
+);
+assert.match(
+    codigoConfiguracoesTenant,
+    /id="config-pin-emergencia-empresa"[\s\S]*id="config-pin-emergencia-usuario"[\s\S]*id="config-smtp-empresa"/,
+    "Configurações do tenant deve manter PIN da empresa, Meu PIN e SMTP nessa ordem."
 );
 assert.doesNotMatch(
     codigoEmergenciaQrPinCard,
