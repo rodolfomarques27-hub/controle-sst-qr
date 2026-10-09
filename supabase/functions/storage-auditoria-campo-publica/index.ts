@@ -225,7 +225,8 @@ serve(async (req) => {
         "validar_acesso_auditoria_publica",
         {
           p_token: tokenAuditoria,
-          p_senha: senha,
+          p_email: null,
+          p_pin: senha,
         },
       );
 

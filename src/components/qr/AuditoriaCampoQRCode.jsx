@@ -182,8 +182,11 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
     const validarAcessoAuditoriaQRCode = async () => {
         setMensagemAcessoAuditoria("");
 
-        if (!senhaAuditoriaQr.trim()) {
-            setMensagemAcessoAuditoria("Informe a senha de acesso da auditoria.");
+        const pinTratado = String(senhaAuditoriaQr || "").trim();
+
+
+        if (!pinTratado) {
+            setMensagemAcessoAuditoria("Informe seu PIN de acesso.");
             return;
         }
 
@@ -192,12 +195,12 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
         try {
             const resposta = await validarSenhaAuditoriaQr({
                 tokenAuditoria: tokenAuditoriaQrValidado || tokenAuditoriaQr,
-                senha: senhaAuditoriaQr,
+                senha: pinTratado,
             });
 
             if (resposta?.autorizado !== true) {
                 setTokenAuditoriaQrValidado("");
-                setMensagemAcessoAuditoria(resposta?.mensagem || "Senha inválida para abrir a auditoria.");
+                setMensagemAcessoAuditoria(resposta?.mensagem || "E-mail ou PIN inválido para abrir a auditoria.");
                 setAcessoAuditoriaLiberado(false);
                 return;
             }
@@ -207,7 +210,7 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
             setMensagemAcessoAuditoria("Acesso liberado. Preencha a auditoria abaixo.");
         } catch (error) {
             setTokenAuditoriaQrValidado("");
-            setMensagemAcessoAuditoria(error?.message || "Não foi possível validar a senha da auditoria.");
+            setMensagemAcessoAuditoria(error?.message || "Não foi possível validar o PIN de acesso.");
             setAcessoAuditoriaLiberado(false);
         } finally {
             setValidandoAcessoAuditoria(false);
@@ -263,7 +266,7 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
         setMensagem("");
 
         if (!acessoAuditoriaLiberado) {
-            setMensagem("Informe e valide a senha da auditoria antes de salvar.");
+            setMensagem("Informe e valide seu e-mail e PIN de acesso antes de salvar.");
             return;
         }
 
@@ -414,7 +417,7 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
                             if (proximo) {
                                 setAcessoAuditoriaLiberado(false);
                                 setTokenAuditoriaQrValidado("");
-                                setSenhaAuditoriaQr("");
+            setSenhaAuditoriaQr("");
                                 setMensagemAcessoAuditoria("");
                                 setMensagem("");
                             }
@@ -439,27 +442,27 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
                     {!acessoAuditoriaLiberado ? (
                         <div className="rounded-3xl border border-blue-200 bg-blue-50 p-4">
                             <h4 className="font-bold text-blue-950">Acesso à auditoria</h4>
-                            <p className="mt-1 text-sm text-blue-700">Informe a senha de auditoria para registrar checklist, desvios e evidências pelo QR Code do colaborador.</p>
+                            <p className="mt-1 text-sm text-blue-700">Informe o mesmo PIN de acesso configurado no SafeScan para registrar checklist, desvios e evidências pelo QR Code do colaborador.</p>
                             <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
                                 <PasswordInput
-                            value={senhaAuditoriaQr}
-                            onChange={(e) =>
-                                setSenhaAuditoriaQr(
-                                    e.target.value
-                                )
-                            }
-                            onKeyDown={(e) => {
-                                if (
-                                    e.key ===
-                                    "Enter"
-                                ) {
-                                    void validarAcessoAuditoriaQRCode();
-                                }
-                            }}
-                            placeholder="Senha da auditoria"
-                            autoComplete="current-password"
-                            inputClassName="!border-blue-100 focus:!border-blue-300 focus:!ring-2 focus:!ring-blue-200"
-                        />
+                                    value={senhaAuditoriaQr}
+                                    onChange={(e) =>
+                                        setSenhaAuditoriaQr(
+                                            e.target.value
+                                        )
+                                    }
+                                    onKeyDown={(e) => {
+                                        if (
+                                            e.key ===
+                                            "Enter"
+                                        ) {
+                                            void validarAcessoAuditoriaQRCode();
+                                        }
+                                    }}
+                                    placeholder="PIN de acesso"
+                                    autoComplete="off"
+                                    inputClassName="!border-blue-100 focus:!border-blue-300 focus:!ring-2 focus:!ring-blue-200"
+                                />
                                 <button
                                     type="button"
                                     onClick={validarAcessoAuditoriaQRCode}

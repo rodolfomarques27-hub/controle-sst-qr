@@ -1,253 +1,598 @@
 import React, { useMemo, useState } from "react";
-import { Building2, KeyRound, Save, ShieldCheck } from "lucide-react";
+import { ChevronDown, Save } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
-import { Card, PasswordInput } from "../commonComponents";
+import { PasswordInput } from "../commonComponents";
 
 function textoSeguro(valor = "") {
     return String(valor || "").trim();
 }
 
 function obterIdEmpresa(item = {}) {
-    return textoSeguro(item.id || item.empresa_id || item.empresaId);
+    return textoSeguro(
+        item.id ||
+        item.empresa_id ||
+        item.empresaId
+    );
 }
 
 function obterNomeEmpresa(item = {}) {
-    return textoSeguro(item.nome || item.empresa_nome || item.empresa || "Empresa sem nome");
+    return textoSeguro(
+        item.nome ||
+        item.empresa_nome ||
+        item.empresa ||
+        "Empresa sem nome"
+    );
 }
 
-function ordenarEmpresasEmergenciaQr(empresas = []) {
+function ordenarEmpresasEmergenciaQr(
+    empresas = []
+) {
     return [...(empresas || [])]
-        .filter((item) => obterIdEmpresa(item))
-        .sort((a, b) => obterNomeEmpresa(a).localeCompare(obterNomeEmpresa(b), "pt-BR"));
+        .filter(
+            (item) =>
+                obterIdEmpresa(item)
+        )
+        .sort(
+            (a, b) =>
+                obterNomeEmpresa(a)
+                    .localeCompare(
+                        obterNomeEmpresa(b),
+                        "pt-BR"
+                    )
+        );
 }
 
 export function EmergenciaQrPinCard({
     empresasBanco = [],
-    controleCard = null,
-    onAlternarRecolhido = null,
 }) {
-    const empresas = useMemo(() => ordenarEmpresasEmergenciaQr(empresasBanco), [empresasBanco]);
-    const [empresaId, setEmpresaId] = useState(() => obterIdEmpresa(empresas[0] || ""));
-    const [ativo, setAtivo] = useState(true);
-    const [pin, setPin] = useState("");
-    const [confirmarPin, setConfirmarPin] = useState("");
+    const empresas =
+        useMemo(
+            () =>
+                ordenarEmpresasEmergenciaQr(
+                    empresasBanco
+                ),
+            [empresasBanco]
+        );
 
-    const [salvando, setSalvando] = useState(false);
-    const [mensagem, setMensagem] = useState("");
-    const [erro, setErro] = useState("");
+    const [empresaId, setEmpresaId] =
+        useState(
+            () =>
+                obterIdEmpresa(
+                    empresas[0] || ""
+                )
+        );
 
-    const empresaSelecionada = empresas.find((item) => obterIdEmpresa(item) === empresaId) || null;
+    const [ativo, setAtivo] =
+        useState(true);
+
+    const [pin, setPin] =
+        useState("");
+
+    const [confirmarPin, setConfirmarPin] =
+        useState("");
+
+    const [salvando, setSalvando] =
+        useState(false);
+
+    const [mensagem, setMensagem] =
+        useState("");
+
+    const [erro, setErro] =
+        useState("");
 
     React.useEffect(() => {
-        if (!empresaId && empresas.length > 0) {
-            setEmpresaId(obterIdEmpresa(empresas[0]));
+        if (
+            !empresaId &&
+            empresas.length > 0
+        ) {
+            setEmpresaId(
+                obterIdEmpresa(
+                    empresas[0]
+                )
+            );
         }
-    }, [empresaId, empresas]);
+    }, [
+        empresaId,
+        empresas,
+    ]);
 
-    const salvarPinEmergencia = async () => {
-        setErro("");
-        setMensagem("");
+    const salvarPinEmergencia =
+        async () => {
+            setErro("");
+            setMensagem("");
 
-        if (!empresaId) {
-            setErro("Selecione a empresa para configurar o PIN.");
-            return;
-        }
+            if (!empresaId) {
+                setErro(
+                    "Selecione a empresa para configurar o PIN."
+                );
 
-        const pinTratado = textoSeguro(pin);
-        const confirmarTratado = textoSeguro(confirmarPin);
-
-        if (ativo) {
-            if (pinTratado.length < 4) {
-                setErro("Informe um PIN com pelo menos 4 caracteres.");
                 return;
             }
 
-            if (pinTratado !== confirmarTratado) {
-                setErro("A confirmação do PIN não confere.");
-                return;
+            const pinTratado =
+                textoSeguro(pin);
+
+            const confirmarTratado =
+                textoSeguro(
+                    confirmarPin
+                );
+
+            if (ativo) {
+                if (
+                    pinTratado.length < 4
+                ) {
+                    setErro(
+                        "Informe um PIN com pelo menos 4 caracteres."
+                    );
+
+                    return;
+                }
+
+                if (
+                    pinTratado !==
+                    confirmarTratado
+                ) {
+                    setErro(
+                        "A confirmação do PIN não confere."
+                    );
+
+                    return;
+                }
             }
-        }
 
-        setSalvando(true);
+            setSalvando(true);
 
-        try {
-            const { data, error: rpcError } = await supabase.rpc("definir_senha_emergencia_empresa", {
-                p_empresa_id: empresaId,
-                p_senha: ativo ? pinTratado : "",
-                p_ativo: ativo,
-            });
+            try {
+                const {
+                    data,
+                    error: rpcError,
+                } =
+                    await supabase.rpc(
+                        "definir_senha_emergencia_empresa",
+                        {
+                            p_empresa_id:
+                                empresaId,
 
-            if (rpcError) {
-                throw new Error(rpcError.message || "Não foi possível salvar o PIN de emergência.");
+                            p_senha:
+                                ativo
+                                    ? pinTratado
+                                    : "",
+
+                            p_ativo:
+                                ativo,
+                        }
+                    );
+
+                if (rpcError) {
+                    throw new Error(
+                        rpcError.message ||
+                        "Não foi possível salvar o PIN de emergência."
+                    );
+                }
+
+                if (
+                    data?.ok === false
+                ) {
+                    throw new Error(
+                        data?.mensagem ||
+                        "Não foi possível salvar o PIN de emergência."
+                    );
+                }
+
+                setMensagem(
+                    data?.mensagem ||
+                    (
+                        ativo
+                            ? "PIN de emergência configurado/atualizado."
+                            : "Contato de emergência desativado."
+                    )
+                );
+
+                setPin("");
+                setConfirmarPin("");
             }
-
-            if (data?.ok === false) {
-                throw new Error(data?.mensagem || "Não foi possível salvar o PIN de emergência.");
+            catch (error) {
+                setErro(
+                    error?.message ||
+                    "Erro ao salvar PIN de emergência."
+                );
             }
-
-            setMensagem(data?.mensagem || (ativo ? "PIN de emergência configurado/atualizado." : "Emergência QR desativada."));
-            setPin("");
-            setConfirmarPin("");
-        } catch (error) {
-            setErro(error.message || "Erro ao salvar PIN de emergência.");
-        } finally {
-            setSalvando(false);
-        }
-    };
-
+            finally {
+                setSalvando(false);
+            }
+        };
 
     return (
-        <div className="h-full">
-            <Card>
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <button
-                        type="button"
-                        onClick={() => onAlternarRecolhido?.()}
-                        className="min-w-0 rounded-2xl text-left outline-none transition hover:bg-slate-50/70 focus-visible:ring-4 focus-visible:ring-slate-100"
-                        aria-label="Recolher Senha/PIN do contato de emergência"
+        <details
+            name="configuracoes-tenant"
+            className="
+                group
+                overflow-hidden
+                rounded-2xl
+                border
+                border-slate-200
+                bg-white
+                shadow-sm
+            "
+        >
+            <summary
+                className="
+                    flex
+                    h-14
+                    cursor-pointer
+                    list-none
+                    items-center
+                    justify-between
+                    gap-4
+                    px-5
+                    text-left
+                    transition
+                    hover:bg-slate-50
+                    [&::-webkit-details-marker]:hidden
+                "
+            >
+                <span
+                    className="
+                        text-sm
+                        font-black
+                        text-slate-950
+                        sm:text-base
+                    "
+                >
+                    PIN de emergência da empresa
+                </span>
+
+                <ChevronDown
+                    aria-hidden="true"
+                    className="
+                        h-5
+                        w-5
+                        shrink-0
+                        text-slate-500
+                        transition-transform
+                        group-open:rotate-180
+                    "
+                />
+            </summary>
+
+            <div
+                className="
+                    border-t
+                    border-slate-100
+                    bg-slate-50/40
+                    p-3
+                    sm:p-4
+                "
+            >
+                <p
+                    className="
+                        mb-4
+                        text-sm
+                        leading-relaxed
+                        text-slate-600
+                    "
+                >
+                    Configure um PIN para cada empresa.
+                    Esse PIN será usado somente para
+                    liberar o contato de emergência dos
+                    colaboradores pelo QR Code.
+                </p>
+
+                <div
+                    className="
+                        grid
+                        gap-4
+                        lg:grid-cols-2
+                    "
+                >
+                    <div
+                        className="
+                            space-y-4
+                            rounded-2xl
+                            border
+                            border-slate-200
+                            bg-white
+                            p-4
+                        "
                     >
-                    <div className="flex items-center gap-2">
-                        <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-red-50 text-red-700 ring-1 ring-red-100">
-                            <ShieldCheck className="h-5 w-5" />
-                        </span>
-                        <div>
-                            <p className="text-xs font-black uppercase tracking-[0.16em] text-red-700">
-                                Emergência QR
-                            </p>
-                            <h2 className="text-lg font-black text-slate-950">
-                                Senha/PIN do contato de emergência
-                            </h2>
-                        </div>
-                    </div>
-
-                        <p className="mt-3 max-w-3xl text-sm font-semibold leading-relaxed text-slate-600">
-                            Configure ou atualize a senha/PIN usada no QR público para liberar o telefone de emergência do colaborador. Por segurança, o PIN atual não fica visível no sistema; ao salvar, o novo PIN substitui o anterior e é armazenado como hash no Supabase.
-                        </p>
-                    </button>
-
-                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                        <span className="inline-flex w-fit items-center gap-2 rounded-2xl bg-slate-50 px-4 py-2 text-xs font-black uppercase tracking-wide text-slate-600 ring-1 ring-slate-100">
-                            <KeyRound className="h-4 w-4" />
-                            Protegido por RPC
-                        </span>
-                        {controleCard}
-                    </div>
-            </div>
-
-            <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(260px,1fr)_minmax(260px,0.8fr)]">
-                <div className="space-y-4 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                    <label className="block">
-                        <span className="mb-2 flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                            <Building2 className="h-4 w-4" />
-                            Empresa
-                        </span>
-                        <select
-                            value={empresaId}
-                            onChange={(event) => setEmpresaId(event.target.value)}
-                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-800 outline-none transition focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        <label
+                            className="
+                                block
+                                space-y-2
+                                text-sm
+                                font-semibold
+                            "
                         >
-                            {empresas.length === 0 ? (
-                                <option value="">Nenhuma empresa carregada</option>
-                            ) : (
-                                empresas.map((empresa) => (
-                                    <option key={obterIdEmpresa(empresa)} value={obterIdEmpresa(empresa)}>
-                                        {obterNomeEmpresa(empresa)}
-                                    </option>
-                                ))
-                            )}
-                        </select>
-                    </label>
+                            <span>
+                                Empresa
+                            </span>
 
-                    {empresaSelecionada && (
-                        <div className="rounded-2xl bg-white px-4 py-3 text-xs font-semibold leading-relaxed text-slate-600 ring-1 ring-slate-100">
-                            Empresa selecionada: <span className="font-black text-slate-900">{obterNomeEmpresa(empresaSelecionada)}</span>
+                            <select
+                                value={empresaId}
+                                onChange={
+                                    (
+                                        event
+                                    ) =>
+                                        setEmpresaId(
+                                            event.target.value
+                                        )
+                                }
+                                className="
+                                    h-12
+                                    w-full
+                                    rounded-xl
+                                    border
+                                    border-slate-200
+                                    bg-white
+                                    px-4
+                                    text-sm
+                                    font-semibold
+                                    text-slate-900
+                                    outline-none
+                                    transition
+                                    focus:border-slate-400
+                                    focus:ring-2
+                                    focus:ring-slate-200
+                                "
+                            >
+                                {
+                                    empresas.length === 0
+                                        ? (
+                                            <option
+                                                value=""
+                                            >
+                                                Nenhuma empresa carregada
+                                            </option>
+                                        )
+                                        : empresas.map(
+                                            (
+                                                empresa
+                                            ) => (
+                                                <option
+                                                    key={
+                                                        obterIdEmpresa(
+                                                            empresa
+                                                        )
+                                                    }
+                                                    value={
+                                                        obterIdEmpresa(
+                                                            empresa
+                                                        )
+                                                    }
+                                                >
+                                                    {
+                                                        obterNomeEmpresa(
+                                                            empresa
+                                                        )
+                                                    }
+                                                </option>
+                                            )
+                                        )
+                                }
+                            </select>
+                        </label>
+
+                        <label
+                            className="
+                                flex
+                                cursor-pointer
+                                items-center
+                                justify-between
+                                gap-4
+                                rounded-xl
+                                border
+                                border-slate-200
+                                bg-slate-50
+                                px-4
+                                py-3
+                            "
+                        >
+                            <span>
+                                <span
+                                    className="
+                                        block
+                                        text-sm
+                                        font-semibold
+                                        text-slate-900
+                                    "
+                                >
+                                    Contato de emergência ativo
+                                </span>
+
+                                <span
+                                    className="
+                                        mt-1
+                                        block
+                                        text-xs
+                                        leading-relaxed
+                                        text-slate-500
+                                    "
+                                >
+                                    Quando ativo, o QR solicita
+                                    o PIN da empresa antes de
+                                    mostrar nome, parentesco e
+                                    telefone.
+                                </span>
+                            </span>
+
+                            <input
+                                type="checkbox"
+                                checked={ativo}
+                                onChange={
+                                    (
+                                        event
+                                    ) =>
+                                        setAtivo(
+                                            event.target.checked
+                                        )
+                                }
+                                className="
+                                    h-5
+                                    w-5
+                                    shrink-0
+                                    rounded
+                                    border-slate-300
+                                "
+                            />
+                        </label>
+                    </div>
+
+                    <div
+                        className="
+                            space-y-4
+                            rounded-2xl
+                            border
+                            border-slate-200
+                            bg-white
+                            p-4
+                        "
+                    >
+                        <div
+                            className="
+                                grid
+                                gap-3
+                                sm:grid-cols-2
+                            "
+                        >
+                            <label
+                                className="
+                                    space-y-2
+                                    text-sm
+                                    font-semibold
+                                "
+                            >
+                                <span>
+                                    Novo PIN
+                                </span>
+
+                                <PasswordInput
+                                    value={pin}
+                                    onChange={
+                                        (
+                                            event
+                                        ) =>
+                                            setPin(
+                                                event.target.value
+                                            )
+                                    }
+                                    disabled={!ativo}
+                                    placeholder="Mínimo 4 caracteres"
+                                    autoComplete="new-password"
+                                    visibilityLabel="PIN"
+                                />
+                            </label>
+
+                            <label
+                                className="
+                                    space-y-2
+                                    text-sm
+                                    font-semibold
+                                "
+                            >
+                                <span>
+                                    Confirmar PIN
+                                </span>
+
+                                <PasswordInput
+                                    value={
+                                        confirmarPin
+                                    }
+                                    onChange={
+                                        (
+                                            event
+                                        ) =>
+                                            setConfirmarPin(
+                                                event.target.value
+                                            )
+                                    }
+                                    disabled={!ativo}
+                                    placeholder="Repita o PIN"
+                                    autoComplete="new-password"
+                                    visibilityLabel="Confirmação do PIN"
+                                />
+                            </label>
                         </div>
-                    )}
 
-                    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-100">
-                        <span>
-                            <span className="block text-sm font-black text-slate-900">
-                                Ativar contato de emergência no QR público
-                            </span>
-                            <span className="mt-1 block text-xs font-semibold leading-relaxed text-slate-500">
-                                Quando ativo, o QR exige PIN para liberar nome, parentesco e telefone.
-                            </span>
-                        </span>
-
-                        <input
-                            type="checkbox"
-                            checked={ativo}
-                            onChange={(event) => setAtivo(event.target.checked)}
-                            className="h-5 w-5 rounded border-slate-300 text-slate-950 focus:ring-slate-300"
-                        />
-                    </label>
-                </div>
-
-                <div className="space-y-4 rounded-3xl bg-white p-4 ring-1 ring-slate-100">
-                    <div className="grid gap-3 sm:grid-cols-2">
-                        <label className="block">
-                            <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                                PIN
-                            </span>
-                            <PasswordInput
-                        value={pin}
-                        onChange={(event) =>
-                            setPin(
-                                event.target.value
+                        {
+                            erro && (
+                                <p
+                                    role="alert"
+                                    className="
+                                        rounded-xl
+                                        bg-red-50
+                                        p-3
+                                        text-sm
+                                        text-red-700
+                                    "
+                                >
+                                    {erro}
+                                </p>
                             )
                         }
-                        disabled={!ativo}
-                        placeholder="Novo PIN · mín. 4 caracteres"
-                        autoComplete="new-password"
-                        visibilityLabel="PIN"
-                        inputClassName="!rounded-2xl !border-slate-200 !bg-white py-3 text-sm font-bold text-slate-800 focus:!border-slate-400 focus:!ring-4 focus:!ring-slate-100 disabled:!bg-slate-50 disabled:!text-slate-400"
-                    />
-                        </label>
 
-                        <label className="block">
-                            <span className="mb-2 block text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                                Confirmar PIN
-                            </span>
-                            <PasswordInput
-                    value={confirmarPin}
-                    onChange={(event) =>
-                        setConfirmarPin(
-                            event.target.value
-                        )
-                    }
-                    disabled={!ativo}
-                    placeholder="Repita o PIN"
-                    autoComplete="new-password"
-                    visibilityLabel="PIN"
-                    inputClassName="!rounded-2xl !border-slate-200 !bg-white py-3 text-sm font-bold text-slate-800 focus:!border-slate-400 focus:!ring-4 focus:!ring-slate-100 disabled:!bg-slate-50 disabled:!text-slate-400"
-                />
-                        </label>
+                        {
+                            mensagem && (
+                                <p
+                                    role="status"
+                                    className="
+                                        rounded-xl
+                                        bg-emerald-50
+                                        p-3
+                                        text-sm
+                                        text-emerald-700
+                                    "
+                                >
+                                    {mensagem}
+                                </p>
+                            )
+                        }
+
+                        <button
+                            type="button"
+                            onClick={
+                                salvarPinEmergencia
+                            }
+                            disabled={
+                                salvando ||
+                                !empresaId
+                            }
+                            className="
+                                inline-flex
+                                min-h-11
+                                items-center
+                                justify-center
+                                gap-2
+                                rounded-xl
+                                bg-emerald-700
+                                px-5
+                                py-3
+                                text-sm
+                                font-bold
+                                text-white
+                                transition
+                                hover:bg-emerald-800
+                                disabled:cursor-not-allowed
+                                disabled:opacity-40
+                            "
+                        >
+                            <Save
+                                className="
+                                    h-4
+                                    w-4
+                                "
+                            />
+
+                            {
+                                salvando
+                                    ? "Salvando..."
+                                    : ativo
+                                        ? "Salvar PIN de emergência"
+                                        : "Desativar contato de emergência"
+                            }
+                        </button>
                     </div>
-
-                    {erro && (
-                        <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700 ring-1 ring-red-200">
-                            {erro}
-                        </div>
-                    )}
-
-                    {mensagem && (
-                        <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 ring-1 ring-emerald-200">
-                            {mensagem}
-                        </div>
-                    )}
-
-                    <button
-                        type="button"
-                        onClick={salvarPinEmergencia}
-                        disabled={salvando || !empresaId}
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                        <Save className="h-4 w-4" />
-                        {salvando ? "Salvando PIN..." : ativo ? "Salvar/atualizar PIN de emergência" : "Desativar emergência QR"}
-                    </button>
                 </div>
             </div>
-        </Card>
-        </div>
+        </details>
     );
 }

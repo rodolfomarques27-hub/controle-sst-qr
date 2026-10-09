@@ -135,7 +135,7 @@ serve(async (req) => {
 
     const { data: tokenData, error: tokenError } = await supabase
       .from("auditoria_tokens_publicos")
-      .select("id, empresa_id, token, senha_acesso, requer_senha, ativo, data_expiracao")
+      .select("id, empresa_id, token, ativo, data_expiracao")
       .eq("token", tokenAuditoria)
       .eq("ativo", true)
       .maybeSingle();
@@ -156,8 +156,46 @@ serve(async (req) => {
       }
     }
 
-    if ((tokenData.requer_senha ?? true) && texto(tokenData.senha_acesso) !== senha) {
-      return jsonResponse({ ok: false, erro: "Senha inválida para salvar a auditoria." }, 401);
+    const {
+      data: validacaoAcesso,
+      error: erroValidacaoAcesso,
+    } =
+      await supabase.rpc(
+        "validar_acesso_auditoria_publica",
+        {
+          p_token: tokenAuditoria,
+          p_email: null,
+          p_pin: senha,
+        },
+      );
+
+    if (erroValidacaoAcesso) {
+      return jsonResponse(
+        {
+          ok: false,
+          erro:
+            "Não foi possível validar o PIN de acesso.",
+        },
+        500,
+      );
+    }
+
+    if (
+      !validacaoAcesso ||
+      validacaoAcesso?.ok !== true ||
+      validacaoAcesso?.autorizado !== true
+    ) {
+      return jsonResponse(
+        {
+          ok: false,
+          erro:
+            texto(
+              validacaoAcesso?.mensagem
+            ) ||
+            "PIN de acesso inválido.",
+        },
+        401,
+      );
     }
 
     if (!tokenData.empresa_id) {
