@@ -3,6 +3,11 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { Card, PasswordInput } from "../commonComponents";
 import { FileUploadAviso, validarArquivoAntesUpload } from "../FileUploadAviso";
+import {
+    adicionarFotosAuditoria,
+    removerFotoAuditoria,
+    LIMITE_FOTOS_POR_FASE,
+} from "../../services/auditoriaCampoFotosMultiplasService.js";
 import dashboardHeroBackground from "../../assets/nova-auditoria-hero-bg.webp";
 import {
     obterCategoriaPadronizadaAuditoriaCampo,
@@ -46,7 +51,6 @@ import {
     obterContatosEmpresaAuditoriaCampoDireta,
     obterParametrosAuditoriaCampoDiretaUrl,
     uploadFotoAuditoriaCampoDireta,
-    removerFotosAuditoriaCampoPublica,
     validarFormularioAuditoriaCampoDireta,
     formatarTelefoneAuditoriaCampoDireta,
     formatarNumeroAuditoriaCampoDireta,
@@ -290,6 +294,45 @@ function CardEtapaAuditoriaCampo({
     );
 }
 
+function PreviaFotoExtraAuditoria({ arquivo, onRemover }) {
+    const imagemRef = useRef(null);
+
+    useEffect(() => {
+        const imagem = imagemRef.current;
+        if (!imagem) return undefined;
+
+        const src = URL.createObjectURL(arquivo);
+        imagem.src = src;
+
+        return () => {
+            imagem.removeAttribute("src");
+            URL.revokeObjectURL(src);
+        };
+    }, [arquivo]);
+
+    return (
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+            <img
+                ref={imagemRef}
+                alt={`Prévia de ${arquivo.name}`}
+                className="h-32 w-full object-cover"
+            />
+            <div className="space-y-2 p-2">
+                <p className="truncate text-xs font-semibold text-slate-700" title={arquivo.name}>
+                    {arquivo.name}
+                </p>
+                <FileUploadAviso arquivo={arquivo} tipo="fotoAuditoria" />
+                <button
+                    type="button"
+                    onClick={onRemover}
+                    className="rounded-lg bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-100"
+                >
+                    Remover foto
+                </button>
+            </div>
+        </div>
+    );
+}
 export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBanco = [] }) {
     const parametros = obterParametrosAuditoriaCampoDiretaUrl();
     const {
@@ -364,6 +407,14 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     ] = useState(null);
 
     const [previewFotos, setPreviewFotos] = useState({ antes: "", depois: "" });
+    const [fotosExtras, setFotosExtras] = useState({
+        antes: [],
+        depois: [],
+    });
+    const [avisosFotos, setAvisosFotos] = useState({
+        antes: "",
+        depois: "",
+    });
     const [formulario, setFormulario] = useState(() => criarFormularioInicialAuditoriaCampoDireta({
         tipoInicial,
         identificacaoParametro,
@@ -1038,6 +1089,8 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         }));
         setRespostasChecklist(criarRespostasChecklistDinamico(tipoInicial.valor));
         setPreviewFotos({ antes: "", depois: "" });
+        setFotosExtras({ antes: [], depois: [] });
+        setAvisosFotos({ antes: "", depois: "" });
         setAuditoriaSalva(null);
         setRetornoEmailAuditoriaSalva(null);
         setMensagem("Formulário limpo. Você pode iniciar uma nova auditoria.");
@@ -1052,24 +1105,85 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         }
     };
 
-    const alterarFoto = (campo, arquivo) => {
-        if (arquivo && !String(arquivo.type || "").startsWith("image/")) {
-            setMensagem("Anexe apenas fotos nos campos de evidência.");
-            return;
+    const atualizarFotosFase = (fase, fotos) => {
+        const campo = fase === "antes" ? "fotoAntes" : "fotoDepois";
+        const [principal = null, ...adicionais] = fotos;
+
+        setFormulario((atual) => ({
+            ...atual,
+            [campo]: principal,
+        }));
+
+        setFotosExtras((atual) => ({
+            ...atual,
+            [fase]: adicionais,
+        }));
+
+        setAvisosFotos((atual) => ({
+            ...atual,
+            [fase]: "",
+        }));
+
+        if (previewFotos[fase]) {
+            URL.revokeObjectURL(previewFotos[fase]);
         }
 
-        setFormulario((atual) => ({ ...atual, [campo]: arquivo || null }));
-
-        const previewCampo = campo === "fotoAntes" ? "antes" : "depois";
-        if (previewFotos[previewCampo]) {
-            URL.revokeObjectURL(previewFotos[previewCampo]);
-        }
         setPreviewFotos((atual) => ({
             ...atual,
-            [previewCampo]: arquivo ? URL.createObjectURL(arquivo) : "",
+            [fase]: principal ? URL.createObjectURL(principal) : "",
         }));
     };
 
+    const adicionarFotosFase = (fase, arquivos) => {
+        const novos = Array.from(arquivos || []);
+        if (novos.length === 0) return;
+
+        const campo = fase === "antes" ? "fotoAntes" : "fotoDepois";
+        const atuais = [
+            formulario[campo],
+            ...fotosExtras[fase],
+        ].filter(Boolean);
+
+        const restantes = Math.max(
+            0,
+            LIMITE_FOTOS_POR_FASE - atuais.length
+        );
+
+        if (novos.length > restantes) {
+            const aviso = restantes === 0
+                ? `As ${LIMITE_FOTOS_POR_FASE} fotos ${fase.toUpperCase()} já foram adicionadas. Remova uma foto para substituí-la.`
+                : `Você selecionou ${novos.length} fotos, mas esta etapa permite adicionar apenas ${restantes} agora. Nenhuma foto foi adicionada.`;
+
+            setAvisosFotos((atual) => ({
+                ...atual,
+                [fase]: aviso,
+            }));
+            return;
+        }
+
+        try {
+            const fotos = adicionarFotosAuditoria(atuais, novos);
+            atualizarFotosFase(fase, fotos);
+            setMensagem("");
+        } catch (erro) {
+            const aviso = erro?.message || "Não foi possível adicionar as fotos.";
+            setAvisosFotos((atual) => ({
+                ...atual,
+                [fase]: aviso,
+            }));
+            setMensagem(aviso);
+        }
+    };
+
+    const removerFotoFase = (fase, indice) => {
+        const campo = fase === "antes" ? "fotoAntes" : "fotoDepois";
+        const atuais = [
+            formulario[campo],
+            ...fotosExtras[fase],
+        ].filter(Boolean);
+
+        atualizarFotosFase(fase, removerFotoAuditoria(atuais, indice));
+    };
     const salvarAuditoriaDireta = async () => {
         if (salvandoRef.current || salvando) {
             setMensagem("A auditoria já está sendo salva. Aguarde a conclusão antes de tentar novamente.");
@@ -1088,6 +1202,20 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
             return;
         }
 
+        const possuiFotosExtras = fotosExtras.antes.length > 0 || fotosExtras.depois.length > 0;
+        if (
+            possuiFotosExtras &&
+            !usuario &&
+            !(
+                tokenAuditoriaPublicaValidado ||
+                tokenAcessoAuditoriaCampo ||
+                obterParametroUrl("token") ||
+                obterParametroUrl("chave")
+            )
+        ) {
+            setMensagem("Informe um token público válido antes de enviar as fotos adicionais.");
+            return;
+        }
         salvandoRef.current = true;
         setSalvando(true);
         setMensagem("");
@@ -1101,41 +1229,66 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
             tokenAuditoriaCampo = tokenAuditoriaPublicaValidado || tokenAcessoAuditoriaCampo || obterParametroUrl("token") || obterParametroUrl("chave");
             uploadPublicoAuditoria = Boolean(!usuario && tokenAuditoriaCampo);
             const referenciaUploadFotos = `auditoria-pendente-${Date.now()}`;
-            const fotoAntesUrl = await uploadFotoAuditoriaCampoDireta({
-                supabaseClient: supabase,
-                arquivo: formulario.fotoAntes,
-                numeroAuditoria: referenciaUploadFotos,
-                tipo: "foto-antes",
-                validarArquivoAntesUpload,
-                empresaId: empresaSelecionadaAuditoria?.id || formulario.empresaId || formulario.empresa_id || "",
-                tokenPublico: tokenAuditoriaCampo,
-                publico: uploadPublicoAuditoria,
-                senhaPublica: uploadPublicoAuditoria
-                    ? senhaAcessoAuditoria.trim()
-                    : "",
-            });
+            const fotosCarregadas = [];
+            const empresaIdUpload = empresaSelecionadaAuditoria?.id
+                || formulario.empresaId
+                || formulario.empresa_id
+                || "";
 
-            if (fotoAntesUrl) {
-                caminhosFotosNovasPendentes.push(fotoAntesUrl);
+            const gruposFotos = [
+                {
+                    fase: "antes",
+                    arquivos: [formulario.fotoAntes, ...fotosExtras.antes].filter(Boolean),
+                },
+                {
+                    fase: "depois",
+                    arquivos: [formulario.fotoDepois, ...fotosExtras.depois].filter(Boolean),
+                },
+            ];
+
+            for (const grupo of gruposFotos) {
+                for (let indice = 0; indice < grupo.arquivos.length; indice += 1) {
+                    const arquivo = grupo.arquivos[indice];
+                    const tipoUpload = possuiFotosExtras
+                        ? `foto-${grupo.fase}-${indice + 1}`
+                        : `foto-${grupo.fase}`;
+
+                    const caminho = await uploadFotoAuditoriaCampoDireta({
+                        supabaseClient: supabase,
+                        arquivo,
+                        numeroAuditoria: referenciaUploadFotos,
+                        tipo: tipoUpload,
+                        validarArquivoAntesUpload,
+                        empresaId: empresaIdUpload,
+                        tokenPublico: tokenAuditoriaCampo,
+                        publico: uploadPublicoAuditoria,
+                        senhaPublica: uploadPublicoAuditoria
+                            ? senhaAcessoAuditoria.trim()
+                            : "",
+                    });
+
+                    if (!caminho) {
+                        throw new Error("Uma foto selecionada não foi enviada.");
+                    }
+
+                    caminhosFotosNovasPendentes.push(caminho);
+
+                    fotosCarregadas.push({
+                        fase: grupo.fase,
+                        caminho,
+                        mimeType: String(arquivo.type || "").toLowerCase(),
+                        nome: arquivo.name || `${tipoUpload}.jpg`,
+                    });
+                }
             }
 
-            const fotoDepoisUrl = await uploadFotoAuditoriaCampoDireta({
-                supabaseClient: supabase,
-                arquivo: formulario.fotoDepois,
-                numeroAuditoria: referenciaUploadFotos,
-                tipo: "foto-depois",
-                validarArquivoAntesUpload,
-                empresaId: empresaSelecionadaAuditoria?.id || formulario.empresaId || formulario.empresa_id || "",
-                tokenPublico: tokenAuditoriaCampo,
-                publico: uploadPublicoAuditoria,
-                senhaPublica: uploadPublicoAuditoria
-                    ? senhaAcessoAuditoria.trim()
-                    : "",
-            });
+            const fotoAntesUrl = fotosCarregadas.find(
+                (foto) => foto.fase === "antes"
+            )?.caminho || "";
 
-            if (fotoDepoisUrl) {
-                caminhosFotosNovasPendentes.push(fotoDepoisUrl);
-            }
+            const fotoDepoisUrl = fotosCarregadas.find(
+                (foto) => foto.fase === "depois"
+            )?.caminho || "";
 
             const payload = montarPayloadAuditoriaCampoDireta({
                 formulario,
@@ -1160,14 +1313,33 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
             let avisoPersistenciaSecundaria = "";
 
             if (uploadPublicoAuditoria) {
-                const { data: dadosRpc, error } = await supabase.rpc("salvar_auditoria_campo_publica", {
+                const rpcPublica = possuiFotosExtras
+                    ? "salvar_auditoria_campo_publica_multifotos"
+                    : "salvar_auditoria_campo_publica";
+
+                const parametrosPublicos = {
                     p_token: tokenAuditoriaCampo,
                     p_senha: senhaAcessoAuditoria.trim(),
                     p_dados: payload,
-                });
+                    ...(possuiFotosExtras ? { p_fotos: fotosCarregadas } : {}),
+                };
+
+                const { data: dadosRpc, error } = await supabase.rpc(
+                    rpcPublica,
+                    parametrosPublicos
+                );
 
                 if (error) {
                     throw error;
+                }
+
+                if (
+                    possuiFotosExtras &&
+                    (dadosRpc?.ok !== true || !dadosRpc?.id)
+                ) {
+                    throw new Error(
+                        "O salvamento das fotos adicionais não foi confirmado."
+                    );
                 }
 
                 auditoriaPersistida = true;
@@ -1183,24 +1355,9 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                     origem: "Auditoria interna / app autenticado",
                 };
 
-                const { data: auditoriaCriada, error: erroAuditoria } = await supabase
-                    .from("auditorias_campo")
-                    .insert(payloadInterno)
-                    .select("*")
-                    .single();
-
-                if (erroAuditoria) {
-                    throw erroAuditoria;
-                }
-
-                auditoriaPersistida = true;
-
-                if (Number(payloadInterno.total_desvios || 0) > 0) {
-                    const { error: erroDesvio } = await supabase
-                        .from("auditoria_campo_desvios")
-                        .insert({
-                            auditoria_id: auditoriaCriada.id,
-                            empresa_id: auditoriaCriada.empresa_id || payloadInterno.empresa_id || null,
+                if (possuiFotosExtras) {
+                    const desvioMultifotos = Number(payloadInterno.total_desvios || 0) > 0
+                        ? {
                             categoria: payloadInterno.categoria_desvio_principal || "Auditoria de campo",
                             descricao: payloadInterno.situacao_encontrada || "Desvio registrado na auditoria de campo",
                             gravidade: payloadInterno.grau_risco || "Moderada",
@@ -1208,32 +1365,88 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                             responsavel: payloadInterno.responsavel_tratativa || null,
                             prazo: payloadInterno.prazo_adequacao || null,
                             status: payloadInterno.status_desvio || "Aberto",
-                            foto_antes_url: payloadInterno.foto_antes_url || null,
-                            foto_depois_url: payloadInterno.foto_depois_url || null,
+                            foto_antes_url: fotoAntesUrl || null,
+                            foto_depois_url: fotoDepoisUrl || null,
                             observacao: payloadInterno.observacao || null,
                             notificacao: payloadInterno.notificacao || {},
                             observacao_aberto: payloadInterno.observacoes_gerais || null,
-                        });
+                        }
+                        : null;
 
-                    if (erroDesvio) {
-                        avisoPersistenciaSecundaria =
-                            `A auditoria principal e as fotos foram preservadas, mas o registro detalhado do desvio não pôde ser criado: ${erroDesvio.message || "erro desconhecido"}.`;
+                    const { data: dadosMultifotos, error: erroMultifotos } = await supabase.rpc(
+                        "salvar_auditoria_campo_interna_multifotos",
+                        {
+                            p_dados: payloadInterno,
+                            p_fotos: fotosCarregadas,
+                            p_desvio: desvioMultifotos,
+                        }
+                    );
 
-                        console.warn(
-                            avisoPersistenciaSecundaria,
-                            erroDesvio
+                    if (erroMultifotos || dadosMultifotos?.ok !== true || !dadosMultifotos?.id) {
+                        throw new Error(
+                            erroMultifotos?.message
+                            || "Não foi possível confirmar a gravação integral das fotos."
                         );
                     }
-                }
 
-                data = {
-                    ok: true,
-                    id: auditoriaCriada.id,
-                    numero_auditoria: auditoriaCriada.numero_auditoria || numeroAuditoriaInterna,
-                    empresa_id: auditoriaCriada.empresa_id || payloadInterno.empresa_id || null,
-                    token_validado_no_supabase: false,
-                    auditoria_interna_autenticada: true,
-                };
+                    auditoriaPersistida = true;
+                    data = {
+                        ...dadosMultifotos,
+                        auditoria_interna_autenticada: true,
+                    };
+                } else {
+                    const { data: auditoriaCriada, error: erroAuditoria } = await supabase
+                        .from("auditorias_campo")
+                        .insert(payloadInterno)
+                        .select("*")
+                        .single();
+
+                    if (erroAuditoria) {
+                        throw erroAuditoria;
+                    }
+
+                    auditoriaPersistida = true;
+
+                    if (Number(payloadInterno.total_desvios || 0) > 0) {
+                        const { error: erroDesvio } = await supabase
+                            .from("auditoria_campo_desvios")
+                            .insert({
+                                auditoria_id: auditoriaCriada.id,
+                                empresa_id: auditoriaCriada.empresa_id || payloadInterno.empresa_id || null,
+                                categoria: payloadInterno.categoria_desvio_principal || "Auditoria de campo",
+                                descricao: payloadInterno.situacao_encontrada || "Desvio registrado na auditoria de campo",
+                                gravidade: payloadInterno.grau_risco || "Moderada",
+                                acao_imediata: payloadInterno.acao_recomendada || null,
+                                responsavel: payloadInterno.responsavel_tratativa || null,
+                                prazo: payloadInterno.prazo_adequacao || null,
+                                status: payloadInterno.status_desvio || "Aberto",
+                                foto_antes_url: payloadInterno.foto_antes_url || null,
+                                foto_depois_url: payloadInterno.foto_depois_url || null,
+                                observacao: payloadInterno.observacao || null,
+                                notificacao: payloadInterno.notificacao || {},
+                                observacao_aberto: payloadInterno.observacoes_gerais || null,
+                            });
+
+                        if (erroDesvio) {
+                            avisoPersistenciaSecundaria =
+                                `A auditoria principal e as fotos foram preservadas, mas o registro detalhado do desvio não pôde ser criado: ${erroDesvio.message || "erro desconhecido"}.`;
+
+                            console.warn(
+                                avisoPersistenciaSecundaria,
+                                erroDesvio
+                            );
+                        }
+                    }
+
+                    data = {
+                        ok: true,
+                        id: auditoriaCriada.id,
+                        numero_auditoria: auditoriaCriada.numero_auditoria || numeroAuditoriaInterna,
+                        empresa_id: auditoriaCriada.empresa_id || payloadInterno.empresa_id || null,
+                        token_validado_no_supabase: false,
+                        auditoria_interna_autenticada: true,
+                    };
+                }
             } else {
                 throw new Error("Token da auditoria não informado. Acesse o formulário por um link público com token cadastrado no Supabase.");
             }
@@ -1263,6 +1476,8 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
             setPontoMapaSelecionado("");
             setRespostasChecklist(criarRespostasChecklistDinamico(tipoInicial.valor));
             setPreviewFotos({ antes: "", depois: "" });
+            setFotosExtras({ antes: [], depois: [] });
+            setAvisosFotos({ antes: "", depois: "" });
             setRetornoEmailAuditoriaSalva(null);
             // R22_E3_D2B_PUBLICO_POS_SAVE_TENANT_CONTEXT
             const normalizadaComContextoEmail = {
@@ -1285,33 +1500,31 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 !auditoriaPersistida
                 && caminhosFotosNovasPendentes.length > 0
             ) {
-                try {
-                    if (uploadPublicoAuditoria) {
-                        await removerFotosAuditoriaCampoPublica({
-                            supabaseClient: supabase,
-                            caminhos: caminhosFotosNovasPendentes,
-                            tokenPublico: tokenAuditoriaCampo,
-                            senhaPublica: senhaAcessoAuditoria.trim(),
-                        });
-                    } else {
-                        const { error: erroRollbackStorage } =
-                            await supabase.storage
-                                .from("auditorias-campo")
-                                .remove(caminhosFotosNovasPendentes);
-
-                        if (erroRollbackStorage) {
-                            throw erroRollbackStorage;
-                        }
+                // G2-C9N: nao excluir uploads no rollback.
+                // A persistencia remota pode ter ocorrido antes do erro.
+                // Os arquivos serao tratados por conciliacao segura futura.
+                console.warn(
+                    "Auditoria nao confirmada. Limpeza automatica suspensa para preservar evidencias.",
+                    {
+                        origem: uploadPublicoAuditoria ? "publica" : "autenticada",
+                        arquivosPendentes: caminhosFotosNovasPendentes.length,
                     }
-                } catch (rollbackError) {
-                    console.warn(
-                        "A auditoria não foi persistida e os novos uploads não puderam ser removidos do Storage:",
-                        rollbackError?.message || rollbackError
-                    );
-                }
+                );
             }
 
-            setMensagem(error.message || "Erro ao salvar auditoria de campo.");
+            const mensagemErro = error?.message || "Erro ao salvar auditoria de campo.";
+
+            const avisoConferencia = auditoriaPersistida
+                ? "O registro principal da auditoria foi salvo, mas uma etapa posterior falhou. Consulte o histórico antes de tentar novamente."
+                : caminhosFotosNovasPendentes.length > 0
+                    ? "As fotos já enviadas foram preservadas para conferência. Verifique se a auditoria foi registrada antes de tentar novamente."
+                    : "";
+
+            setMensagem(
+                avisoConferencia
+                    ? `${mensagemErro} ${avisoConferencia}`
+                    : mensagemErro
+            );
         } finally {
             salvandoRef.current = false;
             setSalvando(false);
@@ -1941,19 +2154,92 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                         >
                             <div className="grid gap-4 md:grid-cols-2">
                                 {[
-                                    { campo: "fotoAntes", preview: previewFotos.antes, label: "Foto antes" },
-                                    { campo: "fotoDepois", preview: previewFotos.depois, label: "Foto depois" },
-                                ].map((item) => (
-                                    <div key={item.campo} className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-4">
-                                        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl bg-white px-4 py-4 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100">
-                                            <Upload className="h-4 w-4" />
-                                            {formulario[item.campo]?.name || item.label}
-                                            <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => alterarFoto(item.campo, e.target.files?.[0] || null)} />
-                                        </label>
-                                        <FileUploadAviso arquivo={formulario[item.campo]} tipo="fotoAuditoria" />
-                                        {item.preview && <img src={item.preview} alt={item.label} className="mt-3 max-h-64 w-full rounded-2xl object-cover ring-1 ring-slate-200" />}
-                                    </div>
-                                ))}
+                                    { fase: "antes", campo: "fotoAntes", titulo: "Fotos antes", acao: "Adicionar foto antes" },
+                                    { fase: "depois", campo: "fotoDepois", titulo: "Fotos depois", acao: "Adicionar foto depois" },
+                                ].map((item) => {
+                                    const selecionadas = [
+                                        formulario[item.campo],
+                                        ...fotosExtras[item.fase],
+                                    ].filter(Boolean);
+
+                                    return (
+                                        <div key={item.fase} className="rounded-3xl border border-slate-200 bg-white p-4">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <p className="text-sm font-black text-slate-800">
+                                                    {item.titulo}
+                                                </p>
+                                                <span className={classNames(
+                                                    "rounded-full px-2.5 py-1 text-xs font-bold",
+                                                    selecionadas.length >= LIMITE_FOTOS_POR_FASE
+                                                        ? "bg-emerald-50 text-emerald-700"
+                                                        : "text-slate-500"
+                                                )}>
+                                                    {selecionadas.length} de {LIMITE_FOTOS_POR_FASE}
+                                                </span>
+                                            </div>
+                                            <label
+                                                className={classNames(
+                                                    "mt-3 flex items-center justify-center gap-2 rounded-2xl border px-4 py-4 text-sm font-bold",
+                                                    selecionadas.length >= LIMITE_FOTOS_POR_FASE
+                                                        ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-500"
+                                                        : "cursor-pointer border-dashed border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                                                )}
+                                                title={selecionadas.length >= LIMITE_FOTOS_POR_FASE
+                                                    ? "Remova uma fotografia para adicionar outra."
+                                                    : item.acao}
+                                            >
+                                                <Upload className="h-4 w-4" />
+                                                {selecionadas.length >= LIMITE_FOTOS_POR_FASE
+                                                    ? "8 fotos adicionadas"
+                                                    : item.acao}
+                                                <input
+                                                    type="file"
+                                                    multiple
+                                                    accept="image/png,image/jpeg,image/webp"
+                                                    className="hidden"
+                                                    disabled={salvando || selecionadas.length >= LIMITE_FOTOS_POR_FASE}
+                                                    onChange={(event) => {
+                                                        const arquivos = Array.from(event.target.files || []);
+                                                        event.target.value = "";
+                                                        adicionarFotosFase(item.fase, arquivos);
+                                                    }}
+                                                />
+                                            </label>
+                                            {avisosFotos[item.fase] && (
+                                                <div
+                                                    role="alert"
+                                                    className="mt-2 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900"
+                                                >
+                                                    <span className="min-w-0 flex-1">
+                                                        {avisosFotos[item.fase]}
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        aria-label={`Fechar aviso das fotos ${item.fase}`}
+                                                        onClick={() => setAvisosFotos((atual) => ({
+                                                            ...atual,
+                                                            [item.fase]: "",
+                                                        }))}
+                                                        className="shrink-0 rounded-lg px-2 py-1 font-bold text-amber-800 hover:bg-amber-100"
+                                                    >
+                                                        Fechar
+                                                    </button>
+                                                </div>
+                                            )}
+                                            {selecionadas.length > 0 && (
+                                                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                                    {selecionadas.map((arquivo, indice) => (
+                                                        <PreviaFotoExtraAuditoria
+                                                            key={`${arquivo.name}-${arquivo.lastModified}-${indice}`}
+                                                            arquivo={arquivo}
+                                                            onRemover={() => removerFotoFase(item.fase, indice)}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </CardEtapaAuditoriaCampo>
                     </div>

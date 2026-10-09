@@ -2782,6 +2782,20 @@ export async function excluirArquivoStorageAuditoriaService({ supabase, arquivo 
         throw new Error("Arquivo inválido para exclusão.");
     }
 
+    // G2-C9W: evidencia de auditoria nao pode ser excluida
+    // por inventario que pode ficar desatualizado.
+    if (
+        String(
+            arquivo?.bucket ||
+            arquivo?.bucketId ||
+            ""
+        ).trim() === "auditorias-campo"
+    ) {
+        throw new Error(
+            "Exclusão de fotos de auditoria temporariamente bloqueada para preservar as evidências."
+        );
+    }
+
     const nomeArquivoStorage =
         String(
             arquivo?.nome ||
@@ -3134,6 +3148,14 @@ export async function excluirArquivoStorageTenantService({
     if (!bucket || !caminho) {
         throw new Error(
             "Exclusão bloqueada: bucket ou caminho inválido."
+        );
+    }
+
+    // G2-C9W: a consulta de inventario nao e atomica
+    // com a exclusao fisica no Supabase Storage.
+    if (bucket === "auditorias-campo") {
+        throw new Error(
+            "Exclusão de fotos de auditoria temporariamente bloqueada para preservar as evidências."
         );
     }
 

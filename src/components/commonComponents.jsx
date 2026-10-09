@@ -272,7 +272,7 @@ export function FotoAuditoriaPreview({ url, label }) {
     if (!url) return null;
 
     return (
-        <a href={urlAssinada || "#"} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200 transition hover:ring-slate-300">
+        <a href={urlAssinada || undefined} target={urlAssinada ? "_blank" : undefined} rel="noreferrer" aria-disabled={!urlAssinada} className="block overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200 transition hover:ring-slate-300">
             {urlAssinada && !erro ? (
                 <img
                     src={urlAssinada}
@@ -283,7 +283,7 @@ export function FotoAuditoriaPreview({ url, label }) {
                 />
             ) : (
                 <div className="flex h-44 items-center justify-center bg-slate-100 px-3 text-center text-xs font-semibold text-slate-500">
-                    Miniatura indisponível. Clique para abrir a foto.
+                    {urlAssinada ? "Miniatura indisponível. Clique para abrir a foto." : "A foto não está disponível para abertura neste momento."}
                 </div>
             )}
             <span className="flex items-center justify-between gap-2 px-3 py-2 text-xs font-bold text-slate-600">

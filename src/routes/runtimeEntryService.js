@@ -565,9 +565,20 @@ export function deveRenderizarSiteInstitucional(
      * Rotas públicas operacionais e
      * parâmetros de QR/DDS mantêm prioridade.
      */
+    // G2-C9Q: reconhecer rotas publicas no hash sem afrouxar
+    // a verificacao das rotas e dos dominios autorizados.
+    const hashOperacional = String(alvo.hash || "");
+    const caminhoHashOperacional =
+        hashOperacional.startsWith("#/")
+            ? normalizarPathname(hashOperacional.slice(1).split("?")[0])
+            : "";
+
     if (
         ehRotaPublicaOperacional(
             pathname
+        ) ||
+        ehRotaPublicaOperacional(
+            caminhoHashOperacional
         ) ||
         possuiParametroPublicoOperacional(
             alvo

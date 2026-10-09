@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ClipboardCheck, Eye, EyeOff, Plus, Trash2 } from "lucide-react";
 import { FileUploadAviso } from "../FileUploadAviso";
 import { PasswordInput } from "../commonComponents";
@@ -11,7 +11,11 @@ import {
     normalizarAuditoriaCampo,
 } from "../../services/auditoriaCampoService";
 import { statusGeral } from "../../services/colaboradorDocumentosService";
-import { reduzirFotoParaAuditoria } from "../../services/imagemService";
+import {
+    adicionarFotosAuditoria,
+    removerFotoAuditoria,
+    LIMITE_FOTOS_POR_FASE,
+} from "../../services/auditoriaCampoFotosMultiplasService.js";
 import {
     respostasAuditoriaCampo,
     categoriasAuditoriaCampo,
@@ -34,6 +38,37 @@ export function statusGeralConsultaPublica(colaborador = {}, treinamentos = []) 
     });
 }
 
+function PreviaFotoExtraQr({ arquivo, fase, indice, onRemover }) {
+    const url = useMemo(
+        () => URL.createObjectURL(arquivo),
+        [arquivo]
+    );
+
+    useEffect(() => () => URL.revokeObjectURL(url), [url]);
+
+    return (
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+            <img
+                src={url}
+                alt={`Foto ${fase} ${indice + 1}`}
+                className="h-32 w-full object-cover"
+            />
+            <div className="space-y-2 p-2">
+                <p className="truncate text-xs font-semibold text-slate-700" title={arquivo.name}>
+                    {arquivo.name}
+                </p>
+                <FileUploadAviso arquivo={arquivo} tipo="fotoAuditoria" />
+                <button
+                    type="button"
+                    onClick={onRemover}
+                    className="rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100"
+                >
+                    Remover foto
+                </button>
+            </div>
+        </div>
+    );
+}
 export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoriaSalva }) {
     const [aberta, setAberta] = useState(false);
     const [salvando, setSalvando] = useState(false);
@@ -67,6 +102,11 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
         observacaoCorrigido: "",
         fotoAntes: null,
         fotoDepois: null,
+    });
+
+    const [fotosExtrasQr, setFotosExtrasQr] = useState({
+        antes: [],
+        depois: [],
     });
 
     const tokenAuditoriaQr = useMemo(() => {
@@ -174,6 +214,49 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
         }
     };
 
+    const atualizarFotosQr = (fase, fotos) => {
+        const campo = fase === "antes" ? "fotoAntes" : "fotoDepois";
+        const [principal = null, ...adicionais] = fotos;
+
+        setDesvio((atual) => ({
+            ...atual,
+            [campo]: principal,
+        }));
+
+        setFotosExtrasQr((atual) => ({
+            ...atual,
+            [fase]: adicionais,
+        }));
+    };
+
+    const adicionarFotosQr = (fase, arquivos) => {
+        const novos = Array.from(arquivos || []);
+        if (novos.length === 0) return;
+
+        try {
+            const campo = fase === "antes" ? "fotoAntes" : "fotoDepois";
+            const atuais = [
+                desvio[campo],
+                ...fotosExtrasQr[fase],
+            ].filter(Boolean);
+
+            const fotos = adicionarFotosAuditoria(atuais, novos);
+            atualizarFotosQr(fase, fotos);
+            setMensagem("");
+        } catch (erro) {
+            setMensagem(erro.message || "Não foi possível adicionar as fotos.");
+        }
+    };
+
+    const removerFotoQr = (fase, indice) => {
+        const campo = fase === "antes" ? "fotoAntes" : "fotoDepois";
+        const atuais = [
+            desvio[campo],
+            ...fotosExtrasQr[fase],
+        ].filter(Boolean);
+
+        atualizarFotosQr(fase, removerFotoAuditoria(atuais, indice));
+    };
     const gerarNumeroAuditoriaQRCode = gerarNumeroAuditoriaQr;
 
     const salvarAuditoria = async () => {
@@ -268,16 +351,22 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
                 fotos: {
                     antes: desvio.fotoAntes,
                     depois: desvio.fotoDepois,
+                    extrasAntes: fotosExtrasQr.antes,
+                    extrasDepois: fotosExtrasQr.depois,
                 },
             });
 
             const normalizada = normalizarAuditoriaCampo({
                 ...(resultadoSalvamento?.auditoria || auditoriaPayload),
                 desvios: resultadoSalvamento?.desvio ? [resultadoSalvamento.desvio] : [],
+                fotos: Array.isArray(resultadoSalvamento?.fotos)
+                    ? resultadoSalvamento.fotos
+                    : [],
             });
 
             onAuditoriaSalva?.(normalizada);
             setMensagem("Auditoria registrada com sucesso.");
+            setFotosExtrasQr({ antes: [], depois: [] });
             setAberta(false);
             setRespostas({ epi: "conforme", frente_trabalho: "conforme", comportamento_seguro: "conforme" });
             setObservacaoAuditoria("");
@@ -608,53 +697,58 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
                                         className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700">Foto antes</label>
-                                    <input
-                                        type="file"
-                                        accept="image/png,image/jpeg,image/webp"
-                                        onChange={async (e) => {
-                                            const arquivo = e.target.files?.[0] || null;
-                                            const otimizado = arquivo ? await reduzirFotoParaAuditoria(arquivo) : null;
-                                            setDesvio((atual) => ({ ...atual, fotoAntes: otimizado }));
-                                        }}
-                                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-                                    />
-                                    <FileUploadAviso arquivo={desvio.fotoAntes} tipo="fotoAuditoria" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700">Foto depois</label>
-                                    <input
-                                        type="file"
-                                        accept="image/png,image/jpeg,image/webp"
-                                        onChange={async (e) => {
-                                            const arquivo = e.target.files?.[0] || null;
-                                            const otimizado = arquivo ? await reduzirFotoParaAuditoria(arquivo) : null;
-                                            setDesvio((atual) => ({ ...atual, fotoDepois: otimizado }));
-                                        }}
-                                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
-                                    />
-                                    <FileUploadAviso arquivo={desvio.fotoDepois} tipo="fotoAuditoria" />
-                                </div>
-                                {(desvio.fotoAntes || desvio.fotoDepois) && (
-                                    <div className="md:col-span-2 rounded-2xl border border-slate-200 bg-white p-4">
-                                        <p className="text-sm font-bold text-slate-800">Fotos anexadas para a auditoria</p>
-                                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                                            {desvio.fotoAntes && (
-                                                <div className="overflow-hidden rounded-2xl bg-slate-50 ring-1 ring-slate-200">
-                                                    <img src={URL.createObjectURL(desvio.fotoAntes)} alt="Prévia da foto antes" className="h-36 w-full object-cover" />
-                                                    <p className="px-3 py-2 text-xs font-bold text-slate-600">Foto antes: {desvio.fotoAntes.name}</p>
+                                <div className="md:col-span-2 grid gap-3 md:grid-cols-2">
+                                    {[
+                                        { fase: "antes", campo: "fotoAntes", titulo: "Fotos antes", acao: "Adicionar foto antes" },
+                                        { fase: "depois", campo: "fotoDepois", titulo: "Fotos depois", acao: "Adicionar foto depois" },
+                                    ].map((item) => {
+                                        const selecionadas = [
+                                            desvio[item.campo],
+                                            ...fotosExtrasQr[item.fase],
+                                        ].filter(Boolean);
+
+                                        return (
+                                            <div key={item.fase} className="rounded-2xl border border-slate-200 bg-white p-4">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <p className="text-sm font-bold text-slate-800">
+                                                        {item.titulo}
+                                                    </p>
+                                                    <span className="text-xs font-bold text-slate-500">
+                                                        {selecionadas.length} de {LIMITE_FOTOS_POR_FASE}
+                                                    </span>
                                                 </div>
-                                            )}
-                                            {desvio.fotoDepois && (
-                                                <div className="overflow-hidden rounded-2xl bg-slate-50 ring-1 ring-slate-200">
-                                                    <img src={URL.createObjectURL(desvio.fotoDepois)} alt="Prévia da foto depois" className="h-36 w-full object-cover" />
-                                                    <p className="px-3 py-2 text-xs font-bold text-slate-600">Foto depois: {desvio.fotoDepois.name}</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
+                                                <label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm font-bold text-slate-700 hover:bg-slate-100">
+                                                    {item.acao}
+                                                    <input
+                                                        type="file"
+                                                        multiple
+                                                        accept="image/png,image/jpeg,image/webp"
+                                                        className="hidden"
+                                                        disabled={salvando}
+                                                        onChange={(event) => {
+                                                            const arquivos = Array.from(event.target.files || []);
+                                                            event.target.value = "";
+                                                            adicionarFotosQr(item.fase, arquivos);
+                                                        }}
+                                                    />
+                                                </label>
+                                                {selecionadas.length > 0 && (
+                                                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                                        {selecionadas.map((arquivo, indice) => (
+                                                            <PreviaFotoExtraQr
+                                                                key={`${arquivo.name}-${arquivo.lastModified}-${indice}`}
+                                                                arquivo={arquivo}
+                                                                fase={item.fase}
+                                                                indice={indice}
+                                                                onRemover={() => removerFotoQr(item.fase, indice)}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                                 <div className="md:col-span-2 rounded-2xl border border-slate-200 bg-white p-4">
                                     <h5 className="text-sm font-bold text-slate-800">Observações por status do desvio</h5>
                                     <p className="mt-1 text-xs text-slate-500">Use esses campos para acompanhar a evolução: abertura, tratativa e correção.</p>

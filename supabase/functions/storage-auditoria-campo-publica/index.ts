@@ -442,25 +442,53 @@ serve(async (req) => {
         );
       }
 
-      const { error: erroRemove } =
-        await supabase.storage
-          .from(BUCKET)
-          .remove(caminhos);
+      // Somente arquivos temporarios do fluxo de auditoria.
+      const prefixoPendente =
+        `${prefixoAutorizado}auditoria-pendente-`;
 
-      if (erroRemove) {
+      if (
+        caminhos.some(
+          (caminho) => !caminho.startsWith(prefixoPendente)
+        )
+      ) {
         return jsonResponse(
           {
             ok: false,
-            erro: "Não foi possível remover os arquivos pendentes da auditoria.",
+            erro: "A remocao somente e permitida para uploads pendentes.",
           },
-          500,
+          403,
         );
       }
 
-      return jsonResponse({
-        ok: true,
-        removidos: caminhos.length,
-      });
+      // Falha de consulta ou evidencia vinculada: negar exclusao.
+      const { data: podeRemover, error: erroProtecao } =
+        await supabase.rpc(
+          "auditoria_campo_pode_remover_fotos_pendentes",
+          {
+            p_caminhos: caminhos,
+          },
+        );
+
+      if (erroProtecao || podeRemover !== true) {
+        return jsonResponse(
+          {
+            ok: false,
+            erro: "Remocao nao autorizada: evidencia vinculada ou verificacao indisponivel.",
+          },
+          409,
+        );
+      }
+
+      // G2-C9K: a consulta SQL anterior nao e atomica com Storage.remove.
+      // Preservar as evidencias ate existir uma limpeza concorrente segura.
+      return jsonResponse(
+        {
+          ok: false,
+          codigo: "REMOCAO_PENDENTE_BLOQUEADA",
+          erro: "Limpeza automatica suspensa para proteger as evidencias. Nenhuma foto foi removida.",
+        },
+        409,
+      );
     }
 
     return jsonResponse(
