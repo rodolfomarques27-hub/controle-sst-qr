@@ -77,6 +77,54 @@ serve(async (req) => {
         ? body.fotos
         : {};
 
+    const extrasAntes =
+      Array.isArray(fotos.extrasAntes) ? fotos.extrasAntes : [];
+    const extrasDepois =
+      Array.isArray(fotos.extrasDepois) ? fotos.extrasDepois : [];
+
+    const multifotos =
+      extrasAntes.length > 0 || extrasDepois.length > 0;
+
+    if (
+      (fotos.extrasAntes != null && !Array.isArray(fotos.extrasAntes)) ||
+      (fotos.extrasDepois != null && !Array.isArray(fotos.extrasDepois)) ||
+      extrasAntes.length + Number(Boolean(fotos.antes)) > 8 ||
+      extrasDepois.length + Number(Boolean(fotos.depois)) > 8 ||
+      (multifotos && !desvio)
+    ) {
+      return jsonResponse({
+        ok: false,
+        erro: "Quantidade ou vinculo das fotos adicionais invalido.",
+      }, 400);
+    }
+
+    const fotosRecebidas: any[] = [
+      fotos.antes,
+      fotos.depois,
+      ...extrasAntes,
+      ...extrasDepois,
+    ].filter(Boolean);
+
+    if (fotosRecebidas.length > 16) {
+      return jsonResponse({
+        ok: false,
+        erro: "Limite fotografico excedido.",
+      }, 400);
+    }
+
+    const estimativaBytes = fotosRecebidas.reduce(
+      (soma: number, foto: any) =>
+        soma + Math.ceil(texto(foto?.base64).length * 3 / 4),
+      0,
+    );
+
+    if (estimativaBytes > 14 * 1024 * 1024) {
+      return jsonResponse({
+        ok: false,
+        erro: "Tamanho total das fotos excede o limite permitido.",
+      }, 413);
+    }
+
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false },
     });
@@ -406,18 +454,19 @@ serve(async (req) => {
     }
 
     const arquivosCriados: string[] = [];
+    const caminhosUploadTentados: string[] = [];
+    const registrosFotosMultiplas: Array<Record<string, unknown>> = [];
 
     async function compensarAuditoria() {
       const errosCompensacao: string[] = [];
 
-      if (arquivosCriados.length > 0) {
-        const { error: storageCleanupError } = await supabase.storage
-          .from("auditorias-campo")
-          .remove([...arquivosCriados]);
-
-        if (storageCleanupError) {
-          errosCompensacao.push(`storage: ${storageCleanupError.message}`);
-        }
+      if (arquivosCriados.length > 0 || caminhosUploadTentados.length > 0) {
+        console.error("G2-C9AE: compensacao suspensa para preservar evidencias.", {
+          auditoriaId,
+          arquivosCriados: [...arquivosCriados],
+          caminhosUploadTentados: [...caminhosUploadTentados],
+        });
+        return ["Evidencias preservadas; auditoria parcial pendente de conciliacao."];
       }
 
       const { error: auditoriaCleanupError } = await supabase
@@ -511,18 +560,34 @@ serve(async (req) => {
 
     const auditoriaFinal = auditoriaAtualizada;
 
-    async function uploadFoto(foto: any, tipo: "antes" | "depois") {
+    async function uploadFoto(foto: any, tipo: "antes" | "depois", ordem = 1) {
       if (!foto?.base64) return "";
 
-      const nomeArquivo = `${tipo}-${Date.now()}-${limparNomeArquivo(foto.nome || "foto-auditoria.jpg")}`;
-      const caminho = `auditorias-publicas/qr-colaborador/${auditoriaId}/${nomeArquivo}`;
+      const mime = texto(foto.tipo).toLowerCase();
+
+      if (!["image/jpeg", "image/png", "image/webp"].includes(mime)) {
+        throw new Error("Formato de imagem nao permitido.");
+      }
+
       const bytes = bytesFromBase64(foto.base64);
+
+      if (bytes.length === 0 || bytes.length > 4 * 1024 * 1024) {
+        throw new Error("Tamanho da imagem nao permitido.");
+      }
+
+      const nomeArquivo =
+        `${tipo}-${ordem}-${crypto.randomUUID()}-${limparNomeArquivo(foto.nome || "foto-auditoria.jpg")}`;
+
+      const caminho =
+        `auditorias-publicas/qr-colaborador/${auditoriaId}/${nomeArquivo}`;
+
+      caminhosUploadTentados.push(caminho);
 
       const { error } = await supabase.storage
         .from("auditorias-campo")
         .upload(caminho, bytes, {
-          contentType: texto(foto.tipo) || "image/jpeg",
-          upsert: true,
+          contentType: mime,
+          upsert: false,
         });
 
       if (error) throw error;
@@ -539,8 +604,58 @@ serve(async (req) => {
       let fotoDepoisUrl = "";
 
       try {
-        fotoAntesUrl = await uploadFoto(fotos.antes, "antes");
-        fotoDepoisUrl = await uploadFoto(fotos.depois, "depois");
+        if (!multifotos) {
+          fotoAntesUrl = await uploadFoto(fotos.antes, "antes");
+          fotoDepoisUrl = await uploadFoto(fotos.depois, "depois");
+        } else {
+          const grupos = [
+            {
+              fase: "antes" as const,
+              arquivos: [fotos.antes, ...extrasAntes].filter(Boolean),
+            },
+            {
+              fase: "depois" as const,
+              arquivos: [fotos.depois, ...extrasDepois].filter(Boolean),
+            },
+          ];
+
+          for (const grupo of grupos) {
+            if (grupo.arquivos.length > 8) {
+              throw new Error("Limite de fotos por fase excedido.");
+            }
+
+            for (let indice = 0; indice < grupo.arquivos.length; indice += 1) {
+              const arquivo = grupo.arquivos[indice];
+              const caminho = await uploadFoto(
+                arquivo,
+                grupo.fase,
+                indice + 1,
+              );
+
+              if (!caminho) {
+                throw new Error("Arquivo fotografico nao enviado.");
+              }
+
+              registrosFotosMultiplas.push({
+                auditoria_id: auditoriaId,
+                empresa_id: auditoriaPayload.empresa_id,
+                fase: grupo.fase,
+                ordem: indice + 1,
+                bucket_id: "auditorias-campo",
+                caminho_storage: caminho,
+                nome_original: limparNomeArquivo(arquivo.nome || ""),
+                mime_type: texto(arquivo.tipo).toLowerCase(),
+              });
+            }
+          }
+
+          fotoAntesUrl = texto(
+            registrosFotosMultiplas.find((foto) => foto.fase === "antes")?.caminho_storage
+          );
+          fotoDepoisUrl = texto(
+            registrosFotosMultiplas.find((foto) => foto.fase === "depois")?.caminho_storage
+          );
+        }
       } catch (error) {
         await compensarAuditoria();
 
@@ -584,6 +699,21 @@ serve(async (req) => {
       }
 
       desvioCriado = data;
+
+      if (multifotos) {
+        const { error: erroFotos } = await supabase
+          .from("auditoria_campo_fotos")
+          .insert(registrosFotosMultiplas);
+
+        if (erroFotos) {
+          await compensarAuditoria();
+
+          return jsonResponse({
+            ok: false,
+            erro: "Falha ao vincular todas as fotos da auditoria.",
+          }, 500);
+        }
+      }
     }
 
     return jsonResponse({
@@ -591,6 +721,7 @@ serve(async (req) => {
       mensagem: "Auditoria registrada com sucesso.",
       auditoria: auditoriaFinal,
       desvio: desvioCriado,
+      fotos: multifotos ? registrosFotosMultiplas : [],
     });
   } catch (error) {
     return jsonResponse({ ok: false, erro: error?.message || String(error) }, 500);

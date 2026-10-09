@@ -2113,7 +2113,7 @@ export function DashboardAuditoriaCampo({
                 const caminho = `${empresaIdAuditoria}/evidencias-correcao/${idAuditoria}/${Date.now()}-${numeroSeguro}-${nomeSeguro}`;
                 const { error: erroUpload } = await supabase.storage.from("auditorias-campo").upload(caminho, formulario.foto, {
                     cacheControl: "3600",
-                    upsert: true,
+                    upsert: false,
                     contentType: formulario.foto.type || "image/jpeg",
                 });
 
@@ -2192,24 +2192,19 @@ export function DashboardAuditoriaCampo({
             }
         } catch (error) {
             if (caminhoFotoNovaPendente) {
-                try {
-                    const { error: erroRollbackStorage } =
-                        await supabase.storage
-                            .from("auditorias-campo")
-                            .remove([caminhoFotoNovaPendente]);
-
-                    if (erroRollbackStorage) {
-                        throw erroRollbackStorage;
-                    }
-                } catch (rollbackError) {
-                    console.warn(
-                        "A persistência da evidência falhou e a nova foto não pôde ser removida do Storage:",
-                        rollbackError?.message || rollbackError
-                    );
-                }
+                // G2-C9V: preservar a foto em caso de falha de confirmacao.
+                // A atualizacao pode ter ocorrido antes de um erro de rede.
+                console.warn(
+                    "Correcao sem confirmacao. Foto preservada para conciliacao segura.",
+                    { auditoriaId: idAuditoria }
+                );
             }
 
-            setMensagemEvidenciaCorrecaoQrCampo({ id: idAuditoria, texto: `Erro ao registrar correção: ${error.message}`, erro: true });
+            setMensagemEvidenciaCorrecaoQrCampo({
+                id: idAuditoria,
+                texto: `Não foi possível confirmar a correção: ${error?.message || "erro desconhecido"}. Consulte o histórico antes de tentar novamente.${caminhoFotoNovaPendente ? " A fotografia enviada foi preservada." : ""}`,
+                erro: true,
+            });
         } finally {
             setSalvandoEvidenciaCorrecaoQrCampoId("");
         }
@@ -3296,7 +3291,7 @@ const logoHtml = logoQr
                     ) : auditoriasFiltradas.slice(0, quantidadeHistoricoVisivel).map((item) => {
                         const alvo = identificarAlvoAuditoriaCampo(item);
                         const fotos = fotosAuditoriaCampo(item);
-                        const temFotos = Boolean(fotos.antes || fotos.depois);
+                        const temFotos = Boolean(fotos.antesLista.length || fotos.depoisLista.length);
                         const chaveAuditoria = String(item.id || item.numeroAuditoria || `${alvo.titulo}-${item.createdAt}`);
                         const aberta = Boolean(auditoriasHistoricoAbertas[chaveAuditoria]);
                         const statusAtual = item.statusAuditoria || item.statusDesvio || "Não informado";
@@ -3527,8 +3522,20 @@ const logoHtml = logoQr
                                                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                                                     <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Fotos da auditoria</p>
                                                     <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                                                        <FotoAuditoriaPreview url={fotos.antes} label="Foto antes" />
-                                                        <FotoAuditoriaPreview url={fotos.depois} label="Foto depois" />
+                                                        {fotos.antesLista.map((url, indice) => (
+                                                            <FotoAuditoriaPreview
+                                                                key={`antes-${indice}-${url}`}
+                                                                url={url}
+                                                                label={`Foto antes ${indice + 1}`}
+                                                            />
+                                                        ))}
+                                                        {fotos.depoisLista.map((url, indice) => (
+                                                            <FotoAuditoriaPreview
+                                                                key={`depois-${indice}-${url}`}
+                                                                url={url}
+                                                                label={`Foto depois ${indice + 1}`}
+                                                            />
+                                                        ))}
                                                     </div>
                                                 </div>
                                             </div>

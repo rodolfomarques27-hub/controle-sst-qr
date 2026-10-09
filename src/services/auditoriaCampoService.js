@@ -242,6 +242,7 @@ function normalizarAuditoriaCampo(item = {}) {
         statusAuditoria: item.status_auditoria || item.statusAuditoria || "",
         fotoAntesUrl: item.foto_antes_url || item.fotoAntesUrl || "",
         fotoDepoisUrl: item.foto_depois_url || item.fotoDepoisUrl || "",
+        fotos: Array.isArray(item.fotos) ? item.fotos : [],
         observacoesGerais: item.observacoes_gerais || item.observacoesGerais || item.observacao || "",
         checklistDinamico: Array.isArray(item.checklist_dinamico) ? item.checklist_dinamico : (Array.isArray(item.checklistDinamico) ? item.checklistDinamico : []),
         funcao: item.funcao || item.colaboradores?.funcao || "",
@@ -316,9 +317,48 @@ function identificarAlvoAuditoriaCampo(item = {}) {
 function fotosAuditoriaCampo(item = {}) {
     const desvios = Array.isArray(item.desvios) ? item.desvios : [];
     const desvioPrincipal = desvios[0] || {};
+    const registros = Array.isArray(item.fotos) ? item.fotos : [];
+
+    const legadoAntes =
+        desvioPrincipal.fotoAntesUrl ||
+        desvioPrincipal.foto_antes_url ||
+        item.fotoAntesUrl ||
+        item.foto_antes_url ||
+        "";
+
+    const legadoDepois =
+        desvioPrincipal.fotoDepoisUrl ||
+        desvioPrincipal.foto_depois_url ||
+        item.fotoDepoisUrl ||
+        item.foto_depois_url ||
+        "";
+
+    const montarLista = (fase, caminhoLegado) => {
+        const adicionais = registros
+            .filter((foto) => foto?.fase === fase)
+            .sort((a, b) => Number(a.ordem || 0) - Number(b.ordem || 0))
+            .map((foto) => String(
+                foto.caminho_storage ||
+                foto.caminhoStorage ||
+                ""
+            ).trim())
+            .filter(Boolean);
+
+        const principal = String(caminhoLegado || "").trim();
+
+        return [...new Set(
+            principal ? [principal, ...adicionais] : adicionais
+        )];
+    };
+
+    const antesLista = montarLista("antes", legadoAntes);
+    const depoisLista = montarLista("depois", legadoDepois);
+
     return {
-        antes: desvioPrincipal.fotoAntesUrl || desvioPrincipal.foto_antes_url || item.fotoAntesUrl || item.foto_antes_url || "",
-        depois: desvioPrincipal.fotoDepoisUrl || desvioPrincipal.foto_depois_url || item.fotoDepoisUrl || item.foto_depois_url || "",
+        antes: antesLista[0] || "",
+        depois: depoisLista[0] || "",
+        antesLista,
+        depoisLista,
     };
 }
 
@@ -449,25 +489,42 @@ async function carregarAuditoriasCampoDiretoDashboard({ supabase, limite = 1000,
         .order("created_at", { ascending: false })
         .range(inicio, fim);
 
-    try {
-        const { data, error } = await montarConsulta("*, desvios:auditoria_campo_desvios(*)");
-        if (error) throw error;
+    const consultas = [
+        "*, desvios:auditoria_campo_desvios(*), fotos:auditoria_campo_fotos(*)",
+        "*, desvios:auditoria_campo_desvios(*)",
+        "*",
+    ];
+
+    for (const select of consultas) {
+        const { data, error } = await montarConsulta(select);
+
+        if (error) {
+            const codigo = String(error.code || "");
+
+            const erroRelacao = [
+                "PGRST200",
+                "PGRST201",
+                "PGRST205",
+                "42P01",
+                "42703",
+            ].includes(codigo);
+
+            if (!erroRelacao || select === "*") {
+                throw error;
+            }
+
+            continue;
+        }
 
         const auditorias = Array.isArray(data) ? data : [];
-        return {
-            auditorias,
-            existeMais: auditorias.length >= tamanho,
-        };
-    } catch (erroRelacao) {
-        const { data, error } = await montarConsulta("*");
-        if (error) throw error;
 
-        const auditorias = Array.isArray(data) ? data : [];
         return {
             auditorias,
             existeMais: auditorias.length >= tamanho,
         };
     }
+
+    throw new Error("Não foi possível carregar o histórico de auditorias.");
 }
 
 export {

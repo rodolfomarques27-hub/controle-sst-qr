@@ -302,6 +302,10 @@ async function resolverUrlStorageComCache(
                     error?.message || error
                 );
 
+                if (bucket === "auditorias-campo") {
+                    return "";
+                }
+
                 const urlPublica =
                     montarUrlPublicaStorage(
                         bucket,

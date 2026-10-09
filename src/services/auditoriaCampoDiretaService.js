@@ -684,33 +684,67 @@ export async function removerFotosAuditoriaCampoPublica({
         );
     }
 
-    const { data, error } =
-        await supabaseClient.functions.invoke(
-            "storage-auditoria-campo-publica",
-            {
-                body: {
-                    acao: "remove",
-                    tokenAuditoria,
-                    senha: String(
-                        senhaPublica || ""
-                    ).trim(),
-                    caminhos: caminhosSeguros,
-                },
-            }
+    const limitePorLote = 10;
+    const falhas = [];
+    let removidos = 0;
+
+    for (
+        let indice = 0;
+        indice < caminhosSeguros.length;
+        indice += limitePorLote
+    ) {
+        const lote = caminhosSeguros.slice(
+            indice,
+            indice + limitePorLote
         );
 
-    if (error || data?.ok === false) {
+        try {
+            const { data, error } =
+                await supabaseClient.functions.invoke(
+                    "storage-auditoria-campo-publica",
+                    {
+                        body: {
+                            acao: "remove",
+                            tokenAuditoria,
+                            senha: String(
+                                senhaPublica || ""
+                            ).trim(),
+                            caminhos: lote,
+                        },
+                    }
+                );
+
+            if (
+                error ||
+                data?.ok !== true ||
+                Number(data?.removidos) !== lote.length
+            ) {
+                throw new Error(
+                    data?.erro ||
+                    data?.mensagem ||
+                    error?.message ||
+                    "A remocao do lote nao foi confirmada."
+                );
+            }
+
+            removidos += lote.length;
+        } catch (erroLote) {
+            falhas.push(
+                erroLote?.message ||
+                "Falha desconhecida na limpeza de fotos."
+            );
+        }
+    }
+
+    if (falhas.length > 0) {
         throw new Error(
-            data?.erro ||
-            data?.mensagem ||
-            error?.message ||
-            "Falha ao remover fotos públicas pendentes da auditoria."
+            `Falha na limpeza de ${falhas.length} lote(s) de fotos: ${falhas.join("; ")}`
         );
     }
 
-    return data || {
+    return {
         ok: true,
-        removidos: caminhosSeguros.length,
+        removidos,
     };
 }
 export function montarPayloadAuditoriaCampoDireta({

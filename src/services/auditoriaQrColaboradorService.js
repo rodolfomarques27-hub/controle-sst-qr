@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabaseClient";
 import { reduzirFotoParaAuditoria } from "./imagemService";
+import { LIMITE_FOTOS_POR_FASE } from "./auditoriaCampoFotosMultiplasService.js";
 import { sanitizarNomeArquivo } from "../utils/sstUtils";
 import { obterTokenAuditoriaPublicaUrl } from "../constants/auditoriaPublicaConstants";
 import {
@@ -33,11 +34,11 @@ async function arquivoParaBase64Payload(arquivo) {
 
     const tipoArquivo = String(arquivoOtimizado.type || arquivo.type || "").toLowerCase();
 
-    if (!tipoArquivo.startsWith("image/")) {
+    if (!["image/jpeg", "image/png", "image/webp"].includes(tipoArquivo)) {
         throw new Error("Somente imagens PNG, JPG, JPEG ou WEBP podem ser enviadas como evidência da auditoria.");
     }
 
-    if (Number(arquivoOtimizado.size || 0) > 5 * 1024 * 1024) {
+    if (Number(arquivoOtimizado.size || 0) > 4 * 1024 * 1024) {
         throw new Error("Foto fora do tamanho permitido mesmo após a redução automática.");
     }
 
@@ -50,7 +51,7 @@ async function arquivoParaBase64Payload(arquivo) {
 
     return {
         nome: sanitizarNomeArquivo(arquivoOtimizado.name || arquivo.name || "foto-auditoria.jpg"),
-        tipo: arquivoOtimizado.type || arquivo.type || "image/jpeg",
+        tipo: tipoArquivo,
         base64,
     };
 }
@@ -116,8 +117,35 @@ export async function salvarAuditoriaQrColaborador({
         throw new Error("Token QR do colaborador não informado.");
     }
 
+    const extrasAntes = Array.isArray(fotos?.extrasAntes) ? fotos.extrasAntes : [];
+    const extrasDepois = Array.isArray(fotos?.extrasDepois) ? fotos.extrasDepois : [];
+
+    if ((extrasAntes.length || extrasDepois.length) && !desvio) {
+        throw new Error("As fotos adicionais precisam estar vinculadas a um desvio.");
+    }
+
+    if (
+        extrasAntes.length + Number(Boolean(fotos?.antes)) > LIMITE_FOTOS_POR_FASE ||
+        extrasDepois.length + Number(Boolean(fotos?.depois)) > LIMITE_FOTOS_POR_FASE
+    ) {
+        throw new Error("Limite de oito fotos por fase excedido.");
+    }
+
     const fotoAntesPayload = desvio ? await arquivoParaBase64Payload(fotos?.antes) : null;
     const fotoDepoisPayload = desvio ? await arquivoParaBase64Payload(fotos?.depois) : null;
+
+    const extrasAntesPayload = [];
+    const extrasDepoisPayload = [];
+
+    for (const arquivo of extrasAntes) {
+        extrasAntesPayload.push(await arquivoParaBase64Payload(arquivo));
+    }
+
+    for (const arquivo of extrasDepois) {
+        extrasDepoisPayload.push(await arquivoParaBase64Payload(arquivo));
+    }
+
+    const possuiExtras = extrasAntesPayload.length > 0 || extrasDepoisPayload.length > 0;
 
     const { data, error } = await supabase.functions.invoke("salvar-auditoria-qr-colaborador", {
         body: {
@@ -129,6 +157,10 @@ export async function salvarAuditoriaQrColaborador({
             fotos: {
                 antes: fotoAntesPayload,
                 depois: fotoDepoisPayload,
+                ...(possuiExtras ? {
+                    extrasAntes: extrasAntesPayload,
+                    extrasDepois: extrasDepoisPayload,
+                } : {}),
             },
         },
     });
