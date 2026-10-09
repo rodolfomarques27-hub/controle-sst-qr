@@ -3130,14 +3130,16 @@ export async function excluirArquivoStorageTenantService({
             ""
         ).trim();
 
-    const caminho =
+    let caminho =
         String(
             arquivo?.caminho ||
             ""
         )
             .trim()
-            .replace(/^\/+/, "")
-            .replace(/\/+$/, "");
+            .replace(/^\/+/, "");
+    while (caminho.endsWith("/")) {
+        caminho = caminho.slice(0, -1);
+    }
 
     if (!tenantIdNormalizado) {
         throw new Error(
@@ -3216,14 +3218,16 @@ export async function excluirArquivoStorageTenantService({
             ""
         ).trim();
 
-    const caminhoConfirmado =
+    let caminhoConfirmado =
         String(
             registro?.caminho ||
             ""
         )
             .trim()
-            .replace(/^\/+/, "")
-            .replace(/\/+$/, "");
+            .replace(/^\/+/, "");
+    while (caminhoConfirmado.endsWith("/")) {
+        caminhoConfirmado = caminhoConfirmado.slice(0, -1);
+    }
 
     if (
         tenantConfirmado !==

@@ -470,7 +470,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
             }
         }
 
-        carregarTokenAtivoAuditoriaPublica();
+        void carregarTokenAtivoAuditoriaPublica();
 
         return () => {
             ativo = false;
@@ -584,7 +584,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
             }
         }
 
-        carregarEmpresasPublicasAuditoria();
+        void carregarEmpresasPublicasAuditoria();
 
         return () => {
             ativo = false;
@@ -702,7 +702,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
             }
         };
 
-        carregarStatusEquipamentoQr();
+        void carregarStatusEquipamentoQr();
     }, [acessoLiberado, parametrosStatusEquipamentoQr]);
 
     const {

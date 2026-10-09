@@ -453,7 +453,7 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
                                     e.key ===
                                     "Enter"
                                 ) {
-                                    validarAcessoAuditoriaQRCode();
+                                    void validarAcessoAuditoriaQRCode();
                                 }
                             }}
                             placeholder="Senha da auditoria"
