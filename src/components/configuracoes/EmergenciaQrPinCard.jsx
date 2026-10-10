@@ -86,6 +86,12 @@ export function EmergenciaQrPinCard({
     const [erroStatus, setErroStatus] = useState("");
     const [revisaoStatus, setRevisaoStatus] = useState(0);
 
+    const [recursoMestreAtivo, setRecursoMestreAtivo] =
+        useState(true);
+
+    const [gateMestreCarregado, setGateMestreCarregado] =
+        useState(false);
+
     const statusSelecionado = statusEmpresas.find(
         (item) => item.empresa_id === empresaId
     );
@@ -99,40 +105,104 @@ export function EmergenciaQrPinCard({
 
         setStatusEmpresas([]);
         setErroStatus("");
+        setGateMestreCarregado(false);
 
         if (!tenantId) {
             setCarregandoStatus(false);
-            return () => { montado = false; };
+
+            return () => {
+                montado = false;
+            };
         }
 
         setCarregandoStatus(true);
 
-        supabase.rpc(
-            "listar_status_pin_emergencia_empresas",
-            { p_tenant_id: tenantId }
-        ).then(({ data, error }) => {
-            if (!montado) return;
+        Promise.all([
+            supabase.rpc(
+                "listar_status_pin_emergencia_empresas",
+                {
+                    p_tenant_id: tenantId,
+                }
+            ),
+            supabase.rpc(
+                "consultar_recursos_pin_tenant",
+                {
+                    p_tenant_id: tenantId,
+                }
+            ),
+        ]).then(
+            ([
+                respostaStatus,
+                respostaGate,
+            ]) => {
+                if (!montado) {
+                    return;
+                }
 
-            if (error) {
-                throw error;
+                if (respostaStatus.error) {
+                    throw respostaStatus.error;
+                }
+
+                if (respostaGate.error) {
+                    throw respostaGate.error;
+                }
+
+                if (!Array.isArray(respostaStatus.data)) {
+                    throw new Error(
+                        "Resposta inesperada ao consultar os PINs."
+                    );
+                }
+
+                const gate =
+                    Array.isArray(respostaGate.data)
+                        ? (
+                            respostaGate.data[0] ??
+                            null
+                        )
+                        : (
+                            respostaGate.data ??
+                            null
+                        );
+
+                if (!gate) {
+                    throw new Error(
+                        "Resposta inesperada do controle mestre de PIN."
+                    );
+                }
+
+                setRecursoMestreAtivo(
+                    gate.pin_emergencia_empresa_ativo !==
+                        false
+                );
+
+                setGateMestreCarregado(
+                    true
+                );
+
+                setStatusEmpresas(
+                    respostaStatus.data
+                );
+            }
+        ).catch(() => {
+            if (!montado) {
+                return;
             }
 
-            if (!Array.isArray(data)) {
-                throw new Error("Resposta inesperada ao consultar os PINs.");
-            }
-
-            setStatusEmpresas(data);
-        }).catch(() => {
-            if (!montado) return;
+            setRecursoMestreAtivo(false);
+            setGateMestreCarregado(false);
 
             setErroStatus(
                 "Não foi possível consultar os status dos PINs das empresas."
             );
         }).finally(() => {
-            if (montado) setCarregandoStatus(false);
+            if (montado) {
+                setCarregandoStatus(false);
+            }
         });
 
-        return () => { montado = false; };
+        return () => {
+            montado = false;
+        };
     }, [tenantId, revisaoStatus]);
 
     React.useEffect(() => {
@@ -155,6 +225,17 @@ export function EmergenciaQrPinCard({
         async () => {
             setErro("");
             setMensagem("");
+
+            if (
+                !gateMestreCarregado ||
+                !recursoMestreAtivo
+            ) {
+                setErro(
+                    "Indisponível pela Conta Mestre."
+                );
+
+                return;
+            }
 
             if (!empresaId) {
                 setErro(
@@ -333,6 +414,36 @@ export function EmergenciaQrPinCard({
                     liberar o contato de emergência dos
                     colaboradores pelo QR Code.
                 </p>
+
+                {
+                    gateMestreCarregado &&
+                    !recursoMestreAtivo ? (
+                        <div
+                            role="status"
+                            className="
+                                mb-4
+                                rounded-xl
+                                border
+                                border-amber-300
+                                bg-amber-50
+                                px-4
+                                py-3
+                            "
+                        >
+                            <p className="text-sm font-black text-amber-900">
+                                Indisponível pela Conta Mestre
+                            </p>
+
+                            <p className="mt-1 text-xs leading-relaxed text-amber-800">
+                                O PIN de emergência da empresa foi desabilitado
+                                para este ambiente. Os PINs, hashes e histórico
+                                permanecem preservados e voltarão a ficar
+                                disponíveis quando a Conta Mestre reativar o
+                                recurso.
+                            </p>
+                        </div>
+                    ) : null
+                }
 
                 <div
                     aria-live="polite"
@@ -669,6 +780,10 @@ export function EmergenciaQrPinCard({
                             <input
                                 type="checkbox"
                                 checked={ativo}
+                                disabled={
+                                    !gateMestreCarregado ||
+                                    !recursoMestreAtivo
+                                }
                                 onChange={
                                     (
                                         event
@@ -726,7 +841,11 @@ export function EmergenciaQrPinCard({
                                                 event.target.value
                                             )
                                     }
-                                    disabled={!ativo}
+                                    disabled={
+                                        !ativo ||
+                                        !gateMestreCarregado ||
+                                        !recursoMestreAtivo
+                                    }
                                     placeholder="Mínimo 4 caracteres"
                                     autoComplete="new-password"
                                     visibilityLabel="PIN"
@@ -756,7 +875,11 @@ export function EmergenciaQrPinCard({
                                                 event.target.value
                                             )
                                     }
-                                    disabled={!ativo}
+                                    disabled={
+                                        !ativo ||
+                                        !gateMestreCarregado ||
+                                        !recursoMestreAtivo
+                                    }
                                     placeholder="Repita o PIN"
                                     autoComplete="new-password"
                                     visibilityLabel="Confirmação do PIN"
@@ -805,7 +928,9 @@ export function EmergenciaQrPinCard({
                             }
                             disabled={
                                 salvando ||
-                                !empresaId
+                                !empresaId ||
+                                !gateMestreCarregado ||
+                                !recursoMestreAtivo
                             }
                             className="
                                 inline-flex

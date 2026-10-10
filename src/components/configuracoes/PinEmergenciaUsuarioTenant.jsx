@@ -30,6 +30,12 @@ export function PinEmergenciaUsuarioTenant({
     const [revisaoStatusMeuPin, setRevisaoStatusMeuPin] =
         useState(0);
 
+    const [recursoMestreAtivo, setRecursoMestreAtivo] =
+        useState(true);
+
+    const [gateMestreCarregado, setGateMestreCarregado] =
+        useState(false);
+
     const [liberacao, setLiberacao] = useState({
         tenantId: "",
         usuarioId: "",
@@ -41,6 +47,11 @@ export function PinEmergenciaUsuarioTenant({
         liberacao.habilitado &&
         liberacao.tenantId === tenantId &&
         liberacao.usuarioId === usuarioId;
+
+    const alteracaoHabilitada =
+        habilitadoSeguro &&
+        gateMestreCarregado &&
+        recursoMestreAtivo;
 
     const statusMeuPinAtual =
         statusMeuPin.tenantId === tenantId &&
@@ -67,6 +78,78 @@ export function PinEmergenciaUsuarioTenant({
                 erroStatusMeuPin.revisao !== revisaoStatusMeuPin
             )
         );
+
+    useEffect(() => {
+        let montado = true;
+
+        setGateMestreCarregado(
+            false
+        );
+
+        if (
+            !tenantId ||
+            !supabaseClient
+        ) {
+            return () => {
+                montado = false;
+            };
+        }
+
+        supabaseClient.rpc(
+            "consultar_recursos_pin_tenant",
+            {
+                p_tenant_id: tenantId,
+            }
+        ).then(({ data, error }) => {
+            if (!montado) {
+                return;
+            }
+
+            if (error) {
+                throw error;
+            }
+
+            const registro =
+                Array.isArray(data)
+                    ? (
+                        data[0] ??
+                        null
+                    )
+                    : (
+                        data ??
+                        null
+                    );
+
+            if (!registro) {
+                throw new Error(
+                    "Resposta inválida do controle mestre de PIN."
+                );
+            }
+
+            setRecursoMestreAtivo(
+                registro.pin_acesso_usuario_ativo !==
+                    false
+            );
+
+            setGateMestreCarregado(
+                true
+            );
+        }).catch(() => {
+            if (!montado) {
+                return;
+            }
+
+            setRecursoMestreAtivo(false);
+            setGateMestreCarregado(false);
+        });
+
+        return () => {
+            montado = false;
+        };
+    }, [
+        tenantId,
+        supabaseClient,
+    ]);
 
     useEffect(() => {
         let montado = true;
@@ -204,7 +287,23 @@ export function PinEmergenciaUsuarioTenant({
         setErro("");
         setMensagem("");
 
-        if (!habilitadoSeguro || !usuarioId || !tenantId || salvando) return;
+        if (
+            !alteracaoHabilitada ||
+            !usuarioId ||
+            !tenantId ||
+            salvando
+        ) {
+            if (
+                gateMestreCarregado &&
+                !recursoMestreAtivo
+            ) {
+                setErro(
+                    "Indisponível pela Conta Mestre."
+                );
+            }
+
+            return;
+        }
 
         if (ativo && (!/^[0-9]{6,10}$/.test(pin) || pin !== confirmacao)) {
             setErro("Informe e confirme um PIN numérico de 6 a 10 dígitos.");
@@ -251,6 +350,28 @@ export function PinEmergenciaUsuarioTenant({
             </summary>
             <div className="border-t border-slate-100 bg-slate-50/40 p-3 sm:p-4">
                 <p className="mb-4 text-sm text-slate-600">Configure seu PIN pessoal para liberar auditorias e vistorias protegidas pelo QR Code. O contato de emergência utiliza o PIN da empresa.</p>
+
+                {
+                    gateMestreCarregado &&
+                    !recursoMestreAtivo ? (
+                        <div
+                            role="status"
+                            className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3"
+                        >
+                            <p className="text-sm font-black text-amber-900">
+                                Indisponível pela Conta Mestre
+                            </p>
+
+                            <p className="mt-1 text-xs leading-5 text-amber-800">
+                                O Meu PIN de acesso foi desabilitado para este
+                                ambiente. O PIN existente e seu histórico
+                                permanecem preservados e voltarão a ficar
+                                disponíveis quando a Conta Mestre reativar o
+                                recurso.
+                            </p>
+                        </div>
+                    ) : null
+                }
 
                 <div
                     aria-live="polite"
@@ -445,6 +566,7 @@ export function PinEmergenciaUsuarioTenant({
                     <input
                         type="checkbox"
                         checked={ativo}
+                        disabled={!alteracaoHabilitada}
                         onChange={(event) => setAtivo(event.target.checked)}
                     />
                     PIN de acesso ativo
@@ -456,7 +578,7 @@ export function PinEmergenciaUsuarioTenant({
                         <PasswordInput
                             value={pin}
                             onChange={(event) => setPin(event.target.value)}
-                            disabled={!ativo || !habilitadoSeguro}
+                            disabled={!ativo || !alteracaoHabilitada}
                             placeholder="6 a 10 dígitos"
                             autoComplete="new-password"
                             visibilityLabel="PIN"
@@ -468,7 +590,7 @@ export function PinEmergenciaUsuarioTenant({
                         <PasswordInput
                             value={confirmacao}
                             onChange={(event) => setConfirmacao(event.target.value)}
-                            disabled={!ativo || !habilitadoSeguro}
+                            disabled={!ativo || !alteracaoHabilitada}
                             placeholder="Repita o PIN"
                             autoComplete="new-password"
                             visibilityLabel="Confirmação do PIN"
@@ -481,7 +603,7 @@ export function PinEmergenciaUsuarioTenant({
 
                 <button
                     type="submit"
-                    disabled={!habilitadoSeguro || !usuarioId || salvando}
+                    disabled={!alteracaoHabilitada || !usuarioId || salvando}
                     className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-40"
                 >
                     <KeyRound className="h-4 w-4" />

@@ -26,6 +26,14 @@ import {
     mensagemTesteEmailTenant,
 } from "../services/tenantAdminEmailMensagens.js";
 
+import {
+    supabase,
+} from "../../../lib/supabaseClient.js";
+
+import {
+    consultarRecursoEmailOperacionalTenantService,
+} from "../services/tenantAdminEmailOperationalGateService.js";
+
 const FORMULARIO_PADRAO =
     Object.freeze({
         provedor:
@@ -316,6 +324,18 @@ export function TenantAdminEmailProviderPanel({
     ] =
         useState("");
 
+    const [
+        gateMestreAtivo,
+        setGateMestreAtivo,
+    ] =
+        useState(true);
+
+    const [
+        gateMestreCarregado,
+        setGateMestreCarregado,
+    ] =
+        useState(false);
+
     const aplicarConfiguracao =
         useCallback(
             (
@@ -373,7 +393,33 @@ export function TenantAdminEmailProviderPanel({
                     "",
                 );
 
+                setGateMestreCarregado(
+                    false,
+                );
+
                 try {
+                    const gateMestre =
+                        await consultarRecursoEmailOperacionalTenantService({
+                            supabase,
+                            tenantId,
+                        });
+
+                    const gateMestreAtivoSeguro =
+                        gateMestre?.ativo !==
+                        false;
+
+                    setGateMestreAtivo(
+                        gateMestreAtivoSeguro,
+                    );
+
+                    setGateMestreCarregado(
+                        true,
+                    );
+
+                    if (!gateMestreAtivoSeguro) {
+                        return;
+                    }
+
                     const resultado =
                         await obterConfiguracaoEmailTenantAdminService({
                             tenantId,
@@ -829,6 +875,64 @@ export function TenantAdminEmailProviderPanel({
                 <div className="flex items-center gap-3 text-sm font-semibold text-slate-500">
                     <RefreshCw className="h-5 w-5 animate-spin text-emerald-600" />
                     Carregando configuração de e-mail...
+                </div>
+            </section>
+        );
+    }
+
+    if (!gateMestreCarregado) {
+        return (
+            <section className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-5 shadow-sm">
+                <div className="flex items-start gap-3 text-red-800">
+                    <CircleAlert className="mt-0.5 h-5 w-5 shrink-0" />
+
+                    <div>
+                        <p className="text-sm font-black">
+                            Não foi possível validar a disponibilidade do e-mail operacional
+                        </p>
+
+                        <p className="mt-1 text-xs leading-5">
+                            Nenhum controle de alteração foi liberado. Atualize a página ou tente novamente antes de configurar o SMTP.
+                        </p>
+                    </div>
+                </div>
+            </section>
+        );
+    }
+
+    if (!gateMestreAtivo) {
+        return (
+            <section className="mt-5 overflow-hidden rounded-2xl border border-amber-300 bg-white shadow-sm">
+                <div className="flex items-start gap-3 p-5">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+                        <Mail className="h-5 w-5" />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-black uppercase tracking-[0.12em] text-amber-700">
+                            Controle da Conta Mestre
+                        </p>
+
+                        <h2 className="mt-1 text-base font-black text-slate-950">
+                            Indisponível pela Conta Mestre
+                        </h2>
+
+                        <p className="mt-2 text-xs leading-5 text-slate-600">
+                            O e-mail operacional foi desabilitado para este ambiente.
+                            A configuração SMTP, credencial, versão e histórico permanecem
+                            preservados e voltarão a ficar disponíveis quando a Conta Mestre
+                            reativar o recurso.
+                        </p>
+
+                        <button
+                            type="button"
+                            onClick={() => void carregar()}
+                            className="mt-4 inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800 transition hover:bg-amber-100"
+                        >
+                            <RefreshCw className="h-4 w-4" />
+                            Atualizar estado
+                        </button>
+                    </div>
                 </div>
             </section>
         );
