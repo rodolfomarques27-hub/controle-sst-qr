@@ -188,7 +188,7 @@ for (const marcador of marcadoresMigration) {
 
 assert.match(
     dados,
-    /id, nome, cnpj, tipo_empresa, data_inicio_contrato, data_fim_contrato/,
+    /id,\s*nome,\s*cnpj,\s*tenant_id,\s*tipo_empresa,\s*data_inicio_contrato,\s*data_fim_contrato/,
 );
 
 assert.match(

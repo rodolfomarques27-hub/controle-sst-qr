@@ -13,19 +13,33 @@ const EMPRESA_ID =
 
 function criarCenario() {
     const chamadas = {
-        iniciar: 0,
+        consultar: 0,
         historico: 0,
     };
 
     const controlador =
         criarControladorCicloCertidaoMensal({
             servicoCiclo: {
+                async obterCompetenciaExistente({
+                    empresaId,
+                    competencia,
+                }) {
+                    chamadas.consultar += 1;
+
+                    return {
+                        competenciaId:
+                            "22222222-2222-4222-8222-222222222222",
+                        empresaId,
+                        competencia,
+                        status:
+                            "ABERTA",
+                    };
+                },
+
                 async obterOuCriarCompetencia({
                     empresaId,
                     competencia,
                 }) {
-                    chamadas.iniciar += 1;
-
                     return {
                         competenciaId:
                             "22222222-2222-4222-8222-222222222222",
@@ -94,7 +108,7 @@ function criarCenario() {
     );
 
     assert.equal(
-        chamadas.iniciar,
+        chamadas.consultar,
         1,
     );
 
@@ -133,7 +147,7 @@ function criarCenario() {
     );
 
     assert.equal(
-        chamadas.iniciar,
+        chamadas.consultar,
         0,
     );
 
@@ -170,7 +184,7 @@ function criarCenario() {
     );
 
     assert.equal(
-        chamadas.iniciar,
+        chamadas.consultar,
         0,
     );
 

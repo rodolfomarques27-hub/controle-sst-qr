@@ -21,6 +21,31 @@ function criarServicoMock({
     return {
         chamadas,
 
+        async obterCompetenciaExistente(
+            parametros,
+        ) {
+            chamadas.push({
+                metodo:
+                    "obterCompetenciaExistente",
+                parametros,
+            });
+
+            if (erroInicializacao) {
+                throw erroInicializacao;
+            }
+
+            return {
+                competenciaId:
+                    COMPETENCIA_ID,
+                empresaId:
+                    parametros.empresaId,
+                competencia:
+                    parametros.competencia,
+                status:
+                    "ABERTA",
+            };
+        },
+
         async obterOuCriarCompetencia(
             parametros,
         ) {
@@ -148,7 +173,7 @@ assert.throws(
         criarControladorCicloCertidaoMensal({
             servicoCiclo: {},
         }),
-    /sem o método obterOuCriarCompetencia/,
+    /sem o método obterCompetenciaExistente/,
     "O controlador deve rejeitar serviços incompletos.",
 );
 
@@ -206,7 +231,7 @@ assert.equal(
         [
             {
                 metodo:
-                    "obterOuCriarCompetencia",
+                    "obterCompetenciaExistente",
                 parametros: {
                     empresaId:
                         EMPRESA_ID,
@@ -233,7 +258,7 @@ assert.equal(
                 },
             },
         ],
-        "A preparação deve inicializar, listar os itens automáticos e depois carregar o histórico.",
+        "A preparação deve consultar a competência existente, listar os itens automáticos e depois carregar o histórico.",
     );
 
     assert.equal(

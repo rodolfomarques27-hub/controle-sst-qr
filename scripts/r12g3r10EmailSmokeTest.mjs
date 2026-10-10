@@ -75,7 +75,7 @@ for (const [codigo, trecho] of [
 }
 
 const migration = readFileSync(
-    "supabase/migrations/20261008120000_r12g3r10_email_usuario_membership.sql",
+    "supabase/migrations/20261008163525_r12g3r10_email_usuario_membership.sql",
     "utf8",
 ).replace(/\r\n?/g, "\n");
 
