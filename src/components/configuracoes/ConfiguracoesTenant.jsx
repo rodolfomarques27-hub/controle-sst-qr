@@ -3676,6 +3676,7 @@ export function ConfiguracoesTenant({
                 >
                     <EmergenciaQrPinCard
                         empresasBanco={empresas}
+                        tenantId={tenantId}
                     />
                 </section>
             ) : null}

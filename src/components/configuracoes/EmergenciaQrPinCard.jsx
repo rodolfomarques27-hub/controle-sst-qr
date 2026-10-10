@@ -44,6 +44,7 @@ function ordenarEmpresasEmergenciaQr(
 
 export function EmergenciaQrPinCard({
     empresasBanco = [],
+    tenantId = "",
 }) {
     const empresas =
         useMemo(
@@ -79,6 +80,60 @@ export function EmergenciaQrPinCard({
 
     const [erro, setErro] =
         useState("");
+
+    const [statusEmpresas, setStatusEmpresas] = useState([]);
+    const [carregandoStatus, setCarregandoStatus] = useState(false);
+    const [erroStatus, setErroStatus] = useState("");
+    const [revisaoStatus, setRevisaoStatus] = useState(0);
+
+    const statusSelecionado = statusEmpresas.find(
+        (item) => item.empresa_id === empresaId
+    );
+
+    const empresasComPin = statusEmpresas.filter(
+        (item) => item.cadastrado === true
+    ).length;
+
+    React.useEffect(() => {
+        let montado = true;
+
+        setStatusEmpresas([]);
+        setErroStatus("");
+
+        if (!tenantId) {
+            setCarregandoStatus(false);
+            return () => { montado = false; };
+        }
+
+        setCarregandoStatus(true);
+
+        supabase.rpc(
+            "listar_status_pin_emergencia_empresas",
+            { p_tenant_id: tenantId }
+        ).then(({ data, error }) => {
+            if (!montado) return;
+
+            if (error) {
+                throw error;
+            }
+
+            if (!Array.isArray(data)) {
+                throw new Error("Resposta inesperada ao consultar os PINs.");
+            }
+
+            setStatusEmpresas(data);
+        }).catch(() => {
+            if (!montado) return;
+
+            setErroStatus(
+                "Não foi possível consultar os status dos PINs das empresas."
+            );
+        }).finally(() => {
+            if (montado) setCarregandoStatus(false);
+        });
+
+        return () => { montado = false; };
+    }, [tenantId, revisaoStatus]);
 
     React.useEffect(() => {
         if (
@@ -190,6 +245,7 @@ export function EmergenciaQrPinCard({
 
                 setPin("");
                 setConfirmarPin("");
+                setRevisaoStatus((revisao) => revisao + 1);
             }
             catch (error) {
                 setErro(
@@ -277,6 +333,201 @@ export function EmergenciaQrPinCard({
                     liberar o contato de emergência dos
                     colaboradores pelo QR Code.
                 </p>
+
+                <div
+                    aria-live="polite"
+                    className="
+                        mb-4
+                        flex
+                        flex-col
+                        gap-3
+                        rounded-xl
+                        border
+                        border-slate-200
+                        bg-slate-50/70
+                        px-4
+                        py-3
+                        sm:flex-row
+                        sm:items-center
+                        sm:justify-between
+                    "
+                >
+                    <div
+                        className="
+                            flex
+                            flex-wrap
+                            items-center
+                            gap-2
+                        "
+                    >
+                        <span
+                            className="
+                                text-xs
+                                font-bold
+                                uppercase
+                                tracking-[0.08em]
+                                text-slate-500
+                            "
+                        >
+                            PINs cadastrados
+                        </span>
+
+                        <span
+                            className="
+                                inline-flex
+                                min-w-12
+                                items-center
+                                justify-center
+                                rounded-full
+                                bg-slate-900
+                                px-2.5
+                                py-1
+                                text-xs
+                                font-bold
+                                text-white
+                            "
+                        >
+                            {
+                                carregandoStatus
+                                    ? "..."
+                                    : `${empresasComPin}/${statusEmpresas.length}`
+                            }
+                        </span>
+                    </div>
+
+                    {
+                        erroStatus ? (
+                            <p
+                                role="alert"
+                                className="
+                                    text-sm
+                                    font-medium
+                                    text-red-700
+                                "
+                            >
+                                {erroStatus}
+                            </p>
+                        ) : carregandoStatus ? (
+                            <p
+                                className="
+                                    text-xs
+                                    text-slate-500
+                                "
+                            >
+                                Consultando status...
+                            </p>
+                        ) : statusSelecionado ? (
+                            <div
+                                className="
+                                    flex
+                                    flex-wrap
+                                    items-center
+                                    gap-2
+                                    sm:justify-end
+                                "
+                            >
+                                <span
+                                    className={`
+                                        inline-flex
+                                        items-center
+                                        gap-2
+                                        rounded-full
+                                        px-3
+                                        py-1.5
+                                        text-xs
+                                        font-bold
+                                        ring-1
+                                        ${
+                                            statusSelecionado.cadastrado
+                                                ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                                : "bg-slate-100 text-slate-600 ring-slate-200"
+                                        }
+                                    `}
+                                >
+                                    <span
+                                        className={`
+                                            h-2
+                                            w-2
+                                            rounded-full
+                                            ${
+                                                statusSelecionado.cadastrado
+                                                    ? "bg-emerald-500"
+                                                    : "bg-slate-400"
+                                            }
+                                        `}
+                                    />
+
+                                    {
+                                        statusSelecionado.cadastrado
+                                            ? "PIN cadastrado"
+                                            : "Sem PIN"
+                                    }
+                                </span>
+
+                                {
+                                    statusSelecionado.cadastrado && (
+                                        <span
+                                            className={`
+                                                inline-flex
+                                                items-center
+                                                rounded-full
+                                                px-3
+                                                py-1.5
+                                                text-xs
+                                                font-bold
+                                                ring-1
+                                                ${
+                                                    statusSelecionado.ativo
+                                                        ? "bg-blue-50 text-blue-700 ring-blue-200"
+                                                        : "bg-amber-50 text-amber-700 ring-amber-200"
+                                                }
+                                            `}
+                                        >
+                                            {
+                                                statusSelecionado.ativo
+                                                    ? "Contato ativo"
+                                                    : "Contato desativado"
+                                            }
+                                        </span>
+                                    )
+                                }
+
+                                {
+                                    statusSelecionado.atualizado_em && (
+                                        <span
+                                            className="
+                                                text-xs
+                                                text-slate-500
+                                            "
+                                        >
+                                            Atualizado{" "}
+                                            {
+                                                new Date(
+                                                    statusSelecionado.atualizado_em
+                                                ).toLocaleString(
+                                                    "pt-BR",
+                                                    {
+                                                        dateStyle: "short",
+                                                        timeStyle: "short",
+                                                    }
+                                                )
+                                            }
+                                        </span>
+                                    )
+                                }
+                            </div>
+                        ) : (
+                            <span
+                                className="
+                                    text-xs
+                                    text-slate-500
+                                "
+                            >
+                                Status não disponível
+                            </span>
+                        )
+                    }
+                </div>
 
                 <div
                     className="
