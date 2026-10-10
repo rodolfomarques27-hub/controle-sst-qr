@@ -15,6 +15,21 @@ export function PinEmergenciaUsuarioTenant({
     const [mensagem, setMensagem] = useState("");
     const [erro, setErro] = useState("");
 
+    const [statusMeuPin, setStatusMeuPin] = useState({
+        tenantId: "",
+        revisao: -1,
+        dados: null,
+    });
+
+    const [erroStatusMeuPin, setErroStatusMeuPin] = useState({
+        tenantId: "",
+        revisao: -1,
+        mensagem: "",
+    });
+
+    const [revisaoStatusMeuPin, setRevisaoStatusMeuPin] =
+        useState(0);
+
     const [liberacao, setLiberacao] = useState({
         tenantId: "",
         usuarioId: "",
@@ -26,6 +41,98 @@ export function PinEmergenciaUsuarioTenant({
         liberacao.habilitado &&
         liberacao.tenantId === tenantId &&
         liberacao.usuarioId === usuarioId;
+
+    const statusMeuPinAtual =
+        statusMeuPin.tenantId === tenantId &&
+        statusMeuPin.revisao === revisaoStatusMeuPin
+            ? statusMeuPin.dados
+            : null;
+
+    const erroStatusMeuPinAtual =
+        erroStatusMeuPin.tenantId === tenantId &&
+        erroStatusMeuPin.revisao === revisaoStatusMeuPin
+            ? erroStatusMeuPin.mensagem
+            : "";
+
+    const carregandoStatusMeuPin =
+        Boolean(
+            tenantId &&
+            habilitadoSeguro &&
+            (
+                statusMeuPin.tenantId !== tenantId ||
+                statusMeuPin.revisao !== revisaoStatusMeuPin
+            ) &&
+            (
+                erroStatusMeuPin.tenantId !== tenantId ||
+                erroStatusMeuPin.revisao !== revisaoStatusMeuPin
+            )
+        );
+
+    useEffect(() => {
+        let montado = true;
+
+        if (
+            !tenantId ||
+            !supabaseClient ||
+            !habilitadoSeguro
+        ) {
+            return () => {
+                montado = false;
+            };
+        }
+
+        supabaseClient.rpc(
+            "consultar_status_meu_pin_acesso",
+            {
+                p_tenant_id: tenantId,
+            }
+        ).then(({ data, error }) => {
+            if (!montado) {
+                return;
+            }
+
+            if (error) {
+                throw error;
+            }
+
+            const registro =
+                Array.isArray(data)
+                    ? (data[0] ?? null)
+                    : (data ?? null);
+
+            setStatusMeuPin({
+                tenantId,
+                revisao: revisaoStatusMeuPin,
+                dados: registro,
+            });
+
+            setErroStatusMeuPin({
+                tenantId,
+                revisao: revisaoStatusMeuPin,
+                mensagem: "",
+            });
+        }).catch(() => {
+            if (!montado) {
+                return;
+            }
+
+            setErroStatusMeuPin({
+                tenantId,
+                revisao: revisaoStatusMeuPin,
+                mensagem:
+                    "Não foi possível consultar o status do Meu PIN.",
+            });
+        });
+
+        return () => {
+            montado = false;
+        };
+    }, [
+        tenantId,
+        supabaseClient,
+        habilitadoSeguro,
+        revisaoStatusMeuPin,
+    ]);
 
     useEffect(() => {
         let montado = true;
@@ -124,6 +231,9 @@ export function PinEmergenciaUsuarioTenant({
             setPin("");
             setConfirmacao("");
             setMensagem("PIN de acesso atualizado.");
+            setRevisaoStatusMeuPin(
+                (revisao) => revisao + 1
+            );
         } catch {
             setErro("Não foi possível salvar o PIN individual. Confira a configuração do serviço.");
         } finally {
@@ -141,6 +251,188 @@ export function PinEmergenciaUsuarioTenant({
             </summary>
             <div className="border-t border-slate-100 bg-slate-50/40 p-3 sm:p-4">
                 <p className="mb-4 text-sm text-slate-600">Configure seu PIN pessoal para liberar auditorias e vistorias protegidas pelo QR Code. O contato de emergência utiliza o PIN da empresa.</p>
+
+                <div
+                    aria-live="polite"
+                    className="
+                        mb-4
+                        flex
+                        flex-col
+                        gap-3
+                        rounded-xl
+                        border
+                        border-slate-200
+                        bg-slate-50/70
+                        px-4
+                        py-3
+                        sm:flex-row
+                        sm:items-center
+                        sm:justify-between
+                    "
+                >
+                    <span
+                        className="
+                            text-xs
+                            font-bold
+                            uppercase
+                            tracking-[0.08em]
+                            text-slate-500
+                        "
+                    >
+                        Status do Meu PIN
+                    </span>
+
+                    {
+                        !habilitadoSeguro ? (
+                            <span
+                                className="
+                                    inline-flex
+                                    items-center
+                                    rounded-full
+                                    bg-amber-50
+                                    px-3
+                                    py-1.5
+                                    text-xs
+                                    font-bold
+                                    text-amber-700
+                                    ring-1
+                                    ring-amber-200
+                                "
+                            >
+                                Usuário não habilitado
+                            </span>
+                        ) : erroStatusMeuPinAtual ? (
+                            <p
+                                role="alert"
+                                className="
+                                    text-sm
+                                    font-medium
+                                    text-red-700
+                                "
+                            >
+                                {erroStatusMeuPinAtual}
+                            </p>
+                        ) : carregandoStatusMeuPin ? (
+                            <span
+                                className="
+                                    text-xs
+                                    text-slate-500
+                                "
+                            >
+                                Consultando status...
+                            </span>
+                        ) : statusMeuPinAtual ? (
+                            <div
+                                className="
+                                    flex
+                                    flex-wrap
+                                    items-center
+                                    gap-2
+                                    sm:justify-end
+                                "
+                            >
+                                <span
+                                    className={`
+                                        inline-flex
+                                        items-center
+                                        gap-2
+                                        rounded-full
+                                        px-3
+                                        py-1.5
+                                        text-xs
+                                        font-bold
+                                        ring-1
+                                        ${
+                                            statusMeuPinAtual.cadastrado
+                                                ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                                : "bg-slate-100 text-slate-600 ring-slate-200"
+                                        }
+                                    `}
+                                >
+                                    <span
+                                        className={`
+                                            h-2
+                                            w-2
+                                            rounded-full
+                                            ${
+                                                statusMeuPinAtual.cadastrado
+                                                    ? "bg-emerald-500"
+                                                    : "bg-slate-400"
+                                            }
+                                        `}
+                                    />
+
+                                    {
+                                        statusMeuPinAtual.cadastrado
+                                            ? "PIN cadastrado"
+                                            : "Sem PIN"
+                                    }
+                                </span>
+
+                                {
+                                    statusMeuPinAtual.cadastrado && (
+                                        <span
+                                            className={`
+                                                inline-flex
+                                                items-center
+                                                rounded-full
+                                                px-3
+                                                py-1.5
+                                                text-xs
+                                                font-bold
+                                                ring-1
+                                                ${
+                                                    statusMeuPinAtual.ativo
+                                                        ? "bg-blue-50 text-blue-700 ring-blue-200"
+                                                        : "bg-amber-50 text-amber-700 ring-amber-200"
+                                                }
+                                            `}
+                                        >
+                                            {
+                                                statusMeuPinAtual.ativo
+                                                    ? "PIN ativo"
+                                                    : "PIN desativado"
+                                            }
+                                        </span>
+                                    )
+                                }
+
+                                {
+                                    statusMeuPinAtual.atualizado_em && (
+                                        <span
+                                            className="
+                                                text-xs
+                                                text-slate-500
+                                            "
+                                        >
+                                            Atualizado{" "}
+                                            {
+                                                new Date(
+                                                    statusMeuPinAtual.atualizado_em
+                                                ).toLocaleString(
+                                                    "pt-BR",
+                                                    {
+                                                        dateStyle: "short",
+                                                        timeStyle: "short",
+                                                    }
+                                                )
+                                            }
+                                        </span>
+                                    )
+                                }
+                            </div>
+                        ) : (
+                            <span
+                                className="
+                                    text-xs
+                                    text-slate-500
+                                "
+                            >
+                                Status não disponível
+                            </span>
+                        )
+                    }
+                </div>
 
             {!habilitadoSeguro && (
                 <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
