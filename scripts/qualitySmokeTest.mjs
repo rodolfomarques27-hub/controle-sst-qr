@@ -1241,18 +1241,16 @@ assert.doesNotMatch(
     "ConfiguracoesTenant não pode importar ou executar serviços globais, Supabase direto, RPC ou Storage administrativo."
 );
 
-assert.ok(
-    codigoConfiguracoesTenant.includes(
-        'import { ProvedorEmailUsuarioConfiguracoes } from "./ProvedorEmailUsuarioConfiguracoes.jsx";'
-    ),
-    "A integração SMTP pessoal deve importar somente o componente isolado autorizado."
+assert.doesNotMatch(
+    codigoConfiguracoesTenant,
+    /ProvedorEmailUsuarioConfiguracoes/,
+    "ConfiguracoesTenant não deve mais importar ou renderizar SMTP pessoal."
 );
 
-assert.ok(
-    codigoConfiguracoesTenant.includes(
-        '<ProvedorEmailUsuarioConfiguracoes key={tenantId} tenantId={tenantId} supabaseClient={supabaseClient}'
-    ),
-    "A integração SMTP pessoal deve receber o tenant e o client já resolvidos."
+assert.doesNotMatch(
+    codigoConfiguracoesTenant,
+    /Meu provedor de e-mail/,
+    "O card legado de SMTP pessoal não deve mais existir na interface do tenant."
 );
 assert.match(
     codigoConfiguracoesTenant,

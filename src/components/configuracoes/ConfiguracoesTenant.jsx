@@ -32,7 +32,6 @@ import {
 import {
     ModelosEmailSstConfiguracoes,
 } from "./ModelosEmailSstConfiguracoes";
-import { ProvedorEmailUsuarioConfiguracoes } from "./ProvedorEmailUsuarioConfiguracoes.jsx";
 import { EmergenciaQrPinCard } from "./EmergenciaQrPinCard.jsx";
 import { PinEmergenciaUsuarioTenant } from "./PinEmergenciaUsuarioTenant.jsx";
 import {
@@ -3725,19 +3724,6 @@ export function ConfiguracoesTenant({
                 </section>
             ) : null}
 
-            {auditoriaDisponivel && tenantId ? (
-                <section id="config-meu-provedor-email" className="scroll-mt-24">
-                    <details name="configuracoes-tenant" className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                        <summary className="flex h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 text-left transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
-                            <span className="text-sm font-black text-slate-950 sm:text-base">Meu provedor de e-mail</span>
-                            <ChevronDown aria-hidden="true" className="h-5 w-5 text-slate-500 transition-transform group-open:rotate-180" />
-                        </summary>
-                        <div className="border-t border-slate-100 bg-slate-50/40">
-                            <ProvedorEmailUsuarioConfiguracoes key={tenantId} tenantId={tenantId} supabaseClient={supabaseClient} emailUsuario={emailUsuario} nomeUsuario={nomeUsuario} />
-                        </div>
-                    </details>
-                </section>
-            ) : null}
             <details
                 open={estadoCardsConfiguracoesAtivo.versaoSafescan}
                 onToggle={(evento) => {
@@ -3852,21 +3838,21 @@ export function ConfiguracoesTenant({
 
                                 <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
                                     <p className="text-sm font-black text-slate-950">
-                                        Avisos padronizados
+                                        PINs de segurança
                                     </p>
 
                                     <p className="mt-0.5 text-sm leading-5 text-slate-600">
-                                        O SafeScan passa a utilizar feedbacks visuais próprios de sucesso, erro, atenção, informação e confirmação, substituindo gradualmente alertas e confirmações nativas do navegador.
+                                        Os PINs de emergência da empresa e de acesso pessoal agora exibem status, ativação e última atualização sem revelar o PIN cadastrado.
                                     </p>
                                 </div>
 
                                 <div className="rounded-lg border border-slate-200 bg-white px-3 py-2">
                                     <p className="text-sm font-black text-slate-950">
-                                        Aniversariantes
+                                        SMTP por empresa
                                     </p>
 
                                     <p className="mt-0.5 text-sm leading-5 text-slate-600">
-                                        Bloqueados, Inativos e Desmobilizados deixam de aparecer na lista, indicadores e relatório de aniversários.
+                                        O envio operacional passa a utilizar uma única configuração SMTP por tenant, com teste de conexão, modo operacional e credencial protegida.
                                     </p>
                                 </div>
                             </div>
