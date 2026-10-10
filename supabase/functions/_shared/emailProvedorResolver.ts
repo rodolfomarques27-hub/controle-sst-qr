@@ -583,97 +583,6 @@ async function resolverTransportadorTenantCliente(
   );
 }
 
-async function resolverTransportadorUsuarioCliente(
-  adminClient: ClienteRpcPrivado,
-  tenantId: string,
-  actorUserId: string,
-  criarTransportador: CriadorTransportadorSmtp,
-): Promise<TransportadorEmailResolvido | null> {
-  const tenantIdNormalizado =
-    texto(
-      tenantId,
-      80,
-    );
-
-  const actorUserIdNormalizado =
-    texto(
-      actorUserId,
-      80,
-    );
-
-  if (
-    !tenantIdNormalizado ||
-    !actorUserIdNormalizado
-  ) {
-    throw new ErroResolvedorEmail(
-      "PROVEDOR_USUARIO_INDISPONIVEL",
-      "Não foi possível identificar o usuário e o tenant para resolver o provedor pessoal de e-mail.",
-    );
-  }
-
-  let resultadoUsuario:
-    ResultadoRpc;
-
-  try {
-    resultadoUsuario =
-      await adminClient.rpc(
-        "backend_obter_configuracao_email_usuario_para_envio",
-        {
-          p_tenant_id:
-            tenantIdNormalizado,
-
-          p_user_id:
-            actorUserIdNormalizado,
-        },
-      );
-  } catch {
-    throw new ErroResolvedorEmail(
-      "PROVEDOR_USUARIO_INDISPONIVEL",
-      "Não foi possível consultar o provedor pessoal de e-mail do usuário.",
-    );
-  }
-
-  if (
-    resultadoUsuario.error
-  ) {
-    throw new ErroResolvedorEmail(
-      "PROVEDOR_USUARIO_INDISPONIVEL",
-      "Não foi possível consultar o provedor pessoal de e-mail do usuário.",
-    );
-  }
-
-  const linhaUsuario =
-    primeiroRegistro(
-      resultadoUsuario.data,
-    );
-
-  if (
-    !linhaUsuario
-  ) {
-    return null;
-  }
-
-  const configuracaoUsuario =
-    normalizarConfiguracaoSmtpPrivada(
-      linhaUsuario,
-      "USUARIO_CLIENTE",
-    );
-
-  if (
-    !configuracaoUsuario
-  ) {
-    throw new ErroResolvedorEmail(
-      "PROVEDOR_USUARIO_INVALIDO",
-      "A configuração pessoal de e-mail do usuário está inconsistente ou ainda não foi aprovada.",
-    );
-  }
-
-  return await montarTransportadorResolvido(
-    configuracaoUsuario,
-    criarTransportador,
-  );
-}
-
 async function resolverTransportadorTenant(
   adminClient: ClienteRpcPrivado,
   tenantId: string,
@@ -810,30 +719,6 @@ export async function resolverTransportadorEmailParaEnvio(
         opcoes.tenantId,
         80,
       );
-
-    const actorUserId =
-      texto(
-        opcoes.actorUserId,
-        80,
-      );
-
-    if (
-      actorUserId
-    ) {
-      const transportadorUsuario =
-        await resolverTransportadorUsuarioCliente(
-          adminClient,
-          tenantId,
-          actorUserId,
-          criarTransportador,
-        );
-
-      if (
-        transportadorUsuario
-      ) {
-        return transportadorUsuario;
-      }
-    }
 
     return await resolverTransportadorTenant(
       adminClient,

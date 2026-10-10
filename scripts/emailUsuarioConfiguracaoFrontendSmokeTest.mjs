@@ -55,8 +55,15 @@ const service = readFileSync("src/services/emailUsuarioConfiguracaoService.js", 
 assert.match(painel, /type="password"/);
 assert.match(painel, /senhaRef\.current\.value = ""/);
 assert.match(painel, /!novaSenha/);
-assert.match(tenantFonte, /Meu provedor de e-mail/);
-assert.match(tenantFonte, /auditoriaDisponivel && tenantId/);
+assert.doesNotMatch(
+    tenantFonte,
+    /Meu provedor de e-mail/
+);
+
+assert.doesNotMatch(
+    tenantFonte,
+    /ProvedorEmailUsuarioConfiguracoes/
+);
 assert.doesNotMatch(service, /\b(userId|user_id|executorId|executor_id|actorUserId|serviceRole)\b/);
 assert.doesNotMatch(service + painel, /\b(localStorage|sessionStorage|console\.log|console\.error)\b/);
 

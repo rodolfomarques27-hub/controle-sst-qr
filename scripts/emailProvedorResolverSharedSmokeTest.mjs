@@ -85,6 +85,9 @@ const proibidos = [
   "localStorage",
   "sessionStorage",
   "VITE_",
+  "backend_obter_configuracao_email_usuario_para_envio",
+  "resolverTransportadorUsuarioCliente",
+  "opcoes.actorUserId",
 ];
 
 for (
@@ -267,6 +270,10 @@ console.log(
 
 console.log(
   "ORIGEM_TENANT_CLIENTE=SIM",
+);
+
+console.log(
+  "SMTP_USUARIO_OPERACIONAL=NAO",
 );
 
 console.log(
