@@ -60,6 +60,14 @@ import {
 } from "../components/TenantAdminEmailProviderPanel.jsx";
 
 import {
+    TenantAdminEmailOperationalGatePanel,
+} from "../components/TenantAdminEmailOperationalGatePanel.jsx";
+
+import {
+    TenantAdminPinResourcesPanel,
+} from "../components/TenantAdminPinResourcesPanel.jsx";
+
+import {
     TenantAdminBrandingPanel,
 } from "../components/TenantAdminBrandingPanel.jsx";
 
@@ -1381,6 +1389,23 @@ export function TenantAdminTenantDetailPage({
                     onClick={
                         () =>
                             setAbaAtiva(
+                                "pins"
+                            )
+                    }
+                    className={
+                        abaAtiva === "pins"
+                            ? "rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white shadow-sm"
+                            : "rounded-xl px-4 py-2.5 text-xs font-bold text-slate-500 transition hover:bg-emerald-50 hover:text-emerald-800"
+                    }
+                >
+                    Segurança e PINs
+                </button>
+
+                <button
+                    type="button"
+                    onClick={
+                        () =>
+                            setAbaAtiva(
                                 "dominio-ativacao"
                             )
                     }
@@ -1978,7 +2003,16 @@ export function TenantAdminTenantDetailPage({
                             />
                         )
                         : abaAtiva ===
-                            "branding"
+                            "pins"
+                            ? (
+                                <TenantAdminPinResourcesPanel
+                                    tenant={
+                                        tenant
+                                    }
+                                />
+                            )
+                            : abaAtiva ===
+                                "branding"
                             ? (
                                 <TenantAdminBrandingPanel
                                     tenant={
@@ -1989,11 +2023,19 @@ export function TenantAdminTenantDetailPage({
                             : abaAtiva ===
                                 "email"
                                 ? (
-                                    <TenantAdminEmailProviderPanel
-                                        tenant={
-                                            tenant
-                                        }
-                                    />
+                                    <>
+                                        <TenantAdminEmailOperationalGatePanel
+                                            tenant={
+                                                tenant
+                                            }
+                                        />
+
+                                        <TenantAdminEmailProviderPanel
+                                            tenant={
+                                                tenant
+                                            }
+                                        />
+                                    </>
                                 )
                                 : (
                                     <TenantAdminDomainReadinessPanel
