@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
     ONNX_RUNTIME_PROVIDER,
     createCpuFloat32Tensor,
+    createCpuInferenceSession,
     inspectOnnxRuntime,
 } from "../src/inference/onnxRuntimeAdapter.mjs";
 
@@ -64,6 +65,7 @@ test(
                         3,
                         4,
                     ],
+
                 dims:
                     [
                         2,
@@ -110,6 +112,7 @@ test(
                         0.25,
                         0.5,
                     ]),
+
                 dims:
                     [
                         1,
@@ -155,6 +158,7 @@ test(
                             1,
                             2,
                         ],
+
                     dims:
                         [
                             0,
@@ -173,6 +177,7 @@ test(
                             2,
                             3,
                         ],
+
                     dims:
                         [
                             2,
@@ -180,6 +185,18 @@ test(
                         ],
                 }),
             /quantidade de elementos diverge/,
+        );
+    },
+);
+
+test(
+    "adapter rejeita caminho de modelo vazio antes de criar sessao",
+    async () => {
+        await assert.rejects(
+            createCpuInferenceSession(
+                "   ",
+            ),
+            /modelPath deve ser uma string nao vazia/,
         );
     },
 );

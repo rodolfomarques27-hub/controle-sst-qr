@@ -60,32 +60,29 @@ function normalizeDims(
         );
     }
 
-    const normalized =
-        dims.map(
-            (
-                dimension,
-            ) => {
-                const value =
-                    Number(
-                        dimension,
-                    );
+    return dims.map(
+        (
+            dimension,
+        ) => {
+            const value =
+                Number(
+                    dimension,
+                );
 
-                if (
-                    !Number.isInteger(
-                        value,
-                    ) ||
-                    value <= 0
-                ) {
-                    throw new TypeError(
-                        "cada dimensao deve ser inteiro positivo.",
-                    );
-                }
+            if (
+                !Number.isInteger(
+                    value,
+                ) ||
+                value <= 0
+            ) {
+                throw new TypeError(
+                    "cada dimensao deve ser inteiro positivo.",
+                );
+            }
 
-                return value;
-            },
-        );
-
-    return normalized;
+            return value;
+        },
+    );
 }
 
 function normalizeFloat32Data(
@@ -142,6 +139,31 @@ function calculateElementCount(
     );
 }
 
+function requireModelPath(
+    modelPath,
+) {
+    if (
+        typeof modelPath !== "string" ||
+        !modelPath.trim()
+    ) {
+        throw new TypeError(
+            "modelPath deve ser uma string nao vazia.",
+        );
+    }
+
+    if (
+        modelPath.includes(
+            "\0",
+        )
+    ) {
+        throw new TypeError(
+            "modelPath contem caractere NUL.",
+        );
+    }
+
+    return modelPath.trim();
+}
+
 export function inspectOnnxRuntime() {
     const api =
         assertRuntimeApi();
@@ -191,5 +213,29 @@ export function createCpuFloat32Tensor({
         "float32",
         normalizedData,
         normalizedDims,
+    );
+}
+
+export async function createCpuInferenceSession(
+    modelPath,
+) {
+    assertRuntimeApi();
+
+    const normalizedModelPath =
+        requireModelPath(
+            modelPath,
+        );
+
+    return ort.InferenceSession.create(
+        normalizedModelPath,
+        {
+            executionProviders:
+                [
+                    ONNX_RUNTIME_PROVIDER,
+                ],
+
+            graphOptimizationLevel:
+                "all",
+        },
     );
 }
