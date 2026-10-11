@@ -32,6 +32,17 @@ function createChild() {
     child.stderr =
         new PassThrough();
 
+    const progress =
+        new PassThrough();
+
+    child.stdio =
+        [
+            null,
+            child.stdout,
+            child.stderr,
+            progress,
+        ];
+
     child.exitCode =
         null;
 
@@ -134,6 +145,8 @@ function createFakeTimers() {
 
 function createFixture({
     stableFrameThreshold = 2,
+    frameWidth = 1920,
+    frameHeight = 1080,
 } = {}) {
     const children =
         [
@@ -289,6 +302,8 @@ function createFixture({
             clearTimer:
                 timers.clearTimer,
             stableFrameThreshold,
+            frameWidth,
+            frameHeight,
         });
 
     return {
@@ -376,7 +391,7 @@ test(
             args[
                 progressIndex + 1
             ],
-            "pipe:1",
+            "pipe:3",
         );
 
         assert.equal(
@@ -388,13 +403,17 @@ test(
 
         assert.deepEqual(
             args.slice(
-                -4,
+                -8,
             ),
             [
                 "-an",
+                "-vf",
+                "scale=1920:1080",
+                "-pix_fmt",
+                "bgr24",
                 "-f",
-                "null",
-                "-",
+                "rawvideo",
+                "pipe:1",
             ],
         );
     },
@@ -415,7 +434,7 @@ test(
             "DEGRADED",
         );
 
-        fixture.children[0].stdout.write(
+        fixture.children[0].stdio[3].write(
             "frame=1\nprogress=continue\n",
         );
 
@@ -559,7 +578,7 @@ test(
 
         fixture.session.start();
 
-        fixture.children[0].stdout.write(
+        fixture.children[0].stdio[3].write(
             "frame=5\nprogress=continue\n",
         );
 
@@ -571,7 +590,7 @@ test(
 
         fixture.timers.runNext();
 
-        fixture.children[1].stdout.write(
+        fixture.children[1].stdio[3].write(
             "frame=1\nprogress=continue\n",
         );
 
@@ -603,7 +622,7 @@ test(
             1,
         );
 
-        fixture.children[1].stdout.write(
+        fixture.children[1].stdio[3].write(
             "frame=2\nprogress=continue\n",
         );
 
@@ -771,7 +790,7 @@ test(
 
         fixture.session.start();
 
-        fixture.children[0].stdout.write(
+        fixture.children[0].stdio[3].write(
             "frame=1\nprogress=continue\n",
         );
 
@@ -851,6 +870,271 @@ test(
             [
                 100,
             ],
+        );
+    },
+);
+test(
+    "stdout BGR24 e progress pipe3 permanecem canais independentes",
+    () => {
+        const fixture =
+            createFixture({
+                frameWidth:
+                    2,
+                frameHeight:
+                    1,
+            });
+
+        fixture.session.start();
+
+        fixture.children[0].stdout.write(
+            Uint8Array.from([
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+            ]),
+        );
+
+        assert.equal(
+            fixture.health
+                .snapshot()
+                .status,
+            "DEGRADED",
+        );
+
+        assert.equal(
+            fixture.session
+                .snapshot()
+                .frames
+                .queue
+                .received,
+            1,
+        );
+
+        assert.deepEqual(
+            Array.from(
+                fixture.session
+                    .takeLatestFrame(),
+            ),
+            [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+            ],
+        );
+
+        fixture.children[0].stdio[3].write(
+            "frame=1\nprogress=continue\n",
+        );
+
+        assert.equal(
+            fixture.health
+                .snapshot()
+                .status,
+            "ONLINE",
+        );
+
+        assert.equal(
+            fixture.session
+                .snapshot()
+                .lastFrame,
+            1,
+        );
+    },
+);
+
+test(
+    "assembler da sessao aceita frame BGR24 fragmentado entre chunks",
+    () => {
+        const fixture =
+            createFixture({
+                frameWidth:
+                    2,
+                frameHeight:
+                    1,
+            });
+
+        fixture.session.start();
+
+        fixture.children[0].stdout.write(
+            Uint8Array.from([
+                10,
+                20,
+            ]),
+        );
+
+        assert.equal(
+            fixture.session
+                .snapshot()
+                .frames
+                .queue
+                .pending,
+            false,
+        );
+
+        assert.equal(
+            fixture.session
+                .snapshot()
+                .frames
+                .assembler
+                .pendingBytes,
+            2,
+        );
+
+        fixture.children[0].stdout.write(
+            Uint8Array.from([
+                30,
+                40,
+                50,
+                60,
+            ]),
+        );
+
+        assert.deepEqual(
+            Array.from(
+                fixture.session
+                    .takeLatestFrame(),
+            ),
+            [
+                10,
+                20,
+                30,
+                40,
+                50,
+                60,
+            ],
+        );
+
+        assert.equal(
+            fixture.session
+                .snapshot()
+                .frames
+                .assembler
+                .pendingBytes,
+            0,
+        );
+    },
+);
+
+test(
+    "dois frames coalescidos mantem somente o frame BGR24 mais recente",
+    () => {
+        const fixture =
+            createFixture({
+                frameWidth:
+                    2,
+                frameHeight:
+                    1,
+            });
+
+        fixture.session.start();
+
+        fixture.children[0].stdout.write(
+            Uint8Array.from([
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+            ]),
+        );
+
+        const snapshot =
+            fixture.session
+                .snapshot()
+                .frames
+                .queue;
+
+        assert.equal(
+            snapshot.capacity,
+            1,
+        );
+
+        assert.equal(
+            snapshot.received,
+            2,
+        );
+
+        assert.equal(
+            snapshot.dropped,
+            1,
+        );
+
+        assert.equal(
+            snapshot.pending,
+            true,
+        );
+
+        assert.deepEqual(
+            Array.from(
+                fixture.session
+                    .takeLatestFrame(),
+            ),
+            [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+            ],
+        );
+    },
+);
+
+test(
+    "stderr permanece separado e nao altera health ou fila de frames",
+    () => {
+        const fixture =
+            createFixture({
+                frameWidth:
+                    2,
+                frameHeight:
+                    1,
+            });
+
+        fixture.session.start();
+
+        fixture.children[0].stderr.write(
+            "warning sintetico",
+        );
+
+        const snapshot =
+            fixture.session.snapshot();
+
+        assert.equal(
+            snapshot.state,
+            "STARTING",
+        );
+
+        assert.equal(
+            snapshot.frames.queue.received,
+            0,
+        );
+
+        assert.equal(
+            snapshot.frames.stderrBytes > 0,
+            true,
+        );
+
+        assert.equal(
+            fixture.health
+                .snapshot()
+                .status,
+            "DEGRADED",
         );
     },
 );

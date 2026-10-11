@@ -7,6 +7,14 @@ import {
     createReconnectPolicy,
 } from "./reconnectPolicy.mjs";
 
+import {
+    createRawBgrFrameAssembler,
+} from "../frames/rawBgrFrameAssembler.mjs";
+
+import {
+    createLatestFrameQueue,
+} from "../frames/latestFrameQueue.mjs";
+
 function requireNonEmptyString(
     value,
     name,
@@ -53,6 +61,24 @@ function requireStableFrameThreshold(
     ) {
         throw new TypeError(
             "stableFrameThreshold deve ser inteiro maior ou igual a 2.",
+        );
+    }
+
+    return value;
+}
+
+function requireFrameDimension(
+    value,
+    name,
+) {
+    if (
+        !Number.isSafeInteger(
+            value,
+        ) ||
+        value <= 0
+    ) {
+        throw new TypeError(
+            `${name} deve ser inteiro positivo.`,
         );
     }
 
@@ -137,6 +163,8 @@ function consumeProgressChunk(
 export function buildRtspFfmpegArgs({
     camera,
     credentials = {},
+    frameWidth = 1920,
+    frameHeight = 1080,
 } = {}) {
     if (
         !camera ||
@@ -146,6 +174,18 @@ export function buildRtspFfmpegArgs({
             "camera e obrigatoria.",
         );
     }
+
+    const normalizedFrameWidth =
+        requireFrameDimension(
+            frameWidth,
+            "frameWidth",
+        );
+
+    const normalizedFrameHeight =
+        requireFrameDimension(
+            frameHeight,
+            "frameHeight",
+        );
 
     const transport =
         normalizeTransport(
@@ -165,7 +205,7 @@ export function buildRtspFfmpegArgs({
         "warning",
         "-nostats",
         "-progress",
-        "pipe:1",
+        "pipe:3",
         "-rtsp_transport",
         transport,
         "-timeout",
@@ -175,9 +215,13 @@ export function buildRtspFfmpegArgs({
         "-map",
         "0:v:0",
         "-an",
+        "-vf",
+        `scale=${normalizedFrameWidth}:${normalizedFrameHeight}`,
+        "-pix_fmt",
+        "bgr24",
         "-f",
-        "null",
-        "-",
+        "rawvideo",
+        "pipe:1",
     ];
 }
 
@@ -194,6 +238,8 @@ export function createRtspSession({
     clearTimer =
         clearTimeout,
     stableFrameThreshold = 2,
+    frameWidth = 1920,
+    frameHeight = 1080,
 } = {}) {
     if (
         !camera ||
@@ -259,10 +305,36 @@ export function createRtspSession({
             stableFrameThreshold,
         );
 
+    const normalizedFrameWidth =
+        requireFrameDimension(
+            frameWidth,
+            "frameWidth",
+        );
+
+    const normalizedFrameHeight =
+        requireFrameDimension(
+            frameHeight,
+            "frameHeight",
+        );
+
     const endpoint =
         describeRtspEndpoint(
             camera.endpoint,
         );
+
+    const frameAssembler =
+        createRawBgrFrameAssembler({
+            width:
+                normalizedFrameWidth,
+            height:
+                normalizedFrameHeight,
+        });
+
+    const latestFrameQueue =
+        createLatestFrameQueue();
+
+    let stderrBytes =
+        0;
 
     let child =
         null;
@@ -308,6 +380,20 @@ export function createRtspSession({
                 reconnectTimer !== null,
             reconnect:
                 reconnectPolicy.snapshot(),
+            frames:
+                Object.freeze({
+                    format:
+                        "bgr24",
+                    width:
+                        normalizedFrameWidth,
+                    height:
+                        normalizedFrameHeight,
+                    assembler:
+                        frameAssembler.snapshot(),
+                    queue:
+                        latestFrameQueue.snapshot(),
+                    stderrBytes,
+                }),
             endpoint,
         });
     }
@@ -410,10 +496,20 @@ export function createRtspSession({
         stableFrameCount =
             0;
 
+        frameAssembler.reset();
+        latestFrameQueue.reset();
+
+        stderrBytes =
+            0;
+
         const args =
             buildRtspFfmpegArgs({
                 camera,
                 credentials,
+                frameWidth:
+                    normalizedFrameWidth,
+                frameHeight:
+                    normalizedFrameHeight,
             });
 
         logger?.info?.(
@@ -434,8 +530,32 @@ export function createRtspSession({
                     cameraId,
                     args,
                 });
+
+            if (
+                !currentChild?.stdio?.[3] ||
+                typeof currentChild.stdio[3].on !==
+                    "function"
+            ) {
+                throw new Error(
+                    "FFmpeg nao expos pipe:3 para progress.",
+                );
+            }
         }
         catch (error) {
+            if (currentChild) {
+                try {
+                    ffmpeg.stop(
+                        currentChild,
+                    );
+                }
+                catch {
+                    /*
+                     * Falha ao encerrar um child incompleto nao deve
+                     * mascarar a causa original de inicializacao.
+                     */
+                }
+            }
+
             child =
                 null;
 
@@ -589,6 +709,12 @@ export function createRtspSession({
                     null;
             }
 
+            frameAssembler.reset();
+            latestFrameQueue.reset();
+
+            stderrBytes =
+                0;
+
             if (stopRequested) {
                 state =
                     "STOPPED";
@@ -651,11 +777,90 @@ export function createRtspSession({
             (
                 chunk,
             ) => {
+                if (
+                    currentGeneration !==
+                    generation
+                ) {
+                    return;
+                }
+
+                try {
+                    const frames =
+                        frameAssembler.push(
+                            chunk,
+                        );
+
+                    for (
+                        const frame of
+                        frames
+                    ) {
+                        latestFrameQueue.push(
+                            frame,
+                        );
+                    }
+                }
+                catch (error) {
+                    try {
+                        ffmpeg.stop(
+                            currentChild,
+                        );
+                    }
+                    catch {
+                        /*
+                         * O finish abaixo preserva o erro original
+                         * do pipeline de frames.
+                         */
+                    }
+
+                    finish({
+                        reason:
+                            "raw_frame_pipeline_error",
+                        error,
+                    });
+                }
+            },
+        );
+
+        currentChild.stdio[3].on(
+            "data",
+            (
+                chunk,
+            ) => {
                 consumeProgressChunk(
                     progressState,
                     chunk,
                     onFrame,
                 );
+            },
+        );
+
+        currentChild.stderr?.on?.(
+            "data",
+            (
+                chunk,
+            ) => {
+                if (
+                    currentGeneration !==
+                    generation
+                ) {
+                    return;
+                }
+
+                const chunkBytes =
+                    Number(
+                        chunk?.byteLength ??
+                        0,
+                    );
+
+                if (
+                    Number.isSafeInteger(
+                        chunkBytes,
+                    ) &&
+                    chunkBytes > 0
+                ) {
+                    stderrBytes +=
+                        chunkBytes;
+                }
             },
         );
 
@@ -728,6 +933,12 @@ export function createRtspSession({
     function stop() {
         const reconnectWasPending =
             clearPendingReconnect();
+
+        frameAssembler.reset();
+        latestFrameQueue.reset();
+
+        stderrBytes =
+            0;
 
         if (
             !child &&
@@ -808,9 +1019,14 @@ export function createRtspSession({
         return stopped;
     }
 
+    function takeLatestFrame() {
+        return latestFrameQueue.take();
+    }
+
     return Object.freeze({
         start,
         stop,
         snapshot,
+        takeLatestFrame,
     });
 }

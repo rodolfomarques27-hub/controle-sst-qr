@@ -103,6 +103,7 @@ export function createFfmpegProcess({
                         "ignore",
                         "pipe",
                         "pipe",
+                        "pipe",
                     ],
                     windowsHide:
                         true,
