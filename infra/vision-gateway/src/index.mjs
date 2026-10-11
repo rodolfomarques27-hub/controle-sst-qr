@@ -27,6 +27,25 @@ import {
     createStructuredLogger,
 } from "./logging/structuredLogger.mjs";
 
+import {
+    createRtspSession,
+} from "./rtsp/rtspSession.mjs";
+
+function requireCameraId(
+    cameraId,
+) {
+    if (
+        typeof cameraId !== "string" ||
+        !cameraId.trim()
+    ) {
+        throw new TypeError(
+            "cameraId e obrigatorio.",
+        );
+    }
+
+    return cameraId.trim();
+}
+
 export function createGatewayRuntime({
     env = process.env,
     logSink,
@@ -48,6 +67,12 @@ export function createGatewayRuntime({
     const healthByCamera =
         new Map();
 
+    const configuredCameraById =
+        new Map();
+
+    const rtspSessions =
+        new Map();
+
     if (config.camera) {
         registry.register({
             id:
@@ -63,6 +88,11 @@ export function createGatewayRuntime({
                     config.camera.id,
             }),
         );
+
+        configuredCameraById.set(
+            config.camera.id,
+            config.camera,
+        );
     }
 
     const ffmpeg =
@@ -71,6 +101,133 @@ export function createGatewayRuntime({
                 config.ffmpeg.path,
             logger,
         });
+
+    function getConfiguredCamera(
+        cameraId,
+    ) {
+        const normalizedCameraId =
+            requireCameraId(
+                cameraId,
+            );
+
+        const camera =
+            registry.get(
+                normalizedCameraId,
+            );
+
+        if (!camera) {
+            throw new Error(
+                `Camera nao registrada: ${normalizedCameraId}`,
+            );
+        }
+
+        const configuredCamera =
+            configuredCameraById.get(
+                normalizedCameraId,
+            );
+
+        if (!configuredCamera) {
+            throw new Error(
+                `Camera sem configuracao RTSP: ${normalizedCameraId}`,
+            );
+        }
+
+        const health =
+            healthByCamera.get(
+                normalizedCameraId,
+            );
+
+        if (!health) {
+            throw new Error(
+                `Camera sem health tracker: ${normalizedCameraId}`,
+            );
+        }
+
+        return {
+            camera,
+            credentials:
+                configuredCamera.credentials,
+            health,
+        };
+    }
+
+    function getOrCreateRtspSession(
+        cameraId,
+    ) {
+        const normalizedCameraId =
+            requireCameraId(
+                cameraId,
+            );
+
+        const existing =
+            rtspSessions.get(
+                normalizedCameraId,
+            );
+
+        if (existing) {
+            return existing;
+        }
+
+        const {
+            camera,
+            credentials,
+            health,
+        } =
+            getConfiguredCamera(
+                normalizedCameraId,
+            );
+
+        const session =
+            createRtspSession({
+                camera,
+                credentials,
+                ffmpeg,
+                health,
+                logger,
+            });
+
+        rtspSessions.set(
+            normalizedCameraId,
+            session,
+        );
+
+        return session;
+    }
+
+    function startCamera(
+        cameraId =
+            config.camera?.id,
+    ) {
+        const normalizedCameraId =
+            requireCameraId(
+                cameraId,
+            );
+
+        return getOrCreateRtspSession(
+            normalizedCameraId,
+        ).start();
+    }
+
+    function stopCamera(
+        cameraId =
+            config.camera?.id,
+    ) {
+        const normalizedCameraId =
+            requireCameraId(
+                cameraId,
+            );
+
+        const session =
+            rtspSessions.get(
+                normalizedCameraId,
+            );
+
+        if (!session) {
+            return false;
+        }
+
+        return session.stop();
+    }
 
     const getSnapshot =
         () => ({
@@ -89,6 +246,12 @@ export function createGatewayRuntime({
                             camera.endpoint,
                         health:
                             healthByCamera
+                                .get(
+                                    camera.id,
+                                )
+                                ?.snapshot() ?? null,
+                        rtsp:
+                            rtspSessions
                                 .get(
                                     camera.id,
                                 )
@@ -116,9 +279,12 @@ export function createGatewayRuntime({
         logger,
         registry,
         healthByCamera,
+        rtspSessions,
         ffmpeg,
         healthServer,
         getSnapshot,
+        startCamera,
+        stopCamera,
     });
 }
 
@@ -169,6 +335,26 @@ async function runMain() {
                     signal,
                 },
             );
+
+            for (
+                const cameraId of
+                runtime.rtspSessions.keys()
+            ) {
+                try {
+                    runtime.stopCamera(
+                        cameraId,
+                    );
+                }
+                catch (error) {
+                    runtime.logger.error(
+                        "vision.gateway.camera_stop_failed",
+                        {
+                            cameraId,
+                            error,
+                        },
+                    );
+                }
+            }
 
             await runtime.healthServer.stop();
 
