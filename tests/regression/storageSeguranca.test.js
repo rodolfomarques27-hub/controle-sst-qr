@@ -55,75 +55,82 @@ describe(
             },
         );
 
-        it(
-            "prioriza estado crítico no resumo de segurança",
-            () => {
-                expect(
-                    calcularResumoSegurancaStorageSistema([
-                        {
-                            nivel:
-                                "alerta",
-                        },
-                        {
-                            nivel:
-                                "critico",
-                        },
-                    ]),
-                ).toMatchObject({
+        it.each([
+            {
+                nome:
+                    "prioriza estado crítico no resumo de segurança",
+                avaliacoes: [
+                    {
+                        nivel:
+                            "alerta",
+                    },
+                    {
+                        nivel:
+                            "critico",
+                    },
+                ],
+                esperado: {
                     texto:
                         "Crítico",
                     detalhe:
                         "1 ponto(s) crítico(s)",
-                });
+                },
             },
-        );
-
-        it(
-            "retorna atenção quando existem alertas sem item crítico",
-            () => {
-                expect(
-                    calcularResumoSegurancaStorageSistema([
-                        {
-                            nivel:
-                                "ok",
-                        },
-                        {
-                            nivel:
-                                "alerta",
-                        },
-                    ]),
-                ).toMatchObject({
+            {
+                nome:
+                    "retorna atenção quando existem alertas sem item crítico",
+                avaliacoes: [
+                    {
+                        nivel:
+                            "ok",
+                    },
+                    {
+                        nivel:
+                            "alerta",
+                    },
+                ],
+                esperado: {
                     texto:
                         "Atenção",
                     detalhe:
                         "1 ponto(s) para conferir",
-                });
+                },
             },
-        );
-
-        it(
-            "retorna controlado quando não existem alertas ou críticos",
-            () => {
-                expect(
-                    calcularResumoSegurancaStorageSistema([
-                        {
-                            nivel:
-                                "ok",
-                        },
-                        {
-                            nivel:
-                                "info",
-                        },
-                    ]),
-                ).toMatchObject({
+            {
+                nome:
+                    "retorna controlado quando não existem alertas ou críticos",
+                avaliacoes: [
+                    {
+                        nivel:
+                            "ok",
+                    },
+                    {
+                        nivel:
+                            "info",
+                    },
+                ],
+                esperado: {
                     texto:
                         "Controlado",
                     detalhe:
                         "Checklist operacional sem bloqueio",
-                });
+                },
+            },
+        ])(
+            "$nome",
+            ({
+                avaliacoes,
+                esperado,
+            }) => {
+                expect(
+                    calcularResumoSegurancaStorageSistema(
+                        avaliacoes,
+                    ),
+                ).toMatchObject(
+                    esperado,
+                );
             },
         );
-
         it(
             "exige cliente e tenant antes de solicitar resumo de armazenamento",
             async () => {

@@ -33,6 +33,6 @@ jobs:
       - name: Executar regressao Node
         run: npm run test:regression
       - name: Instalar Chromium do Playwright
-        run: npx playwright install --with-deps chromium
+        run: ./node_modules/.bin/playwright install --with-deps chromium
       - name: Executar testes E2E locais
         run: npm run test:e2e
