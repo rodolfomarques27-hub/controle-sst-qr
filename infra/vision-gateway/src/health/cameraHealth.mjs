@@ -95,9 +95,15 @@ export class CameraHealthTracker {
                 createdAt,
             lastFrameAt:
                 null,
+            lastOnlineAt:
+                null,
+            lastStableAt:
+                null,
             lastReconnectAttemptAt:
                 null,
             reconnectAttempts:
+                0,
+            totalReconnectAttempts:
                 0,
             reason:
                 "not_started",
@@ -115,6 +121,8 @@ export class CameraHealthTracker {
         {
             reason = null,
             frameReceived = false,
+            resetReconnectAttempts = false,
+            markOnlineAt = false,
         } = {},
     ) {
         const at =
@@ -129,6 +137,14 @@ export class CameraHealthTracker {
                 frameReceived
                     ? at
                     : this.#state.lastFrameAt,
+            lastOnlineAt:
+                markOnlineAt
+                    ? at
+                    : this.#state.lastOnlineAt,
+            reconnectAttempts:
+                resetReconnectAttempts
+                    ? 0
+                    : this.#state.reconnectAttempts,
             reason:
                 normalizeReason(
                     reason,
@@ -138,20 +154,45 @@ export class CameraHealthTracker {
         return this.snapshot();
     }
 
-    markOnline() {
-        this.#state = {
-            ...this.#state,
-            reconnectAttempts:
-                0,
-        };
-
+    markOnline({
+        resetReconnectAttempts = true,
+    } = {}) {
         return this.#setStatus(
             CAMERA_HEALTH_STATUS.ONLINE,
             {
                 frameReceived:
                     true,
+                resetReconnectAttempts,
+                markOnlineAt:
+                    true,
             },
         );
+    }
+
+    markStable() {
+        if (
+            this.#state.status !==
+            CAMERA_HEALTH_STATUS.ONLINE
+        ) {
+            throw new Error(
+                "Camera so pode ser marcada estavel quando ONLINE.",
+            );
+        }
+
+        const at =
+            this.#timestamp();
+
+        this.#state = {
+            ...this.#state,
+            reconnectAttempts:
+                0,
+            lastStableAt:
+                at,
+            reason:
+                null,
+        };
+
+        return this.snapshot();
     }
 
     markDegraded(
@@ -199,6 +240,8 @@ export class CameraHealthTracker {
             ...this.#state,
             reconnectAttempts:
                 this.#state.reconnectAttempts + 1,
+            totalReconnectAttempts:
+                this.#state.totalReconnectAttempts + 1,
             lastReconnectAttemptAt:
                 at,
             reason:

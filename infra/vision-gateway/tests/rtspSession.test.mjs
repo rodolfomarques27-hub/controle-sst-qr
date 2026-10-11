@@ -14,6 +14,10 @@ import {
 } from "../src/health/cameraHealth.mjs";
 
 import {
+    createReconnectPolicy,
+} from "../src/rtsp/reconnectPolicy.mjs";
+
+import {
     buildRtspFfmpegArgs,
     createRtspSession,
 } from "../src/rtsp/rtspSession.mjs";
@@ -37,9 +41,110 @@ function createChild() {
     return child;
 }
 
-function createFixture() {
-    const child =
-        createChild();
+function createFakeTimers() {
+    let nextId =
+        1;
+
+    const pending =
+        new Map();
+
+    const cleared =
+        [];
+
+    function setTimer(
+        callback,
+        delayMs,
+    ) {
+        const id =
+            nextId++;
+
+        pending.set(
+            id,
+            {
+                callback,
+                delayMs,
+            },
+        );
+
+        return id;
+    }
+
+    function clearTimer(
+        id,
+    ) {
+        if (
+            pending.delete(
+                id,
+            )
+        ) {
+            cleared.push(
+                id,
+            );
+        }
+    }
+
+    function runNext() {
+        const first =
+            pending
+                .entries()
+                .next();
+
+        if (first.done) {
+            return null;
+        }
+
+        const [
+            id,
+            item,
+        ] =
+            first.value;
+
+        pending.delete(
+            id,
+        );
+
+        item.callback();
+
+        return {
+            id,
+            delayMs:
+                item.delayMs,
+        };
+    }
+
+    function delays() {
+        return Array.from(
+            pending.values(),
+            (
+                item,
+            ) =>
+                item.delayMs,
+        );
+    }
+
+    return {
+        setTimer,
+        clearTimer,
+        runNext,
+        delays,
+        pending,
+        cleared,
+    };
+}
+
+function createFixture({
+    stableFrameThreshold = 2,
+} = {}) {
+    const children =
+        [
+            createChild(),
+            createChild(),
+            createChild(),
+            createChild(),
+        ];
+
+    let childCursor =
+        0;
 
     const starts =
         [];
@@ -51,16 +156,36 @@ function createFixture() {
         start(
             input,
         ) {
-            starts.push(
+            const child =
+                children[
+                    childCursor
+                ];
+
+            childCursor +=
+                1;
+
+            if (!child) {
+                throw new Error(
+                    "Sem child de teste disponivel.",
+                );
+            }
+
+            starts.push({
                 input,
-            );
+                child,
+            });
 
             return child;
         },
 
-        stop() {
+        stop(
+            child,
+        ) {
             stopCount +=
                 1;
+
+            child.killed =
+                true;
 
             return true;
         },
@@ -77,6 +202,18 @@ function createFixture() {
             logs.push({
                 level:
                     "info",
+                event,
+                context,
+            });
+        },
+
+        warn(
+            event,
+            context,
+        ) {
+            logs.push({
+                level:
+                    "warn",
                 event,
                 context,
             });
@@ -124,6 +261,21 @@ function createFixture() {
             "test-secret",
     };
 
+    const timers =
+        createFakeTimers();
+
+    const reconnectPolicy =
+        createReconnectPolicy({
+            baseDelayMs:
+                100,
+            maxDelayMs:
+                400,
+            jitterRatio:
+                0,
+            random:
+                () => 0.5,
+        });
+
     const session =
         createRtspSession({
             camera,
@@ -131,15 +283,23 @@ function createFixture() {
             ffmpeg,
             health,
             logger,
+            reconnectPolicy,
+            setTimer:
+                timers.setTimer,
+            clearTimer:
+                timers.clearTimer,
+            stableFrameThreshold,
         });
 
     return {
-        child,
+        children,
         ffmpeg,
         health,
         logs,
         session,
         starts,
+        timers,
+        reconnectPolicy,
         credentials,
 
         get stopCount() {
@@ -255,7 +415,7 @@ test(
             "DEGRADED",
         );
 
-        fixture.child.stdout.write(
+        fixture.children[0].stdout.write(
             "frame=1\nprogress=continue\n",
         );
 
@@ -314,48 +474,246 @@ test(
 );
 
 test(
-    "saida antes do primeiro frame marca camera OFFLINE",
+    "queda inesperada agenda reconexao com backoff",
     () => {
         const fixture =
             createFixture();
 
         fixture.session.start();
 
-        fixture.child.emit(
+        fixture.children[0].emit(
             "exit",
             1,
             null,
-        );
-
-        const health =
-            fixture.health.snapshot();
-
-        assert.equal(
-            health.status,
-            "OFFLINE",
-        );
-
-        assert.equal(
-            health.reason,
-            "ffmpeg_exit_before_first_frame",
         );
 
         assert.equal(
             fixture.session
                 .snapshot()
                 .state,
-            "STOPPED",
+            "RECONNECTING",
+        );
+
+        assert.equal(
+            fixture.session
+                .snapshot()
+                .reconnectScheduled,
+            true,
+        );
+
+        assert.deepEqual(
+            fixture.timers.delays(),
+            [
+                100,
+            ],
+        );
+
+        assert.equal(
+            fixture.health
+                .snapshot()
+                .status,
+            "DEGRADED",
+        );
+
+        const fired =
+            fixture.timers.runNext();
+
+        assert.equal(
+            fired.delayMs,
+            100,
+        );
+
+        assert.equal(
+            fixture.starts.length,
+            2,
+        );
+
+        assert.equal(
+            fixture.session
+                .snapshot()
+                .state,
+            "STARTING",
+        );
+
+        assert.equal(
+            fixture.health
+                .snapshot()
+                .reconnectAttempts,
+            1,
+        );
+
+        assert.equal(
+            fixture.health
+                .snapshot()
+                .totalReconnectAttempts,
+            1,
         );
     },
 );
 
 test(
-    "stop e explicito e nao implementa reconexao",
+    "retomada estavel reseta backoff apenas apos segundo frame",
     () => {
         const fixture =
             createFixture();
 
         fixture.session.start();
+
+        fixture.children[0].stdout.write(
+            "frame=5\nprogress=continue\n",
+        );
+
+        fixture.children[0].emit(
+            "exit",
+            1,
+            null,
+        );
+
+        fixture.timers.runNext();
+
+        fixture.children[1].stdout.write(
+            "frame=1\nprogress=continue\n",
+        );
+
+        assert.equal(
+            fixture.session
+                .snapshot()
+                .state,
+            "RUNNING",
+        );
+
+        assert.equal(
+            fixture.health
+                .snapshot()
+                .status,
+            "ONLINE",
+        );
+
+        assert.equal(
+            fixture.health
+                .snapshot()
+                .reconnectAttempts,
+            1,
+        );
+
+        assert.equal(
+            fixture.reconnectPolicy
+                .snapshot()
+                .attempt,
+            1,
+        );
+
+        fixture.children[1].stdout.write(
+            "frame=2\nprogress=continue\n",
+        );
+
+        assert.equal(
+            fixture.health
+                .snapshot()
+                .reconnectAttempts,
+            0,
+        );
+
+        assert.notEqual(
+            fixture.health
+                .snapshot()
+                .lastStableAt,
+            null,
+        );
+
+        assert.equal(
+            fixture.reconnectPolicy
+                .snapshot()
+                .attempt,
+            0,
+        );
+
+        fixture.children[1].emit(
+            "exit",
+            1,
+            null,
+        );
+
+        assert.deepEqual(
+            fixture.timers.delays(),
+            [
+                100,
+            ],
+        );
+    },
+);
+
+test(
+    "quedas consecutivas aumentam backoff ate o limite",
+    () => {
+        const fixture =
+            createFixture();
+
+        fixture.session.start();
+
+        fixture.children[0].emit(
+            "exit",
+            1,
+            null,
+        );
+
+        assert.deepEqual(
+            fixture.timers.delays(),
+            [
+                100,
+            ],
+        );
+
+        fixture.timers.runNext();
+
+        fixture.children[1].emit(
+            "exit",
+            1,
+            null,
+        );
+
+        assert.deepEqual(
+            fixture.timers.delays(),
+            [
+                200,
+            ],
+        );
+
+        fixture.timers.runNext();
+
+        fixture.children[2].emit(
+            "exit",
+            1,
+            null,
+        );
+
+        assert.deepEqual(
+            fixture.timers.delays(),
+            [
+                400,
+            ],
+        );
+    },
+);
+
+test(
+    "stop manual cancela reconexao pendente",
+    () => {
+        const fixture =
+            createFixture();
+
+        fixture.session.start();
+
+        fixture.children[0].emit(
+            "exit",
+            1,
+            null,
+        );
+
+        assert.equal(
+            fixture.timers.pending.size,
+            1,
+        );
 
         const result =
             fixture.session.stop();
@@ -366,26 +724,22 @@ test(
         );
 
         assert.equal(
-            fixture.stopCount,
-            1,
-        );
-
-        assert.equal(
-            fixture.starts.length,
-            1,
-        );
-
-        assert.equal(
-            fixture.health
-                .snapshot()
-                .status,
-            "DEGRADED",
-        );
-
-        fixture.child.emit(
-            "exit",
+            fixture.timers.pending.size,
             0,
-            "SIGTERM",
+        );
+
+        assert.equal(
+            fixture.session
+                .snapshot()
+                .state,
+            "STOPPED",
+        );
+
+        assert.equal(
+            fixture.session
+                .snapshot()
+                .reconnectScheduled,
+            false,
         );
 
         assert.equal(
@@ -405,6 +759,98 @@ test(
         assert.equal(
             fixture.starts.length,
             1,
+        );
+    },
+);
+
+test(
+    "stop de processo ativo nao agenda nova reconexao",
+    () => {
+        const fixture =
+            createFixture();
+
+        fixture.session.start();
+
+        fixture.children[0].stdout.write(
+            "frame=1\nprogress=continue\n",
+        );
+
+        const result =
+            fixture.session.stop();
+
+        assert.equal(
+            result,
+            true,
+        );
+
+        assert.equal(
+            fixture.stopCount,
+            1,
+        );
+
+        fixture.children[0].emit(
+            "exit",
+            0,
+            "SIGTERM",
+        );
+
+        assert.equal(
+            fixture.session
+                .snapshot()
+                .state,
+            "STOPPED",
+        );
+
+        assert.equal(
+            fixture.timers.pending.size,
+            0,
+        );
+
+        assert.equal(
+            fixture.health
+                .snapshot()
+                .reason,
+            "stopped",
+        );
+
+        assert.equal(
+            fixture.starts.length,
+            1,
+        );
+    },
+);
+
+test(
+    "error e exit do mesmo processo nao duplicam reconexao",
+    () => {
+        const fixture =
+            createFixture();
+
+        fixture.session.start();
+
+        fixture.children[0].emit(
+            "error",
+            new Error(
+                "falha simulada",
+            ),
+        );
+
+        fixture.children[0].emit(
+            "exit",
+            1,
+            null,
+        );
+
+        assert.equal(
+            fixture.timers.pending.size,
+            1,
+        );
+
+        assert.deepEqual(
+            fixture.timers.delays(),
+            [
+                100,
+            ],
         );
     },
 );

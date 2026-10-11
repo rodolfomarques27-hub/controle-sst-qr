@@ -3,6 +3,10 @@ import {
     describeRtspEndpoint,
 } from "./rtspUrl.mjs";
 
+import {
+    createReconnectPolicy,
+} from "./reconnectPolicy.mjs";
+
 function requireNonEmptyString(
     value,
     name,
@@ -38,6 +42,21 @@ function normalizeTransport(
     }
 
     return transport;
+}
+
+function requireStableFrameThreshold(
+    value,
+) {
+    if (
+        !Number.isSafeInteger(value) ||
+        value < 2
+    ) {
+        throw new TypeError(
+            "stableFrameThreshold deve ser inteiro maior ou igual a 2.",
+        );
+    }
+
+    return value;
 }
 
 function consumeProgressChunk(
@@ -145,36 +164,17 @@ export function buildRtspFfmpegArgs({
         "-loglevel",
         "warning",
         "-nostats",
-
-        /*
-         * O progresso e enviado para stdout.
-         * O video e descartado pelo muxer null.
-         */
         "-progress",
         "pipe:1",
-
-        /*
-         * A TWG homologada respondeu corretamente
-         * usando RTP/UDP.
-         */
         "-rtsp_transport",
         transport,
-
-        /*
-         * Timeout FFmpeg em microssegundos.
-         * 10 segundos.
-         */
         "-timeout",
         "10000000",
-
         "-i",
         rtspUrl,
-
         "-map",
         "0:v:0",
-
         "-an",
-
         "-f",
         "null",
         "-",
@@ -187,6 +187,13 @@ export function createRtspSession({
     ffmpeg,
     health,
     logger = null,
+    reconnectPolicy =
+        createReconnectPolicy(),
+    setTimer =
+        setTimeout,
+    clearTimer =
+        clearTimeout,
+    stableFrameThreshold = 2,
 } = {}) {
     if (
         !camera ||
@@ -216,14 +223,41 @@ export function createRtspSession({
     if (
         !health ||
         typeof health.markOnline !== "function" ||
+        typeof health.markStable !== "function" ||
         typeof health.markDegraded !== "function" ||
         typeof health.markOffline !== "function" ||
-        typeof health.recordFrame !== "function"
+        typeof health.recordFrame !== "function" ||
+        typeof health.recordReconnectAttempt !== "function"
     ) {
         throw new TypeError(
             "health deve ser um CameraHealthTracker compativel.",
         );
     }
+
+    if (
+        !reconnectPolicy ||
+        typeof reconnectPolicy.next !== "function" ||
+        typeof reconnectPolicy.reset !== "function" ||
+        typeof reconnectPolicy.snapshot !== "function"
+    ) {
+        throw new TypeError(
+            "reconnectPolicy invalida.",
+        );
+    }
+
+    if (
+        typeof setTimer !== "function" ||
+        typeof clearTimer !== "function"
+    ) {
+        throw new TypeError(
+            "setTimer e clearTimer devem ser funcoes.",
+        );
+    }
+
+    const normalizedStableFrameThreshold =
+        requireStableFrameThreshold(
+            stableFrameThreshold,
+        );
 
     const endpoint =
         describeRtspEndpoint(
@@ -233,16 +267,25 @@ export function createRtspSession({
     let child =
         null;
 
+    let reconnectTimer =
+        null;
+
     let state =
         "STOPPED";
 
     let firstFrameSeen =
         false;
 
+    let lastFrame =
+        0;
+
     let stopRequested =
         false;
 
-    let lastFrame =
+    let stableFrameCount =
+        0;
+
+    let generation =
         0;
 
     function snapshot() {
@@ -253,23 +296,119 @@ export function createRtspSession({
                 Boolean(
                     child,
                 ) &&
-                state !==
-                    "STOPPED",
+                (
+                    state === "STARTING" ||
+                    state === "RUNNING" ||
+                    state === "STOPPING"
+                ),
             firstFrameSeen,
             lastFrame,
+            stableFrameCount,
+            reconnectScheduled:
+                reconnectTimer !== null,
+            reconnect:
+                reconnectPolicy.snapshot(),
             endpoint,
         });
     }
 
-    function start() {
+    function clearPendingReconnect() {
+        if (reconnectTimer === null) {
+            return false;
+        }
+
+        clearTimer(
+            reconnectTimer,
+        );
+
+        reconnectTimer =
+            null;
+
+        return true;
+    }
+
+    function scheduleReconnect(
+        reason,
+    ) {
         if (
-            child &&
-            state !== "STOPPED"
+            stopRequested ||
+            reconnectTimer !== null
         ) {
-            throw new Error(
-                `Sessao RTSP ja iniciada: ${cameraId}`,
+            return snapshot();
+        }
+
+        const decision =
+            reconnectPolicy.next();
+
+        state =
+            "RECONNECTING";
+
+        health.markDegraded(
+            "rtsp_reconnecting",
+        );
+
+        logger?.warn?.(
+            "rtsp.session.reconnect_scheduled",
+            {
+                cameraId,
+                attempt:
+                    decision.attempt,
+                delayMs:
+                    decision.delayMs,
+                reason,
+            },
+        );
+
+        reconnectTimer =
+            setTimer(
+                () => {
+                    reconnectTimer =
+                        null;
+
+                    if (stopRequested) {
+                        state =
+                            "STOPPED";
+
+                        health.markOffline(
+                            "stopped",
+                        );
+
+                        return;
+                    }
+
+                    health.recordReconnectAttempt(
+                        reason,
+                    );
+
+                    launch({
+                        isReconnect:
+                            true,
+                    });
+                },
+                decision.delayMs,
+            );
+
+        return snapshot();
+    }
+
+    function launch({
+        isReconnect,
+    }) {
+        if (stopRequested) {
+            return snapshot();
+        }
+
+        state =
+            "STARTING";
+
+        if (!isReconnect) {
+            health.markDegraded(
+                "rtsp_starting",
             );
         }
+
+        stableFrameCount =
+            0;
 
         const args =
             buildRtspFfmpegArgs({
@@ -277,36 +416,20 @@ export function createRtspSession({
                 credentials,
             });
 
-        stopRequested =
-            false;
-
-        firstFrameSeen =
-            false;
-
-        lastFrame =
-            0;
-
-        state =
-            "STARTING";
-
-        health.markDegraded(
-            "rtsp_starting",
-        );
-
-        /*
-         * Nao registrar URL RTSP nem argumentos.
-         * Eles podem conter credenciais.
-         */
         logger?.info?.(
-            "rtsp.session.starting",
+            isReconnect
+                ? "rtsp.session.reconnect_starting"
+                : "rtsp.session.starting",
             {
                 cameraId,
                 endpoint,
             },
         );
 
+        let currentChild;
+
         try {
-            child =
+            currentChild =
                 ffmpeg.start({
                     cameraId,
                     args,
@@ -328,11 +451,39 @@ export function createRtspSession({
                 {
                     cameraId,
                     error,
+                    reconnect:
+                        isReconnect,
                 },
             );
 
+            if (
+                isReconnect &&
+                !stopRequested
+            ) {
+                scheduleReconnect(
+                    "ffmpeg_start_failed",
+                );
+
+                return snapshot();
+            }
+
             throw error;
         }
+
+        child =
+            currentChild;
+
+        generation +=
+            1;
+
+        const currentGeneration =
+            generation;
+
+        let finished =
+            false;
+
+        let runFirstFrameSeen =
+            false;
 
         const progressState = {
             buffer:
@@ -341,37 +492,161 @@ export function createRtspSession({
                 0,
         };
 
-        const onFrame =
-            (
-                frame,
-            ) => {
-                lastFrame =
-                    frame;
+        function onFrame(
+            frame,
+        ) {
+            if (
+                currentGeneration !==
+                generation
+            ) {
+                return;
+            }
 
-                if (!firstFrameSeen) {
-                    firstFrameSeen =
-                        true;
+            lastFrame =
+                frame;
 
-                    state =
-                        "RUNNING";
+            stableFrameCount +=
+                1;
 
-                    health.markOnline();
+            if (!runFirstFrameSeen) {
+                runFirstFrameSeen =
+                    true;
 
-                    logger?.info?.(
-                        "rtsp.session.first_frame",
-                        {
-                            cameraId,
-                            frame,
-                        },
-                    );
+                firstFrameSeen =
+                    true;
 
-                    return;
-                }
+                state =
+                    "RUNNING";
 
+                health.markOnline({
+                    resetReconnectAttempts:
+                        !isReconnect,
+                });
+
+                logger?.info?.(
+                    isReconnect
+                        ? "rtsp.session.recovered_first_frame"
+                        : "rtsp.session.first_frame",
+                    {
+                        cameraId,
+                        frame,
+                    },
+                );
+            }
+            else {
                 health.recordFrame();
-            };
+            }
 
-        child.stdout?.on?.(
+            if (
+                isReconnect &&
+                stableFrameCount >=
+                    normalizedStableFrameThreshold &&
+                reconnectPolicy
+                    .snapshot()
+                    .attempt >
+                    0
+            ) {
+                reconnectPolicy.reset();
+
+                health.markStable();
+
+                logger?.info?.(
+                    "rtsp.session.recovery_stable",
+                    {
+                        cameraId,
+                        frame,
+                        stableFrameCount,
+                    },
+                );
+            }
+        }
+
+        function finish({
+            reason,
+            code = null,
+            signal = null,
+            error = null,
+        }) {
+            if (finished) {
+                return;
+            }
+
+            finished =
+                true;
+
+            if (
+                currentGeneration !==
+                generation
+            ) {
+                return;
+            }
+
+            if (
+                child ===
+                currentChild
+            ) {
+                child =
+                    null;
+            }
+
+            if (stopRequested) {
+                state =
+                    "STOPPED";
+
+                reconnectPolicy.reset();
+
+                health.markOffline(
+                    "stopped",
+                );
+
+                logger?.info?.(
+                    "rtsp.session.exited",
+                    {
+                        cameraId,
+                        code,
+                        signal,
+                        reason:
+                            "stopped",
+                    },
+                );
+
+                return;
+            }
+
+            state =
+                "STOPPED";
+
+            health.markOffline(
+                reason,
+            );
+
+            if (error) {
+                logger?.error?.(
+                    "rtsp.session.process_error",
+                    {
+                        cameraId,
+                        error,
+                    },
+                );
+            }
+            else {
+                logger?.warn?.(
+                    "rtsp.session.unexpected_exit",
+                    {
+                        cameraId,
+                        code,
+                        signal,
+                        reason,
+                    },
+                );
+            }
+
+            scheduleReconnect(
+                reason,
+            );
+        }
+
+        currentChild.stdout?.on?.(
             "data",
             (
                 chunk,
@@ -384,76 +659,113 @@ export function createRtspSession({
             },
         );
 
-        child.once?.(
+        currentChild.once?.(
             "error",
             (
                 error,
             ) => {
-                state =
-                    "STOPPED";
-
-                child =
-                    null;
-
-                health.markOffline(
-                    "ffmpeg_error",
-                );
-
-                logger?.error?.(
-                    "rtsp.session.process_error",
-                    {
-                        cameraId,
-                        error,
-                    },
-                );
+                finish({
+                    reason:
+                        "ffmpeg_error",
+                    error,
+                });
             },
         );
 
-        child.once?.(
+        currentChild.once?.(
             "exit",
             (
                 code,
                 signal,
             ) => {
-                const reason =
-                    stopRequested
-                        ? "stopped"
-                        : firstFrameSeen
+                finish({
+                    reason:
+                        runFirstFrameSeen
                             ? "ffmpeg_exit"
-                            : "ffmpeg_exit_before_first_frame";
-
-                state =
-                    "STOPPED";
-
-                child =
-                    null;
-
-                health.markOffline(
-                    reason,
-                );
-
-                logger?.info?.(
-                    "rtsp.session.exited",
-                    {
-                        cameraId,
-                        code:
-                            code ?? null,
-                        signal:
-                            signal ?? null,
-                        reason,
-                    },
-                );
+                            : "ffmpeg_exit_before_first_frame",
+                    code:
+                        code ?? null,
+                    signal:
+                        signal ?? null,
+                });
             },
         );
 
         return snapshot();
     }
 
-    function stop() {
+    function start() {
         if (
-            !child ||
-            state === "STOPPED"
+            child ||
+            reconnectTimer !== null ||
+            state !== "STOPPED"
         ) {
+            throw new Error(
+                `Sessao RTSP ja iniciada: ${cameraId}`,
+            );
+        }
+
+        stopRequested =
+            false;
+
+        firstFrameSeen =
+            false;
+
+        lastFrame =
+            0;
+
+        stableFrameCount =
+            0;
+
+        reconnectPolicy.reset();
+
+        return launch({
+            isReconnect:
+                false,
+        });
+    }
+
+    function stop() {
+        const reconnectWasPending =
+            clearPendingReconnect();
+
+        if (
+            !child &&
+            (
+                state === "STOPPED" ||
+                state === "RECONNECTING"
+            )
+        ) {
+            if (
+                !reconnectWasPending &&
+                state === "STOPPED"
+            ) {
+                return false;
+            }
+
+            stopRequested =
+                true;
+
+            state =
+                "STOPPED";
+
+            reconnectPolicy.reset();
+
+            health.markOffline(
+                "stopped",
+            );
+
+            logger?.info?.(
+                "rtsp.session.reconnect_cancelled",
+                {
+                    cameraId,
+                },
+            );
+
+            return true;
+        }
+
+        if (!child) {
             return false;
         }
 
@@ -480,11 +792,13 @@ export function createRtspSession({
             );
 
         if (!stopped) {
+            child =
+                null;
+
             state =
                 "STOPPED";
 
-            child =
-                null;
+            reconnectPolicy.reset();
 
             health.markOffline(
                 "stopped",

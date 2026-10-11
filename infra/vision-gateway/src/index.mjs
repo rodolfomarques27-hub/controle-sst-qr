@@ -49,7 +49,17 @@ function requireCameraId(
 export function createGatewayRuntime({
     env = process.env,
     logSink,
+    rtspOptions = {},
 } = {}) {
+    if (
+        !rtspOptions ||
+        typeof rtspOptions !== "object"
+    ) {
+        throw new TypeError(
+            "rtspOptions deve ser um objeto.",
+        );
+    }
+
     const config =
         loadVisionConfig({
             env,
@@ -184,6 +194,14 @@ export function createGatewayRuntime({
                 ffmpeg,
                 health,
                 logger,
+                reconnectPolicy:
+                    rtspOptions.reconnectPolicy,
+                setTimer:
+                    rtspOptions.setTimer,
+                clearTimer:
+                    rtspOptions.clearTimer,
+                stableFrameThreshold:
+                    rtspOptions.stableFrameThreshold,
             });
 
         rtspSessions.set(
