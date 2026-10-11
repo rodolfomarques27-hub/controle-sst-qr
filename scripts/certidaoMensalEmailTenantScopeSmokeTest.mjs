@@ -13,6 +13,9 @@ const fonte =
   readFileSync(
     arquivo,
     "utf8",
+  ).replace(
+    /\r\n?/g,
+    "\n",
   );
 
 function quantidade(

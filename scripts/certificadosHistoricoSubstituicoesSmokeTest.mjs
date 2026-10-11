@@ -84,8 +84,14 @@ const blocoExcluir =
 
 assert.match(
     blocoSalvar,
-    /public\.certificados_historico/,
-    "CRUD deve documentar histórico."
+    /CERT-HIST-G1-R2-F1/,
+    "CRUD deve documentar que o histórico é delegado ao trigger."
+);
+
+assert.doesNotMatch(
+    blocoSalvar,
+    /\.from\(\s*["']certificados_historico["']\s*\)/,
+    "CRUD não deve duplicar no cliente o arquivamento que pertence ao trigger."
 );
 
 assert.doesNotMatch(
@@ -173,7 +179,7 @@ assert.doesNotMatch(
 
 assert.match(
     storageAuditoria,
-    /buscarTodosRegistrosSupabase\("certificados_historico",\s*"\*"\)/,
+    /buscarTodosRegistrosSupabase\(\s*"certificados_historico",\s*"\*"\s*\)/,
     "Auditoria deve consultar histórico."
 );
 

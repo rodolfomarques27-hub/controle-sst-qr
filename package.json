@@ -12,13 +12,16 @@
     "lint": "eslint .",
     "lint:quiet": "eslint . --quiet",
     "test:smoke": "node scripts/qualitySmokeTest.mjs && node scripts/ddsPersistenceSmokeTest.mjs && node scripts/ddsAvaliacaoMensalSmokeTest.mjs && node scripts/certidaoMensalRevisaoHistoricaSmokeTest.mjs",
+    "test:regression": "node scripts/regressionRunner.mjs",
+    "test:unit": "vitest run --config vitest.config.mjs",
     "check:security": "node scripts/securityBaselineCheck.mjs",
     "check:database": "node scripts/databaseSecurityCheck.mjs",
     "check:bundle": "node scripts/bundleBudgetCheck.mjs .verify-dist",
     "check": "npm run lint:quiet && npm run test:smoke && npm run check:security && npm run check:database",
     "verify": "npm run check && npm run build -- --configLoader runner --outDir .verify-dist --manifest && npm run check:bundle",
     "check:build": "npm run build -- --configLoader runner",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "playwright test --config playwright.config.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.0",
@@ -39,6 +42,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.64.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
@@ -46,6 +50,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
-    "vite": "8.0.16"
+    "vite": "8.0.16",
+    "vitest": "5.0.3"
   }
 }
