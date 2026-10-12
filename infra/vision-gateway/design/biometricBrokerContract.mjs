@@ -249,7 +249,7 @@ export const RPC_CONTRACTS = Object.freeze({
   changeReferenceStatus: Object.freeze({
     rpc: 'backend_biometric_change_reference_status',
     databaseExecuteRole: 'service_role',
-    purpose: 'QUARANTINE_OR_REVOKE_WITH_SET_SAFETY',
+    purpose: 'ENROLLMENT_EMBEDDING_READY_TO_ACTIVE_OR_QUARANTINE_OR_REVOKE_WITH_SET_SAFETY',
     inputs: Object.freeze([
       'referenceId',
       'nextStatus',
@@ -274,6 +274,15 @@ export const RPC_CONTRACTS = Object.freeze({
     returns: 'encryptedActiveBundle',
   }),
 });
+
+export const ENROLLMENT_RPC_SEQUENCE = Object.freeze([
+  'createReferenceSet',
+  'registerReference ×3–5',
+  'changeReferenceStatus(ACTIVE) ×3–5',
+  'storeCentroid',
+  'activateReferenceSet',
+  'getActiveBundle',
+]);
 
 export const ATOMIC_ACTIVATION_RULES = Object.freeze([
   'TARGET_SET_STATUS_MUST_BE_READY',
