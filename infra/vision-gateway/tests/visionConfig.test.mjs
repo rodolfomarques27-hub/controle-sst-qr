@@ -134,3 +134,88 @@ test(
         );
     },
 );
+
+test(
+    "configura broker HTTPS sem expor token na configuracao publica",
+    () => {
+        const token = "broker-test-token-" + "x".repeat(32);
+        const config = loadVisionConfig({
+            env: {
+                SAFESCAN_BIOMETRIC_BROKER_URL:
+                    "https://example.supabase.co/functions/v1/biometric-broker/",
+                SAFESCAN_BIOMETRIC_BROKER_TOKEN: token,
+                SAFESCAN_BIOMETRIC_BROKER_TIMEOUT_MS: "7000",
+            },
+        });
+        const publicConfig = toPublicVisionConfig(config);
+        const serialized = JSON.stringify(publicConfig);
+
+        assert.equal(
+            config.broker.url,
+            "https://example.supabase.co/functions/v1/biometric-broker",
+        );
+        assert.equal(config.broker.token, token);
+        assert.equal(config.broker.timeoutMs, 7000);
+        assert.deepEqual(publicConfig.broker, {
+            configured: true,
+            timeoutMs: 7000,
+        });
+        assert.equal(serialized.includes(token), false);
+    },
+);
+
+test(
+    "rejeita broker parcial, token curto, HTTP e timeout excessivo",
+    () => {
+        const token = "t".repeat(48);
+
+        assert.throws(
+            () => loadVisionConfig({
+                env: {
+                    SAFESCAN_BIOMETRIC_BROKER_URL:
+                        "https://example.supabase.co/functions/v1/biometric-broker",
+                },
+            }),
+            /TOKEN e obrigatorio/,
+        );
+        assert.throws(
+            () => loadVisionConfig({
+                env: {
+                    SAFESCAN_BIOMETRIC_BROKER_TOKEN: token,
+                },
+            }),
+            /URL e obrigatorio/,
+        );
+        assert.throws(
+            () => loadVisionConfig({
+                env: {
+                    SAFESCAN_BIOMETRIC_BROKER_URL:
+                        "https://example.supabase.co/functions/v1/biometric-broker",
+                    SAFESCAN_BIOMETRIC_BROKER_TOKEN: "short",
+                },
+            }),
+            /entre 32 e/,
+        );
+        assert.throws(
+            () => loadVisionConfig({
+                env: {
+                    SAFESCAN_BIOMETRIC_BROKER_URL:
+                        "http://example.local/biometric-broker",
+                    SAFESCAN_BIOMETRIC_BROKER_TOKEN: token,
+                },
+            }),
+            /HTTPS/,
+        );
+        assert.throws(
+            () => loadVisionConfig({
+                env: {
+                    SAFESCAN_BIOMETRIC_BROKER_URL:
+                        "https://example.supabase.co/functions/v1/biometric-broker",
+                    SAFESCAN_BIOMETRIC_BROKER_TOKEN: token,
+                    SAFESCAN_BIOMETRIC_BROKER_TIMEOUT_MS: "30001",
+                },
+            }),
+            /entre 1 e 30000/,
+        );
+    },
+);

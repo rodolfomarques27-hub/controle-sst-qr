@@ -11,6 +11,10 @@ const SUPPORTED_TRANSPORTS =
         "tcp",
     ]);
 
+const BROKER_DEFAULT_TIMEOUT_MS = 5000;
+const BROKER_MAX_TIMEOUT_MS = 30000;
+const BROKER_MAX_TOKEN_BYTES = 4096;
+
 function readTrimmed(env, name) {
     const value =
         env?.[name];
@@ -63,6 +67,88 @@ function readPositiveInteger(
     }
 
     return value;
+}
+
+function readBrokerTimeoutMs(env) {
+    const value = readPositiveInteger(
+        env,
+        "SAFESCAN_BIOMETRIC_BROKER_TIMEOUT_MS",
+        BROKER_DEFAULT_TIMEOUT_MS,
+    );
+
+    if (value > BROKER_MAX_TIMEOUT_MS) {
+        throw new Error(
+            `SAFESCAN_BIOMETRIC_BROKER_TIMEOUT_MS deve estar entre 1 e ${BROKER_MAX_TIMEOUT_MS}.`,
+        );
+    }
+
+    return value;
+}
+
+function normalizeBrokerUrl(value) {
+    let parsed;
+
+    try {
+        parsed = new URL(value);
+    }
+    catch {
+        throw new Error(
+            "SAFESCAN_BIOMETRIC_BROKER_URL deve ser uma URL valida.",
+        );
+    }
+
+    if (parsed.protocol !== "https:") {
+        throw new Error(
+            "SAFESCAN_BIOMETRIC_BROKER_URL deve usar HTTPS.",
+        );
+    }
+
+    if (parsed.username || parsed.password || parsed.search || parsed.hash) {
+        throw new Error(
+            "SAFESCAN_BIOMETRIC_BROKER_URL nao pode conter credenciais, query ou fragmento.",
+        );
+    }
+
+    return parsed.href.replace(/\/+$/, "");
+}
+
+function normalizeBrokerToken(value) {
+    const byteLength = new TextEncoder().encode(value).byteLength;
+
+    if (byteLength < 32 || byteLength > BROKER_MAX_TOKEN_BYTES) {
+        throw new Error(
+            `SAFESCAN_BIOMETRIC_BROKER_TOKEN deve possuir entre 32 e ${BROKER_MAX_TOKEN_BYTES} bytes.`,
+        );
+    }
+
+    return value;
+}
+
+function loadBrokerConfig(env) {
+    const url = readTrimmed(env, "SAFESCAN_BIOMETRIC_BROKER_URL");
+    const token = readTrimmed(env, "SAFESCAN_BIOMETRIC_BROKER_TOKEN");
+
+    if (!url && !token) {
+        return null;
+    }
+
+    if (!url) {
+        throw new Error(
+            "SAFESCAN_BIOMETRIC_BROKER_URL e obrigatorio quando o broker e configurado.",
+        );
+    }
+
+    if (!token) {
+        throw new Error(
+            "SAFESCAN_BIOMETRIC_BROKER_TOKEN e obrigatorio quando o broker e configurado.",
+        );
+    }
+
+    return Object.freeze({
+        url: normalizeBrokerUrl(url),
+        token: normalizeBrokerToken(token),
+        timeoutMs: readBrokerTimeoutMs(env),
+    });
 }
 
 function normalizeCameraPath(value) {
@@ -125,6 +211,11 @@ export function loadVisionConfig({
             env,
             "SAFESCAN_FFMPEG_PATH",
         ) || "ffmpeg";
+
+    const broker =
+        loadBrokerConfig(
+            env,
+        );
 
     const cameraId =
         readTrimmed(
@@ -219,6 +310,7 @@ export function loadVisionConfig({
                 path:
                     ffmpegPath,
             }),
+        broker,
         camera,
     });
 }
@@ -245,6 +337,13 @@ export function toPublicVisionConfig(
                 path:
                     config.ffmpeg.path,
             }),
+        broker:
+            config.broker
+                ? Object.freeze({
+                    configured: true,
+                    timeoutMs: config.broker.timeoutMs,
+                })
+                : null,
         camera:
             config.camera
                 ? Object.freeze({
