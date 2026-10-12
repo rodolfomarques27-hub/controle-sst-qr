@@ -641,8 +641,8 @@ export async function runBiometricIdentificationPipeline({
 
   if (
     !ranking.top1 ||
-    !ranking.colaboradorId ||
-    !ranking.referenceSetId
+    !ranking.top1.colaboradorId ||
+    !ranking.top1.referenceSetId
   ) {
     throw new Error(
       "IDENTIFICATION_RANKING_INVALID",
