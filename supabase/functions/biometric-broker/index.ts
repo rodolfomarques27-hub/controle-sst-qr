@@ -18,6 +18,7 @@ import {
 
 import {
   decryptBiometricVector128,
+  encryptBiometricVector128,
 } from "../_shared/biometricCrypto.ts";
 
 const ALLOWED_OPERATIONS = new Set([
@@ -61,6 +62,12 @@ type ReadEnv =
 type DecryptVector =
   typeof decryptBiometricVector128;
 
+type EncryptVector =
+  typeof encryptBiometricVector128;
+
+type RandomUuid =
+  () => string;
+
 interface AdminClientLike {
   rpc(
     name: string,
@@ -83,6 +90,8 @@ interface BrokerEndpointDependencies {
   ) => Promise<AdminClientLike>;
 
   decryptVector?: DecryptVector;
+  encryptVector?: EncryptVector;
+  randomUuid?: RandomUuid;
 }
 
 class HttpError extends Error {
@@ -783,6 +792,15 @@ export async function handleBiometricBrokerRequest(
     dependencies.decryptVector ??
     decryptBiometricVector128;
 
+  const encryptVector =
+    dependencies.encryptVector ??
+    encryptBiometricVector128;
+
+  const randomUuid =
+    dependencies.randomUuid ??
+    (() =>
+      crypto.randomUUID());
+
   try {
       if (
         req.method !==
@@ -985,47 +1003,161 @@ export async function handleBiometricBrokerRequest(
               });
           break;
 
-        case "registerReference":
-          result =
-            await broker
-              .registerReference({
-                referenceSetId:
-                  requiredUuid(
-                    input,
-                    "referenceSetId",
-                  ),
-                boundary:
-                  requiredRecord(
-                    input,
-                    "boundary",
-                  ),
-                qualityMetadata:
-                  requiredRecord(
-                    input,
-                    "qualityMetadata",
-                  ),
-                encryptedEmbedding:
-                  requiredRecord(
-                    input,
-                    "encryptedEmbedding",
-                  ),
-                sourceMetadata:
-                  requiredRecord(
-                    input,
-                    "sourceMetadata",
-                  ),
-                requestId:
-                  requiredUuid(
-                    input,
-                    "requestId",
-                  ),
-                executorId:
-                  nullableUuid(
-                    input,
-                    "executorId",
-                  ),
+        case "registerReference": {
+          const referenceSetId =
+            requiredUuid(
+              input,
+              "referenceSetId",
+            );
+
+          const boundary =
+            requiredRecord(
+              input,
+              "boundary",
+            );
+
+          const tenantId =
+            requiredUuid(
+              boundary,
+              "tenantId",
+            );
+
+          const empresaId =
+            requiredUuid(
+              boundary,
+              "empresaId",
+            );
+
+          const colaboradorId =
+            requiredUuid(
+              boundary,
+              "colaboradorId",
+            );
+
+          const profileId =
+            requiredText(
+              boundary,
+              "profileId",
+              160,
+            );
+
+          requiredText(
+            boundary,
+            "qualityProfileId",
+            160,
+          );
+
+          const qualityMetadata =
+            requiredRecord(
+              input,
+              "qualityMetadata",
+            );
+
+          const sourceMetadata =
+            requiredRecord(
+              input,
+              "sourceMetadata",
+            );
+
+          const requestId =
+            requiredUuid(
+              input,
+              "requestId",
+            );
+
+          const executorId =
+            nullableUuid(
+              input,
+              "executorId",
+            );
+
+          const keyVersion =
+            requiredText(
+              input,
+              "keyVersion",
+              128,
+            );
+
+          const parsedEmbedding =
+            requiredNormalizedEmbedding(
+              input,
+              "embedding",
+            );
+
+          try {
+            const referenceId =
+              randomUuid();
+
+            if (
+              !validUuid(
+                referenceId,
+              )
+            ) {
+              throw new HttpError(
+                500,
+                "BROKER_UUID_GENERATION_FAILED",
+              );
+            }
+
+            const encryptedEmbedding =
+              await encryptVector({
+                vector:
+                  parsedEmbedding.vector,
+
+                keyVersion,
+
+                aad: {
+                  tenantId,
+                  empresaId,
+                  colaboradorId,
+                  profileId,
+                  referenceSetId,
+                  materialKind:
+                    "REFERENCE",
+                  materialId:
+                    referenceId,
+                },
               });
+
+            const persistedReferenceId =
+              await broker
+                .registerReference({
+                  referenceId,
+                  referenceSetId,
+                  boundary,
+                  qualityMetadata,
+                  encryptedEmbedding: {
+                    ...encryptedEmbedding,
+                  },
+                  sourceMetadata,
+                  requestId,
+                  executorId,
+                });
+
+            if (
+              persistedReferenceId !==
+                referenceId
+            ) {
+              throw new HttpError(
+                502,
+                "REFERENCE_ID_MISMATCH",
+              );
+            }
+
+            result =
+              persistedReferenceId;
+          } finally {
+            parsedEmbedding
+              .vector
+              .fill(0);
+
+            wipeNumberArray(
+              parsedEmbedding.raw,
+            );
+          }
+
           break;
+        }
 
         case "changeReferenceStatus": {
           const nextStatus =
@@ -1076,37 +1208,154 @@ export async function handleBiometricBrokerRequest(
           break;
         }
 
-        case "storeCentroid":
-          result =
-            await broker
-              .storeCentroid({
-                referenceSetId:
-                  requiredUuid(
-                    input,
-                    "referenceSetId",
-                  ),
-                contributingReferenceIds:
-                  requiredUuidArray(
-                    input,
-                    "contributingReferenceIds",
-                  ),
-                encryptedCentroid:
-                  requiredRecord(
-                    input,
-                    "encryptedCentroid",
-                  ),
-                requestId:
-                  requiredUuid(
-                    input,
-                    "requestId",
-                  ),
-                executorId:
-                  nullableUuid(
-                    input,
-                    "executorId",
-                  ),
+        case "storeCentroid": {
+          const referenceSetId =
+            requiredUuid(
+              input,
+              "referenceSetId",
+            );
+
+          const boundary =
+            requiredRecord(
+              input,
+              "boundary",
+            );
+
+          const tenantId =
+            requiredUuid(
+              boundary,
+              "tenantId",
+            );
+
+          const empresaId =
+            requiredUuid(
+              boundary,
+              "empresaId",
+            );
+
+          const colaboradorId =
+            requiredUuid(
+              boundary,
+              "colaboradorId",
+            );
+
+          const profileId =
+            requiredText(
+              boundary,
+              "profileId",
+              160,
+            );
+
+          requiredText(
+            boundary,
+            "qualityProfileId",
+            160,
+          );
+
+          const contributingReferenceIds =
+            requiredUuidArray(
+              input,
+              "contributingReferenceIds",
+            );
+
+          const requestId =
+            requiredUuid(
+              input,
+              "requestId",
+            );
+
+          const executorId =
+            nullableUuid(
+              input,
+              "executorId",
+            );
+
+          const keyVersion =
+            requiredText(
+              input,
+              "keyVersion",
+              128,
+            );
+
+          const parsedCentroid =
+            requiredNormalizedEmbedding(
+              input,
+              "centroid",
+            );
+
+          try {
+            const centroidId =
+              randomUuid();
+
+            if (
+              !validUuid(
+                centroidId,
+              )
+            ) {
+              throw new HttpError(
+                500,
+                "BROKER_UUID_GENERATION_FAILED",
+              );
+            }
+
+            const encryptedCentroid =
+              await encryptVector({
+                vector:
+                  parsedCentroid.vector,
+
+                keyVersion,
+
+                aad: {
+                  tenantId,
+                  empresaId,
+                  colaboradorId,
+                  profileId,
+                  referenceSetId,
+                  materialKind:
+                    "CENTROID",
+                  materialId:
+                    centroidId,
+                },
               });
+
+            const persistedCentroidId =
+              await broker
+                .storeCentroid({
+                  centroidId,
+                  referenceSetId,
+                  boundary,
+                  contributingReferenceIds,
+                  encryptedCentroid: {
+                    ...encryptedCentroid,
+                  },
+                  requestId,
+                  executorId,
+                });
+
+            if (
+              persistedCentroidId !==
+                centroidId
+            ) {
+              throw new HttpError(
+                502,
+                "CENTROID_ID_MISMATCH",
+              );
+            }
+
+            result =
+              persistedCentroidId;
+          } finally {
+            parsedCentroid
+              .vector
+              .fill(0);
+
+            wipeNumberArray(
+              parsedCentroid.raw,
+            );
+          }
+
           break;
+        }
 
         case "activateReferenceSet":
           result =

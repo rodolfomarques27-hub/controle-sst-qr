@@ -1,8 +1,8 @@
 export const BIOMETRIC_RPC_NAMES = Object.freeze({
   createReferenceSet: "backend_biometric_create_reference_set",
-  registerReference: "backend_biometric_register_reference",
+  registerReference: "backend_biometric_register_reference_v2",
   changeReferenceStatus: "backend_biometric_change_reference_status",
-  storeCentroid: "backend_biometric_store_centroid",
+  storeCentroid: "backend_biometric_store_centroid_v2",
   activateReferenceSet: "backend_biometric_activate_reference_set",
   listActiveCentroids: "backend_biometric_list_active_centroids",
   getActiveBundle: "backend_biometric_get_active_bundle",
@@ -43,6 +43,7 @@ export interface CreateReferenceSetInput {
 }
 
 export interface RegisterReferenceInput {
+  referenceId: string;
   referenceSetId: string;
   boundary: JsonRecord;
   qualityMetadata: JsonRecord;
@@ -61,7 +62,9 @@ export interface ChangeReferenceStatusInput {
 }
 
 export interface StoreCentroidInput {
+  centroidId: string;
   referenceSetId: string;
+  boundary: JsonRecord;
   contributingReferenceIds: string[];
   encryptedCentroid: JsonRecord;
   requestId: string;
@@ -223,6 +226,7 @@ export function createBiometricBrokerRpc(
         client,
         BIOMETRIC_RPC_NAMES.registerReference,
         {
+          p_reference_id: input.referenceId,
           p_reference_set_id: input.referenceSetId,
           p_boundary: input.boundary,
           p_quality_metadata: input.qualityMetadata,
@@ -257,7 +261,9 @@ export function createBiometricBrokerRpc(
         client,
         BIOMETRIC_RPC_NAMES.storeCentroid,
         {
+          p_centroid_id: input.centroidId,
           p_reference_set_id: input.referenceSetId,
+          p_boundary: input.boundary,
           p_contributing_reference_ids:
             input.contributingReferenceIds,
           p_encrypted_centroid: input.encryptedCentroid,
