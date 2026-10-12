@@ -1,0 +1,273 @@
+export const BIOMETRIC_RPC_NAMES = Object.freeze({
+  createReferenceSet: "backend_biometric_create_reference_set",
+  registerReference: "backend_biometric_register_reference",
+  changeReferenceStatus: "backend_biometric_change_reference_status",
+  storeCentroid: "backend_biometric_store_centroid",
+  activateReferenceSet: "backend_biometric_activate_reference_set",
+  getActiveBundle: "backend_biometric_get_active_bundle",
+});
+
+export const BIOMETRIC_ENROLLMENT_SEQUENCE = Object.freeze([
+  "createReferenceSet",
+  "registerReference x3-5",
+  "changeReferenceStatus(ACTIVE) x3-5",
+  "storeCentroid",
+  "activateReferenceSet",
+  "getActiveBundle",
+]);
+
+export type JsonRecord = Record<string, unknown>;
+
+export interface BiometricRpcClient {
+  rpc(
+    name: string,
+    args: JsonRecord,
+  ): Promise<{
+    data: unknown;
+    error: {
+      message?: string;
+      code?: string;
+    } | null;
+  }>;
+}
+
+export interface CreateReferenceSetInput {
+  tenantId: string;
+  empresaId: string;
+  colaboradorId: string;
+  profileId: string;
+  qualityProfileId: string;
+  requestId: string;
+  executorId: string | null;
+}
+
+export interface RegisterReferenceInput {
+  referenceSetId: string;
+  boundary: JsonRecord;
+  qualityMetadata: JsonRecord;
+  encryptedEmbedding: JsonRecord;
+  sourceMetadata: JsonRecord;
+  requestId: string;
+  executorId: string | null;
+}
+
+export interface ChangeReferenceStatusInput {
+  referenceId: string;
+  nextStatus: string;
+  reasonCode: string | null;
+  requestId: string;
+  executorId: string | null;
+}
+
+export interface StoreCentroidInput {
+  referenceSetId: string;
+  contributingReferenceIds: string[];
+  encryptedCentroid: JsonRecord;
+  requestId: string;
+  executorId: string | null;
+}
+
+export interface ActivateReferenceSetInput {
+  referenceSetId: string;
+  centroidId: string;
+  requestId: string;
+  executorId: string | null;
+}
+
+export interface GetActiveBundleInput {
+  tenantId: string;
+  empresaId: string;
+  colaboradorId: string;
+  profileId: string;
+  requestId: string;
+}
+
+export interface ReferenceLifecycleResult extends JsonRecord {
+  referenceId?: string;
+  nextStatus?: string;
+  referenceSetId?: string;
+}
+
+export interface ActivationResult extends JsonRecord {
+  referenceSetId?: string;
+  status?: string;
+  supersededReferenceSetId?: string | null;
+}
+
+export interface EncryptedActiveBundle extends JsonRecord {
+  requestId?: string;
+  referenceSetId?: string;
+  tenantId?: string;
+  empresaId?: string;
+  colaboradorId?: string;
+  profileId?: string;
+  qualityProfileId?: string;
+  centroid?: JsonRecord;
+  references?: unknown[];
+}
+
+export class BiometricRpcError extends Error {
+  readonly rpc: string;
+  readonly code: string | null;
+
+  constructor(
+    rpc: string,
+    message: string,
+    code: string | null = null,
+  ) {
+    super(message);
+    this.name = "BiometricRpcError";
+    this.rpc = rpc;
+    this.code = code;
+  }
+}
+
+function requireClient(
+  client: BiometricRpcClient,
+): BiometricRpcClient {
+  if (
+    !client ||
+    typeof client.rpc !== "function"
+  ) {
+    throw new TypeError(
+      "Biometric RPC client with rpc() is required.",
+    );
+  }
+
+  return client;
+}
+
+async function callRpc<T>(
+  client: BiometricRpcClient,
+  rpc: string,
+  args: JsonRecord,
+): Promise<T> {
+  const {
+    data,
+    error,
+  } = await client.rpc(
+    rpc,
+    args,
+  );
+
+  if (error) {
+    throw new BiometricRpcError(
+      rpc,
+      error.message || "Biometric RPC failed.",
+      error.code || null,
+    );
+  }
+
+  return data as T;
+}
+
+export function createBiometricBrokerRpc(
+  injectedClient: BiometricRpcClient,
+) {
+  const client =
+    requireClient(
+      injectedClient,
+    );
+
+  return Object.freeze({
+    async createReferenceSet(
+      input: CreateReferenceSetInput,
+    ): Promise<string> {
+      return await callRpc<string>(
+        client,
+        BIOMETRIC_RPC_NAMES.createReferenceSet,
+        {
+          p_tenant_id: input.tenantId,
+          p_empresa_id: input.empresaId,
+          p_colaborador_id: input.colaboradorId,
+          p_profile_id: input.profileId,
+          p_quality_profile_id: input.qualityProfileId,
+          p_request_id: input.requestId,
+          p_executor_id: input.executorId,
+        },
+      );
+    },
+
+    async registerReference(
+      input: RegisterReferenceInput,
+    ): Promise<string> {
+      return await callRpc<string>(
+        client,
+        BIOMETRIC_RPC_NAMES.registerReference,
+        {
+          p_reference_set_id: input.referenceSetId,
+          p_boundary: input.boundary,
+          p_quality_metadata: input.qualityMetadata,
+          p_encrypted_embedding: input.encryptedEmbedding,
+          p_source_metadata: input.sourceMetadata,
+          p_request_id: input.requestId,
+          p_executor_id: input.executorId,
+        },
+      );
+    },
+
+    async changeReferenceStatus(
+      input: ChangeReferenceStatusInput,
+    ): Promise<ReferenceLifecycleResult> {
+      return await callRpc<ReferenceLifecycleResult>(
+        client,
+        BIOMETRIC_RPC_NAMES.changeReferenceStatus,
+        {
+          p_reference_id: input.referenceId,
+          p_next_status: input.nextStatus,
+          p_reason_code: input.reasonCode,
+          p_request_id: input.requestId,
+          p_executor_id: input.executorId,
+        },
+      );
+    },
+
+    async storeCentroid(
+      input: StoreCentroidInput,
+    ): Promise<string> {
+      return await callRpc<string>(
+        client,
+        BIOMETRIC_RPC_NAMES.storeCentroid,
+        {
+          p_reference_set_id: input.referenceSetId,
+          p_contributing_reference_ids:
+            input.contributingReferenceIds,
+          p_encrypted_centroid: input.encryptedCentroid,
+          p_request_id: input.requestId,
+          p_executor_id: input.executorId,
+        },
+      );
+    },
+
+    async activateReferenceSet(
+      input: ActivateReferenceSetInput,
+    ): Promise<ActivationResult> {
+      return await callRpc<ActivationResult>(
+        client,
+        BIOMETRIC_RPC_NAMES.activateReferenceSet,
+        {
+          p_reference_set_id: input.referenceSetId,
+          p_centroid_id: input.centroidId,
+          p_request_id: input.requestId,
+          p_executor_id: input.executorId,
+        },
+      );
+    },
+
+    async getActiveBundle(
+      input: GetActiveBundleInput,
+    ): Promise<EncryptedActiveBundle> {
+      return await callRpc<EncryptedActiveBundle>(
+        client,
+        BIOMETRIC_RPC_NAMES.getActiveBundle,
+        {
+          p_tenant_id: input.tenantId,
+          p_empresa_id: input.empresaId,
+          p_colaborador_id: input.colaboradorId,
+          p_profile_id: input.profileId,
+          p_request_id: input.requestId,
+        },
+      );
+    },
+  });
+}
