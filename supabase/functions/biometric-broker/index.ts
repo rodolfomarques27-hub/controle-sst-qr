@@ -1,12 +1,24 @@
-import {
-  createClient,
-} from "https://esm.sh/@supabase/supabase-js@2.106.0";
 
 import {
   BiometricRpcError,
   createBiometricBrokerRpc,
+  type BiometricRpcClient,
   type JsonRecord,
 } from "../_shared/biometricBrokerRpc.ts";
+
+import {
+  BIOMETRIC_MATCH_RANK_STATUS,
+  createBiometricMatchBroker,
+  type RankedCentroidCandidate,
+} from "../_shared/biometricMatchBroker.ts";
+
+import {
+  createBiometricFineVerification,
+} from "../_shared/biometricFineVerification.ts";
+
+import {
+  decryptBiometricVector128,
+} from "../_shared/biometricCrypto.ts";
 
 const ALLOWED_OPERATIONS = new Set([
   "createReferenceSet",
@@ -14,6 +26,7 @@ const ALLOWED_OPERATIONS = new Set([
   "changeReferenceStatus",
   "storeCentroid",
   "activateReferenceSet",
+  "identify",
 ]);
 
 const ALLOWED_REFERENCE_STATUS = new Set([
@@ -24,6 +37,53 @@ const ALLOWED_REFERENCE_STATUS = new Set([
 
 const MAX_BODY_BYTES = 512 * 1024;
 const MAX_BROKER_TOKEN_BYTES = 512;
+
+const BIOMETRIC_VECTOR_LENGTH =
+  128;
+
+const UNIT_NORM_TOLERANCE =
+  1e-5;
+
+const IDENTIFY_INPUT_FIELDS =
+  Object.freeze([
+    "tenantId",
+    "empresaId",
+    "profileId",
+    "requestId",
+    "observedEmbedding",
+  ]);
+
+type ReadEnv =
+  (
+    name: string,
+  ) => string;
+
+type DecryptVector =
+  typeof decryptBiometricVector128;
+
+interface AdminClientLike {
+  rpc(
+    name: string,
+    args: JsonRecord,
+  ): Promise<{
+    data: unknown;
+    error: {
+      message?: string;
+      code?: string;
+    } | null;
+  }>;
+}
+
+interface BrokerEndpointDependencies {
+  readEnv?: ReadEnv;
+
+  createAdminClient?: (
+    supabaseUrl: string,
+    adminKey: string,
+  ) => Promise<AdminClientLike>;
+
+  decryptVector?: DecryptVector;
+}
 
 class HttpError extends Error {
   readonly status: number;
@@ -211,6 +271,163 @@ function requiredUuidArray(
   return ids;
 }
 
+function assertExactIdentifyInput(
+  input: JsonRecord,
+) {
+  const keys =
+    Object.keys(
+      input,
+    ).sort();
+
+  const expected =
+    [
+      ...IDENTIFY_INPUT_FIELDS,
+    ].sort();
+
+  if (
+    keys.length !==
+      expected.length ||
+    keys.some(
+      (
+        key,
+        index,
+      ) =>
+        key !==
+        expected[index],
+    )
+  ) {
+    throw new HttpError(
+      400,
+      "INVALID_IDENTIFY_PAYLOAD",
+    );
+  }
+}
+
+function requiredNormalizedEmbedding(
+  source: JsonRecord,
+  field: string,
+) {
+  const raw =
+    source[field];
+
+  if (
+    !Array.isArray(
+      raw,
+    ) ||
+    raw.length !==
+      BIOMETRIC_VECTOR_LENGTH
+  ) {
+    throw new HttpError(
+      400,
+      "INVALID_OBSERVED_EMBEDDING",
+    );
+  }
+
+  const vector =
+    new Float32Array(
+      BIOMETRIC_VECTOR_LENGTH,
+    );
+
+  let sumSquares =
+    0;
+
+  try {
+    for (
+      let index = 0;
+      index <
+        raw.length;
+      index += 1
+    ) {
+      const value =
+        raw[index];
+
+      if (
+        typeof value !==
+          "number" ||
+        !Number.isFinite(
+          value,
+        )
+      ) {
+        throw new HttpError(
+          400,
+          "INVALID_OBSERVED_EMBEDDING",
+        );
+      }
+
+      vector[index] =
+        value;
+
+      sumSquares +=
+        value *
+        value;
+    }
+
+    const norm =
+      Math.sqrt(
+        sumSquares,
+      );
+
+    if (
+      !Number.isFinite(
+        norm,
+      ) ||
+      Math.abs(
+        norm - 1,
+      ) >
+        UNIT_NORM_TOLERANCE
+    ) {
+      throw new HttpError(
+        400,
+        "OBSERVED_EMBEDDING_NOT_NORMALIZED",
+      );
+    }
+
+    return {
+      raw,
+      vector,
+    };
+  } catch (error) {
+    vector.fill(0);
+
+    throw error;
+  }
+}
+
+function wipeNumberArray(
+  values: unknown[],
+) {
+  for (
+    let index = 0;
+    index <
+      values.length;
+    index += 1
+  ) {
+    values[index] =
+      0;
+  }
+}
+
+function publicRankCandidate(
+  candidate:
+    RankedCentroidCandidate |
+    null,
+) {
+  if (!candidate) {
+    return null;
+  }
+
+  return Object.freeze({
+    colaboradorId:
+      candidate.colaboradorId,
+
+    referenceSetId:
+      candidate.referenceSetId,
+
+    score:
+      candidate.score,
+  });
+}
+
 function timingSafeEqual(
   received: string,
   expected: string,
@@ -254,10 +471,10 @@ function timingSafeEqual(
   );
 }
 
-function readSupabaseAdminKey() {
+function readSupabaseAdminKey(readEnv: ReadEnv) {
   const secretKeysRaw =
     (
-      Deno.env.get(
+      readEnv(
         "SUPABASE_SECRET_KEYS",
       ) || ""
     ).trim();
@@ -303,10 +520,212 @@ function readSupabaseAdminKey() {
   }
 
   return (
-    Deno.env.get(
+    readEnv(
       "SUPABASE_SERVICE_ROLE_KEY",
     ) || ""
   ).trim();
+}
+
+function defaultReadEnv(
+  name: string,
+) {
+  if (
+    typeof Deno ===
+      "undefined"
+  ) {
+    return "";
+  }
+
+  return (
+    Deno.env.get(
+      name,
+    ) || ""
+  );
+}
+
+async function createDefaultAdminClient(
+  supabaseUrl: string,
+  adminKey: string,
+): Promise<AdminClientLike> {
+  const {
+    createClient,
+  } =
+    await import(
+      "https://esm.sh/@supabase/supabase-js@2.106.0"
+    );
+
+  return createClient(
+    supabaseUrl,
+    adminKey,
+    {
+      auth: {
+        persistSession:
+          false,
+
+        autoRefreshToken:
+          false,
+
+        detectSessionInUrl:
+          false,
+      },
+    },
+  ) as unknown as
+    AdminClientLike;
+}
+
+export async function runBiometricIdentificationPipeline({
+  rpcClient,
+  tenantId,
+  empresaId,
+  profileId,
+  requestId,
+  observedEmbedding,
+  decryptVector =
+    decryptBiometricVector128,
+}: {
+  rpcClient: BiometricRpcClient;
+  tenantId: string;
+  empresaId: string;
+  profileId: string;
+  requestId: string;
+  observedEmbedding: Float32Array;
+  decryptVector?: DecryptVector;
+}) {
+  const matchBroker =
+    createBiometricMatchBroker({
+      rpcClient,
+      decryptVector,
+    });
+
+  const ranking =
+    await matchBroker
+      .rankIdentification({
+        tenantId,
+        empresaId,
+        profileId,
+        requestId,
+        observedEmbedding,
+      });
+
+  if (
+    ranking.status ===
+      BIOMETRIC_MATCH_RANK_STATUS
+        .NO_REFERENCE
+  ) {
+    return Object.freeze({
+      status:
+        "NO_REFERENCE",
+
+      candidateCount:
+        0,
+
+      top1:
+        null,
+
+      top2:
+        null,
+
+      margin:
+        null,
+
+      fineVerification:
+        null,
+
+      thresholds:
+        null,
+
+      decision:
+        null,
+    });
+  }
+
+  if (
+    !ranking.top1 ||
+    !ranking.colaboradorId ||
+    !ranking.referenceSetId
+  ) {
+    throw new Error(
+      "IDENTIFICATION_RANKING_INVALID",
+    );
+  }
+
+  const fineVerifier =
+    createBiometricFineVerification({
+      rpcClient,
+      decryptVector,
+    });
+
+  const fine =
+    await fineVerifier
+      .verifyCandidate({
+        tenantId,
+        empresaId,
+        profileId,
+        requestId,
+
+        colaboradorId:
+          ranking.top1
+            .colaboradorId,
+
+        referenceSetId:
+          ranking.top1
+            .referenceSetId,
+
+        observedEmbedding,
+      });
+
+  return Object.freeze({
+    status:
+      "RANKED",
+
+    tenantId,
+    empresaId,
+    profileId,
+    requestId,
+
+    candidateCount:
+      ranking.candidateCount,
+
+    top1:
+      publicRankCandidate(
+        ranking.top1,
+      ),
+
+    top2:
+      publicRankCandidate(
+        ranking.top2,
+      ),
+
+    margin:
+      ranking.margin,
+
+    fineVerification:
+      Object.freeze({
+        referenceCount:
+          fine.referenceCount,
+
+        referenceScores:
+          fine.referenceScores,
+
+        bestScore:
+          fine.bestScore,
+
+        worstScore:
+          fine.worstScore,
+
+        meanScore:
+          fine.meanScore,
+
+        bestReferenceId:
+          fine.bestReferenceId,
+      }),
+
+    thresholds:
+      null,
+
+    decision:
+      null,
+  });
 }
 
 async function readPayload(
@@ -347,11 +766,24 @@ async function readPayload(
 }
 
 
-Deno.serve(
-  async (
-    req,
-  ) => {
-    try {
+export async function handleBiometricBrokerRequest(
+  req: Request,
+  dependencies:
+    BrokerEndpointDependencies = {},
+) {
+  const readEnv =
+    dependencies.readEnv ??
+    defaultReadEnv;
+
+  const createAdminClient =
+    dependencies.createAdminClient ??
+    createDefaultAdminClient;
+
+  const decryptVector =
+    dependencies.decryptVector ??
+    decryptBiometricVector128;
+
+  try {
       if (
         req.method !==
         "POST"
@@ -382,7 +814,7 @@ Deno.serve(
 
       const expectedBrokerToken =
         (
-          Deno.env.get(
+          readEnv(
             "SAFESCAN_BIOMETRIC_BROKER_TOKEN",
           ) || ""
         ).trim();
@@ -396,13 +828,13 @@ Deno.serve(
 
       const supabaseUrl =
         (
-          Deno.env.get(
+          readEnv(
             "SUPABASE_URL",
           ) || ""
         ).trim();
 
       const adminKey =
-        readSupabaseAdminKey();
+        readSupabaseAdminKey(readEnv);
 
       if (
         !supabaseUrl ||
@@ -461,23 +893,14 @@ Deno.serve(
         );
 
       const adminClient =
-        createClient(
+        await createAdminClient(
           supabaseUrl,
           adminKey,
-          {
-            auth: {
-              persistSession:
-                false,
-              autoRefreshToken:
-                false,
-              detectSessionInUrl:
-                false,
-            },
-          },
         );
 
-      const broker =
-        createBiometricBrokerRpc({
+      const rpcClient:
+        BiometricRpcClient =
+        {
           rpc:
             async (
               rpcName,
@@ -494,18 +917,25 @@ Deno.serve(
 
               return {
                 data,
+
                 error:
                   error
                     ? {
                         message:
                           error.message,
+
                         code:
                           error.code,
                       }
                     : null,
               };
             },
-        });
+        };
+
+      const broker =
+        createBiometricBrokerRpc(
+          rpcClient,
+        );
 
       let result:
         unknown = null;
@@ -705,6 +1135,69 @@ Deno.serve(
               });
           break;
 
+        case "identify": {
+          assertExactIdentifyInput(
+            input,
+          );
+
+          const tenantId =
+            requiredUuid(
+              input,
+              "tenantId",
+            );
+
+          const empresaId =
+            requiredUuid(
+              input,
+              "empresaId",
+            );
+
+          const profileId =
+            requiredText(
+              input,
+              "profileId",
+              160,
+            );
+
+          const requestId =
+            requiredUuid(
+              input,
+              "requestId",
+            );
+
+          const parsedEmbedding =
+            requiredNormalizedEmbedding(
+              input,
+              "observedEmbedding",
+            );
+
+          try {
+            result =
+              await runBiometricIdentificationPipeline({
+                rpcClient,
+                tenantId,
+                empresaId,
+                profileId,
+                requestId,
+
+                observedEmbedding:
+                  parsedEmbedding.vector,
+
+                decryptVector,
+              });
+          } finally {
+            parsedEmbedding
+              .vector
+              .fill(0);
+
+            wipeNumberArray(
+              parsedEmbedding.raw,
+            );
+          }
+
+          break;
+        }
+
 
         default:
           throw new HttpError(
@@ -758,7 +1251,13 @@ Deno.serve(
           code:
             "BROKER_INTERNAL_ERROR",
         },
-      );
-    }
-  },
-);
+      );    }
+}
+
+if (
+  typeof Deno !== "undefined"
+) {
+  Deno.serve(
+    handleBiometricBrokerRequest,
+  );
+}
