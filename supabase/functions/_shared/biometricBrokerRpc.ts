@@ -4,6 +4,7 @@ export const BIOMETRIC_RPC_NAMES = Object.freeze({
   changeReferenceStatus: "backend_biometric_change_reference_status",
   storeCentroid: "backend_biometric_store_centroid",
   activateReferenceSet: "backend_biometric_activate_reference_set",
+  listActiveCentroids: "backend_biometric_list_active_centroids",
   getActiveBundle: "backend_biometric_get_active_bundle",
 });
 
@@ -74,12 +75,39 @@ export interface ActivateReferenceSetInput {
   executorId: string | null;
 }
 
+export interface ListActiveCentroidsInput {
+  tenantId: string;
+  empresaId: string;
+  profileId: string;
+  requestId: string;
+}
+
 export interface GetActiveBundleInput {
   tenantId: string;
   empresaId: string;
   colaboradorId: string;
   profileId: string;
   requestId: string;
+}
+
+export interface EncryptedActiveCentroidCandidate extends JsonRecord {
+  referenceSetId?: string;
+  colaboradorId?: string;
+  qualityProfileId?: string;
+  centroidId?: string;
+  ciphertextBase64?: string;
+  ivBase64?: string;
+  keyVersion?: string;
+  cipherVersion?: string;
+  cipherSha256?: string;
+}
+
+export interface EncryptedActiveCentroidsResult extends JsonRecord {
+  requestId?: string;
+  tenantId?: string;
+  empresaId?: string;
+  profileId?: string;
+  candidates?: EncryptedActiveCentroidCandidate[];
 }
 
 export interface ReferenceLifecycleResult extends JsonRecord {
@@ -250,6 +278,21 @@ export function createBiometricBrokerRpc(
           p_centroid_id: input.centroidId,
           p_request_id: input.requestId,
           p_executor_id: input.executorId,
+        },
+      );
+    },
+
+    async listActiveCentroids(
+      input: ListActiveCentroidsInput,
+    ): Promise<EncryptedActiveCentroidsResult> {
+      return await callRpc<EncryptedActiveCentroidsResult>(
+        client,
+        BIOMETRIC_RPC_NAMES.listActiveCentroids,
+        {
+          p_tenant_id: input.tenantId,
+          p_empresa_id: input.empresaId,
+          p_profile_id: input.profileId,
+          p_request_id: input.requestId,
         },
       );
     },
