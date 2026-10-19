@@ -54,6 +54,7 @@ import {
     BookOpen,
     Building2,
     CalendarClock,
+    Camera,
     ClipboardCheck,
     Database,
     Eye,
@@ -1712,6 +1713,7 @@ export default function App() {
 
     const navCompleta = useMemo(() => [
         { id: "dashboard", label: "Dashboard SST", icon: LayoutDashboard, grupo: "VISÃO GERAL" },
+        { id: "cameraIa", label: "Controle de Acesso IA", icon: Camera, grupo: "VISÃO GERAL" },
 
         { id: "vistoriaExtintores", label: "Vistoria", icon: ClipboardList, grupo: "VISTORIA" },
         { id: "extintores", label: "Extintores", icon: Map, grupo: "VISTORIA" },
