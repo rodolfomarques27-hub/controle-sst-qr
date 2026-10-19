@@ -18,6 +18,7 @@ import {
 } from "../src/rtsp/reconnectPolicy.mjs";
 
 import {
+    buildH265DecoderFfmpegArgs,
     buildRtspFfmpegArgs,
     createRtspSession,
 } from "../src/rtsp/rtspSession.mjs";
@@ -1135,6 +1136,369 @@ test(
                 .snapshot()
                 .status,
             "DEGRADED",
+        );
+    },
+);
+
+test(
+    "native-h265-tcp alimenta decoder por stdin e preserva BGR/progress/backpressure",
+    async () => {
+        const child =
+            new EventEmitter();
+
+        child.stdin =
+            new PassThrough();
+
+        child.stdout =
+            new PassThrough();
+
+        child.stderr =
+            new PassThrough();
+
+        const progress =
+            new PassThrough();
+
+        child.stdio =
+            [
+                child.stdin,
+                child.stdout,
+                child.stderr,
+                progress,
+            ];
+
+        child.exitCode =
+            null;
+
+        child.killed =
+            false;
+
+        const starts =
+            [];
+
+        let ffmpegStopCount =
+            0;
+
+        const ffmpeg = {
+            start(
+                input,
+            ) {
+                starts.push(
+                    input,
+                );
+
+                return child;
+            },
+
+            stop() {
+                ffmpegStopCount +=
+                    1;
+
+                child.killed =
+                    true;
+
+                return true;
+            },
+        };
+
+        const health =
+            new CameraHealthTracker({
+                cameraId:
+                    "native-test-01",
+            });
+
+        const reconnectPolicy =
+            createReconnectPolicy({
+                baseDelayMs:
+                    100,
+                maxDelayMs:
+                    400,
+                jitterRatio:
+                    0,
+                random:
+                    () => 0.5,
+            });
+
+        let callbacks =
+            null;
+
+        let sourceStartCount =
+            0;
+
+        let sourceStopCount =
+            0;
+
+        let pauseCount =
+            0;
+
+        let resumeCount =
+            0;
+
+        const source = {
+            start(
+                input,
+            ) {
+                sourceStartCount +=
+                    1;
+
+                callbacks =
+                    input;
+
+                return Promise.resolve();
+            },
+
+            stop() {
+                sourceStopCount +=
+                    1;
+
+                return Promise.resolve(
+                    true,
+                );
+            },
+
+            pause() {
+                pauseCount +=
+                    1;
+
+                return true;
+            },
+
+            resume() {
+                resumeCount +=
+                    1;
+
+                return true;
+            },
+        };
+
+        const decoderArgs =
+            buildH265DecoderFfmpegArgs({
+                frameWidth:
+                    2,
+                frameHeight:
+                    1,
+            });
+
+        assert.equal(
+            decoderArgs.includes(
+                "-rtsp_transport",
+            ),
+            false,
+        );
+
+        assert.deepEqual(
+            decoderArgs.slice(
+                5,
+                10,
+            ),
+            [
+                "pipe:3",
+                "-f",
+                "hevc",
+                "-i",
+                "pipe:0",
+            ],
+        );
+
+        const session =
+            createRtspSession({
+                camera:
+                    {
+                        id:
+                            "native-test-01",
+                        endpoint:
+                            {
+                                host:
+                                    "camera.example.local",
+                                port:
+                                    554,
+                                path:
+                                    "/onvif1",
+                                transport:
+                                    "tcp",
+                            },
+                    },
+                credentials:
+                    {
+                        username:
+                            "test-user",
+                        password:
+                            "test-secret",
+                    },
+                ffmpeg,
+                health,
+                reconnectPolicy,
+                setTimer:
+                    () => 1,
+                clearTimer:
+                    () => {},
+                frameWidth:
+                    2,
+                frameHeight:
+                    1,
+                ingestMode:
+                    "native-h265-tcp",
+                interleavedClientFactory:
+                    () => source,
+            });
+
+        const started =
+            session.start();
+
+        assert.equal(
+            started.state,
+            "STARTING",
+        );
+
+        await Promise.resolve();
+        await Promise.resolve();
+
+        assert.equal(
+            sourceStartCount,
+            1,
+        );
+
+        assert.equal(
+            starts.length,
+            1,
+        );
+
+        assert.equal(
+            starts[0].stdinMode,
+            "pipe",
+        );
+
+        assert.equal(
+            starts[0].args.includes(
+                "rtsp://",
+            ),
+            false,
+        );
+
+        assert.equal(
+            starts[0].args.includes(
+                "-rtsp_transport",
+            ),
+            false,
+        );
+
+        const stdinBytes =
+            [];
+
+        child.stdin.on(
+            "data",
+            (
+                chunk,
+            ) => {
+                stdinBytes.push(
+                    ...chunk,
+                );
+            },
+        );
+
+        callbacks.onAnnexB(
+            Buffer.from([
+                0,
+                0,
+                0,
+                1,
+                64,
+                1,
+            ]),
+        );
+
+        assert.deepEqual(
+            stdinBytes,
+            [
+                0,
+                0,
+                0,
+                1,
+                64,
+                1,
+            ],
+        );
+
+        const originalWrite =
+            child.stdin.write.bind(
+                child.stdin,
+            );
+
+        let forceBackpressure =
+            true;
+
+        child.stdin.write =
+            (
+                chunk,
+            ) => {
+                originalWrite(
+                    chunk,
+                );
+
+                if (forceBackpressure) {
+                    forceBackpressure =
+                        false;
+
+                    return false;
+                }
+
+                return true;
+            };
+
+        callbacks.onAnnexB(
+            Buffer.from([
+                5,
+                6,
+                7,
+            ]),
+        );
+
+        assert.equal(
+            pauseCount,
+            1,
+        );
+
+        child.stdin.emit(
+            "drain",
+        );
+
+        assert.equal(
+            resumeCount,
+            1,
+        );
+
+        progress.write(
+            "frame=1\nprogress=continue\n",
+        );
+
+        await Promise.resolve();
+
+        assert.equal(
+            session
+                .snapshot()
+                .state,
+            "RUNNING",
+        );
+
+        assert.equal(
+            health
+                .snapshot()
+                .status,
+            "ONLINE",
+        );
+
+        assert.equal(
+            session.stop(),
+            true,
+        );
+
+        assert.equal(
+            sourceStopCount,
+            1,
+        );
+
+        assert.equal(
+            ffmpegStopCount,
+            1,
         );
     },
 );

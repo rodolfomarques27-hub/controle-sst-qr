@@ -18,7 +18,7 @@ export const IDENTIFICATION_SEARCH_KIND = Object.freeze({
     NON_MATED: "NON_MATED",
 });
 
-const OPAQUE_ID_PATTERN = /^[A-Za-z0-9._:|%+\-]{1,256}$/;
+const OPAQUE_ID_PATTERN = /^[A-Za-z0-9._:|%+-]{1,256}$/;
 
 const PLAN_KEYS = new Set([
     "protocolVersion",
@@ -717,7 +717,10 @@ function normalizeIdentificationSearches({
             });
         }
 
-        if (source.mateParticipantId !== undefined) {
+        if (
+            source.mateParticipantId !== undefined &&
+            source.mateParticipantId !== null
+        ) {
             throw new TypeError(`${name}.mateParticipantId nao e permitido para NON_MATED.`);
         }
 

@@ -45,6 +45,21 @@ function normalizeArgs(
     );
 }
 
+function normalizeStdinMode(
+    value,
+) {
+    if (
+        value !== "ignore" &&
+        value !== "pipe"
+    ) {
+        throw new TypeError(
+            "stdinMode deve ser ignore ou pipe.",
+        );
+    }
+
+    return value;
+}
+
 export function createFfmpegProcess({
     ffmpegPath = "ffmpeg",
     spawnImpl = spawn,
@@ -67,6 +82,7 @@ export function createFfmpegProcess({
     function start({
         cameraId,
         args = [],
+        stdinMode = "ignore",
     }) {
         const normalizedCameraId =
             requireNonEmptyString(
@@ -77,6 +93,11 @@ export function createFfmpegProcess({
         const normalizedArgs =
             normalizeArgs(
                 args,
+            );
+
+        const normalizedStdinMode =
+            normalizeStdinMode(
+                stdinMode,
             );
 
         /*
@@ -100,13 +121,18 @@ export function createFfmpegProcess({
                 normalizedArgs,
                 {
                     stdio: [
-                        "ignore",
+                        normalizedStdinMode,
                         "pipe",
                         "pipe",
                         "pipe",
                     ],
                     windowsHide:
                         true,
+                    env: Object.fromEntries(
+                        Object.entries(process.env).filter(([key]) =>
+                            /^(?:PATH|PATHEXT|SystemRoot|WINDIR|TEMP|TMP|ComSpec|LANG|LC_ALL)$/i.test(key),
+                        ),
+                    ),
                 },
             );
 

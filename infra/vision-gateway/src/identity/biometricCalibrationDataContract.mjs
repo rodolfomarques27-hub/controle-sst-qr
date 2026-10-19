@@ -12,7 +12,7 @@ const SCORE_MIN = -1;
 const SCORE_MAX = 1;
 const MARGIN_MIN = 0;
 const MARGIN_MAX = 2;
-const OPAQUE_ID_PATTERN = /^[A-Za-z0-9._:|%+\-]{1,256}$/;
+const OPAQUE_ID_PATTERN = /^[A-Za-z0-9._:|%+-]{1,256}$/;
 const ISO_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$/;
 
 const DATASET_KEYS = new Set([
@@ -39,6 +39,7 @@ const VERIFICATION_KEYS = new Set([
     "type",
     "sessionId",
     "sampleId",
+    "comparisonId",
     "profileId",
     "label",
     "score",
@@ -289,10 +290,28 @@ function normalizeVerificationRecord({
         conditionIds,
     });
 
+    const comparisonId =
+        Object.hasOwn(
+            source,
+            "comparisonId",
+        )
+            ? normalizeOpaqueId(
+                source.comparisonId,
+                `${name}.comparisonId`,
+            )
+            : null;
+
     return Object.freeze({
         type: CALIBRATION_RECORD_TYPE.VERIFICATION_COMPARISON,
         ...common,
         sampleId: normalizeOpaqueId(source.sampleId, `${name}.sampleId`),
+        ...(
+            comparisonId === null
+                ? {}
+                : {
+                    comparisonId,
+                }
+        ),
         label: source.label,
         score: normalizeFiniteNumber(
             source.score,
@@ -389,10 +408,14 @@ function normalizeIdentificationRecord({
         top1Score,
         top2Score,
         margin,
-        top1IsMate:
+        ...(
             source.kind === IDENTIFICATION_SEARCH_KIND.MATED
-                ? source.top1IsMate
-                : null,
+                ? {
+                    top1IsMate:
+                        source.top1IsMate,
+                }
+                : {}
+        ),
         candidateCount: normalizeNonNegativeInteger(
             source.candidateCount,
             `${name}.candidateCount`,
@@ -406,6 +429,7 @@ function normalizeRecords({ records, datasetProfileId, conditionIds }) {
     }
 
     const seenKeys = new Set();
+    const seenVerificationComparisonIds = new Set();
 
     return Object.freeze(
         records.map((item, index) => {
@@ -432,11 +456,52 @@ function normalizeRecords({ records, datasetProfileId, conditionIds }) {
 
             const recordKey =
                 normalized.type === CALIBRATION_RECORD_TYPE.VERIFICATION_COMPARISON
-                    ? `${normalized.type}|${normalized.sessionId}|${normalized.sampleId}`
+                    ? (
+                        Object.hasOwn(
+                            normalized,
+                            "comparisonId",
+                        )
+                            ? `${normalized.type}|${normalized.sessionId}|${normalized.comparisonId}`
+                            : `${normalized.type}|${normalized.sessionId}|${normalized.sampleId}`
+                    )
                     : `${normalized.type}|${normalized.sessionId}|${normalized.searchId}`;
 
-            if (seenKeys.has(recordKey)) {
+            const controlledVerification =
+                normalized.type ===
+                    CALIBRATION_RECORD_TYPE.VERIFICATION_COMPARISON &&
+                Object.hasOwn(
+                    normalized,
+                    "comparisonId",
+                );
+
+            if (
+                seenKeys.has(recordKey) &&
+                !controlledVerification
+            ) {
                 throw new TypeError(`registro duplicado: ${recordKey}`);
+            }
+
+            if (
+                normalized.type ===
+                    CALIBRATION_RECORD_TYPE.VERIFICATION_COMPARISON &&
+                Object.hasOwn(
+                    normalized,
+                    "comparisonId",
+                )
+            ) {
+                if (
+                    seenVerificationComparisonIds.has(
+                        normalized.comparisonId,
+                    )
+                ) {
+                    throw new TypeError(
+                        `comparisonId duplicado: ${normalized.comparisonId}`,
+                    );
+                }
+
+                seenVerificationComparisonIds.add(
+                    normalized.comparisonId,
+                );
             }
 
             seenKeys.add(recordKey);

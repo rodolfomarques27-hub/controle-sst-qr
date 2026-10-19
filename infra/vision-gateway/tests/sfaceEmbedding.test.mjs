@@ -530,8 +530,7 @@ test(
                 modelPath,
             });
 
-        let releaseGreen =
-            false;
+        let releaseGreen;
 
         try {
             assert.equal(

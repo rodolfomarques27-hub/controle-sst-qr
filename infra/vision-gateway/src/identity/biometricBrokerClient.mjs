@@ -156,7 +156,7 @@ export function createBiometricBrokerClient({
     } = {}) {
         const embedding = assertNormalizedEmbedding128(observedEmbedding);
         const wireEmbedding = Array.from(embedding);
-        let requestBody = JSON.stringify({
+        const requestBody = JSON.stringify({
             operation: "identify",
             input: {
                 tenantId: requireUuid(tenantId, "tenantId"),
@@ -226,7 +226,6 @@ export function createBiometricBrokerClient({
         }
         finally {
             clearTimeout(timer);
-            requestBody = null;
         }
     }
 

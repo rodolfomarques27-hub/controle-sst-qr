@@ -126,10 +126,166 @@ test("aceita busca NON_MATED valida e preserva margin validada", () => {
     const record = result.records[3];
 
     assert.equal(record.kind, "NON_MATED");
-    assert.equal(record.top1IsMate, null);
+    assert.equal(
+        Object.hasOwn(
+            record,
+            "top1IsMate",
+        ),
+        false,
+    );
     assert.ok(Math.abs(record.margin - 0.17) < 1e-12);
 });
 
+test("comparisonId opcional e normalizado quando informado", () => {
+    const dataset = cloneDataset();
+    dataset.records[0].comparisonId = "comparison-genuine-01";
+
+    const result = validateBiometricCalibrationDataset(dataset);
+
+    assert.equal(
+        result.records[0].comparisonId,
+        "comparison-genuine-01",
+    );
+});
+
+test("dataset legado sem comparisonId permanece compativel", () => {
+    const result = validateBiometricCalibrationDataset(syntheticDataset());
+
+    assert.equal(
+        Object.hasOwn(result.records[0], "comparisonId"),
+        false,
+    );
+
+    assert.equal(
+        Object.hasOwn(result.records[1], "comparisonId"),
+        false,
+    );
+});
+
+test("comparisonId informado deve ser identificador opaco valido", () => {
+    const dataset = cloneDataset();
+
+    dataset.records[0].comparisonId =
+        "comparison invalido";
+
+    assert.throws(
+        () => validateBiometricCalibrationDataset(dataset),
+        /comparisonId.*identificador opaco/,
+    );
+});
+
+test("comparisonId informado nao pode ser duplicado entre verificacoes", () => {
+    const dataset = cloneDataset();
+
+    dataset.records[0].comparisonId =
+        "comparison-shared-01";
+
+    dataset.records[1].comparisonId =
+        "comparison-shared-01";
+
+    assert.throws(
+        () => validateBiometricCalibrationDataset(dataset),
+        /comparisonId duplicado/,
+    );
+});
+
+test("comparisonId nao vaza para o input estatistico do harness", () => {
+    const dataset = cloneDataset();
+
+    dataset.records[0].comparisonId =
+        "comparison-genuine-01";
+
+    dataset.records[1].comparisonId =
+        "comparison-impostor-01";
+
+    const converted =
+        toBiometricThresholdCalibrationInput(
+            dataset,
+        );
+
+    assert.deepEqual(
+        converted.verificationComparisons,
+        [
+            {
+                label: "GENUINE",
+                score: 0.91,
+            },
+            {
+                label: "IMPOSTOR",
+                score: 0.18,
+            },
+        ],
+    );
+});
+test("NON_MATED validado omite completamente top1IsMate", () => {
+    const result =
+        validateBiometricCalibrationDataset(
+            syntheticDataset(),
+        );
+
+    const record =
+        result.records.find(
+            (
+                item,
+            ) =>
+                item.type ===
+                    "IDENTIFICATION_SEARCH" &&
+                item.kind ===
+                    "NON_MATED",
+        );
+
+    assert.ok(
+        record,
+    );
+
+    assert.equal(
+        Object.hasOwn(
+            record,
+            "top1IsMate",
+        ),
+        false,
+    );
+});
+
+test("validateBiometricCalibrationDataset e idempotente sobre dataset normalizado", () => {
+    const once =
+        validateBiometricCalibrationDataset(
+            syntheticDataset(),
+        );
+
+    const twice =
+        validateBiometricCalibrationDataset(
+            once,
+        );
+
+    assert.deepEqual(
+        twice,
+        once,
+    );
+
+    const nonMated =
+        twice.records.find(
+            (
+                item,
+            ) =>
+                item.type ===
+                    "IDENTIFICATION_SEARCH" &&
+                item.kind ===
+                    "NON_MATED",
+        );
+
+    assert.ok(
+        nonMated,
+    );
+
+    assert.equal(
+        Object.hasOwn(
+            nonMated,
+            "top1IsMate",
+        ),
+        false,
+    );
+});
 test("rejeita profile de registro diferente do profile unico do dataset", () => {
     const dataset = cloneDataset();
     dataset.records[0].profileId = "other-profile";
@@ -335,3 +491,138 @@ test("dataset validado nao contem decisao, threshold ou material biometrico", ()
         );
     }
 });
+test(
+    "R7F-R8D: comparisonId diferencia verificacoes sobre a mesma probe",
+    () => {
+        const dataset = {
+            datasetVersion:
+                "r8d-dataset-v1",
+
+            protocolVersion:
+                "r8d-protocol-v1",
+
+            profileId:
+                "r8d-profile-v1",
+
+            environmentId:
+                "r8d-environment-v1",
+
+            captureConditionCatalog: [
+                {
+                    id:
+                        "condition-a",
+
+                    lighting:
+                        "real-bright",
+
+                    distanceBand:
+                        "near",
+
+                    pose:
+                        "frontal",
+
+                    glasses:
+                        false,
+
+                    ppe: [],
+
+                    deviceId:
+                        "synthetic-device-a",
+                },
+            ],
+
+            createdAt:
+                "2026-01-01T00:00:02.000Z",
+
+            records: [
+                {
+                    type:
+                        "VERIFICATION_COMPARISON",
+
+                    sessionId:
+                        "session-probe-01",
+
+                    sampleId:
+                        "probe-01",
+
+                    comparisonId:
+                        "comparison-r8d-01",
+
+                    profileId:
+                        "r8d-profile-v1",
+
+                    label:
+                        "GENUINE",
+
+                    score:
+                        0.8,
+
+                    captureConditionId:
+                        "condition-a",
+
+                    timestamp:
+                        "2026-01-01T00:00:01.000Z",
+                },
+
+                {
+                    type:
+                        "VERIFICATION_COMPARISON",
+
+                    sessionId:
+                        "session-probe-01",
+
+                    sampleId:
+                        "probe-01",
+
+                    comparisonId:
+                        "comparison-r8d-02",
+
+                    profileId:
+                        "r8d-profile-v1",
+
+                    label:
+                        "IMPOSTOR",
+
+                    score:
+                        0.2,
+
+                    captureConditionId:
+                        "condition-a",
+
+                    timestamp:
+                        "2026-01-01T00:00:01.000Z",
+                },
+            ],
+        };
+
+        const normalized =
+            validateBiometricCalibrationDataset(
+                dataset,
+            );
+
+        assert.equal(
+            normalized.records.length,
+            2,
+        );
+
+        assert.equal(
+            normalized.records[0].comparisonId,
+            "comparison-r8d-01",
+        );
+
+        assert.equal(
+            normalized.records[1].comparisonId,
+            "comparison-r8d-02",
+        );
+
+        assert.equal(
+            normalized.records[0].sampleId,
+            normalized.records[1].sampleId,
+        );
+
+        assert.equal(
+            normalized.records[0].sessionId,
+            normalized.records[1].sessionId,
+        );
+    },
+);

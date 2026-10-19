@@ -128,9 +128,7 @@ function validPlan() {
     };
 }
 
-function clone(value) {
-    return structuredClone(value);
-}
+
 
 test("plano sintetico valido fica estruturalmente pronto", () => {
     const summary = summarizeBiometricCalibrationCollectionPlan(validPlan());
@@ -427,3 +425,61 @@ test("quantidades planejadas devem coincidir com participantes e sessoes", () =>
         /samples deve possuir exatamente/,
     );
 });
+test(
+    "R7F-R8A: NON_MATED normalizado permanece idempotente",
+    () => {
+        const first =
+            validateBiometricCalibrationCollectionPlan(
+                validPlan(),
+            );
+
+        const nonMated =
+            first.identificationSearches.find(
+                (search) =>
+                    search.kind === "NON_MATED",
+            );
+
+        assert.ok(
+            nonMated,
+        );
+
+        assert.equal(
+            nonMated.mateParticipantId,
+            null,
+        );
+
+        const second =
+            validateBiometricCalibrationCollectionPlan(
+                first,
+            );
+
+        assert.deepEqual(
+            second,
+            first,
+        );
+
+        const invalid =
+            validPlan();
+
+        const invalidNonMated =
+            invalid.identificationSearches.find(
+                (search) =>
+                    search.kind === "NON_MATED",
+            );
+
+        assert.ok(
+            invalidNonMated,
+        );
+
+        invalidNonMated.mateParticipantId =
+            invalid.calibrationParticipantIds[0];
+
+        assert.throws(
+            () =>
+                validateBiometricCalibrationCollectionPlan(
+                    invalid,
+                ),
+            /mateParticipantId nao e permitido para NON_MATED/,
+        );
+    },
+);
