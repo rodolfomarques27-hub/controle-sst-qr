@@ -672,6 +672,8 @@ async function releaseIgnoringErrors(
 export async function createBiometricProcessingRuntime({
     session,
     brokerConfig,
+    productivePolicy =
+        null,
     pollIntervalMs,
     alignmentPolicy,
     getIdentificationContext,
@@ -761,6 +763,7 @@ export async function createBiometricProcessingRuntime({
             await normalizedFactories
                 .createIdentificationPipeline({
                     brokerClient,
+                    productivePolicy,
                 });
 
         detector =

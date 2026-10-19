@@ -863,6 +863,129 @@ function classifyIdentification({
     });
 }
 
+function normalizeDecisionRanking(
+    ranking,
+) {
+    if (
+        !Array.isArray(
+            ranking,
+        )
+    ) {
+        throw new TypeError(
+            "ranking deve ser array.",
+        );
+    }
+
+    return ranking
+        .map(
+            (
+                candidate,
+                index,
+            ) => {
+                if (
+                    !candidate ||
+                    typeof candidate !==
+                        "object" ||
+                    Array.isArray(
+                        candidate,
+                    )
+                ) {
+                    throw new TypeError(
+                        `ranking[${index}] deve ser objeto.`,
+                    );
+                }
+
+                return Object.freeze({
+                    collaboratorId:
+                        normalizeCollaboratorId(
+                            candidate.collaboratorId,
+                        ),
+                    score:
+                        normalizeThreshold(
+                            candidate.score,
+                            `ranking[${index}].score`,
+                        ),
+                });
+            },
+        )
+        .sort(
+            (
+                left,
+                right,
+            ) => {
+                if (
+                    right.score !==
+                    left.score
+                ) {
+                    return right.score -
+                        left.score;
+                }
+
+                return left.collaboratorId
+                    .localeCompare(
+                        right.collaboratorId,
+                    );
+            },
+        );
+}
+
+export function decideIdentityRanking({
+    mode,
+    profileId,
+    ranking,
+    candidateThreshold,
+    matchThreshold,
+    ambiguityMargin,
+} = {}) {
+    const normalizedMode =
+        normalizeMode(
+            mode,
+        );
+
+    const normalizedProfileId =
+        normalizeOpaqueString(
+            profileId,
+            "profileId",
+        );
+
+    const normalizedRanking =
+        normalizeDecisionRanking(
+            ranking,
+        );
+
+    const thresholds =
+        normalizeThresholds({
+            candidateThreshold,
+            matchThreshold,
+            ambiguityMargin,
+        });
+
+    if (
+        normalizedMode ===
+        IDENTITY_COMPARISON_MODE.VERIFICATION
+    ) {
+        return classifyVerification({
+            ranking:
+                normalizedRanking,
+            mode:
+                normalizedMode,
+            profileId:
+                normalizedProfileId,
+            thresholds,
+        });
+    }
+
+    return classifyIdentification({
+        ranking:
+            normalizedRanking,
+        mode:
+            normalizedMode,
+        profileId:
+            normalizedProfileId,
+        thresholds,
+    });
+}
+
 export function compareIdentityEmbeddings({
     mode,
     profile,

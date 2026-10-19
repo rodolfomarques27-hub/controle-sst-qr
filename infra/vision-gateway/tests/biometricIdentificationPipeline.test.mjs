@@ -28,6 +28,19 @@ const TOKEN =
         32,
     );
 
+const TEST_PRODUCTIVE_POLICY =
+    Object.freeze({
+        status:
+            "HOMOLOGATED",
+        policyVersion:
+            "test-policy-v1",
+        candidateThreshold:
+            0.5,
+        matchThreshold:
+            0.8,
+        ambiguityMargin:
+            0.05,
+    });
 function createUnitEmbedding() {
     const embedding =
         new Float32Array(
@@ -117,6 +130,8 @@ test(
         const pipeline =
             createBiometricIdentificationPipeline({
                 brokerClient,
+                productivePolicy:
+                    TEST_PRODUCTIVE_POLICY,
             });
 
         const result =
@@ -195,14 +210,31 @@ test(
             "NO_REFERENCE",
         );
 
-        assert.equal(
+        assert.deepEqual(
             result.thresholds,
-            null,
+            {
+                candidateThreshold:
+                    0.5,
+                matchThreshold:
+                    0.8,
+                ambiguityMargin:
+                    0.05,
+            },
         );
 
         assert.equal(
-            result.decision,
-            null,
+            result.policyVersion,
+            "test-policy-v1",
+        );
+
+        assert.equal(
+            result.decision.status,
+            "NO_REFERENCE",
+        );
+
+        assert.equal(
+            result.decision.policyVersion,
+            "test-policy-v1",
         );
     },
 );
@@ -228,6 +260,8 @@ test(
         const pipeline =
             createBiometricIdentificationPipeline({
                 brokerClient,
+                productivePolicy:
+                    TEST_PRODUCTIVE_POLICY,
             });
 
         const invalid =
@@ -277,6 +311,8 @@ test(
         const pipeline =
             createBiometricIdentificationPipeline({
                 brokerClient,
+                productivePolicy:
+                    TEST_PRODUCTIVE_POLICY,
             });
 
         await assert.rejects(
@@ -341,6 +377,251 @@ test(
                         {},
                 }),
             /brokerClient\.identify/,
+        );
+    },
+);
+test(
+    "bloqueia identificacao antes do broker quando productivePolicy esta ausente",
+    async () => {
+        let identifyCalled =
+            false;
+
+        const pipeline =
+            createBiometricIdentificationPipeline({
+                brokerClient: {
+                    async identify() {
+                        identifyCalled =
+                            true;
+
+                        return {
+                            status:
+                                "NO_REFERENCE",
+                        };
+                    },
+                },
+            });
+
+        await assert.rejects(
+            () =>
+                pipeline.identifySface({
+                    tenantId:
+                        TENANT_ID,
+                    empresaId:
+                        EMPRESA_ID,
+                    profileId:
+                        PROFILE_ID,
+                    requestId:
+                        REQUEST_ID,
+                    observedEmbedding:
+                        createUnitEmbedding(),
+                }),
+            (
+                error,
+            ) =>
+                error?.code ===
+                "BIOMETRIC_PRODUCTIVE_POLICY_REQUIRED",
+        );
+
+        assert.equal(
+            identifyCalled,
+            false,
+        );
+    },
+);
+
+test(
+    "bloqueia identificacao antes do broker quando productivePolicy e invalida",
+    async () => {
+        let identifyCalled =
+            false;
+
+        const pipeline =
+            createBiometricIdentificationPipeline({
+                brokerClient: {
+                    async identify() {
+                        identifyCalled =
+                            true;
+
+                        return {
+                            status:
+                                "NO_REFERENCE",
+                        };
+                    },
+                },
+                productivePolicy: {
+                    ...TEST_PRODUCTIVE_POLICY,
+                    candidateThreshold:
+                        0.9,
+                    matchThreshold:
+                        0.8,
+                },
+            });
+
+        await assert.rejects(
+            () =>
+                pipeline.identifySface({
+                    tenantId:
+                        TENANT_ID,
+                    empresaId:
+                        EMPRESA_ID,
+                    profileId:
+                        PROFILE_ID,
+                    requestId:
+                        REQUEST_ID,
+                    observedEmbedding:
+                        createUnitEmbedding(),
+                }),
+            (
+                error,
+            ) =>
+                error?.code ===
+                "BIOMETRIC_PRODUCTIVE_POLICY_INVALID",
+        );
+
+        assert.equal(
+            identifyCalled,
+            false,
+        );
+    },
+);
+
+test(
+    "bloqueia identificacao antes do broker quando productivePolicy nao esta homologada",
+    async () => {
+        let identifyCalled =
+            false;
+
+        const pipeline =
+            createBiometricIdentificationPipeline({
+                brokerClient: {
+                    async identify() {
+                        identifyCalled =
+                            true;
+
+                        return {
+                            status:
+                                "NO_REFERENCE",
+                        };
+                    },
+                },
+                productivePolicy: {
+                    ...TEST_PRODUCTIVE_POLICY,
+                    status:
+                        "DRAFT",
+                },
+            });
+
+        await assert.rejects(
+            () =>
+                pipeline.identifySface({
+                    tenantId:
+                        TENANT_ID,
+                    empresaId:
+                        EMPRESA_ID,
+                    profileId:
+                        PROFILE_ID,
+                    requestId:
+                        REQUEST_ID,
+                    observedEmbedding:
+                        createUnitEmbedding(),
+                }),
+            (
+                error,
+            ) =>
+                error?.code ===
+                "BIOMETRIC_PRODUCTIVE_POLICY_NOT_HOMOLOGATED",
+        );
+
+        assert.equal(
+            identifyCalled,
+            false,
+        );
+    },
+);
+
+test(
+    "usa identityComparison para decidir ranking e registra policyVersion",
+    async () => {
+        const pipeline =
+            createBiometricIdentificationPipeline({
+                brokerClient: {
+                    async identify() {
+                        return {
+                            status:
+                                "RANKED",
+                            candidateCount:
+                                2,
+                            top1: {
+                                colaboradorId:
+                                    "colab-a",
+                                score:
+                                    0.9,
+                            },
+                            top2: {
+                                colaboradorId:
+                                    "colab-b",
+                                score:
+                                    0.7,
+                            },
+                            margin:
+                                0.2,
+                            fineVerification: {
+                                referenceCount:
+                                    3,
+                                referenceScores:
+                                    [],
+                                bestScore:
+                                    0.91,
+                                worstScore:
+                                    0.86,
+                                meanScore:
+                                    0.89,
+                                bestReferenceId:
+                                    "ref-a1",
+                            },
+                            thresholds:
+                                null,
+                            decision:
+                                null,
+                        };
+                    },
+                },
+                productivePolicy:
+                    TEST_PRODUCTIVE_POLICY,
+            });
+
+        const result =
+            await pipeline.identifySface({
+                tenantId:
+                    TENANT_ID,
+                empresaId:
+                    EMPRESA_ID,
+                profileId:
+                    PROFILE_ID,
+                requestId:
+                    REQUEST_ID,
+                observedEmbedding:
+                    createUnitEmbedding(),
+            });
+
+        assert.equal(
+            result.decision.status,
+            "MATCH",
+        );
+
+        assert.equal(
+            result.decision.collaboratorId,
+            "colab-a",
+        );
+
+        assert.equal(
+            result.policyVersion,
+            "test-policy-v1",
+        );
+
+        assert.equal(
+            result.decision.policyVersion,
+            "test-policy-v1",
         );
     },
 );

@@ -316,6 +316,9 @@ function createHarness({
                 112,
         });
 
+    let pipelineOptions =
+        null;
+
     const factories =
         {
             createBiometricBrokerClient(
@@ -353,6 +356,9 @@ function createHarness({
                 events.push(
                     "pipeline.create",
                 );
+
+                pipelineOptions =
+                    options;
 
                 if (
                     failAt ===
@@ -483,6 +489,7 @@ function createHarness({
                 loopArgs,
                 yunetOptions,
                 sfaceOptions,
+                pipelineOptions,
             };
         },
     };
@@ -532,6 +539,49 @@ test(
             await createRuntime(
                 harness,
             );
+
+        assert.equal(
+            harness.stats()
+                .pipelineOptions
+                .productivePolicy,
+            null,
+        );
+
+        const productivePolicy =
+            Object.freeze({
+                marker:
+                    "runtime-policy-reference",
+            });
+
+        const policyHarness =
+            createHarness();
+
+        await createRuntime(
+            policyHarness,
+            {
+                productivePolicy,
+            },
+        );
+
+        assert.equal(
+            policyHarness
+                .stats()
+                .pipelineOptions
+                .productivePolicy,
+            productivePolicy,
+        );
+
+        assert.deepEqual(
+            Object.keys(
+                policyHarness
+                    .stats()
+                    .pipelineOptions,
+            ).sort(),
+            [
+                "brokerClient",
+                "productivePolicy",
+            ],
+        );
 
         assert.deepEqual(
             harness.events,

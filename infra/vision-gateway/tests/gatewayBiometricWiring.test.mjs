@@ -430,8 +430,17 @@ test(
                     },
             });
 
+        const productivePolicy =
+            Object.freeze({
+                marker:
+                    "gateway-policy-reference",
+            });
+
         const options =
-            createStartOptions();
+            {
+                ...createStartOptions(),
+                productivePolicy,
+            };
 
         await runtime.startBiometricProcessing(
             CAMERA_ID,
@@ -485,6 +494,11 @@ test(
         );
 
         assert.equal(
+            captured.productivePolicy,
+            productivePolicy,
+        );
+
+        assert.equal(
             captured.brokerConfig.url,
             "https://broker.example.test",
         );
@@ -497,6 +511,40 @@ test(
         assert.equal(
             captured.brokerConfig.timeoutMs,
             1000,
+        );
+    },
+);
+
+test(
+    "wiring encaminha ausencia de productivePolicy como null",
+    async () => {
+        let captured =
+            null;
+
+        const runtime =
+            createGatewayRuntime({
+                env:
+                    createEnv(),
+
+                biometricRuntimeFactory:
+                    async (
+                        options,
+                    ) => {
+                        captured =
+                            options;
+
+                        return createBiometricRuntimeStub();
+                    },
+            });
+
+        await runtime.startBiometricProcessing(
+            CAMERA_ID,
+            createStartOptions(),
+        );
+
+        assert.equal(
+            captured.productivePolicy,
+            null,
         );
     },
 );

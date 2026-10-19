@@ -457,6 +457,9 @@ export function createGatewayRuntime({
                                 session,
                                 brokerConfig:
                                     config.broker,
+                                productivePolicy:
+                                    normalizedOptions.productivePolicy ??
+                                        null,
                                 pollIntervalMs:
                                     normalizedOptions.pollIntervalMs,
                                 alignmentPolicy:
