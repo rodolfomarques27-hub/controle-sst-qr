@@ -6,6 +6,7 @@ export const BIOMETRIC_RPC_NAMES = Object.freeze({
   activateReferenceSet: "backend_biometric_activate_reference_set",
   listActiveCentroids: "backend_biometric_list_active_centroids",
   getActiveBundle: "backend_biometric_get_active_bundle",
+  revokeLegalAuthorization: "backend_biometric_revoke_legal_authorization",
 });
 
 export const BIOMETRIC_ENROLLMENT_SEQUENCE = Object.freeze([
@@ -54,6 +55,7 @@ export interface RegisterReferenceInput {
 }
 
 export interface ChangeReferenceStatusInput {
+  tenantId: string;
   referenceId: string;
   nextStatus: string;
   reasonCode: string | null;
@@ -72,6 +74,7 @@ export interface StoreCentroidInput {
 }
 
 export interface ActivateReferenceSetInput {
+  tenantId: string;
   referenceSetId: string;
   centroidId: string;
   requestId: string;
@@ -91,6 +94,17 @@ export interface GetActiveBundleInput {
   colaboradorId: string;
   profileId: string;
   requestId: string;
+}
+
+export interface RevokeLegalAuthorizationInput {
+  authorizationId: string;
+  tenantId: string;
+  empresaId: string;
+  colaboradorId: string;
+  purposeCode: string;
+  reasonCode: string;
+  requestId: string;
+  executorId: string | null;
 }
 
 export interface EncryptedActiveCentroidCandidate extends JsonRecord {
@@ -245,6 +259,7 @@ export function createBiometricBrokerRpc(
         client,
         BIOMETRIC_RPC_NAMES.changeReferenceStatus,
         {
+          p_tenant_id: input.tenantId,
           p_reference_id: input.referenceId,
           p_next_status: input.nextStatus,
           p_reason_code: input.reasonCode,
@@ -280,6 +295,7 @@ export function createBiometricBrokerRpc(
         client,
         BIOMETRIC_RPC_NAMES.activateReferenceSet,
         {
+          p_tenant_id: input.tenantId,
           p_reference_set_id: input.referenceSetId,
           p_centroid_id: input.centroidId,
           p_request_id: input.requestId,
@@ -299,6 +315,25 @@ export function createBiometricBrokerRpc(
           p_empresa_id: input.empresaId,
           p_profile_id: input.profileId,
           p_request_id: input.requestId,
+        },
+      );
+    },
+
+    async revokeLegalAuthorization(
+      input: RevokeLegalAuthorizationInput,
+    ): Promise<JsonRecord> {
+      return await callRpc<JsonRecord>(
+        client,
+        BIOMETRIC_RPC_NAMES.revokeLegalAuthorization,
+        {
+          p_authorization_id: input.authorizationId,
+          p_tenant_id: input.tenantId,
+          p_empresa_id: input.empresaId,
+          p_colaborador_id: input.colaboradorId,
+          p_purpose_code: input.purposeCode,
+          p_reason_code: input.reasonCode,
+          p_request_id: input.requestId,
+          p_executor_id: input.executorId,
         },
       );
     },

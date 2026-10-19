@@ -27,7 +27,17 @@ const ALLOWED_OPERATIONS = new Set([
   "changeReferenceStatus",
   "storeCentroid",
   "activateReferenceSet",
+  "revokeLegalAuthorization",
   "identify",
+]);
+
+const HUMAN_REQUIRED_OPERATIONS = new Set([
+  "createReferenceSet",
+  "registerReference",
+  "changeReferenceStatus",
+  "storeCentroid",
+  "activateReferenceSet",
+  "revokeLegalAuthorization",
 ]);
 
 const ALLOWED_REFERENCE_STATUS = new Set([
@@ -81,6 +91,33 @@ interface AdminClientLike {
   }>;
 }
 
+
+interface UserClientLike {
+  auth: {
+    getUser(): Promise<{
+      data: {
+        user?: {
+          id?: string;
+        } | null;
+      } | null;
+      error: {
+        message?: string;
+      } | null;
+    }>;
+  };
+
+  rpc(
+    name: string,
+    args: JsonRecord,
+  ): Promise<{
+    data: unknown;
+    error: {
+      message?: string;
+      code?: string;
+    } | null;
+  }>;
+}
+
 interface BrokerEndpointDependencies {
   readEnv?: ReadEnv;
 
@@ -88,6 +125,13 @@ interface BrokerEndpointDependencies {
     supabaseUrl: string,
     adminKey: string,
   ) => Promise<AdminClientLike>;
+
+
+  createUserClient?: (
+    supabaseUrl: string,
+    anonKey: string,
+    authorization: string,
+  ) => Promise<UserClientLike>;
 
   decryptVector?: DecryptVector;
   encryptVector?: EncryptVector;
@@ -582,6 +626,44 @@ async function createDefaultAdminClient(
     AdminClientLike;
 }
 
+async function createDefaultUserClient(
+  supabaseUrl: string,
+  anonKey: string,
+  authorization: string,
+): Promise<UserClientLike> {
+  const {
+    createClient,
+  } =
+    await import(
+      "https://esm.sh/@supabase/supabase-js@2.106.0"
+    );
+
+  return createClient(
+    supabaseUrl,
+    anonKey,
+    {
+      global: {
+        headers: {
+          Authorization:
+            authorization,
+        },
+      },
+
+      auth: {
+        persistSession:
+          false,
+
+        autoRefreshToken:
+          false,
+
+        detectSessionInUrl:
+          false,
+      },
+    },
+  ) as unknown as
+    UserClientLike;
+}
+
 export async function runBiometricIdentificationPipeline({
   rpcClient,
   tenantId,
@@ -775,6 +857,189 @@ async function readPayload(
 }
 
 
+function humanOperationTenantId(
+  operation: string,
+  input: JsonRecord,
+) {
+  switch (operation) {
+    case "createReferenceSet":
+    case "changeReferenceStatus":
+    case "activateReferenceSet":
+    case "revokeLegalAuthorization":
+      return requiredUuid(
+        input,
+        "tenantId",
+      );
+
+    case "registerReference":
+    case "storeCentroid": {
+      const boundary =
+        requiredRecord(
+          input,
+          "boundary",
+        );
+
+      return requiredUuid(
+        boundary,
+        "tenantId",
+      );
+    }
+
+    default:
+      throw new HttpError(
+        400,
+        "INVALID_OPERATION",
+      );
+  }
+}
+
+async function requireHumanIdentity(
+  req: Request,
+  operation: string,
+  input: JsonRecord,
+  supabaseUrl: string,
+  readEnv: ReadEnv,
+  createUserClient: (
+    supabaseUrl: string,
+    anonKey: string,
+    authorization: string,
+  ) => Promise<UserClientLike>,
+) {
+  if (
+    !HUMAN_REQUIRED_OPERATIONS
+      .has(operation)
+  ) {
+    return null;
+  }
+
+  const authorization =
+    (
+      req.headers.get(
+        "Authorization",
+      ) || ""
+    ).trim();
+
+  if (
+    !/^Bearer\s+\S+$/i
+      .test(authorization)
+  ) {
+    throw new HttpError(
+      401,
+      "BROKER_USER_UNAUTHENTICATED",
+    );
+  }
+
+  const anonKey =
+    (
+      readEnv(
+        "SUPABASE_ANON_KEY",
+      ) || ""
+    ).trim();
+
+  if (!anonKey) {
+    throw new HttpError(
+      503,
+      "BROKER_USER_AUTH_CONFIG_UNAVAILABLE",
+    );
+  }
+
+  const userClient =
+    await createUserClient(
+      supabaseUrl,
+      anonKey,
+      authorization,
+    );
+
+  const {
+    data: authData,
+    error: authError,
+  } =
+    await userClient.auth
+      .getUser();
+
+  const executorId =
+    authData?.user?.id || "";
+
+  if (
+    authError ||
+    !validUuid(executorId)
+  ) {
+    throw new HttpError(
+      401,
+      "BROKER_USER_UNAUTHENTICATED",
+    );
+  }
+
+  const tenantId =
+    humanOperationTenantId(
+      operation,
+      input,
+    );
+
+  const {
+    data: canManageTenant,
+    error: tenantError,
+  } =
+    await userClient.rpc(
+      "usuario_pode_gerenciar_tenant",
+      {
+        p_tenant_id:
+          tenantId,
+      },
+    );
+
+  if (
+    tenantError ||
+    canManageTenant !== true
+  ) {
+    throw new HttpError(
+      403,
+      "BROKER_TENANT_FORBIDDEN",
+    );
+  }
+
+  const claimedExecutor =
+    input["executorId"];
+
+  if (
+    claimedExecutor !==
+      undefined &&
+    claimedExecutor !==
+      null
+  ) {
+    if (
+      typeof claimedExecutor !==
+        "string" ||
+      !validUuid(
+        claimedExecutor,
+      )
+    ) {
+      throw new HttpError(
+        400,
+        "INVALID_PAYLOAD",
+      );
+    }
+
+    if (
+      claimedExecutor
+        .toLowerCase() !==
+      executorId
+        .toLowerCase()
+    ) {
+      throw new HttpError(
+        403,
+        "BIOMETRIC_EXECUTOR_MISMATCH",
+      );
+    }
+  }
+
+  return {
+    tenantId,
+    executorId:
+      executorId.toLowerCase(),
+  };
+}
+
 export async function handleBiometricBrokerRequest(
   req: Request,
   dependencies:
@@ -787,6 +1052,11 @@ export async function handleBiometricBrokerRequest(
   const createAdminClient =
     dependencies.createAdminClient ??
     createDefaultAdminClient;
+
+
+  const createUserClient =
+    dependencies.createUserClient ??
+    createDefaultUserClient;
 
   const decryptVector =
     dependencies.decryptVector ??
@@ -910,6 +1180,17 @@ export async function handleBiometricBrokerRequest(
           "input",
         );
 
+
+      const humanIdentity =
+        await requireHumanIdentity(
+          req,
+          operation,
+          input,
+          supabaseUrl,
+          readEnv,
+          createUserClient,
+        );
+
       const adminClient =
         await createAdminClient(
           supabaseUrl,
@@ -996,10 +1277,7 @@ export async function handleBiometricBrokerRequest(
                     "requestId",
                   ),
                 executorId:
-                  nullableUuid(
-                    input,
-                    "executorId",
-                  ),
+                  humanIdentity?.executorId ?? null,
               });
           break;
 
@@ -1066,10 +1344,7 @@ export async function handleBiometricBrokerRequest(
             );
 
           const executorId =
-            nullableUuid(
-              input,
-              "executorId",
-            );
+            humanIdentity?.executorId ?? null;
 
           const keyVersion =
             requiredText(
@@ -1183,6 +1458,11 @@ export async function handleBiometricBrokerRequest(
           result =
             await broker
               .changeReferenceStatus({
+                tenantId:
+                  requiredUuid(
+                    input,
+                    "tenantId",
+                  ),
                 referenceId:
                   requiredUuid(
                     input,
@@ -1200,10 +1480,7 @@ export async function handleBiometricBrokerRequest(
                     "requestId",
                   ),
                 executorId:
-                  nullableUuid(
-                    input,
-                    "executorId",
-                  ),
+                  humanIdentity?.executorId ?? null,
               });
           break;
         }
@@ -1265,10 +1542,7 @@ export async function handleBiometricBrokerRequest(
             );
 
           const executorId =
-            nullableUuid(
-              input,
-              "executorId",
-            );
+            humanIdentity?.executorId ?? null;
 
           const keyVersion =
             requiredText(
@@ -1361,6 +1635,11 @@ export async function handleBiometricBrokerRequest(
           result =
             await broker
               .activateReferenceSet({
+                tenantId:
+                  requiredUuid(
+                    input,
+                    "tenantId",
+                  ),
                 referenceSetId:
                   requiredUuid(
                     input,
@@ -1377,14 +1656,73 @@ export async function handleBiometricBrokerRequest(
                     "requestId",
                   ),
                 executorId:
-                  nullableUuid(
-                    input,
-                    "executorId",
-                  ),
+                  humanIdentity?.executorId ?? null,
               });
           break;
 
+        case "revokeLegalAuthorization": {
+          const purposeCode =
+            requiredText(
+              input,
+              "purposeCode",
+            );
+
+          if (
+            purposeCode !==
+              "ACCESS_VERIFICATION_1_TO_1"
+          ) {
+            throw new HttpError(
+              400,
+              "INVALID_PAYLOAD",
+            );
+          }
+
+          result =
+            await broker
+              .revokeLegalAuthorization({
+                authorizationId:
+                  requiredUuid(
+                    input,
+                    "authorizationId",
+                  ),
+                tenantId:
+                  requiredUuid(
+                    input,
+                    "tenantId",
+                  ),
+                empresaId:
+                  requiredUuid(
+                    input,
+                    "empresaId",
+                  ),
+                colaboradorId:
+                  requiredUuid(
+                    input,
+                    "colaboradorId",
+                  ),
+                purposeCode,
+                reasonCode:
+                  requiredText(
+                    input,
+                    "reasonCode",
+                  ),
+                requestId:
+                  requiredUuid(
+                    input,
+                    "requestId",
+                  ),
+                executorId:
+                  humanIdentity?.executorId ?? null,
+              });
+
+          break;
+        }
+
         case "identify": {
+          const biometricExecutionDisabled = true;
+          if (biometricExecutionDisabled) {
+            throw new HttpError(409, "BIOMETRIC_EXECUTION_DISABLED");
+          }
           assertExactIdentifyInput(
             input,
           );
