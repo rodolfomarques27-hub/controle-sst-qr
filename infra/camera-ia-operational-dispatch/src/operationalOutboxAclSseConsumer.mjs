@@ -52,7 +52,7 @@ function normalizedLease(row, now) {
         ? row.leaseUntil.getTime()
         : (typeof row.leaseUntil === 'string' &&
           /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d)$/.test(row.leaseUntil)
-            ? Date.parse(row.leaseUntil) : NaN);
+            ? Date.parse(row.leaseUntil) : Number.NaN);
     if (!Number.isFinite(until) || until <= now) throw new Error('expired_trusted_lease');
     return Object.freeze({
         deviceId: row.deviceId, eventId: norm(row.eventId), cameraId: row.cameraId,

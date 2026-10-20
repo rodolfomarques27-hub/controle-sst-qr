@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import test from 'node:test';
 import { EventEmitter } from 'node:events';
 import { randomUUID } from 'node:crypto';
 import { createOperationalOutboxAclSseConsumer } from '../src/operationalOutboxAclSseConsumer.mjs';
@@ -140,7 +141,9 @@ function createFixture() {
     };
 }
 const opts = () => ({workerId});
-assert.throws(()=>createOperationalOutboxAclSseConsumer(),/trusted_injected_providers_required/);
+test(
+    'operational outbox ACL SSE consumer — offline contract',
+    async () => {assert.throws(()=>createOperationalOutboxAclSseConsumer(),/trusted_injected_providers_required/);
 const f=createFixture();
 assert.deepEqual(Object.keys(f.consumer),['drainOnce','handleAuthorizedSse']);
 assert.equal('publishSnapshot' in f.consumer,false);
@@ -257,3 +260,4 @@ unblock();await a;
 console.log('C3FA_SINGLE_INSTANCE_NON_OVERLAP=GREEN');
 console.log('R10K_3C4F_C3FA_OFFLINE_CONSUMER=GREEN');
 console.log('REAL_NETWORK=FALSE; DB=MOCK_ONLY; DURABLE_SINK=MOCK_ONLY; ROUTES=OFF');
+});

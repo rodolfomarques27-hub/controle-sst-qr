@@ -110,11 +110,11 @@ function assertExactKeys(
     const actual =
         Object.keys(
             source,
-        ).sort();
+        ).sort((left, right) => left.localeCompare(right));
 
     const expected =
         [...POLICY_KEYS]
-            .sort();
+            .sort((left, right) => left.localeCompare(right));
 
     if (
         actual.length !==

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import test from 'node:test';
 import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createOperationalIngestContract } from '../operationalIngestContract.mjs';
@@ -212,4 +213,9 @@ async function run() {
     console.log('R10K_3C4F_C2_OFFLINE_CONTRACT=GREEN');
 }
 
-run().catch((error) => { console.error(error); process.exitCode=1; });
+test(
+    'operational ingest contract — offline contract',
+    async () => {
+        await run();
+    },
+);

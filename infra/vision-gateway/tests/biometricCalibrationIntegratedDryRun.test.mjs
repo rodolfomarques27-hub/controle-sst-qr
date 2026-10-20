@@ -21,6 +21,12 @@ import {
 import {
     createBiometricCalibrationCollectionRunner,
 } from "../src/identity/biometricCalibrationCollectionRunner.mjs";
+import {
+    createCommonCalibrationParticipant,
+    createCommonControlledStudyContract,
+    createCommonScoringProtocol,
+    createCommonVerificationStudySections,
+} from "./biometricCalibrationVerificationFixtures.mjs";
 
 const YUNET_MODEL_PATH =
     fileURLToPath(
@@ -361,253 +367,26 @@ function probeId(
 function participant(
     participantId,
 ) {
-    return {
+    return createCommonCalibrationParticipant({
         participantId,
-
-        sessions: [
-            {
-                sessionId:
-                    sessionId(
-                        participantId,
-                    ),
-
-                samples: [
-                    {
-                        sampleId:
-                            enrollmentId(
-                                participantId,
-                                1,
-                            ),
-
-                        profileId:
-                            PROFILE_ID,
-
-                        role:
-                            "ENROLLMENT",
-
-                        captureConditionId:
-                            "condition-a",
-                    },
-                    {
-                        sampleId:
-                            enrollmentId(
-                                participantId,
-                                2,
-                            ),
-
-                        profileId:
-                            PROFILE_ID,
-
-                        role:
-                            "ENROLLMENT",
-
-                        captureConditionId:
-                            "condition-b",
-                    },
-                    {
-                        sampleId:
-                            enrollmentId(
-                                participantId,
-                                3,
-                            ),
-
-                        profileId:
-                            PROFILE_ID,
-
-                        role:
-                            "ENROLLMENT",
-
-                        captureConditionId:
-                            "condition-a",
-                    },
-                    {
-                        sampleId:
-                            probeId(
-                                participantId,
-                            ),
-
-                        profileId:
-                            PROFILE_ID,
-
-                        role:
-                            "PROBE",
-
-                        captureConditionId:
-                            participantId.endsWith(
-                                "02",
-                            )
-                                ? "condition-a"
-                                : "condition-b",
-                    },
-                ],
-            },
-        ],
-    };
+        profileId: PROFILE_ID,
+        sessionId,
+        enrollmentId,
+        probeId,
+    });
 }
-
 function controlledStudyContract() {
-    return {
-        protocolVersion:
-            PROTOCOL_VERSION,
-
-        profileId:
-            PROFILE_ID,
-
-        calibration: {
-            datasetVersion:
-                DATASET_VERSION,
-
-            protocolVersion:
-                PROTOCOL_VERSION,
-
-            profileId:
-                PROFILE_ID,
-
-            environmentId:
-                ENVIRONMENT_ID,
-
-            deviceIds: [
-                "device-a",
-                "device-b",
-            ],
-
-            captureConditionIds: [
-                "condition-a",
-                "condition-b",
-            ],
-
-            participantIds: [
-                ...CAL_PARTICIPANTS,
-            ],
-
-            sessionIds:
-                CAL_PARTICIPANTS.map(
-                    sessionId,
-                ),
-
-            plannedCounts: {
-                genuineComparisons:
-                    1,
-
-                impostorComparisons:
-                    1,
-
-                matedSearches:
-                    1,
-
-                nonMatedSearches:
-                    1,
-            },
-        },
-
-        evaluation: {
-            datasetVersion:
-                "evaluation-dataset-v1",
-
-            protocolVersion:
-                PROTOCOL_VERSION,
-
-            profileId:
-                PROFILE_ID,
-
-            environmentId:
-                ENVIRONMENT_ID,
-
-            deviceIds: [
-                "device-a",
-                "device-b",
-            ],
-
-            captureConditionIds: [
-                "condition-a",
-                "condition-b",
-            ],
-
-            participantIds: [
-                ...EVAL_PARTICIPANTS,
-            ],
-
-            sessionIds:
-                EVAL_PARTICIPANTS.map(
-                    sessionId,
-                ),
-
-            plannedCounts: {
-                genuineComparisons:
-                    1,
-
-                impostorComparisons:
-                    1,
-
-                matedSearches:
-                    1,
-
-                nonMatedSearches:
-                    1,
-            },
-        },
-
-        analysisPolicy: {
-            thresholdGrid: [
-                0.2,
-                0.4,
-                0.6,
-                0.8,
-            ],
-
-            percentilePoints: [
-                0,
-                0.5,
-                0.95,
-                1,
-            ],
-
-            minimumSampleCounts: {
-                genuineComparisons:
-                    1,
-
-                impostorComparisons:
-                    1,
-
-                matedSearches:
-                    1,
-
-                nonMatedSearches:
-                    1,
-            },
-        },
-
-        acceptancePolicy: {
-            maxFmr:
-                0.1,
-
-            maxFnmr:
-                0.1,
-
-            maxFpir:
-                0.1,
-
-            maxFnir:
-                0.1,
-
-            minimumEvaluationParticipants:
-                3,
-
-            minimumGenuineComparisons:
-                1,
-
-            minimumImpostorComparisons:
-                1,
-
-            minimumMatedSearches:
-                1,
-
-            minimumNonMatedSearches:
-                1,
-        },
-    };
+    return createCommonControlledStudyContract({
+        protocolVersion: PROTOCOL_VERSION,
+        profileId: PROFILE_ID,
+        datasetVersion: DATASET_VERSION,
+        evaluationDatasetVersion: "evaluation-dataset-v1",
+        environmentId: ENVIRONMENT_ID,
+        calibrationParticipants: CAL_PARTICIPANTS,
+        evaluationParticipants: EVAL_PARTICIPANTS,
+        sessionId,
+    });
 }
-
 function collectionPlan() {
     return {
         protocolVersion:
@@ -699,252 +478,18 @@ function collectionPlan() {
             ...EVAL_PARTICIPANTS,
         ],
 
-        verificationComparisons: [
-            {
-                comparisonId:
-                    "comparison-cal-genuine",
-
-                split:
-                    "CALIBRATION",
-
-                label:
-                    "GENUINE",
-
-                enrollmentSampleId:
-                    enrollmentId(
-                        "cal-p01",
-                        1,
-                    ),
-
-                probeSampleId:
-                    probeId(
-                        "cal-p01",
-                    ),
-            },
-            {
-                comparisonId:
-                    "comparison-cal-impostor",
-
-                split:
-                    "CALIBRATION",
-
-                label:
-                    "IMPOSTOR",
-
-                enrollmentSampleId:
-                    enrollmentId(
-                        "cal-p01",
-                        1,
-                    ),
-
-                probeSampleId:
-                    probeId(
-                        "cal-p02",
-                    ),
-            },
-            {
-                comparisonId:
-                    "comparison-eval-genuine",
-
-                split:
-                    "EVALUATION",
-
-                label:
-                    "GENUINE",
-
-                enrollmentSampleId:
-                    enrollmentId(
-                        "eval-p01",
-                        1,
-                    ),
-
-                probeSampleId:
-                    probeId(
-                        "eval-p01",
-                    ),
-            },
-            {
-                comparisonId:
-                    "comparison-eval-impostor",
-
-                split:
-                    "EVALUATION",
-
-                label:
-                    "IMPOSTOR",
-
-                enrollmentSampleId:
-                    enrollmentId(
-                        "eval-p01",
-                        1,
-                    ),
-
-                probeSampleId:
-                    probeId(
-                        "eval-p02",
-                    ),
-            },
-        ],
-
-        identificationSearches: [
-            {
-                searchId:
-                    "search-cal-mated",
-
-                split:
-                    "CALIBRATION",
-
-                kind:
-                    "MATED",
-
-                probeSampleId:
-                    probeId(
-                        "cal-p01",
-                    ),
-
-                galleryParticipantIds: [
-                    "cal-p01",
-                    "cal-p02",
-                ],
-
-                mateParticipantId:
-                    "cal-p01",
-            },
-            {
-                searchId:
-                    "search-cal-nonmated",
-
-                split:
-                    "CALIBRATION",
-
-                kind:
-                    "NON_MATED",
-
-                probeSampleId:
-                    probeId(
-                        "cal-p03",
-                    ),
-
-                galleryParticipantIds: [
-                    "cal-p01",
-                    "cal-p02",
-                ],
-            },
-            {
-                searchId:
-                    "search-eval-mated",
-
-                split:
-                    "EVALUATION",
-
-                kind:
-                    "MATED",
-
-                probeSampleId:
-                    probeId(
-                        "eval-p01",
-                    ),
-
-                galleryParticipantIds: [
-                    "eval-p01",
-                    "eval-p02",
-                ],
-
-                mateParticipantId:
-                    "eval-p01",
-            },
-            {
-                searchId:
-                    "search-eval-nonmated",
-
-                split:
-                    "EVALUATION",
-
-                kind:
-                    "NON_MATED",
-
-                probeSampleId:
-                    probeId(
-                        "eval-p03",
-                    ),
-
-                galleryParticipantIds: [
-                    "eval-p01",
-                    "eval-p02",
-                ],
-            },
-        ],
-
-        policies: {
-            enrollmentProbeSeparationRequired:
-                true,
-
-            disjointCalibrationEvaluationRequired:
-                true,
-
-            requireMatedSearches:
-                true,
-
-            requireNonMatedSearches:
-                true,
-        },
-
-        sufficiencyCriteria: {
-            minimumParticipants:
-                6,
-
-            minimumSessionsPerParticipant:
-                1,
-
-            minimumSamplesPerSession:
-                4,
-
-            minimumGenuineComparisons:
-                1,
-
-            minimumImpostorComparisons:
-                1,
-
-            minimumMatedSearches:
-                1,
-
-            minimumNonMatedSearches:
-                1,
-
-            minimumGallerySize:
-                2,
-
-            minimumSamplesPerCondition:
-                1,
-        },
+        ...createCommonVerificationStudySections({
+            enrollmentId,
+            probeId,
+        }),
     };
 }
 
 function scoringProtocol() {
-    return {
-        profileId:
-            PROFILE_ID,
-
-        verificationReferenceAggregation:
-            "PARTICIPANT_ENROLLMENT_CENTROID",
-
-        identificationReferenceAggregation:
-            "PARTICIPANT_ENROLLMENT_CENTROID",
-
-        minimumEnrollmentReferencesPerParticipant:
-            3,
-
-        maximumEnrollmentReferencesPerParticipant:
-            5,
-
-        embeddingRetention:
-            "MEMORY_ONLY",
-
-        persistedArtifacts:
-            "EXECUTION_MANIFEST_AND_R7C_DATASET",
-    };
+    return createCommonScoringProtocol(
+        PROFILE_ID,
+    );
 }
-
 function makeClock() {
     const base =
         Date.UTC(

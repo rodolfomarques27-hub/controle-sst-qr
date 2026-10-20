@@ -128,6 +128,35 @@ function cloneManifest() {
     );
 }
 
+function assertManifestBlockers(
+    manifest,
+    blockers,
+    {
+        manifestValid,
+    } = {},
+) {
+    const result =
+        evaluateBiometricCalibrationExecutionManifest(
+            manifest,
+        );
+
+    if (
+        manifestValid !==
+        undefined
+    ) {
+        assert.equal(
+            result.manifestValid,
+            manifestValid,
+        );
+    }
+
+    assert.deepEqual(
+        result.blockers,
+        blockers,
+    );
+
+    return result;
+}
 test(
     "manifest CALIBRATION valido fica pronto para validacao de execucao",
     () => {
@@ -186,22 +215,7 @@ test(
         manifest.phase =
             "EVALUATION";
 
-        const result =
-            evaluateBiometricCalibrationExecutionManifest(
-                manifest,
-            );
-
-        assert.equal(
-            result.manifestValid,
-            false,
-        );
-
-        assert.deepEqual(
-            result.blockers,
-            [
-                "PHASE_INVALID",
-            ],
-        );
+        assertManifestBlockers(manifest, ["PHASE_INVALID"], { manifestValid: false });
     },
 );
 
@@ -213,22 +227,7 @@ test(
 
         delete manifest.datasetVersion;
 
-        const result =
-            evaluateBiometricCalibrationExecutionManifest(
-                manifest,
-            );
-
-        assert.equal(
-            result.manifestValid,
-            false,
-        );
-
-        assert.deepEqual(
-            result.blockers,
-            [
-                "MISSING_FIELD",
-            ],
-        );
+        assertManifestBlockers(manifest, ["MISSING_FIELD"], { manifestValid: false });
     },
 );
 
@@ -241,22 +240,7 @@ test(
         manifest.notes =
             "nao permitido";
 
-        const result =
-            evaluateBiometricCalibrationExecutionManifest(
-                manifest,
-            );
-
-        assert.equal(
-            result.manifestValid,
-            false,
-        );
-
-        assert.deepEqual(
-            result.blockers,
-            [
-                "EXTRA_FIELD",
-            ],
-        );
+        assertManifestBlockers(manifest, ["EXTRA_FIELD"], { manifestValid: false });
     },
 );
 
@@ -269,22 +253,7 @@ test(
         manifest.participants[0].cpf =
             "00000000000";
 
-        const result =
-            evaluateBiometricCalibrationExecutionManifest(
-                manifest,
-            );
-
-        assert.equal(
-            result.manifestValid,
-            false,
-        );
-
-        assert.deepEqual(
-            result.blockers,
-            [
-                "FORBIDDEN_FIELD",
-            ],
-        );
+        assertManifestBlockers(manifest, ["FORBIDDEN_FIELD"], { manifestValid: false });
     },
 );
 
@@ -304,22 +273,7 @@ test(
                 0.2,
             ];
 
-        const result =
-            evaluateBiometricCalibrationExecutionManifest(
-                manifest,
-            );
-
-        assert.equal(
-            result.manifestValid,
-            false,
-        );
-
-        assert.deepEqual(
-            result.blockers,
-            [
-                "FORBIDDEN_FIELD",
-            ],
-        );
+        assertManifestBlockers(manifest, ["FORBIDDEN_FIELD"], { manifestValid: false });
     },
 );
 
@@ -375,17 +329,7 @@ test(
         manifest.participants[1].participantId =
             manifest.participants[0].participantId;
 
-        const result =
-            evaluateBiometricCalibrationExecutionManifest(
-                manifest,
-            );
-
-        assert.deepEqual(
-            result.blockers,
-            [
-                "DUPLICATE_PARTICIPANT_ID",
-            ],
-        );
+        assertManifestBlockers(manifest, ["DUPLICATE_PARTICIPANT_ID"]);
     },
 );
 
@@ -404,17 +348,7 @@ test(
                 .sessions[0]
                 .sessionId;
 
-        const result =
-            evaluateBiometricCalibrationExecutionManifest(
-                manifest,
-            );
-
-        assert.deepEqual(
-            result.blockers,
-            [
-                "DUPLICATE_SESSION_ID",
-            ],
-        );
+        assertManifestBlockers(manifest, ["DUPLICATE_SESSION_ID"]);
     },
 );
 
@@ -435,17 +369,7 @@ test(
                 .samples[0]
                 .sampleId;
 
-        const result =
-            evaluateBiometricCalibrationExecutionManifest(
-                manifest,
-            );
-
-        assert.deepEqual(
-            result.blockers,
-            [
-                "DUPLICATE_SAMPLE_ID",
-            ],
-        );
+        assertManifestBlockers(manifest, ["DUPLICATE_SAMPLE_ID"]);
     },
 );
 
@@ -460,17 +384,7 @@ test(
             .participantId =
             "participante com espaco";
 
-        const result =
-            evaluateBiometricCalibrationExecutionManifest(
-                manifest,
-            );
-
-        assert.deepEqual(
-            result.blockers,
-            [
-                "OPAQUE_ID_INVALID",
-            ],
-        );
+        assertManifestBlockers(manifest, ["OPAQUE_ID_INVALID"]);
     },
 );
 
@@ -486,17 +400,7 @@ test(
             .startedAt =
             "13/10/2026 08:00";
 
-        const result =
-            evaluateBiometricCalibrationExecutionManifest(
-                manifest,
-            );
-
-        assert.deepEqual(
-            result.blockers,
-            [
-                "TIMESTAMP_INVALID",
-            ],
-        );
+        assertManifestBlockers(manifest, ["TIMESTAMP_INVALID"]);
     },
 );
 
@@ -512,17 +416,7 @@ test(
             .startedAt =
             "2026-02-30T08:00:00-03:00";
 
-        const result =
-            evaluateBiometricCalibrationExecutionManifest(
-                manifest,
-            );
-
-        assert.deepEqual(
-            result.blockers,
-            [
-                "TIMESTAMP_INVALID",
-            ],
-        );
+        assertManifestBlockers(manifest, ["TIMESTAMP_INVALID"]);
     },
 );
 
@@ -538,17 +432,7 @@ test(
             .startedAt =
             "2026-10-13T08:11:00-03:00";
 
-        const result =
-            evaluateBiometricCalibrationExecutionManifest(
-                manifest,
-            );
-
-        assert.deepEqual(
-            result.blockers,
-            [
-                "SESSION_TIME_ORDER_INVALID",
-            ],
-        );
+        assertManifestBlockers(manifest, ["SESSION_TIME_ORDER_INVALID"]);
     },
 );
 
@@ -565,17 +449,7 @@ test(
             .capturedAt =
             "2026-10-13T07:59:59-03:00";
 
-        const result =
-            evaluateBiometricCalibrationExecutionManifest(
-                manifest,
-            );
-
-        assert.deepEqual(
-            result.blockers,
-            [
-                "SAMPLE_TIME_OUTSIDE_SESSION",
-            ],
-        );
+        assertManifestBlockers(manifest, ["SAMPLE_TIME_OUTSIDE_SESSION"]);
     },
 );
 
@@ -592,17 +466,7 @@ test(
             .capturedAt =
             "2026-10-13T08:10:01-03:00";
 
-        const result =
-            evaluateBiometricCalibrationExecutionManifest(
-                manifest,
-            );
-
-        assert.deepEqual(
-            result.blockers,
-            [
-                "SAMPLE_TIME_OUTSIDE_SESSION",
-            ],
-        );
+        assertManifestBlockers(manifest, ["SAMPLE_TIME_OUTSIDE_SESSION"]);
     },
 );
 
@@ -615,17 +479,7 @@ test(
         manifest.participants =
             [];
 
-        const result =
-            evaluateBiometricCalibrationExecutionManifest(
-                manifest,
-            );
-
-        assert.deepEqual(
-            result.blockers,
-            [
-                "EMPTY_COLLECTION",
-            ],
-        );
+        assertManifestBlockers(manifest, ["EMPTY_COLLECTION"]);
     },
 );
 
@@ -638,17 +492,7 @@ test(
         manifest.participants[0].sessions =
             [];
 
-        const result =
-            evaluateBiometricCalibrationExecutionManifest(
-                manifest,
-            );
-
-        assert.deepEqual(
-            result.blockers,
-            [
-                "EMPTY_COLLECTION",
-            ],
-        );
+        assertManifestBlockers(manifest, ["EMPTY_COLLECTION"]);
     },
 );
 
@@ -664,17 +508,7 @@ test(
             .samples =
             [];
 
-        const result =
-            evaluateBiometricCalibrationExecutionManifest(
-                manifest,
-            );
-
-        assert.deepEqual(
-            result.blockers,
-            [
-                "EMPTY_COLLECTION",
-            ],
-        );
+        assertManifestBlockers(manifest, ["EMPTY_COLLECTION"]);
     },
 );
 

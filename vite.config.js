@@ -24,7 +24,7 @@ function safescanCameraDevStatusPlugin() {
 
                     const remoto = req.socket.remoteAddress;
 
-                    if (!["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(remoto)) {
+                    if (!["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(remoto)) { // NOSONAR - explicit loopback-only DEV boundary.
                         responder(403, { error: "local_only" });
                         return;
                     }
@@ -107,7 +107,7 @@ function safeScanDevGatewayHealthPlugin() {
   const isLoopback = (address) =>
     address === '127.0.0.1' ||
     address === '::1' ||
-    address === '::ffff:127.0.0.1';
+    address === '::ffff:127.0.0.1'; // NOSONAR - explicit IPv4-mapped loopback value.
 
   return {
     name: 'safescan-dev-gateway-health',
@@ -368,7 +368,7 @@ function safeScanDevGatewayHealthPlugin() {
               Number.isFinite(f.maxConfidence) &&
               f.maxConfidence >= 0 && f.maxConfidence <= 1;
             const stamp = typeof f?.updatedAt === 'string'
-              ? Date.parse(f.updatedAt) : NaN;
+              ? Date.parse(f.updatedAt) : Number.NaN;
             const fresh =
               Number.isFinite(stamp) &&
               stamp <= Date.now() &&

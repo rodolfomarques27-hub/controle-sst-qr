@@ -4,6 +4,9 @@ import assert from "node:assert/strict";
 import {
     evaluateBiometricCalibrationExecutionValidation,
 } from "../src/identity/biometricCalibrationExecutionValidator.mjs";
+import {
+    createCommonAnalysisAcceptancePolicies,
+} from "./biometricCalibrationVerificationFixtures.mjs";
 
 const PROTOCOL_VERSION =
     "r7f-v1";
@@ -208,64 +211,7 @@ function validControlledStudyContract() {
             },
         },
 
-        analysisPolicy: {
-            thresholdGrid: [
-                0.2,
-                0.4,
-                0.6,
-                0.8,
-            ],
-
-            percentilePoints: [
-                0,
-                0.5,
-                0.95,
-                1,
-            ],
-
-            minimumSampleCounts: {
-                genuineComparisons:
-                    1,
-
-                impostorComparisons:
-                    1,
-
-                matedSearches:
-                    1,
-
-                nonMatedSearches:
-                    1,
-            },
-        },
-
-        acceptancePolicy: {
-            maxFmr:
-                0.1,
-
-            maxFnmr:
-                0.1,
-
-            maxFpir:
-                0.1,
-
-            maxFnir:
-                0.1,
-
-            minimumEvaluationParticipants:
-                3,
-
-            minimumGenuineComparisons:
-                1,
-
-            minimumImpostorComparisons:
-                1,
-
-            minimumMatedSearches:
-                1,
-
-            minimumNonMatedSearches:
-                1,
-        },
+        ...createCommonAnalysisAcceptancePolicies(),
     };
 }
 

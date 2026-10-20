@@ -1,11 +1,17 @@
 // SafeScan B5-B3-B1: ephemeral fixture ONLY. It DOES NOT apply a revocation migration.
 // --pg <container> uses local `docker exec`/psql only, never opens ports or network sockets.
 import {spawn,spawnSync} from 'node:child_process';
+import {resolveTrustedDockerCli} from './trustedDockerCli.mjs';
 import assert from 'node:assert/strict';
-const container=process.argv[3];
+function requireContainerName(value){
+ if(typeof value!=='string'||!/^[a-z0-9-]{4,64}$/.test(value))throw new Error('INVALID_DOCKER_CONTAINER');
+ return value;
+}
+const dockerCli=resolveTrustedDockerCli();
+const container=requireContainerName(process.argv[3]);
 const args=()=>['exec','-i',container,'psql','-X','-A','-t','-v','ON_ERROR_STOP=1','-U','postgres','-d','postgres'];
 function pg(sql,{expectFail=false}={}){
- const p=spawnSync('docker',args(sql),{input:sql,encoding:'utf8',timeout:15000,maxBuffer:500_000,windowsHide:true});
+ const p=spawnSync(dockerCli,args(),{input:sql,encoding:'utf8',timeout:15000,maxBuffer:500_000,windowsHide:true});
  if(p.error)throw p.error;
  if(expectFail){assert.notEqual(p.status,0,`Expected SQL denial: ${p.stdout}`);return p.stderr;}
  assert.equal(p.status,0,`SQL: ${p.stderr}`);return p.stdout.trim();
@@ -14,7 +20,7 @@ function asyncPg(sql,marker){
  let resolveMarker,rejectMarker;
  const markerSeen=new Promise((resolve,reject)=>{resolveMarker=resolve;rejectMarker=reject;});
  const finished=new Promise((resolve,reject)=>{
-  const p=spawn('docker',args(sql),{stdio:['pipe','pipe','pipe'],windowsHide:true});
+  const p=spawn(dockerCli,args(),{stdio:['pipe','pipe','pipe'],windowsHide:true});
   let stdout='',stderr='';p.stdout.setEncoding('utf8');p.stderr.setEncoding('utf8');
   p.stdout.on('data',s=>{stdout+=s; if(marker && stdout.includes(marker))resolveMarker();});
   p.stderr.on('data',s=>stderr+=s);

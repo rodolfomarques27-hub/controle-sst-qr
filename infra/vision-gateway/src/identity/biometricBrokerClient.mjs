@@ -45,7 +45,22 @@ function normalizeUrl(value, allowInsecureHttpForTests) {
         );
     }
 
-    return parsed.href.replace(/\/+$/, "");
+    let href =
+        parsed.href;
+
+    while (
+        href.endsWith(
+            "/",
+        )
+    ) {
+        href =
+            href.slice(
+                0,
+                -1,
+            );
+    }
+
+    return href;
 }
 
 function normalizeToken(value) {

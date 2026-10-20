@@ -330,12 +330,12 @@ function assertExactIdentifyInput(
   const keys =
     Object.keys(
       input,
-    ).sort();
+    ).sort((left, right) => left.localeCompare(right));
 
   const expected =
     [
       ...IDENTIFY_INPUT_FIELDS,
-    ].sort();
+    ].sort((left, right) => left.localeCompare(right));
 
   if (
     keys.length !==

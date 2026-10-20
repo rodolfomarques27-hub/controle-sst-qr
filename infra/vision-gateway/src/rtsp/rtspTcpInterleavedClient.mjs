@@ -68,7 +68,7 @@ function normalizeCredentials(
 function md5(
     value,
 ) {
-    return createHash(
+    return createHash( // NOSONAR - MD5 is required by the negotiated RTSP Digest algorithm; it is not used for password storage or generic integrity.
         "md5",
     )
         .update(
@@ -104,15 +104,89 @@ function parseDigestChallenge(
             "",
         );
 
+    const fields =
+        [];
+
+    let fieldStart =
+        0;
+
+    let quoted =
+        false;
+
     for (
-        const match of
-        body.matchAll(
-            /([A-Za-z0-9_-]+)\s*=\s*(?:"([^"]*)"|([^,\s]+))/g,
-        )
+        let index = 0;
+        index <= body.length;
+        index += 1
     ) {
+        const character =
+            body[index];
+
+        if (character === '"') {
+            quoted =
+                !quoted;
+        }
+
+        if (
+            index === body.length ||
+            (
+                character === "," &&
+                !quoted
+            )
+        ) {
+            fields.push(
+                body.slice(
+                    fieldStart,
+                    index,
+                ),
+            );
+
+            fieldStart =
+                index + 1;
+        }
+    }
+
+    for (const field of fields) {
+        const separator =
+            field.indexOf(
+                "=",
+            );
+
+        if (separator <= 0) {
+            continue;
+        }
+
+        const key =
+            field.slice(
+                0,
+                separator,
+            ).trim();
+
+        if (
+            !/^[A-Za-z0-9_-]+$/.test(
+                key,
+            )
+        ) {
+            continue;
+        }
+
+        const rawValue =
+            field.slice(
+                separator + 1,
+            ).trim();
+
+        const value =
+            rawValue.length >= 2 &&
+            rawValue.startsWith('"') &&
+            rawValue.endsWith('"')
+                ? rawValue.slice(
+                    1,
+                    -1,
+                )
+                : rawValue;
+
         parameters.set(
-            match[1].toLowerCase(),
-            match[2] ?? match[3] ?? "",
+            key.toLowerCase(),
+            value,
         );
     }
 
@@ -424,19 +498,62 @@ function parseSdpVideo(
             continue;
         }
 
-        const fmtpMatch =
-            /^a=fmtp:(\d+)\s+(.+)$/i.exec(
-                line,
-            );
+        const fmtpPrefix =
+            "a=fmtp:";
 
-        if (fmtpMatch) {
-            fmtpByPayload.set(
-                Number.parseInt(
-                    fmtpMatch[1],
-                    10,
-                ),
-                fmtpMatch[2],
-            );
+        if (
+            line.slice(
+                0,
+                fmtpPrefix.length,
+            ).toLowerCase() ===
+            fmtpPrefix
+        ) {
+            const remainder =
+                line.slice(
+                    fmtpPrefix.length,
+                );
+
+            let separatorIndex =
+                0;
+
+            while (
+                separatorIndex < remainder.length &&
+                remainder.charCodeAt(separatorIndex) >= 48 &&
+                remainder.charCodeAt(separatorIndex) <= 57
+            ) {
+                separatorIndex +=
+                    1;
+            }
+
+            const separator =
+                remainder[
+                    separatorIndex
+                ];
+
+            const fmtpValue =
+                remainder.slice(
+                    separatorIndex,
+                ).trim();
+
+            if (
+                separatorIndex > 0 &&
+                (
+                    separator === " " ||
+                    separator === "\t"
+                ) &&
+                fmtpValue
+            ) {
+                fmtpByPayload.set(
+                    Number.parseInt(
+                        remainder.slice(
+                            0,
+                            separatorIndex,
+                        ),
+                        10,
+                    ),
+                    fmtpValue,
+                );
+            }
         }
     }
 
@@ -466,8 +583,37 @@ function parseSdpVideo(
             `rtsp://${aggregate.host}${control}`;
     }
     else {
+        let aggregateBase =
+            aggregateUri;
+
+        while (
+            aggregateBase.endsWith(
+                "/",
+            )
+        ) {
+            aggregateBase =
+                aggregateBase.slice(
+                    0,
+                    -1,
+                );
+        }
+
+        let controlPath =
+            control;
+
+        while (
+            controlPath.startsWith(
+                "/",
+            )
+        ) {
+            controlPath =
+                controlPath.slice(
+                    1,
+                );
+        }
+
         trackUri =
-            `${aggregateUri.replace(/\/+$/, "")}/${control.replace(/^\/+/, "")}`;
+            `${aggregateBase}/${controlPath}`;
     }
 
     let donlExpected =

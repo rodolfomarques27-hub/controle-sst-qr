@@ -59,7 +59,8 @@ function canonicalBase64UrlSignature(input) {
         const binary = atob(base64);
         if (binary.length !== 32) return null;
         const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
-        const normalized = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+        let normalized = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_');
+        while (normalized.endsWith('=')) normalized = normalized.slice(0, -1);
         return normalized === input ? bytes : null;
     } catch {
         return null;

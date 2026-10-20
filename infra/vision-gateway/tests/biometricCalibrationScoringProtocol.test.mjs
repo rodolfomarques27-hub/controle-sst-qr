@@ -147,6 +147,86 @@ function threeEnrollments(
     ];
 }
 
+function standardSamples({
+    includeParticipantB = false,
+    probeParticipantId = "participant-a",
+    probeEmbeddingIndex = 0,
+    participantAEnrollmentCount = 3,
+} = {}) {
+    const samples =
+        threeEnrollments(
+            "participant-a",
+            unitEmbedding(0),
+        ).slice(
+            0,
+            participantAEnrollmentCount,
+        );
+
+    if (includeParticipantB) {
+        samples.push(
+            ...threeEnrollments(
+                "participant-b",
+                unitEmbedding(1),
+            ),
+        );
+    }
+
+    samples.push(
+        probe(
+            probeParticipantId,
+            "01",
+            unitEmbedding(
+                probeEmbeddingIndex,
+            ),
+        ),
+    );
+
+    return samples;
+}
+
+function identificationRequestBase(samples) {
+    return {
+        protocol: protocol(),
+        samples,
+        probeSampleId: "participant-x-probe-01",
+    };
+}
+
+function identificationRequestDefaults(
+    samples,
+    kind = "NON_MATED",
+) {
+    return {
+        ...identificationRequestBase(samples),
+        galleryParticipantIds: [
+            "participant-a",
+            "participant-b",
+        ],
+        kind,
+    };
+}
+
+function verificationRequestBase(samples) {
+    return {
+        protocol: protocol(),
+        samples,
+        enrollmentSampleId: "participant-a-enroll-01",
+        probeSampleId: "participant-a-probe-01",
+    };
+}
+
+function assertProtocolRejects(
+    value,
+    expected,
+) {
+    assert.throws(
+        () =>
+            createBiometricCalibrationScoringProtocol(
+                value,
+            ),
+        expected,
+    );
+}
 test(
     "protocolo valido congela a semantica autorizada",
     () => {
@@ -200,11 +280,8 @@ test(
 
         delete value.profileId;
 
-        assert.throws(
-            () =>
-                createBiometricCalibrationScoringProtocol(
-                    value,
-                ),
+        assertProtocolRejects(
+            value,
             /profileId/,
         );
     },
@@ -219,11 +296,8 @@ test(
         value.verificationReferenceAggregation =
             "SINGLE_REFERENCE";
 
-        assert.throws(
-            () =>
-                createBiometricCalibrationScoringProtocol(
-                    value,
-                ),
+        assertProtocolRejects(
+            value,
             /PARTICIPANT_ENROLLMENT_CENTROID/,
         );
     },
@@ -238,11 +312,8 @@ test(
         value.identificationReferenceAggregation =
             "SINGLE_REFERENCE";
 
-        assert.throws(
-            () =>
-                createBiometricCalibrationScoringProtocol(
-                    value,
-                ),
+        assertProtocolRejects(
+            value,
             /PARTICIPANT_ENROLLMENT_CENTROID/,
         );
     },
@@ -258,11 +329,8 @@ test(
             MIN_ACTIVE_REFERENCES -
             1;
 
-        assert.throws(
-            () =>
-                createBiometricCalibrationScoringProtocol(
-                    value,
-                ),
+        assertProtocolRejects(
+            value,
             /exatamente/,
         );
     },
@@ -278,11 +346,8 @@ test(
             MAX_ACTIVE_REFERENCES +
             1;
 
-        assert.throws(
-            () =>
-                createBiometricCalibrationScoringProtocol(
-                    value,
-                ),
+        assertProtocolRejects(
+            value,
             /maximumEnrollmentReferencesPerParticipant/,
         );
     },
@@ -298,11 +363,8 @@ test(
             MIN_ACTIVE_REFERENCES -
             1;
 
-        assert.throws(
-            () =>
-                createBiometricCalibrationScoringProtocol(
-                    value,
-                ),
+        assertProtocolRejects(
+            value,
             /maximumEnrollmentReferencesPerParticipant/,
         );
     },
@@ -317,11 +379,8 @@ test(
         value.embeddingRetention =
             "PERSIST";
 
-        assert.throws(
-            () =>
-                createBiometricCalibrationScoringProtocol(
-                    value,
-                ),
+        assertProtocolRejects(
+            value,
             /MEMORY_ONLY/,
         );
     },
@@ -336,11 +395,8 @@ test(
         value.persistedArtifacts =
             "EMBEDDINGS";
 
-        assert.throws(
-            () =>
-                createBiometricCalibrationScoringProtocol(
-                    value,
-                ),
+        assertProtocolRejects(
+            value,
             /EXECUTION_MANIFEST_AND_R7C_DATASET/,
         );
     },
@@ -413,16 +469,7 @@ test(
 
         const result =
             scoreBiometricCalibrationVerification({
-                protocol:
-                    protocol(),
-
-                samples,
-
-                enrollmentSampleId:
-                    "participant-a-enroll-01",
-
-                probeSampleId:
-                    "participant-a-probe-01",
+                ...verificationRequestBase(samples),
             });
 
         const expected =
@@ -444,30 +491,7 @@ test(
 test(
     "enrollmentSampleId identifica o participante alvo da verification",
     () => {
-        const samples =
-            [
-                ...threeEnrollments(
-                    "participant-a",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-
-                ...threeEnrollments(
-                    "participant-b",
-                    unitEmbedding(
-                        1,
-                    ),
-                ),
-
-                probe(
-                    "participant-x",
-                    "01",
-                    unitEmbedding(
-                        1,
-                    ),
-                ),
-            ];
+        const samples = standardSamples({ includeParticipantB: true, probeParticipantId: "participant-x", probeEmbeddingIndex: 1 });
 
         const result =
             scoreBiometricCalibrationVerification({
@@ -496,44 +520,12 @@ test(
 test(
     "verification rejeita participante com menos ENROLLMENT que o lifecycle",
     () => {
-        const samples =
-            [
-                enrollment(
-                    "participant-a",
-                    "01",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-                enrollment(
-                    "participant-a",
-                    "02",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-                probe(
-                    "participant-a",
-                    "01",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-            ];
+        const samples = standardSamples({ participantAEnrollmentCount: 2 });
 
         assert.throws(
             () =>
                 scoreBiometricCalibrationVerification({
-                    protocol:
-                        protocol(),
-
-                    samples,
-
-                    enrollmentSampleId:
-                        "participant-a-enroll-01",
-
-                    probeSampleId:
-                        "participant-a-probe-01",
+                    ...verificationRequestBase(samples),
                 }),
             /minimo/,
         );
@@ -626,23 +618,7 @@ test(
 test(
     "samples com profileId incompatível sao rejeitadas",
     () => {
-        const samples =
-            [
-                ...threeEnrollments(
-                    "participant-a",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-
-                probe(
-                    "participant-a",
-                    "01",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-            ];
+        const samples = standardSamples();
 
         samples[0].profileId =
             "other-profile";
@@ -650,16 +626,7 @@ test(
         assert.throws(
             () =>
                 scoreBiometricCalibrationVerification({
-                    protocol:
-                        protocol(),
-
-                    samples,
-
-                    enrollmentSampleId:
-                        "participant-a-enroll-01",
-
-                    probeSampleId:
-                        "participant-a-probe-01",
+                    ...verificationRequestBase(samples),
                 }),
             /profileId/,
         );
@@ -690,16 +657,7 @@ test(
         assert.throws(
             () =>
                 scoreBiometricCalibrationVerification({
-                    protocol:
-                        protocol(),
-
-                    samples,
-
-                    enrollmentSampleId:
-                        "participant-a-enroll-01",
-
-                    probeSampleId:
-                        "participant-a-probe-01",
+                    ...verificationRequestBase(samples),
                 }),
             /embedding invalido/,
         );
@@ -853,49 +811,11 @@ test(
 test(
     "MATED deriva top1IsMate do ranking e nao de threshold",
     () => {
-        const samples =
-            [
-                ...threeEnrollments(
-                    "participant-a",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-
-                ...threeEnrollments(
-                    "participant-b",
-                    unitEmbedding(
-                        1,
-                    ),
-                ),
-
-                probe(
-                    "participant-x",
-                    "01",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-            ];
+        const samples = standardSamples({ includeParticipantB: true, probeParticipantId: "participant-x" });
 
         const result =
             scoreBiometricCalibrationIdentification({
-                protocol:
-                    protocol(),
-
-                samples,
-
-                probeSampleId:
-                    "participant-x-probe-01",
-
-                galleryParticipantIds:
-                    [
-                        "participant-a",
-                        "participant-b",
-                    ],
-
-                kind:
-                    "MATED",
+                ...identificationRequestDefaults(samples, "MATED"),
 
                 mateParticipantId:
                     "participant-b",
@@ -911,49 +831,11 @@ test(
 test(
     "NON_MATED nao produz top1IsMate",
     () => {
-        const samples =
-            [
-                ...threeEnrollments(
-                    "participant-a",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-
-                ...threeEnrollments(
-                    "participant-b",
-                    unitEmbedding(
-                        1,
-                    ),
-                ),
-
-                probe(
-                    "participant-x",
-                    "01",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-            ];
+        const samples = standardSamples({ includeParticipantB: true, probeParticipantId: "participant-x" });
 
         const result =
             scoreBiometricCalibrationIdentification({
-                protocol:
-                    protocol(),
-
-                samples,
-
-                probeSampleId:
-                    "participant-x-probe-01",
-
-                galleryParticipantIds:
-                    [
-                        "participant-a",
-                        "participant-b",
-                    ],
-
-                kind:
-                    "NON_MATED",
+                ...identificationRequestDefaults(samples),
             });
 
         assert.equal(
@@ -969,50 +851,12 @@ test(
 test(
     "NON_MATED rejeita mateParticipantId",
     () => {
-        const samples =
-            [
-                ...threeEnrollments(
-                    "participant-a",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-
-                ...threeEnrollments(
-                    "participant-b",
-                    unitEmbedding(
-                        1,
-                    ),
-                ),
-
-                probe(
-                    "participant-x",
-                    "01",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-            ];
+        const samples = standardSamples({ includeParticipantB: true, probeParticipantId: "participant-x" });
 
         assert.throws(
             () =>
                 scoreBiometricCalibrationIdentification({
-                    protocol:
-                        protocol(),
-
-                    samples,
-
-                    probeSampleId:
-                        "participant-x-probe-01",
-
-                    galleryParticipantIds:
-                        [
-                            "participant-a",
-                            "participant-b",
-                        ],
-
-                    kind:
-                        "NON_MATED",
+                    ...identificationRequestDefaults(samples),
 
                     mateParticipantId:
                         "participant-a",
@@ -1025,50 +869,12 @@ test(
 test(
     "MATED exige mateParticipantId dentro da galeria",
     () => {
-        const samples =
-            [
-                ...threeEnrollments(
-                    "participant-a",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-
-                ...threeEnrollments(
-                    "participant-b",
-                    unitEmbedding(
-                        1,
-                    ),
-                ),
-
-                probe(
-                    "participant-x",
-                    "01",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-            ];
+        const samples = standardSamples({ includeParticipantB: true, probeParticipantId: "participant-x" });
 
         assert.throws(
             () =>
                 scoreBiometricCalibrationIdentification({
-                    protocol:
-                        protocol(),
-
-                    samples,
-
-                    probeSampleId:
-                        "participant-x-probe-01",
-
-                    galleryParticipantIds:
-                        [
-                            "participant-a",
-                            "participant-b",
-                        ],
-
-                    kind:
-                        "MATED",
+                    ...identificationRequestDefaults(samples, "MATED"),
 
                     mateParticipantId:
                         "participant-c",
@@ -1081,34 +887,12 @@ test(
 test(
     "galleryParticipantIds exige pelo menos dois candidatos",
     () => {
-        const samples =
-            [
-                ...threeEnrollments(
-                    "participant-a",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-
-                probe(
-                    "participant-x",
-                    "01",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-            ];
+        const samples = standardSamples({ probeParticipantId: "participant-x" });
 
         assert.throws(
             () =>
                 scoreBiometricCalibrationIdentification({
-                    protocol:
-                        protocol(),
-
-                    samples,
-
-                    probeSampleId:
-                        "participant-x-probe-01",
+                    ...identificationRequestBase(samples),
 
                     galleryParticipantIds:
                         [
@@ -1126,34 +910,12 @@ test(
 test(
     "galleryParticipantIds nao aceita participante duplicado",
     () => {
-        const samples =
-            [
-                ...threeEnrollments(
-                    "participant-a",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-
-                probe(
-                    "participant-x",
-                    "01",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-            ];
+        const samples = standardSamples({ probeParticipantId: "participant-x" });
 
         assert.throws(
             () =>
                 scoreBiometricCalibrationIdentification({
-                    protocol:
-                        protocol(),
-
-                    samples,
-
-                    probeSampleId:
-                        "participant-x-probe-01",
+                    ...identificationRequestBase(samples),
 
                     galleryParticipantIds:
                         [
@@ -1201,22 +963,7 @@ test(
         assert.throws(
             () =>
                 scoreBiometricCalibrationIdentification({
-                    protocol:
-                        protocol(),
-
-                    samples,
-
-                    probeSampleId:
-                        "participant-x-probe-01",
-
-                    galleryParticipantIds:
-                        [
-                            "participant-a",
-                            "participant-b",
-                        ],
-
-                    kind:
-                        "NON_MATED",
+                    ...identificationRequestDefaults(samples),
                 }),
             /minimo/,
         );
@@ -1226,37 +973,12 @@ test(
 test(
     "threshold nao pode ser injetado em request de verification",
     () => {
-        const samples =
-            [
-                ...threeEnrollments(
-                    "participant-a",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-
-                probe(
-                    "participant-a",
-                    "01",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-            ];
+        const samples = standardSamples();
 
         assert.throws(
             () =>
                 scoreBiometricCalibrationVerification({
-                    protocol:
-                        protocol(),
-
-                    samples,
-
-                    enrollmentSampleId:
-                        "participant-a-enroll-01",
-
-                    probeSampleId:
-                        "participant-a-probe-01",
+                    ...verificationRequestBase(samples),
 
                     matchThreshold:
                         0.5,
@@ -1269,50 +991,12 @@ test(
 test(
     "threshold nao pode ser injetado em request de identification",
     () => {
-        const samples =
-            [
-                ...threeEnrollments(
-                    "participant-a",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-
-                ...threeEnrollments(
-                    "participant-b",
-                    unitEmbedding(
-                        1,
-                    ),
-                ),
-
-                probe(
-                    "participant-x",
-                    "01",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-            ];
+        const samples = standardSamples({ includeParticipantB: true, probeParticipantId: "participant-x" });
 
         assert.throws(
             () =>
                 scoreBiometricCalibrationIdentification({
-                    protocol:
-                        protocol(),
-
-                    samples,
-
-                    probeSampleId:
-                        "participant-x-probe-01",
-
-                    galleryParticipantIds:
-                        [
-                            "participant-a",
-                            "participant-b",
-                        ],
-
-                    kind:
-                        "NON_MATED",
+                    ...identificationRequestDefaults(samples),
 
                     candidateThreshold:
                         0.4,
@@ -1325,49 +1009,11 @@ test(
 test(
     "outputs de scoring nao expoem embeddings frames crops ou ids de participantes",
     () => {
-        const samples =
-            [
-                ...threeEnrollments(
-                    "participant-a",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-
-                ...threeEnrollments(
-                    "participant-b",
-                    unitEmbedding(
-                        1,
-                    ),
-                ),
-
-                probe(
-                    "participant-x",
-                    "01",
-                    unitEmbedding(
-                        0,
-                    ),
-                ),
-            ];
+        const samples = standardSamples({ includeParticipantB: true, probeParticipantId: "participant-x" });
 
         const result =
             scoreBiometricCalibrationIdentification({
-                protocol:
-                    protocol(),
-
-                samples,
-
-                probeSampleId:
-                    "participant-x-probe-01",
-
-                galleryParticipantIds:
-                    [
-                        "participant-a",
-                        "participant-b",
-                    ],
-
-                kind:
-                    "NON_MATED",
+                ...identificationRequestDefaults(samples),
             });
 
         assert.deepEqual(

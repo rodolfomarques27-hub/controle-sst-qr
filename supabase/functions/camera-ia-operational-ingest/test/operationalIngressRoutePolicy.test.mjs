@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import test from 'node:test';
 import { createHmac, createHash, randomUUID } from 'node:crypto';
 import { createOperationalIngestContract } from '../operationalIngestContract.mjs';
 import { createUnMountedOperationalIngressRoutePolicy,
@@ -215,4 +216,9 @@ async function run() {
     assert.equal((await setup().route.handle(new Request(ENDPOINT,{method:'GET'}))).status,405);
     console.log('R10K_3C4F_C3EB_OFFLINE_HTTP_POLICY=GREEN');
 }
-run().catch((error)=>{console.error(error);process.exitCode=1;});
+test(
+    'operational ingress route policy — offline contract',
+    async () => {
+        await run();
+    },
+);

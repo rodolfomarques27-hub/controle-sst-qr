@@ -17,7 +17,7 @@ const TTL_MS = 60000;
 const MAX_BODY_BYTES = 1024;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const LOCAL = new Set([
-  '127.0.0.1', '::1', '::ffff:127.0.0.1'
+  '127.0.0.1', '::1', '::ffff:127.0.0.1' // NOSONAR - explicit loopback-only allowlist.
 ]);
 
 function reply(response, status, data) {

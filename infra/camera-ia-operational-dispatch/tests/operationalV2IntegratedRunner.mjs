@@ -4,10 +4,12 @@
  */
 import assert from 'node:assert/strict';
 import {spawn,execFileSync} from 'node:child_process';
+import {resolveTrustedDockerCli} from './trustedDockerCli.mjs';
 import {fileURLToPath} from 'node:url';
 import {dirname,join} from 'node:path';
 const dir=dirname(fileURLToPath(import.meta.url));
 const script=join(dir,'operationalV2IntegratedWorker.mjs');
+const dockerCli=resolveTrustedDockerCli();
 const container=process.env.SAFESCAN_B4E_CONTAINER;
 assert.match(container??'',/^safescan-b4e-[a-f0-9]{12}$/);
 function child(mode,token){
@@ -25,7 +27,7 @@ function child(mode,token){
     });
 }
 function pg(sql){
-    return execFileSync('docker',['exec','-i',container,'psql','-X','-q','-t','-A','-v','ON_ERROR_STOP=1','-U','postgres','-d','postgres'],
+    return execFileSync(dockerCli,['exec','-i',container,'psql','-X','-q','-t','-A','-v','ON_ERROR_STOP=1','-U','postgres','-d','postgres'],
         {input:sql,encoding:'utf8',timeout:90000,maxBuffer:2*1024*1024,stdio:['pipe','pipe','pipe']}).trim();
 }
 function scalar(sql){const val=pg(sql).split(/\r?\n/).filter(Boolean);assert.equal(val.length,1);return val[0]}
@@ -45,10 +47,10 @@ const first=await child('replay-first');
 assert.equal(first.ok,true);assert.equal(first.status,200);assert.equal(first.count,100);
 assert.equal(first.lastSeq,'100');
 console.log('B4E_POSTGRES_100_EVENT_SSE_HMAC_CURSOR=GREEN');
-execFileSync('docker',['restart',container],{encoding:'utf8',timeout:90000,stdio:['ignore','pipe','pipe']});
+execFileSync(dockerCli,['restart',container],{encoding:'utf8',timeout:90000,stdio:['ignore','pipe','pipe']});
 let ready=false;
 for(let n=0;n<90;n++){
-    try{execFileSync('docker',['exec',container,'pg_isready','-U','postgres','-d','postgres'],{
+    try{execFileSync(dockerCli,['exec',container,'pg_isready','-U','postgres','-d','postgres'],{
         timeout:4000,stdio:'ignore'});ready=true;break;}catch{await new Promise(r=>setTimeout(r,250))}
 }
 assert.equal(ready,true);

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import test from 'node:test';
 import { randomUUID, createHash, createHmac } from 'node:crypto';
 import { createOperationalIngestContract } from '../operationalIngestContract.mjs';
 import { createUnMountedOperationalIngressRoutePolicy } from '../operationalIngressRoutePolicy.mjs';
@@ -245,4 +246,9 @@ async function main(){
     console.log('R10K_3C4F_C3EC_OFFLINE_TRANSPORT=GREEN');
 }
 
-main().catch(err=>{console.error(err);process.exitCode=1;});
+test(
+    'operational pinned HTTPS transport — offline contract',
+    async () => {
+        await main();
+    },
+);
