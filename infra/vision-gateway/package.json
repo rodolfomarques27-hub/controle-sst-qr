@@ -1,0 +1,17 @@
+{
+  "name": "@safescan/vision-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "start": "node src/index.mjs",
+    "test": "node --test",
+    "check": "node --check src/index.mjs"
+  },
+  "dependencies": {
+    "onnxruntime-node": "1.30.0"
+  }
+}

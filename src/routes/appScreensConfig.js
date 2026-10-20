@@ -1,5 +1,6 @@
 export const ORDEM_TELAS_INICIAIS_PERMITIDAS_APP = Object.freeze([
     "dashboard",
+    "cameraIa",
     "auditoriaCampo",
     "novaAuditoriaCampo",
     "qr",
@@ -18,6 +19,7 @@ export const ORDEM_TELAS_INICIAIS_PERMITIDAS_APP = Object.freeze([
 
 export const ORDEM_REDIRECIONAMENTO_TELAS_PERMITIDAS = Object.freeze([
     "dashboard",
+    "cameraIa",
     "vistoriaExtintores",
     "mapaObra",
     "mapaObraVisualizacao",
@@ -40,6 +42,7 @@ export const ORDEM_REDIRECIONAMENTO_TELAS_PERMITIDAS = Object.freeze([
 
 export const ROTULOS_TELAS_ACESSO_BLOQUEADO = Object.freeze({
     dashboard: "Dashboard SST",
+    cameraIa: "Controle de Acesso IA",
     vistoriaExtintores: "Vistoria de extintores",
     mapaObra: "Mapa da Obra",
     mapaObraVisualizacao: "Mapa da Obra - Consulta",
@@ -63,6 +66,7 @@ export const ROTULOS_TELAS_ACESSO_BLOQUEADO = Object.freeze({
 
 const CARREGADORES_MODULOS_TELAS = Object.freeze({
     dashboard: () => import("../components/dashboard/Dashboard"),
+    cameraIa: () => import("../features/camera-ia/pages/CameraIaPreviewPage"),
     extintores: () => import("../components/extintores/ExtintoresPage"),
     vistoriaExtintores: () =>
         import("../components/extintores/VistoriaExtintoresPage"),

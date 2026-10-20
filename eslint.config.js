@@ -23,6 +23,53 @@ export default [
         },
     },
     {
+        files: [
+            "infra/vision-gateway/**/*.mjs",
+            "infra/camera-ia-operational-dispatch/**/*.mjs",
+            "supabase/functions/camera-ia-operational-ingest/test/**/*.mjs",
+        ],
+        languageOptions: {
+            globals: {
+                ...globals.nodeBuiltin,
+                AbortController: "readonly",
+                Headers: "readonly",
+                Request: "readonly",
+                Response: "readonly",
+                TextDecoder: "readonly",
+                TextEncoder: "readonly",
+                URL: "readonly",
+                atob: "readonly",
+                btoa: "readonly",
+            },
+        },
+    },
+    {
+        files: [
+            "supabase/functions/camera-ia-operational-ingest/**/*.mjs",
+        ],
+        ignores: [
+            "supabase/functions/camera-ia-operational-ingest/test/**/*.mjs",
+        ],
+        languageOptions: {
+            globals: {
+                ...globals.denoBuiltin,
+            },
+        },
+    },
+    {
+        files: [
+            "src/features/camera-ia/**/*.mjs",
+        ],
+        languageOptions: {
+            ecmaVersion: "latest",
+            sourceType: "module",
+            globals: {
+                ...globals.browser,
+                ...globals.es2021,
+            },
+        },
+    },
+    {
         files: ["src/**/*.{js,jsx}"],
         languageOptions: {
             ecmaVersion: "latest",

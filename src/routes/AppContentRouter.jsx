@@ -31,6 +31,7 @@ const ConsultaQR = React.lazy(() => import("../components/qr/ConsultaQR").then((
 const Requisitos = React.lazy(() => import("../components/Requisitos").then((modulo) => ({ default: modulo.Requisitos })));
 const Aniversariantes = React.lazy(() => import("../components/aniversariantes/AniversariantesPage").then((modulo) => ({ default: modulo.Aniversariantes })));
 const Dashboard = React.lazy(() => import("../components/dashboard/Dashboard").then((modulo) => ({ default: modulo.Dashboard })));
+const CameraIaPreviewPage = React.lazy(() => import("../features/camera-ia/pages/CameraIaPreviewPage").then((modulo) => ({ default: modulo.CameraIaPreviewPage })));
 const Extintores = React.lazy(() => import("../components/extintores/ExtintoresPage").then((modulo) => ({ default: modulo.ExtintoresPage })));
 const VistoriaExtintores = React.lazy(() => import("../components/extintores/VistoriaExtintoresPage").then((modulo) => ({ default: modulo.VistoriaExtintoresPage })));
 const MapaObra = React.lazy(() => import("../components/mapa/MapaObraPage").then((modulo) => ({ default: modulo.MapaObraPage })));
@@ -1235,6 +1236,7 @@ export function AppContentRouter({
                 />
             )}
 
+            {tela === "cameraIa" && <CameraIaPreviewPage />}
             {tela === "vistoriaExtintores" && <VistoriaExtintores />}
             {tela === "mapaObra" && <MapaObra empresasBanco={empresasBanco} obrasEmpresasBanco={obrasEmpresasBanco} auditoriasCampo={auditoriasCampo} />}
             {tela === "mapaObraVisualizacao" && <MapaObraVisualizacao auditoriasCampo={auditoriasCampo} />}
