@@ -91,7 +91,7 @@ const ALIGNMENT_POLICY =
             1,
 
         maxRmsError:
-            1e-5,
+            8,
     });
 
 function l2Norm(
@@ -1821,5 +1821,149 @@ test(
                 true,
             );
         }
+    },
+);
+
+/*
+ * D47-P24.
+ * Candidate validation only.
+ * No camera, frame, image or biometric persistence.
+ */
+const { test: p24Test } =
+    await import(
+        "node:test",
+    );
+
+const p24Assert =
+    await import(
+        "node:assert/strict",
+    );
+
+p24Test(
+    "P24 maxRmsError 8 preserva residuos <=8 e rejeita guard >8",
+    async () => {
+        const alignment =
+            await import(
+                new URL(
+                    "../src/alignment/faceAlignment.mjs",
+                    import.meta.url,
+                ).href,
+            );
+
+        const sface =
+            await import(
+                new URL(
+                    "../src/recognition/sfaceEmbedding.mjs",
+                    import.meta.url,
+                ).href,
+            );
+
+        p24Assert.equal(
+            typeof alignment.estimateSimilarityTransform,
+            "function",
+        );
+
+        p24Assert.equal(
+            sface.SFACE_CANONICAL_LANDMARKS_112.length,
+            5,
+        );
+
+        const canonical =
+            sface.SFACE_CANONICAL_LANDMARKS_112.map(
+                (point) => ({
+                    x: point.x,
+                    y: point.y,
+                }),
+            );
+
+        const createPerturbed = (
+            patternX,
+            patternY,
+            amplitude,
+        ) =>
+            canonical.map(
+                (point, index) => ({
+                    x:
+                        point.x +
+                        patternX[index] * amplitude,
+                    y:
+                        point.y +
+                        patternY[index] * amplitude,
+                }),
+            );
+
+        const severeWithin =
+            createPerturbed(
+                [1.2, -1.1, 0.2, -0.4, 0.5],
+                [0.1, -0.2, 1.3, -1.1, 0.8],
+                5,
+            );
+
+        const severeGuard =
+            createPerturbed(
+                [1.4, -1.3, 0.9, -1.2, 0.3],
+                [-1.1, 1.2, -0.7, 0.6, 1.4],
+                9,
+            );
+
+        const exact =
+            alignment.estimateSimilarityTransform({
+                sourceLandmarks: canonical,
+                targetLandmarks: canonical,
+                maxRmsError: 8,
+            });
+
+        p24Assert.ok(
+            exact.rmsError <= 8,
+        );
+
+        const withinDiagnostic =
+            alignment.estimateSimilarityTransform({
+                sourceLandmarks: severeWithin,
+                targetLandmarks: canonical,
+                maxRmsError: 1000,
+            });
+
+        p24Assert.ok(
+            withinDiagnostic.rmsError > 4,
+        );
+
+        p24Assert.ok(
+            withinDiagnostic.rmsError <= 8,
+        );
+
+        const withinCandidate =
+            alignment.estimateSimilarityTransform({
+                sourceLandmarks: severeWithin,
+                targetLandmarks: canonical,
+                maxRmsError: 8,
+            });
+
+        p24Assert.ok(
+            withinCandidate.rmsError <= 8,
+        );
+
+        const guardDiagnostic =
+            alignment.estimateSimilarityTransform({
+                sourceLandmarks: severeGuard,
+                targetLandmarks: canonical,
+                maxRmsError: 1000,
+            });
+
+        p24Assert.ok(
+            guardDiagnostic.rmsError > 8,
+        );
+
+        p24Assert.throws(
+            () =>
+                alignment.estimateSimilarityTransform({
+                    sourceLandmarks: severeGuard,
+                    targetLandmarks: canonical,
+                    maxRmsError: 8,
+                }),
+            (error) =>
+                error?.code ===
+                "ALIGNMENT_RESIDUAL_TOO_HIGH",
+        );
     },
 );

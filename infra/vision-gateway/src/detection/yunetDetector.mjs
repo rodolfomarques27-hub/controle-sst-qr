@@ -14,7 +14,7 @@ export const YUNET_STRIDES =
     ]);
 
 export const YUNET_DEFAULT_SCORE_THRESHOLD =
-    0.6;
+    0.7;
 
 export const YUNET_DEFAULT_NMS_THRESHOLD =
     0.3;
@@ -331,6 +331,328 @@ function intersectionOverUnion(
     return (
         intersectionArea /
         unionArea
+    );
+}
+
+export const YUNET_MAX_DETECTION_WIDTH =
+    640;
+
+export const YUNET_MAX_DETECTION_HEIGHT =
+    360;
+
+export function fitYunetDetectionDimensions({
+    width,
+    height,
+} = {}) {
+    const sourceWidth =
+        requirePositiveInteger(
+            width,
+            "width",
+        );
+
+    const sourceHeight =
+        requirePositiveInteger(
+            height,
+            "height",
+        );
+
+    const scale =
+        Math.min(
+            1,
+            YUNET_MAX_DETECTION_WIDTH /
+                sourceWidth,
+            YUNET_MAX_DETECTION_HEIGHT /
+                sourceHeight,
+        );
+
+    const detectionWidth =
+        Math.max(
+            1,
+            Math.round(
+                sourceWidth *
+                scale,
+            ),
+        );
+
+    const detectionHeight =
+        Math.max(
+            1,
+            Math.round(
+                sourceHeight *
+                scale,
+            ),
+        );
+
+    return Object.freeze({
+        sourceWidth,
+        sourceHeight,
+
+        detectionWidth,
+        detectionHeight,
+
+        resized:
+            detectionWidth !==
+                sourceWidth ||
+            detectionHeight !==
+                sourceHeight,
+
+        resizeScaleX:
+            detectionWidth /
+            sourceWidth,
+
+        resizeScaleY:
+            detectionHeight /
+            sourceHeight,
+
+        inverseScaleX:
+            sourceWidth /
+            detectionWidth,
+
+        inverseScaleY:
+            sourceHeight /
+            detectionHeight,
+    });
+}
+
+export function resizeBgrForYunetDetection({
+    data,
+    width,
+    height,
+} = {}) {
+    const fit =
+        fitYunetDetectionDimensions({
+            width,
+            height,
+        });
+
+    const bytes =
+        requireBgrBytes(
+            data,
+            fit.sourceWidth,
+            fit.sourceHeight,
+        );
+
+    /*
+     * No upscale and no copy when already
+     * inside the detector envelope.
+     */
+    if (!fit.resized) {
+        return Object.freeze({
+            data:
+                bytes,
+
+            ...fit,
+        });
+    }
+
+    /*
+     * Deterministic nearest-neighbor.
+     *
+     * Same interpolation family used by the
+     * historical 640x360 real-camera proof.
+     */
+    const resizedData =
+        new Uint8Array(
+            fit.detectionWidth *
+            fit.detectionHeight *
+            3,
+        );
+
+    for (
+        let y = 0;
+        y <
+        fit.detectionHeight;
+        y += 1
+    ) {
+        const sourceY =
+            Math.min(
+                fit.sourceHeight -
+                    1,
+
+                Math.floor(
+                    y *
+                    fit.sourceHeight /
+                    fit.detectionHeight,
+                ),
+            );
+
+        for (
+            let x = 0;
+            x <
+            fit.detectionWidth;
+            x += 1
+        ) {
+            const sourceX =
+                Math.min(
+                    fit.sourceWidth -
+                        1,
+
+                    Math.floor(
+                        x *
+                        fit.sourceWidth /
+                        fit.detectionWidth,
+                    ),
+                );
+
+            const sourceOffset =
+                (
+                    sourceY *
+                    fit.sourceWidth +
+                    sourceX
+                ) *
+                3;
+
+            const destinationOffset =
+                (
+                    y *
+                    fit.detectionWidth +
+                    x
+                ) *
+                3;
+
+            resizedData[
+                destinationOffset
+            ] =
+                bytes[
+                    sourceOffset
+                ];
+
+            resizedData[
+                destinationOffset +
+                    1
+            ] =
+                bytes[
+                    sourceOffset +
+                        1
+                ];
+
+            resizedData[
+                destinationOffset +
+                    2
+            ] =
+                bytes[
+                    sourceOffset +
+                        2
+                ];
+        }
+    }
+
+    return Object.freeze({
+        data:
+            resizedData,
+
+        ...fit,
+    });
+}
+
+export function remapYunetDetectionsToSource({
+    detections,
+    sourceWidth,
+    sourceHeight,
+    detectionWidth,
+    detectionHeight,
+} = {}) {
+    if (
+        !Array.isArray(
+            detections,
+        )
+    ) {
+        throw new TypeError(
+            "detections deve ser array.",
+        );
+    }
+
+    const normalizedSourceWidth =
+        requirePositiveInteger(
+            sourceWidth,
+            "sourceWidth",
+        );
+
+    const normalizedSourceHeight =
+        requirePositiveInteger(
+            sourceHeight,
+            "sourceHeight",
+        );
+
+    const normalizedDetectionWidth =
+        requirePositiveInteger(
+            detectionWidth,
+            "detectionWidth",
+        );
+
+    const normalizedDetectionHeight =
+        requirePositiveInteger(
+            detectionHeight,
+            "detectionHeight",
+        );
+
+    const inverseScaleX =
+        normalizedSourceWidth /
+        normalizedDetectionWidth;
+
+    const inverseScaleY =
+        normalizedSourceHeight /
+        normalizedDetectionHeight;
+
+    return Object.freeze(
+        detections.map(
+            (
+                detection,
+            ) => {
+                if (
+                    !detection ||
+                    !Array.isArray(
+                        detection.landmarks,
+                    ) ||
+                    detection.landmarks.length !==
+                        5
+                ) {
+                    throw new TypeError(
+                        "deteccao YuNet deve conter 5 landmarks.",
+                    );
+                }
+
+                return Object.freeze({
+                    ...detection,
+
+                    x:
+                        detection.x *
+                        inverseScaleX,
+
+                    y:
+                        detection.y *
+                        inverseScaleY,
+
+                    width:
+                        detection.width *
+                        inverseScaleX,
+
+                    height:
+                        detection.height *
+                        inverseScaleY,
+
+                    landmarks:
+                        Object.freeze(
+                            detection
+                                .landmarks
+                                .map(
+                                    (
+                                        point,
+                                    ) =>
+                                        Object.freeze({
+                                            x:
+                                                point.x *
+                                                inverseScaleX,
+
+                                            y:
+                                                point.y *
+                                                inverseScaleY,
+                                        }),
+                                ),
+                        ),
+                });
+            },
+        ),
     );
 }
 
@@ -948,43 +1270,102 @@ export async function createYunetDetector({
     } = {}) {
         assertActive();
 
-        const preprocessed =
-            preprocessBgrHwcToNchw({
+        const detectionInput =
+            resizeBgrForYunetDetection({
                 data,
                 width,
                 height,
             });
 
-        const tensor =
-            createCpuFloat32Tensor({
-                data:
-                    preprocessed.data,
+        try {
+            const preprocessed =
+                preprocessBgrHwcToNchw({
+                    data:
+                        detectionInput.data,
 
-                dims:
-                    Array.from(
-                        preprocessed.dims,
-                    ),
+                    width:
+                        detectionInput
+                            .detectionWidth,
+
+                    height:
+                        detectionInput
+                            .detectionHeight,
+                });
+
+            const tensor =
+                createCpuFloat32Tensor({
+                    data:
+                        preprocessed.data,
+
+                    dims:
+                        Array.from(
+                            preprocessed.dims,
+                        ),
+                });
+
+            const outputs =
+                await session.run({
+                    [inputName]:
+                        tensor,
+                });
+
+            const detections =
+                decodeYunetOutputs({
+                    outputs,
+
+                    paddedWidth:
+                        preprocessed
+                            .paddedWidth,
+
+                    paddedHeight:
+                        preprocessed
+                            .paddedHeight,
+
+                    scoreThreshold:
+                        normalizedScoreThreshold,
+
+                    nmsThreshold:
+                        normalizedNmsThreshold,
+
+                    topK:
+                        normalizedTopK,
+                });
+
+            return remapYunetDetectionsToSource({
+                detections,
+
+                sourceWidth:
+                    detectionInput
+                        .sourceWidth,
+
+                sourceHeight:
+                    detectionInput
+                        .sourceHeight,
+
+                detectionWidth:
+                    detectionInput
+                        .detectionWidth,
+
+                detectionHeight:
+                    detectionInput
+                        .detectionHeight,
             });
-
-        const outputs =
-            await session.run({
-                [inputName]:
-                    tensor,
-            });
-
-        return decodeYunetOutputs({
-            outputs,
-            paddedWidth:
-                preprocessed.paddedWidth,
-            paddedHeight:
-                preprocessed.paddedHeight,
-            scoreThreshold:
-                normalizedScoreThreshold,
-            nmsThreshold:
-                normalizedNmsThreshold,
-            topK:
-                normalizedTopK,
-        });
+        }
+        finally {
+            /*
+             * Only the detector-only reduced copy is
+             * owned here. Never zero the caller frame.
+             */
+            if (
+                detectionInput.resized
+            ) {
+                detectionInput
+                    .data
+                    .fill(
+                        0,
+                    );
+            }
+        }
     }
 
     async function release() {

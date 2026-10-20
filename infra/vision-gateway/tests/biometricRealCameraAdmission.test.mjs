@@ -115,10 +115,18 @@ function createScenario({
         "SUCCESS",
     faceMode =
         "ONE",
+    faceModes =
+        null,
+    multipleDetections =
+        null,
     detectorMode =
         "OK",
     alignmentMode =
         "OK",
+    alignmentErrorCode =
+        null,
+    alignmentErrorRms =
+        null,
     embeddingMode =
         "OK",
     startMode =
@@ -204,6 +212,22 @@ function createScenario({
             1;
     }
 
+    function createTemporalFreshFrame(
+        fill,
+    ) {
+        const data =
+            new Uint8Array(
+                2 *
+                    2 *
+                    3,
+            );
+
+        data.fill(
+            fill,
+        );
+
+        return data;
+    }
     const session =
         {
             snapshot() {
@@ -371,6 +395,23 @@ function createScenario({
                 detectorCalls +=
                     1;
 
+                const requestedFaceMode =
+                    Array.isArray(
+                        faceModes,
+                    )
+                        ? faceModes[
+                              detectorCalls -
+                                  1
+                          ] ??
+                          faceMode
+                        : faceMode;
+
+                const activeFaceMode =
+                    requestedFaceMode ===
+                        "MULTI"
+                        ? "MULTIPLE"
+                        : requestedFaceMode;
+
                 observedFrames.push(
                     data,
                 );
@@ -395,21 +436,56 @@ function createScenario({
                 }
 
                 if (
-                    faceMode ===
+                    freshMode ===
+                        "SUCCESS" &&
+                    detectorCalls <
+                        3
+                ) {
+                    pushFrame(
+                        createTemporalFreshFrame(
+                            40 +
+                                detectorCalls,
+                        ),
+                    );
+                }
+                if (
+                    activeFaceMode ===
                     "ZERO"
                 ) {
                     return [];
                 }
 
                 if (
-                    faceMode ===
+                activeFaceMode ===
                     "MULTIPLE"
+            ) {
+                if (
+                    Array.isArray(
+                        multipleDetections,
+                    )
                 ) {
-                    return [
-                        {},
-                        {},
-                    ];
+                    return multipleDetections;
                 }
+
+                return [
+                    {
+                        x: 0,
+                        y: 0,
+                        width: 100,
+                        height: 100,
+                        score: 0.90,
+                        landmarks: [],
+                    },
+                    {
+                        x: 60,
+                        y: 0,
+                        width: 100,
+                        height: 100,
+                        score: 0.75,
+                        landmarks: [],
+                    },
+                ];
+            }
 
                 return [
                     {},
@@ -425,9 +501,34 @@ function createScenario({
             alignmentMode ===
             "ERROR"
         ) {
-            throw new Error(
-                "synthetic alignment error",
-            );
+            const error =
+                new Error(
+                    "synthetic alignment error",
+                );
+
+            if (
+                alignmentErrorCode !==
+                    null
+            ) {
+                error.name =
+                    "FaceAlignmentError";
+
+                error.code =
+                    alignmentErrorCode;
+
+                if (
+                    alignmentErrorRms !==
+                        null
+                ) {
+                    error.details =
+                        Object.freeze({
+                            rmsError:
+                                alignmentErrorRms,
+                        });
+                }
+            }
+
+            throw error;
         }
 
         if (
@@ -1103,6 +1204,34 @@ test(
             2,
         );
 
+        assert.equal(
+            result.multipleFacesOverlapBand,
+            "GT_0_20_LE_0_30",
+        );
+
+        assert.equal(
+            result.secondaryFaceScoreBand,
+            "GT_0_70_LE_0_80",
+        );
+
+        for (const forbidden of [
+            "detections",
+            "bbox",
+            "x",
+            "y",
+            "width",
+            "height",
+            "iou",
+            "overlap",
+            "score",
+            "landmarks",
+        ]) {
+            assert.equal(
+                forbidden in result,
+                false,
+            );
+        }
+
         assert.deepEqual(
             result.blockers,
             [
@@ -1119,6 +1248,439 @@ test(
     },
 );
 
+test(
+    "MULTIPLE_FACES publica somente faixas sanitizadas de overlap",
+    async () => {
+        const cases = [
+            [90, "LE_0_10"],
+            [80, "GT_0_10_LE_0_20"],
+            [60, "GT_0_20_LE_0_30"],
+            [50, "UNKNOWN"],
+        ];
+
+        for (const [secondX, expectedBand] of cases) {
+            const scenario =
+                createScenario({
+                    faceMode:
+                        "MULTIPLE",
+                    multipleDetections:
+                        [
+                            {
+                                x: 0,
+                                y: 0,
+                                width: 100,
+                                height: 100,
+                                score: 0.90,
+                                landmarks: [],
+                            },
+                            {
+                                x: secondX,
+                                y: 0,
+                                width: 100,
+                                height: 100,
+                                score: 0.75,
+                                landmarks: [],
+                            },
+                        ],
+                });
+
+            const result =
+                await scenario.harness.run({
+                    areaClearConfirmation:
+                        REAL_CAMERA_ADMISSION_CONFIRMATION,
+                });
+
+            assert.equal(
+                result.faceCount,
+                2,
+            );
+
+            assert.deepEqual(
+                result.blockers,
+                [
+                    REAL_CAMERA_ADMISSION_BLOCKER
+                        .MULTIPLE_FACES,
+                ],
+            );
+
+            assert.equal(
+                result.multipleFacesOverlapBand,
+                expectedBand,
+            );
+
+            assert.equal(
+                result.secondaryFaceScoreBand,
+                "GT_0_70_LE_0_80",
+            );
+
+            assert.equal(
+                scenario.counts()
+                    .alignmentCalls,
+                0,
+            );
+        }
+    },
+);
+
+test(
+    "MULTIPLE_FACES publica somente faixa sanitizada do score secundario",
+    async () => {
+        const cases = [
+            [0.60, "UNKNOWN"],
+            [0.600001, "GT_0_60_LE_0_70"],
+            [0.70, "GT_0_60_LE_0_70"],
+            [0.700001, "GT_0_70_LE_0_80"],
+            [0.80, "GT_0_70_LE_0_80"],
+            [0.800001, "GT_0_80_LE_0_90"],
+            [0.90, "GT_0_80_LE_0_90"],
+            [0.900001, "GT_0_90_LE_1_00"],
+            [1.00, "GT_0_90_LE_1_00"],
+            [1.000001, "UNKNOWN"],
+            [Number.NaN, "UNKNOWN"],
+        ];
+
+        for (const [score, expectedBand] of cases) {
+            const scenario =
+                createScenario({
+                    faceMode:
+                        "MULTIPLE",
+                    multipleDetections:
+                        [
+                            {
+                                x: 0,
+                                y: 0,
+                                width: 100,
+                                height: 100,
+                                score: 0.95,
+                                landmarks: [],
+                            },
+                            {
+                                x: 60,
+                                y: 0,
+                                width: 100,
+                                height: 100,
+                                score,
+                                landmarks: [],
+                            },
+                        ],
+                });
+
+            const result =
+                await scenario.harness.run({
+                    areaClearConfirmation:
+                        REAL_CAMERA_ADMISSION_CONFIRMATION,
+                });
+
+            assert.equal(
+                result.secondaryFaceScoreBand,
+                expectedBand,
+            );
+
+            assert.equal(
+                result.multipleFacesOverlapBand,
+                "GT_0_20_LE_0_30",
+            );
+        }
+    },
+);
+
+test(
+    "diagnostico MULTIPLE_FACES permanece null fora do blocker MULTIPLE_FACES",
+    async () => {
+        const scenario =
+            createScenario();
+
+        const result =
+            await scenario.harness.run({
+                areaClearConfirmation:
+                    REAL_CAMERA_ADMISSION_CONFIRMATION,
+            });
+
+        assert.equal(
+            result.faceCount,
+            1,
+        );
+
+        assert.equal(
+            result.multipleFacesOverlapBand,
+            null,
+        );
+
+        assert.equal(
+            result.secondaryFaceScoreBand,
+            null,
+        );
+    },
+);
+test(
+    "MULTIPLE_FACES N cobre faceCount 2 3 e maior que 3",
+    async () => {
+        const cases = [
+            {
+                name:
+                    "two",
+                detections:
+                    [
+                        {
+                            x: 0,
+                            y: 0,
+                            width: 100,
+                            height: 100,
+                            score: 0.95,
+                            landmarks: [],
+                        },
+                        {
+                            x: 60,
+                            y: 0,
+                            width: 100,
+                            height: 100,
+                            score: 0.75,
+                            landmarks: [],
+                        },
+                    ],
+                expectedOverlapBand:
+                    "GT_0_20_LE_0_30",
+                expectedScoreBand:
+                    "GT_0_70_LE_0_80",
+            },
+            {
+                name:
+                    "three",
+                detections:
+                    [
+                        {
+                            x: 0,
+                            y: 0,
+                            width: 100,
+                            height: 100,
+                            score: 0.95,
+                            landmarks: [],
+                        },
+                        {
+                            x: 200,
+                            y: 0,
+                            width: 100,
+                            height: 100,
+                            score: 0.85,
+                            landmarks: [],
+                        },
+                        {
+                            x: 60,
+                            y: 0,
+                            width: 100,
+                            height: 100,
+                            score: 0.75,
+                            landmarks: [],
+                        },
+                    ],
+                expectedOverlapBand:
+                    "GT_0_20_LE_0_30",
+                expectedScoreBand:
+                    "GT_0_80_LE_0_90",
+            },
+            {
+                name:
+                    "four",
+                detections:
+                    [
+                        {
+                            x: 0,
+                            y: 0,
+                            width: 100,
+                            height: 100,
+                            score: 0.95,
+                            landmarks: [],
+                        },
+                        {
+                            x: 300,
+                            y: 0,
+                            width: 100,
+                            height: 100,
+                            score: 0.75,
+                            landmarks: [],
+                        },
+                        {
+                            x: 600,
+                            y: 0,
+                            width: 100,
+                            height: 100,
+                            score: 0.70,
+                            landmarks: [],
+                        },
+                        {
+                            x: 90,
+                            y: 0,
+                            width: 100,
+                            height: 100,
+                            score: 0.65,
+                            landmarks: [],
+                        },
+                    ],
+                expectedOverlapBand:
+                    "LE_0_10",
+                expectedScoreBand:
+                    "GT_0_70_LE_0_80",
+            },
+        ];
+
+        for (const item of cases) {
+            const scenario =
+                createScenario({
+                    faceMode:
+                        "MULTIPLE",
+                    multipleDetections:
+                        item.detections,
+                });
+
+            const result =
+                await scenario.harness.run({
+                    areaClearConfirmation:
+                        REAL_CAMERA_ADMISSION_CONFIRMATION,
+                });
+
+            assert.equal(
+                result.faceCount,
+                item.detections.length,
+                item.name,
+            );
+
+            assert.deepEqual(
+                result.blockers,
+                [
+                    REAL_CAMERA_ADMISSION_BLOCKER
+                        .MULTIPLE_FACES,
+                ],
+                item.name,
+            );
+
+            assert.equal(
+                result.multipleFacesOverlapBand,
+                item.expectedOverlapBand,
+                item.name,
+            );
+
+            assert.equal(
+                result.secondaryFaceScoreBand,
+                item.expectedScoreBand,
+                item.name,
+            );
+
+            assert.equal(
+                scenario.counts()
+                    .alignmentCalls,
+                0,
+                item.name,
+            );
+        }
+    },
+);
+
+test(
+    "MULTIPLE_FACES N retorna UNKNOWN para entradas diagnosticas invalidas",
+    async () => {
+        const invalidGeometry =
+            createScenario({
+                faceMode:
+                    "MULTIPLE",
+                multipleDetections:
+                    [
+                        {
+                            x: 0,
+                            y: 0,
+                            width: 100,
+                            height: 100,
+                            score: 0.95,
+                            landmarks: [],
+                        },
+                        {
+                            x: 200,
+                            y: 0,
+                            width: 100,
+                            height: 100,
+                            score: 0.85,
+                            landmarks: [],
+                        },
+                        {
+                            x: 60,
+                            y: 0,
+                            width: 0,
+                            height: 100,
+                            score: 0.75,
+                            landmarks: [],
+                        },
+                    ],
+            });
+
+        const invalidGeometryResult =
+            await invalidGeometry.harness.run({
+                areaClearConfirmation:
+                    REAL_CAMERA_ADMISSION_CONFIRMATION,
+            });
+
+        assert.equal(
+            invalidGeometryResult
+                .multipleFacesOverlapBand,
+            "UNKNOWN",
+        );
+
+        assert.equal(
+            invalidGeometryResult
+                .secondaryFaceScoreBand,
+            "GT_0_80_LE_0_90",
+        );
+
+        const invalidSecondScore =
+            createScenario({
+                faceMode:
+                    "MULTIPLE",
+                multipleDetections:
+                    [
+                        {
+                            x: 0,
+                            y: 0,
+                            width: 100,
+                            height: 100,
+                            score: 0.95,
+                            landmarks: [],
+                        },
+                        {
+                            x: 200,
+                            y: 0,
+                            width: 100,
+                            height: 100,
+                            score: Number.NaN,
+                            landmarks: [],
+                        },
+                        {
+                            x: 60,
+                            y: 0,
+                            width: 100,
+                            height: 100,
+                            score: 0.75,
+                            landmarks: [],
+                        },
+                    ],
+            });
+
+        const invalidSecondScoreResult =
+            await invalidSecondScore.harness.run({
+                areaClearConfirmation:
+                    REAL_CAMERA_ADMISSION_CONFIRMATION,
+            });
+
+        assert.equal(
+            invalidSecondScoreResult
+                .multipleFacesOverlapBand,
+            "GT_0_20_LE_0_30",
+        );
+
+        assert.equal(
+            invalidSecondScoreResult
+                .secondaryFaceScoreBand,
+            "UNKNOWN",
+        );
+    },
+);
 test(
     "erro YuNet sintetico vira DETECTION_FAILED",
     async () => {
@@ -1151,12 +1713,16 @@ test(
 );
 
 test(
-    "erro alignment sintetico vira ALIGNMENT_FAILED",
+    "erro alignment preserva somente codigo seguro FaceAlignmentError",
     async () => {
         const scenario =
             createScenario({
                 alignmentMode:
                     "ERROR",
+                alignmentErrorCode:
+                    "ALIGNMENT_RESIDUAL_TOO_HIGH",
+                alignmentErrorRms:
+                    0.075,
             });
 
         const result =
@@ -1171,6 +1737,184 @@ test(
                 REAL_CAMERA_ADMISSION_BLOCKER
                     .ALIGNMENT_FAILED,
             ],
+        );
+
+        assert.equal(
+            result.alignmentFailureCode,
+            "ALIGNMENT_RESIDUAL_TOO_HIGH",
+        );
+
+        assert.equal(
+            result.alignmentFailureRmsBand,
+            "GT_0_05_LE_0_10",
+        );
+
+        assert.equal(
+            "rmsError" in result,
+            false,
+        );
+
+        assert.equal(
+            "maxError" in result,
+            false,
+        );
+
+        assert.equal(
+            "maxRmsError" in result,
+            false,
+        );
+
+        assert.equal(
+            "message" in result,
+            false,
+        );
+
+        assert.equal(
+            "details" in result,
+            false,
+        );
+    },
+);
+
+test(
+    "faixa RMS sanitizada categoriza sem expor valor numerico",
+    async () => {
+        const cases = [
+            [0, "LE_0_05"],
+            [0.05, "LE_0_05"],
+            [0.050001, "GT_0_05_LE_0_10"],
+            [0.10, "GT_0_05_LE_0_10"],
+            [0.100001, "GT_0_10_LE_0_25"],
+            [0.25, "GT_0_10_LE_0_25"],
+            [0.250001, "GT_0_25_LE_0_50"],
+            [0.50, "GT_0_25_LE_0_50"],
+            [0.500001, "GT_0_50_LE_1_00"],
+            [1.00, "GT_0_50_LE_1_00"],
+            [1.000001, "GT_1_00_LE_1_25"],
+            [1.25, "GT_1_00_LE_1_25"],
+            [1.250001, "GT_1_25_LE_1_50"],
+            [1.50, "GT_1_25_LE_1_50"],
+            [1.500001, "GT_1_50_LE_1_75"],
+            [1.75, "GT_1_50_LE_1_75"],
+            [1.750001, "GT_1_75_LE_2_00"],
+            [2.00, "GT_1_75_LE_2_00"],
+            [2.000001, "GT_2_00_LE_4_00"],
+            [4.00, "GT_2_00_LE_4_00"],
+            [4.000001, "GT_4_00_LE_8_00"],
+            [8.00, "GT_4_00_LE_8_00"],
+            [8.000001, "GT_8_00_LE_16_00"],
+            [16.00, "GT_8_00_LE_16_00"],
+            [16.000001, "GT_16_00"],
+            [Number.NaN, "UNKNOWN"],
+            [-0.01, "UNKNOWN"],
+        ];
+
+        for (const [rmsError, expectedBand] of cases) {
+            const scenario =
+                createScenario({
+                    alignmentMode:
+                        "ERROR",
+                    alignmentErrorCode:
+                        "ALIGNMENT_RESIDUAL_TOO_HIGH",
+                    alignmentErrorRms:
+                        rmsError,
+                });
+
+            const result =
+                await scenario.harness.run({
+                    areaClearConfirmation:
+                        REAL_CAMERA_ADMISSION_CONFIRMATION,
+                });
+
+            assert.equal(
+                result.alignmentFailureCode,
+                "ALIGNMENT_RESIDUAL_TOO_HIGH",
+            );
+
+            assert.equal(
+                result.alignmentFailureRmsBand,
+                expectedBand,
+            );
+
+            assert.equal(
+                "rmsError" in result,
+                false,
+            );
+
+            assert.equal(
+                "maxError" in result,
+                false,
+            );
+
+            assert.equal(
+                "maxRmsError" in result,
+                false,
+            );
+        }
+
+        const nonResidualScenario =
+            createScenario({
+                alignmentMode:
+                    "ERROR",
+                alignmentErrorCode:
+                    "FACE_TOO_SMALL",
+                alignmentErrorRms:
+                    0.075,
+            });
+
+        const nonResidualResult =
+            await nonResidualScenario.harness.run({
+                areaClearConfirmation:
+                    REAL_CAMERA_ADMISSION_CONFIRMATION,
+            });
+
+        assert.equal(
+            nonResidualResult.alignmentFailureCode,
+            "FACE_TOO_SMALL",
+        );
+
+        assert.equal(
+            nonResidualResult.alignmentFailureRmsBand,
+            null,
+        );
+    },
+);
+
+test(
+    "codigo alignment fora da whitelist nao e exposto",
+    async () => {
+        const scenario =
+            createScenario({
+                alignmentMode:
+                    "ERROR",
+                alignmentErrorCode:
+                    "UNSAFE_PRIVATE_ALIGNMENT_DATA",
+                alignmentErrorRms:
+                    0.075,
+            });
+
+        const result =
+            await scenario.harness.run({
+                areaClearConfirmation:
+                    REAL_CAMERA_ADMISSION_CONFIRMATION,
+            });
+
+        assert.deepEqual(
+            result.blockers,
+            [
+                REAL_CAMERA_ADMISSION_BLOCKER
+                    .ALIGNMENT_FAILED,
+            ],
+        );
+
+        assert.equal(
+            result.alignmentFailureCode,
+            null,
+        );
+
+        assert.equal(
+            result.alignmentFailureRmsBand,
+            null,
         );
     },
 );
@@ -1408,6 +2152,10 @@ test(
                 "visionAdmission",
                 "faceCount",
                 "embeddingValid",
+                "alignmentFailureCode",
+                "alignmentFailureRmsBand",
+                "multipleFacesOverlapBand",
+                "secondaryFaceScoreBand",
                 "cameraStartAttempted",
                 "cameraStopAttempted",
                 "calibrationSampleCaptured",
@@ -1619,6 +2367,300 @@ test(
 
                 return true;
             },
+        );
+    },
+);
+
+test(
+    "P28 consenso temporal cobre as 27 sequencias ZERO ONE MULTI",
+    async () => {
+        const modes =
+            [
+                "ZERO",
+                "ONE",
+                "MULTI",
+            ];
+
+        const totals =
+            {
+                NO_FACE_STABLE: 0,
+                SINGLE_FACE_STABLE: 0,
+                MULTIPLE_FACES_STABLE: 0,
+                DETECTION_UNSTABLE: 0,
+            };
+
+        for (const first of modes) {
+            for (const second of modes) {
+                for (const third of modes) {
+                    const sequence =
+                        [
+                            first,
+                            second,
+                            third,
+                        ];
+
+                    const zeroCount =
+                        sequence.filter(
+                            (value) =>
+                                value ===
+                                "ZERO",
+                        ).length;
+
+                    const oneCount =
+                        sequence.filter(
+                            (value) =>
+                                value ===
+                                "ONE",
+                        ).length;
+
+                    const multiCount =
+                        sequence.filter(
+                            (value) =>
+                                value ===
+                                "MULTI",
+                        ).length;
+
+                    const expected =
+                        zeroCount >=
+                            2
+                            ? "NO_FACE_STABLE"
+                            : oneCount >=
+                                  2
+                                ? "SINGLE_FACE_STABLE"
+                                : multiCount >=
+                                      2
+                                    ? "MULTIPLE_FACES_STABLE"
+                                    : "DETECTION_UNSTABLE";
+
+                    totals[expected] +=
+                        1;
+
+                    const scenario =
+                        createScenario({
+                            faceModes:
+                                sequence,
+                        });
+
+                    const result =
+                        await scenario.harness.run({
+                            areaClearConfirmation:
+                                REAL_CAMERA_ADMISSION_CONFIRMATION,
+                        });
+
+                    const counts =
+                        scenario.counts();
+
+                    assert.equal(
+                        counts.detectorCalls,
+                        3,
+                        `detectorCalls ${sequence.join("/")}`,
+                    );
+
+                    if (
+                        expected ===
+                        "NO_FACE_STABLE"
+                    ) {
+                        assert.equal(
+                            result.faceCount,
+                            0,
+                        );
+
+                        assert.deepEqual(
+                            result.blockers,
+                            [
+                                REAL_CAMERA_ADMISSION_BLOCKER
+                                    .NO_FACE,
+                            ],
+                        );
+
+                        assert.equal(
+                            counts.alignmentCalls,
+                            0,
+                        );
+
+                        assert.equal(
+                            counts.embeddingCalls,
+                            0,
+                        );
+                    }
+                    else if (
+                        expected ===
+                        "SINGLE_FACE_STABLE"
+                    ) {
+                        assert.equal(
+                            result.faceCount,
+                            1,
+                        );
+
+                        assert.deepEqual(
+                            result.blockers,
+                            [],
+                        );
+
+                        assert.equal(
+                            result.admissionPassed,
+                            true,
+                        );
+
+                        assert.equal(
+                            counts.alignmentCalls,
+                            1,
+                        );
+
+                        assert.equal(
+                            counts.embeddingCalls,
+                            1,
+                        );
+                    }
+                    else if (
+                        expected ===
+                        "MULTIPLE_FACES_STABLE"
+                    ) {
+                        assert.ok(
+                            result.faceCount >=
+                                2,
+                        );
+
+                        assert.deepEqual(
+                            result.blockers,
+                            [
+                                REAL_CAMERA_ADMISSION_BLOCKER
+                                    .MULTIPLE_FACES,
+                            ],
+                        );
+
+                        assert.equal(
+                            counts.alignmentCalls,
+                            0,
+                        );
+
+                        assert.equal(
+                            counts.embeddingCalls,
+                            0,
+                        );
+                    }
+                    else {
+                        assert.equal(
+                            result.faceCount,
+                            null,
+                        );
+
+                        assert.deepEqual(
+                            result.blockers,
+                            [
+                                REAL_CAMERA_ADMISSION_BLOCKER
+                                    .DETECTION_UNSTABLE,
+                            ],
+                        );
+
+                        assert.equal(
+                            counts.alignmentCalls,
+                            0,
+                        );
+
+                        assert.equal(
+                            counts.embeddingCalls,
+                            0,
+                        );
+                    }
+                }
+            }
+        }
+
+        assert.deepEqual(
+            totals,
+            {
+                NO_FACE_STABLE: 7,
+                SINGLE_FACE_STABLE: 7,
+                MULTIPLE_FACES_STABLE: 7,
+                DETECTION_UNSTABLE: 6,
+            },
+        );
+    },
+);
+
+test(
+    "P28 contrato estatico preserva tres fresh frames sem early exit",
+    async () => {
+        const { readFileSync } =
+            await import(
+                "node:fs",
+            );
+
+        const source =
+            readFileSync(
+                new URL(
+                    "../src/identity/biometricRealCameraAdmission.mjs",
+                    import.meta.url,
+                ),
+                "utf8",
+            );
+
+        const start =
+            source.indexOf(
+                "const temporalCounts =",
+            );
+
+        const end =
+            source.indexOf(
+                "await alignFaceImpl({",
+                start,
+            );
+
+        assert.ok(
+            start >=
+                0,
+        );
+
+        assert.ok(
+            end >
+                start,
+        );
+
+        const temporal =
+            source.slice(
+                start,
+                end,
+            );
+
+        assert.match(
+            temporal,
+            /temporalSample\s*<\s*[\r\n\s]*3/,
+        );
+
+        assert.match(
+            temporal,
+            /temporalSample\s*\+=\s*[\r\n\s]*1/,
+        );
+
+        assert.doesNotMatch(
+            temporal,
+            /\bbreak\s*;/,
+        );
+
+        assert.match(
+            temporal,
+            /zeroBytes\(\s*frame,\s*\)/,
+        );
+
+        assert.match(
+            temporal,
+            /zeroBytes\(\s*currentFrame,\s*\)/,
+        );
+
+        assert.match(
+            temporal,
+            /frame\s*=\s*[\r\n\s]*currentFrame/,
+        );
+
+        assert.match(
+            temporal,
+            /currentFrame\s*=\s*[\r\n\s]*null/,
+        );
+
+        assert.match(
+            temporal,
+            /"DETECTION_UNSTABLE"/,
         );
     },
 );

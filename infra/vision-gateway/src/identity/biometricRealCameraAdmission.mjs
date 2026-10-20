@@ -63,6 +63,8 @@ export const REAL_CAMERA_ADMISSION_BLOCKER =
             "NO_FACE",
         MULTIPLE_FACES:
             "MULTIPLE_FACES",
+        DETECTION_UNSTABLE:
+            "DETECTION_UNSTABLE",
         ALIGNMENT_FAILED:
             "ALIGNMENT_FAILED",
         EMBEDDING_FAILED:
@@ -504,12 +506,376 @@ export async function waitForCameraSessionStopped({
 
     throw error;
 }
+const SAFE_ALIGNMENT_FAILURE_CODES =
+    Object.freeze([
+        "ALIGNMENT_RESIDUAL_TOO_HIGH",
+        "DEGENERATE_LANDMARK_GEOMETRY",
+        "FACE_OUTSIDE_FRAME",
+        "FACE_TOO_SMALL",
+        "INSUFFICIENT_VISIBLE_AREA",
+        "INVALID_BBOX",
+        "INVALID_FRAME",
+        "INVALID_LANDMARK_COUNT",
+        "INVALID_OUTPUT_SIZE",
+        "INVALID_PARAMETER",
+        "INVALID_SCALE",
+        "INVALID_TARGET_TEMPLATE",
+        "NON_FINITE_LANDMARK",
+        "REFLECTION_DETECTED",
+        "SIMILARITY_TRANSFORM_FAILED",
+    ]);
+
+function sanitizeAlignmentFailureCode(
+    error,
+) {
+    if (
+        error?.name !==
+            "FaceAlignmentError"
+    ) {
+        return null;
+    }
+
+    const code =
+        error?.code;
+
+    return (
+        typeof code ===
+            "string" &&
+        SAFE_ALIGNMENT_FAILURE_CODES
+            .includes(code)
+    )
+        ? code
+        : null;
+}
+
+function sanitizeAlignmentFailureRmsBand(
+    error,
+) {
+    if (
+        error?.name !==
+            "FaceAlignmentError" ||
+        error?.code !==
+            "ALIGNMENT_RESIDUAL_TOO_HIGH"
+    ) {
+        return null;
+    }
+
+    const rmsError =
+        error?.details?.rmsError;
+
+    if (
+        typeof rmsError !==
+            "number" ||
+        !Number.isFinite(rmsError) ||
+        rmsError < 0
+    ) {
+        return "UNKNOWN";
+    }
+
+    if (rmsError <= 0.05) {
+        return "LE_0_05";
+    }
+
+    if (rmsError <= 0.10) {
+        return "GT_0_05_LE_0_10";
+    }
+
+    if (rmsError <= 0.25) {
+        return "GT_0_10_LE_0_25";
+    }
+
+    if (rmsError <= 0.50) {
+        return "GT_0_25_LE_0_50";
+    }
+
+    if (rmsError <= 1.00) {
+        return "GT_0_50_LE_1_00";
+    }
+
+    if (rmsError <= 1.25) {
+        return "GT_1_00_LE_1_25";
+    }
+
+    if (rmsError <= 1.50) {
+        return "GT_1_25_LE_1_50";
+    }
+
+    if (rmsError <= 1.75) {
+        return "GT_1_50_LE_1_75";
+    }
+
+    if (rmsError <= 2.00) {
+        return "GT_1_75_LE_2_00";
+    }
+
+    if (rmsError <= 4.00) {
+        return "GT_2_00_LE_4_00";
+    }
+
+    if (rmsError <= 8.00) {
+        return "GT_4_00_LE_8_00";
+    }
+
+    if (rmsError <= 16.00) {
+        return "GT_8_00_LE_16_00";
+    }
+
+    return "GT_16_00";
+}
+
+function sanitizeSecondaryFaceScoreBand(
+    detection,
+) {
+    const score =
+        detection?.score;
+
+    if (
+        typeof score !==
+            "number" ||
+        !Number.isFinite(score)
+    ) {
+        return "UNKNOWN";
+    }
+
+    if (
+        score > 0.60 &&
+        score <= 0.70
+    ) {
+        return "GT_0_60_LE_0_70";
+    }
+
+    if (
+        score > 0.70 &&
+        score <= 0.80
+    ) {
+        return "GT_0_70_LE_0_80";
+    }
+
+    if (
+        score > 0.80 &&
+        score <= 0.90
+    ) {
+        return "GT_0_80_LE_0_90";
+    }
+
+    if (
+        score > 0.90 &&
+        score <= 1.00
+    ) {
+        return "GT_0_90_LE_1_00";
+    }
+
+    return "UNKNOWN";
+}
+
+function sanitizeMultipleFacesOverlapBand(
+    first,
+    second,
+) {
+    const boxes =
+        [
+            first,
+            second,
+        ];
+
+    for (const box of boxes) {
+        if (
+            typeof box?.x !== "number" ||
+            !Number.isFinite(box.x) ||
+            typeof box?.y !== "number" ||
+            !Number.isFinite(box.y) ||
+            typeof box?.width !== "number" ||
+            !Number.isFinite(box.width) ||
+            box.width <= 0 ||
+            typeof box?.height !== "number" ||
+            !Number.isFinite(box.height) ||
+            box.height <= 0
+        ) {
+            return "UNKNOWN";
+        }
+    }
+
+    const intersectionWidth =
+        Math.max(
+            0,
+            Math.min(
+                first.x + first.width,
+                second.x + second.width,
+            ) -
+                Math.max(
+                    first.x,
+                    second.x,
+                ),
+        );
+
+    const intersectionHeight =
+        Math.max(
+            0,
+            Math.min(
+                first.y + first.height,
+                second.y + second.height,
+            ) -
+                Math.max(
+                    first.y,
+                    second.y,
+                ),
+        );
+
+    const intersectionArea =
+        intersectionWidth *
+        intersectionHeight;
+
+    const unionArea =
+        first.width * first.height +
+        second.width * second.height -
+        intersectionArea;
+
+    if (
+        !Number.isFinite(unionArea) ||
+        unionArea <= 0
+    ) {
+        return "UNKNOWN";
+    }
+
+    const overlap =
+        intersectionArea /
+        unionArea;
+
+    if (
+        !Number.isFinite(overlap) ||
+        overlap < 0
+    ) {
+        return "UNKNOWN";
+    }
+
+    if (overlap <= 0.10) {
+        return "LE_0_10";
+    }
+
+    if (overlap <= 0.20) {
+        return "GT_0_10_LE_0_20";
+    }
+
+    if (overlap <= 0.30) {
+        return "GT_0_20_LE_0_30";
+    }
+
+    return "UNKNOWN";
+}
+
+function sanitizeMultipleFacesDiagnostics(
+    detections,
+) {
+    if (
+        !Array.isArray(detections) ||
+        detections.length < 2
+    ) {
+        return Object.freeze({
+            multipleFacesOverlapBand:
+                "UNKNOWN",
+            secondaryFaceScoreBand:
+                "UNKNOWN",
+        });
+    }
+
+    const overlapBandRank =
+        Object.freeze({
+            LE_0_10:
+                0,
+            GT_0_10_LE_0_20:
+                1,
+            GT_0_20_LE_0_30:
+                2,
+        });
+
+    let maximumOverlapBand =
+        "LE_0_10";
+
+    let maximumOverlapRank =
+        overlapBandRank
+            .LE_0_10;
+
+    let overlapUnknown =
+        false;
+
+    pairLoop:
+    for (
+        let firstIndex = 0;
+        firstIndex < detections.length - 1;
+        firstIndex += 1
+    ) {
+        for (
+            let secondIndex = firstIndex + 1;
+            secondIndex < detections.length;
+            secondIndex += 1
+        ) {
+            const candidateBand =
+                sanitizeMultipleFacesOverlapBand(
+                    detections[firstIndex],
+                    detections[secondIndex],
+                );
+
+            if (
+                candidateBand ===
+                "UNKNOWN"
+            ) {
+                overlapUnknown =
+                    true;
+
+                break pairLoop;
+            }
+
+            const candidateRank =
+                overlapBandRank[
+                    candidateBand
+                ];
+
+            if (
+                !Number.isInteger(
+                    candidateRank,
+                )
+            ) {
+                overlapUnknown =
+                    true;
+
+                break pairLoop;
+            }
+
+            if (
+                candidateRank >
+                maximumOverlapRank
+            ) {
+                maximumOverlapRank =
+                    candidateRank;
+
+                maximumOverlapBand =
+                    candidateBand;
+            }
+        }
+    }
+
+    return Object.freeze({
+        multipleFacesOverlapBand:
+            overlapUnknown
+                ? "UNKNOWN"
+                : maximumOverlapBand,
+
+        secondaryFaceScoreBand:
+            sanitizeSecondaryFaceScoreBand(
+                detections[1],
+            ),
+    });
+}
 function safeOutcome({
     admissionPassed,
     streamAdmission,
     visionAdmission,
     faceCount,
     embeddingValid,
+    alignmentFailureCode,
+    alignmentFailureRmsBand,
+    multipleFacesOverlapBand,
+    secondaryFaceScoreBand,
     cameraStartAttempted,
     cameraStopAttempted,
     warnings,
@@ -521,6 +887,10 @@ function safeOutcome({
         visionAdmission,
         faceCount,
         embeddingValid,
+        alignmentFailureCode,
+        alignmentFailureRmsBand,
+        multipleFacesOverlapBand,
+        secondaryFaceScoreBand,
         cameraStartAttempted,
         cameraStopAttempted,
         calibrationSampleCaptured:
@@ -1001,6 +1371,18 @@ export function createBiometricRealCameraAdmissionHarness({
         let embeddingValid =
             false;
 
+        let alignmentFailureCode =
+            null;
+
+        let alignmentFailureRmsBand =
+            null;
+
+        let multipleFacesOverlapBand =
+            null;
+
+        let secondaryFaceScoreBand =
+            null;
+
         let streamAdmission =
             false;
 
@@ -1139,101 +1521,267 @@ export function createBiometricRealCameraAdmissionHarness({
             state =
                 REAL_CAMERA_ADMISSION_STATE.STREAM_RUNNING;
 
-            const baseline =
+            /*
+             * D47-P28 temporal consensus.
+             * Exactly three independent fresh frames.
+             * No early-exit for valid ZERO/ONE/MULTI samples.
+             */
+            let baseline =
                 drainPendingFrame(
                     session,
                 );
 
-            await waitForFreshFrame(
-                session,
-                baseline,
-            );
+            const temporalCounts =
+                {
+                    ZERO: 0,
+                    ONE: 0,
+                    MULTI: 0,
+                };
 
-            const beforeTake =
-                session.snapshot();
+            let detections =
+                null;
 
-            frame =
-                session.takeLatestFrame();
+            let beforeTake =
+                null;
 
-            const afterTake =
-                session.snapshot();
+            let lastMultipleFaceCount =
+                null;
 
-            if (
-                afterTake.frames.queue.delivered !==
-                baseline.delivered +
+            let lastMultipleFacesOverlapBand =
+                null;
+
+            let lastSecondaryFaceScoreBand =
+                null;
+
+            const releaseRetainedOne =
+                () => {
+                    if (
+                        frame instanceof
+                        Uint8Array
+                    ) {
+                        zeroBytes(
+                            frame,
+                        );
+                    }
+
+                    frame =
+                        null;
+
+                    beforeTake =
+                        null;
+
+                    detections =
+                        null;
+                };
+
+            for (
+                let temporalSample =
+                    0;
+                temporalSample <
+                    3;
+                temporalSample +=
                     1
             ) {
-                fail(
-                    REAL_CAMERA_ADMISSION_BLOCKER
-                        .EXCLUSIVE_FRAME_CONSUMER_VIOLATION,
+                await waitForFreshFrame(
+                    session,
+                    baseline,
                 );
-            }
 
-            if (
-                !frame
-            ) {
-                fail(
-                    REAL_CAMERA_ADMISSION_BLOCKER
-                        .FRESH_FRAME_UNAVAILABLE,
-                );
-            }
+                const sampleBeforeTake =
+                    session.snapshot();
 
-            if (
-                !frameIsValid(
-                    frame,
-                    beforeTake,
-                )
-            ) {
-                fail(
-                    REAL_CAMERA_ADMISSION_BLOCKER
-                        .FRAME_INVALID,
-                );
-            }
+                let currentFrame =
+                    session.takeLatestFrame();
 
-            streamAdmission =
-                true;
+                const sampleAfterTake =
+                    session.snapshot();
 
-            state =
-                REAL_CAMERA_ADMISSION_STATE.FRESH_FRAME_VALIDATED;
+                try {
+                    if (
+                        sampleAfterTake.frames.queue.delivered !==
+                        baseline.delivered +
+                            1
+                    ) {
+                        fail(
+                            REAL_CAMERA_ADMISSION_BLOCKER
+                                .EXCLUSIVE_FRAME_CONSUMER_VIOLATION,
+                        );
+                    }
 
-            let detections;
+                    if (
+                        !currentFrame
+                    ) {
+                        fail(
+                            REAL_CAMERA_ADMISSION_BLOCKER
+                                .FRESH_FRAME_UNAVAILABLE,
+                        );
+                    }
 
-            try {
-                detections =
-                    await detectBgr({
-                        data:
-                            frame,
+                    if (
+                        !frameIsValid(
+                            currentFrame,
+                            sampleBeforeTake,
+                        )
+                    ) {
+                        fail(
+                            REAL_CAMERA_ADMISSION_BLOCKER
+                                .FRAME_INVALID,
+                        );
+                    }
+
+                    streamAdmission =
+                        true;
+
+                    state =
+                        REAL_CAMERA_ADMISSION_STATE.FRESH_FRAME_VALIDATED;
+
+                    let sampleDetections;
+
+                    try {
+                        sampleDetections =
+                            await detectBgr({
+                                data:
+                                    currentFrame,
+                                width:
+                                    sampleBeforeTake.frames.width,
+                                height:
+                                    sampleBeforeTake.frames.height,
+                            });
+                    }
+                    catch {
+                        fail(
+                            REAL_CAMERA_ADMISSION_BLOCKER
+                                .DETECTION_FAILED,
+                        );
+                    }
+
+                    if (
+                        !Array.isArray(
+                            sampleDetections,
+                        )
+                    ) {
+                        fail(
+                            REAL_CAMERA_ADMISSION_BLOCKER
+                                .DETECTION_FAILED,
+                        );
+                    }
+
+                    const sampleFaceCount =
+                        sampleDetections.length;
+
+                    if (
+                        sampleFaceCount ===
+                        0
+                    ) {
+                        temporalCounts.ZERO +=
+                            1;
+
+                        sampleDetections =
+                            null;
+                    }
+                    else if (
+                        sampleFaceCount ===
+                        1
+                    ) {
+                        temporalCounts.ONE +=
+                            1;
+
+                        if (
+                            frame instanceof
+                            Uint8Array
+                        ) {
+                            zeroBytes(
+                                frame,
+                            );
+                        }
+
+                        frame =
+                            currentFrame;
+
+                        currentFrame =
+                            null;
+
+                        beforeTake =
+                            sampleBeforeTake;
+
+                        detections =
+                            sampleDetections;
+
+                        sampleDetections =
+                            null;
+                    }
+                    else {
+                        temporalCounts.MULTI +=
+                            1;
+
+                        const diagnostics =
+                            sanitizeMultipleFacesDiagnostics(
+                                sampleDetections,
+                            );
+
+                        lastMultipleFaceCount =
+                            sampleFaceCount;
+
+                        lastMultipleFacesOverlapBand =
+                            diagnostics
+                                .multipleFacesOverlapBand;
+
+                        lastSecondaryFaceScoreBand =
+                            diagnostics
+                                .secondaryFaceScoreBand;
+
+                        sampleDetections =
+                            null;
+                    }
+                }
+                finally {
+                    if (
+                        currentFrame instanceof
+                        Uint8Array
+                    ) {
+                        zeroBytes(
+                            currentFrame,
+                        );
+                    }
+
+                    currentFrame =
+                        null;
+                }
+
+                baseline =
+                    Object.freeze({
+                        lastFrame:
+                            sampleAfterTake.lastFrame,
+                        delivered:
+                            sampleAfterTake.frames.queue.delivered,
                         width:
-                            beforeTake.frames.width,
+                            sampleAfterTake.frames.width,
                         height:
-                            beforeTake.frames.height,
+                            sampleAfterTake.frames.height,
                     });
             }
-            catch {
-                fail(
-                    REAL_CAMERA_ADMISSION_BLOCKER
-                        .DETECTION_FAILED,
-                );
-            }
+
+            const temporalDecision =
+                temporalCounts.ZERO >=
+                    2
+                    ? "NO_FACE_STABLE"
+                    : temporalCounts.ONE >=
+                          2
+                        ? "SINGLE_FACE_STABLE"
+                        : temporalCounts.MULTI >=
+                              2
+                            ? "MULTIPLE_FACES_STABLE"
+                            : "DETECTION_UNSTABLE";
 
             if (
-                !Array.isArray(
-                    detections,
-                )
+                temporalDecision ===
+                "NO_FACE_STABLE"
             ) {
-                fail(
-                    REAL_CAMERA_ADMISSION_BLOCKER
-                        .DETECTION_FAILED,
-                );
-            }
+                faceCount =
+                    0;
 
-            faceCount =
-                detections.length;
+                releaseRetainedOne();
 
-            if (
-                faceCount ===
-                0
-            ) {
                 fail(
                     REAL_CAMERA_ADMISSION_BLOCKER
                         .NO_FACE,
@@ -1241,15 +1789,62 @@ export function createBiometricRealCameraAdmissionHarness({
             }
 
             if (
-                faceCount !==
-                1
+                temporalDecision ===
+                "MULTIPLE_FACES_STABLE"
             ) {
+                faceCount =
+                    lastMultipleFaceCount;
+
+                multipleFacesOverlapBand =
+                    lastMultipleFacesOverlapBand;
+
+                secondaryFaceScoreBand =
+                    lastSecondaryFaceScoreBand;
+
+                releaseRetainedOne();
+
                 fail(
                     REAL_CAMERA_ADMISSION_BLOCKER
                         .MULTIPLE_FACES,
                 );
             }
 
+            if (
+                temporalDecision ===
+                "DETECTION_UNSTABLE"
+            ) {
+                faceCount =
+                    null;
+
+                releaseRetainedOne();
+
+                fail(
+                    REAL_CAMERA_ADMISSION_BLOCKER
+                        .DETECTION_UNSTABLE,
+                );
+            }
+
+            if (
+                temporalDecision !==
+                    "SINGLE_FACE_STABLE" ||
+                !(frame instanceof Uint8Array) ||
+                !beforeTake ||
+                !Array.isArray(
+                    detections,
+                ) ||
+                detections.length !==
+                    1
+            ) {
+                releaseRetainedOne();
+
+                fail(
+                    REAL_CAMERA_ADMISSION_BLOCKER
+                        .DETECTION_FAILED,
+                );
+            }
+
+            faceCount =
+                1;
             try {
                 aligned =
                     await alignFaceImpl({
@@ -1277,7 +1872,17 @@ export function createBiometricRealCameraAdmissionHarness({
                             alignment.maxRmsError,
                     });
             }
-            catch {
+            catch (error) {
+                alignmentFailureCode =
+                    sanitizeAlignmentFailureCode(
+                        error,
+                    );
+
+                alignmentFailureRmsBand =
+                    sanitizeAlignmentFailureRmsBand(
+                        error,
+                    );
+
                 fail(
                     REAL_CAMERA_ADMISSION_BLOCKER
                         .ALIGNMENT_FAILED,
@@ -1450,6 +2055,10 @@ export function createBiometricRealCameraAdmissionHarness({
                     embeddingValid &&
                     blockers.length ===
                         0,
+                alignmentFailureCode,
+                alignmentFailureRmsBand,
+                multipleFacesOverlapBand,
+                secondaryFaceScoreBand,
                 cameraStartAttempted,
                 cameraStopAttempted,
                 warnings,
