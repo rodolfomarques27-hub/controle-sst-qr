@@ -55,7 +55,7 @@ export function isEligiblePublicOperationalIp(address) {
     const right = parts.length === 2 && parts[1] ? parts[1].split(':') : [];
     if (left.length + right.length > 8) return false;
     const fill = parts.length === 2 ? new Array(8 - left.length - right.length).fill('0') : [];
-    const groups = [...left, ...fill, ...right].map((part) => parseInt(part, 16));
+    const groups = [...left, ...fill, ...right].map((part) => Number.parseInt(part, 16));
     if (groups.length !== 8 || groups.some((v) => !Number.isInteger(v))) return false;
     const [first, second] = groups;
     if ((first & 0xe000) !== 0x2000) return false; // excludes ULA, link-local, loopback

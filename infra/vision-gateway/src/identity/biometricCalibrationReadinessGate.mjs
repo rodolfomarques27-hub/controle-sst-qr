@@ -136,8 +136,8 @@ function arraysEqualAsSets(left, right) {
         return false;
     }
 
-    const a = [...left].sort();
-    const b = [...right].sort();
+    const a = [...left].sort((left, right) => left.localeCompare(right));
+    const b = [...right].sort((left, right) => left.localeCompare(right));
 
     return a.every((value, index) => value === b[index]);
 }

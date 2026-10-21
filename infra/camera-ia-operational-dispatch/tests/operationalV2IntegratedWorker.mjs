@@ -5,6 +5,7 @@
  */
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
+import {resolveTrustedDockerCli} from './trustedDockerCli.mjs';
 import {EventEmitter} from 'node:events';
 import {createOperationalV2AtomicJournalHandoffAdapter} from '../src/operationalV2AtomicJournalHandoffAdapter.mjs';
 import {createOperationalOutboxAclSseConsumer} from '../src/operationalOutboxAclSseConsumer.mjs';
@@ -14,6 +15,7 @@ import {createSupabaseCameraViewAuthorizationAdapter} from '../../vision-gateway
 import {OUTBOX_LEASE_V2_SQL,JOURNAL_HANDOFF_V2_SQL} from '../src/operationalV2AtomicJournalHandoffAdapter.mjs';
 import {JOURNAL_V2_PAGE_SQL,JOURNAL_V2_INSPECT_SQL} from '../src/operationalV2RecoverableJournalReader.mjs';
 
+const dockerCli=resolveTrustedDockerCli();
 const db=process.env.SAFESCAN_B4E_CONTAINER;
 const key64=process.env.SAFESCAN_B4E_TEST_KEY_B64;
 assert.match(db??'',/^safescan-b4e-[a-f0-9]{12}$/);
@@ -56,7 +58,7 @@ function dbQuery(sql,args){
     const source=formatSql(sql,args);
     let out;
     try{
-        out=execFileSync('docker',['exec','-i',db,'psql','-X','-q','-t','-A','-v','ON_ERROR_STOP=1','-U','postgres','-d','postgres'],
+        out=execFileSync(dockerCli,['exec','-i',db,'psql','-X','-q','-t','-A','-v','ON_ERROR_STOP=1','-U','postgres','-d','postgres'],
             {input:source,encoding:'utf8',timeout:40000,maxBuffer:4*1024*1024,stdio:['pipe','pipe','pipe']}).trim();
     }catch(error){
         const diagnostic=String(error?.stderr??'');

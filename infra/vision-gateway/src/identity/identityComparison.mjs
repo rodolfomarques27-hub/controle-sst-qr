@@ -456,7 +456,10 @@ function normalizeReferences(
 
     const normalized =
         references.map(
-            normalizeReference,
+            (reference) =>
+                normalizeReference(
+                    reference,
+                ),
         );
 
     const referenceIds =

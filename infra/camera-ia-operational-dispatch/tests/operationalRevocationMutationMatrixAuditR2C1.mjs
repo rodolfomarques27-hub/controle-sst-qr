@@ -4,6 +4,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
+import {
+  KNOWN_GATES,
+  normalizeName,
+  locIndex,
+  sqlWithoutComments,
+  collect,
+  functionRanges,
+  owningFunction,
+  renderAuditMarkdown,
+} from './operationalRevocationMutationMatrixAuditShared.mjs';
+
 export const DOMAIN_TABLES = Object.freeze({
   USER: ['usuarios_permissoes_sistema', 'auth.users'],
   MEMBERSHIP: ['tenant_memberships'],
@@ -14,20 +25,10 @@ export const DOMAIN_TABLES = Object.freeze({
   DEVICE: ['camera_ia_operational_devices'],
 });
 const tableDomain = new Map(Object.entries(DOMAIN_TABLES).flatMap(([domain, tables]) => tables.map(t => [t, domain])));
-const KNOWN_GATES = Object.freeze([
-  'usuario_ativo_sistema', 'usuario_tem_acesso_empresa', 'usuario_tem_acesso_tenant',
-  'usuario_admin_global', 'camera_ia_autorizar_visualizacao',
-]);
-const EXTENSIONS = /\.(sql|js|jsx|mjs|cjs|ts|tsx)$/i;
-const EXCLUDE_DIR = new Set(['.git', 'node_modules', 'dist', 'build', 'coverage', '.next', '.vercel', '.supabase', '.cache', 'vendor']);
-const EXCLUDE_FILE = /(?:\.test\.|\.spec\.|\.min\.|\.snap$)/i;
-const sourcePrefixes = ['supabase/migrations/', 'supabase/functions/', 'src/', 'infra/'];
 const QUALIFIED = String.raw`((?:("?(?:public|private|auth)"?)\s*\.\s*)?("?[a-z_][a-z0-9_]*"?))`;
 const mutationRx = new RegExp(String.raw`\b(insert\s+into|update|delete\s+from|truncate(?:\s+table)?|merge\s+into)\s+(?:only\s+)?`+QUALIFIED,'gi');
-const funcRx = /\bcreate\s+(?:or\s+replace\s+)?function\s+((?:"?[a-z_][\w]*"?\.)?"?[a-z_][\w]*"?)\s*\(/gi;
 const triggerRx = new RegExp(String.raw`\bcreate\s+(?:constraint\s+)?trigger\s+("?[a-z_]\w*"?)\s+([\s\S]{0,1300}?)\bon\s+`+QUALIFIED+String.raw`\s+(?:for\s+each\s+(?:row|statement)\s+)?(?:when\s*\([\s\S]{0,500}?\)\s+)?execute\s+(?:function|procedure)\s+((?:(?:"?(?:public|private|auth)"?)\s*\.\s*)?"?[a-z_]\w*"?)`,'gi');
 
-function normalizeName(v) { return String(v ?? '').replaceAll('"', '').toLowerCase(); }
 function resolvedTable(rawSchema,rawName) {
   const name=normalizeName(rawName), schema=normalizeName(rawSchema||((name==='users')?'auth':'public'));
   const canonical=(name==='users' && schema==='auth')?'auth.users':name;
@@ -36,58 +37,6 @@ function resolvedTable(rawSchema,rawName) {
   if(name==='users' && schema!=='auth')return null;
   if(!['public','private','auth'].includes(schema))return null;
   return {table:canonical,schema};
-}
-function locIndex(content) {
-  const starts = [0];
-  for (let i = 0; i < content.length; i++) if (content.charCodeAt(i) === 10) starts.push(i + 1);
-  return (pos) => {
-    let lo=0,hi=starts.length-1;
-    while(lo<hi){const mid=(lo+hi+1)>>1;if(starts[mid]<=pos)lo=mid;else hi=mid-1;}
-    return lo+1;
-  };
-}
-function sqlWithoutComments(raw) {
-  // Preserve exact offsets for evidence lines; this is not a complete SQL parser.
-  return raw.replace(/--[^\r\n]*/g, x=>' '.repeat(x.length)).replace(/\/\*[\s\S]*?\*\//g, x=>x.replace(/[^\r\n]/g,' '));
-}
-function collect(root) {
-  const result=[];
-  function visit(dir, depth) {
-    if(depth>14) return;
-    for(const e of fs.readdirSync(dir,{withFileTypes:true})) {
-      if(e.isSymbolicLink() || EXCLUDE_DIR.has(e.name))continue;
-      const abs=path.join(dir,e.name);
-      if(e.isDirectory()){visit(abs,depth+1);continue;}
-      if(!e.isFile()||!EXTENSIONS.test(e.name)||EXCLUDE_FILE.test(e.name))continue;
-      const rel=path.relative(root,abs).replaceAll('\\','/');
-      if(!sourcePrefixes.some(x=>rel.startsWith(x)))continue;
-      const stat=fs.statSync(abs);
-      if(stat.size>2_000_000)continue;
-      result.push({abs,rel});
-      if(result.length>12000)throw new Error('SAFE_STOP: excessive source file count');
-    }
-  }
-  visit(root,0);
-  return result.sort((a,b)=>a.rel.localeCompare(b.rel));
-}
-function functionRanges(sql, lineOf, rel) {
-  const list=[];
-  for(const m of sql.matchAll(funcRx)){
-    const prefix=sql.slice(m.index,m.index+2400);
-    const opening=/\bas\s+(\$[a-z_0-9]*\$)/i.exec(prefix);
-    let end=m.index+m[0].length;
-    if(opening){
-      const bodyStart=m.index+opening.index+opening[0].length;
-      const offset=sql.indexOf(opening[1],bodyStart);
-      if(offset!==-1)end=offset+opening[1].length;
-    }
-    list.push({start:m.index,end, name:normalizeName(m[1]), line:lineOf(m.index), file:rel});
-  }
-  return list;
-}
-function owningFunction(ranges,index){
-  for(let i=ranges.length-1;i>=0;i--){if(ranges[i].start<=index&&index<ranges[i].end)return ranges[i].name;}
-  return null;
 }
 function row({table,schema='public',kind,operation,rel,line,owner=null,confidence='STATIC_CANDIDATE',note=''}) {
   return {domain:tableDomain.get(table)||'EXTERNAL',table,schema,kind,operation,file:rel,line,owner:owner??'',confidence,note};
@@ -129,22 +78,41 @@ function scanSql(raw,rel,add,evidence){
     const target=resolvedTable(m[3],m[4]);if(!target)continue;
     add(row({...target,kind:'SQL_DDL',operation:m[1].replace(/\s+/g,' ').toUpperCase(),rel,line:lineOf(m.index),confidence:'SCHEMA_REVIEW_REQUIRED'}));
   }
-  const refs=new RegExp(String.raw`\breferences\s+`+QUALIFIED+String.raw`\s*(?:\([^)]*\))?\s+on\s+delete\s+(cascade|set\s+null|set\s+default)`,'gi');
+  const refs=new RegExp(String.raw`\breferences[ \t\r\n]+`+QUALIFIED+String.raw`(?:\([^()\r\n]*\)|[ \t\r\n]+\([^()\r\n]*\))?[ \t\r\n]+on[ \t\r\n]+delete[ \t\r\n]+(cascade|set[ \t\r\n]+null|set[ \t\r\n]+default)`,'gi');
   for(const m of sql.matchAll(refs)){
     const target=resolvedTable(m[2],m[3]);if(!target)continue;
     evidence.cascades.push({referencedTable:target.table,schema:target.schema,action:m[4].toUpperCase(),file:rel,line:lineOf(m.index),confidence:'DEPENDENCY_REQUIRES_SCHEMA_CONTEXT'});
   }
   // Parse comma-separated GRANT/REVOKE ON TABLE targets; this remains syntactic evidence, not effective privileges.
-  const grantRx=/\b(grant|revoke)\b[\s\S]{0,600}?\bon\s+(?:table\s+)?([\s\S]{1,750}?)\s+(?:to|from)\s+[\w" ,]+(?:;|$)/gi;
   const tableListRx=new RegExp(String.raw`^\s*`+QUALIFIED+String.raw`(?:\s*,\s*`+QUALIFIED+String.raw`)*\s*$`,'i');
   const oneTargetRx=new RegExp(String.raw`^\s*`+QUALIFIED+String.raw`\s*$`,'i');
-  for(const m of sql.matchAll(grantRx)){
-    const targets=m[2].trim();if(!tableListRx.test(targets))continue;
-    for(const targetText of targets.split(',')) {
-      const mm=oneTargetRx.exec(targetText); if(!mm)continue;
-      const target=resolvedTable(mm[2],mm[3]); if(!target)continue;
-      evidence.grants.push({...target,file:rel,line:lineOf(m.index),action:m[1].toUpperCase(),confidence:'DECLARATION_NOT_EFFECTIVE_PRIVILEGE'});
+  let statementStart=0;
+  while(statementStart<sql.length){
+    const semicolon=sql.indexOf(';',statementStart);
+    const statementEnd=semicolon===-1?sql.length:semicolon+1;
+    const statement=sql.slice(statementStart,statementEnd);
+    const trimmed=statement.trim();
+    const actionMatch=/^(grant|revoke)\b/i.exec(trimmed);
+    if(actionMatch&&trimmed.length<=1500){
+      const lower=trimmed.toLowerCase();
+      const onIndex=lower.indexOf(' on ');
+      const action=actionMatch[1].toUpperCase();
+      const principalToken=action==='GRANT'?' to ':' from ';
+      const principalIndex=lower.lastIndexOf(principalToken);
+      if(onIndex!==-1&&principalIndex>onIndex){
+        let targets=trimmed.slice(onIndex+4,principalIndex).trim();
+        if(targets.toLowerCase().startsWith('table '))targets=targets.slice(6).trim();
+        if(tableListRx.test(targets)){
+          for(const targetText of targets.split(',')){
+            const mm=oneTargetRx.exec(targetText);if(!mm)continue;
+            const target=resolvedTable(mm[2],mm[3]);if(!target)continue;
+            evidence.grants.push({...target,file:rel,line:lineOf(statementStart+statement.indexOf(trimmed)),action,confidence:'DECLARATION_NOT_EFFECTIVE_PRIVILEGE'});
+          }
+        }
+      }
     }
+    if(semicolon===-1)break;
+    statementStart=semicolon+1;
   }
 }
 function scanJs(raw,rel,add,evidence){
@@ -154,9 +122,11 @@ function scanJs(raw,rel,add,evidence){
  const from=/\.from\s*\(\s*(?:(['"`])([a-z_][a-z0-9_]*)\1\s*\))?/gi;
  for(const m of raw.matchAll(from)){
   const prefix=raw.slice(Math.max(0,m.index-160),m.index);
-  const receiver=/(?:\b(?:supabase\w*|client|db|database))\s*(?:\.\s*schema\s*\(\s*(['"`])(public|private|auth)\1\s*\))?\s*$/i.exec(prefix);
-  if(!receiver)continue;
-  const schema=normalizeName(receiver[2]||'public');
+  const trimmedPrefix=prefix.trimEnd();
+  const schemaReceiver=/(?:\b(?:supabase\w*|client|db|database))[ \t\r\n]*\.[ \t\r\n]*schema[ \t\r\n]*\([ \t\r\n]*(['"`])(public|private|auth)\1[ \t\r\n]*\)$/i.exec(trimmedPrefix);
+  const directReceiver=/(?:\b(?:supabase\w*|client|db|database))$/i.exec(trimmedPrefix);
+  if(!schemaReceiver&&!directReceiver)continue;
+  const schema=normalizeName(schemaReceiver?.[2]||'public');
   if(m[2]){
     const target=resolvedTable(schema,m[2]);if(!target)continue;
     const after=raw.slice(m.index+m[0].length,m.index+m[0].length+600);
@@ -208,31 +178,10 @@ export function analyzeRepository(root){
 function csvEscape(v){const s=String(v??'');return '"'+s.replaceAll('"','""')+'"';}
 export function renderCsv(report){const keys=['domain','table','schema','kind','operation','file','line','owner','confidence','note'];return [keys.join(','),...report.rows.map(r=>keys.map(k=>csvEscape(r[k])).join(','))].join('\n')+'\n';}
 export function renderMarkdown(report){
- const lines=[
- '# SafeScan Brasil — R10K-3C4F-C3F-B5-B3-B2-R2-C1',
- '', '> Auditoria estática read-only; **não comprova cobertura exaustiva** de mutações nem autoriza migration.',
- '',`Arquivos examinados: **${report.filesScanned}** (SQL: ${report.sqlFiles}; JavaScript/TypeScript: ${report.jsFiles}).`,
- '', '| Domínio | Tabelas | Candidatos | SQL DML | DML Supabase | Triggers | Cobertura |', '|---|---|---:|---:|---:|---:|---|',
- ...Object.entries(report.domains).map(([domain,d])=>`| ${domain} | ${d.tables.map(t=>'\x60'+t+'\x60').join(', ')} | ${d.candidateCount} | ${d.sqlMutations} | ${d.javascriptMutations} | ${d.triggers} | ${d.coverage} |`),
- '', '## Evidências que ainda exigem revisão',
- `- RPCs referenciadas em JS/TS: **${report.evidence.rpcCalls.length}** (candidatas; não prova de mutação).`,
- `- Funções SQL declaradas detectadas: **${report.evidence.definitions.length}** (a definição efetiva depende da ordem das migrations).`,
- `- SQL dinâmico/referências dinâmicas: **${report.evidence.dynamic.length}** candidatas.`,
- `- Chamadas diretas às APIs Auth de escrita: **${report.evidence.externalWrites.length}** candidatas.`,
- `- Dependências FK com ação no DELETE: **${report.evidence.cascades.length}** candidatas.`,
- '', '## Funções de autorização ainda não localizadas na amostra',
- report.missingGates.length?report.missingGates.map(x=>'- `'+x+'`').join('\n'):'- Todas as cinco funções principais aparecem em alguma fonte analisada; isso **não** demonstra suas definições finais ou cobertura de mutações.',
- '', '## Exemplos por domínio (arquivo:linha)',
- ...Object.entries(report.domains).flatMap(([domain])=>[
-   '### '+domain,
-   ...report.rows.filter(r=>r.domain===domain && r.kind!=='SUPABASE_READ_OR_UNKNOWN').slice(0,18).map(r=>`- ${r.operation} ${r.kind} — \x60${r.file}:${r.line}\x60; contexto: \x60${r.owner||'fora de função identificada'}\x60`),
-   '' ]),
- '## Critérios que permanecem abertos',...report.obligations.map(x=>'- '+x),
- '', '**B5B3B2_R1_COVERAGE=NOT_PROVEN**',
- '**MIGRATION_CREATED=FALSE**',
- '**DISTRIBUTED_INVALIDATION=NOT_IMPLEMENTED**',
- '', 'Os detalhes completos e as localizações estão nos arquivos CSV e JSON. Não executar migration nem inferir cobertura completa por contagem de ocorrências.',
- ];return lines.join('\n')+'\n';
+ return renderAuditMarkdown(
+   report,
+   '# SafeScan Brasil — R10K-3C4F-C3F-B5-B3-B2-R2-C1',
+ );
 }
 export function compareR1(current,baseline){
  const domainCounts={};

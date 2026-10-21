@@ -797,7 +797,7 @@ function GatewayHealthIndicator() {
           typeof payload === "object" &&
           !Array.isArray(payload) &&
           ["configured,reachable", "configured,operational,reachable"].includes(
-             Object.keys(payload).sort().join(",")
+             Object.keys(payload).sort((left, right) => left.localeCompare(right)).join(",")
            ) &&
            (payload.operational === undefined || (
              payload.operational !== null &&

@@ -132,7 +132,7 @@ export function createFacePresenceDevMonitor({
     return true;
   }
 
-  async function stop() {
+  async function stop() { // NOSONAR -- contrato idempotente DEV: true confirma estado finalizado.
     if (closed) return true;
     closed = true;
     abort?.abort();

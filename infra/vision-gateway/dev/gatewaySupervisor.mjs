@@ -235,7 +235,7 @@ export class GatewaySupervisor extends EventEmitter {
       done,
       new Promise(resolveTimeout => {
         const token = this.deps.setDelay(() => resolveTimeout(false), this.deps.stopGraceMs);
-        done.then(() => this.deps.clearDelay(token));
+        void done.then(() => this.deps.clearDelay(token));
       }),
     ]);
     let confirmed = completed;
@@ -268,7 +268,7 @@ export function validateDevEnvironment(env = process.env) {
       env.SAFESCAN_VISION_PORT !== '18573' ||
       !env.SAFESCAN_CAMERA_PASSWORD ||
       env.SAFESCAN_CAMERA_ID !== 'sala_teste' ||
-      env.SAFESCAN_CAMERA_HOST !== '192.168.15.63' ||
+      env.SAFESCAN_CAMERA_HOST !== '192.168.15.63' || // NOSONAR - deliberate fail-closed DEV camera host pin; not a credential or production endpoint.
       env.SAFESCAN_CAMERA_PATH !== '/onvif1' ||
       env.SAFESCAN_CAMERA_PORT !== '554' ||
       env.SAFESCAN_CAMERA_TRANSPORT !== 'udp' ||

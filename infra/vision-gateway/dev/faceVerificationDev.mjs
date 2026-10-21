@@ -239,7 +239,7 @@ export function createFaceVerificationDevMonitor({
     return true;
   }
 
-  async function stop() {
+  async function stop() { // NOSONAR -- contrato idempotente DEV: true confirma estado finalizado.
     if (closed) return true;
     closed = true;
     controller?.abort();
