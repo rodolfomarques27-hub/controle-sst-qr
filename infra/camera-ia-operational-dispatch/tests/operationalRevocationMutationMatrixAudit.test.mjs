@@ -6,10 +6,10 @@ import {
 } from './operationalRevocationMutationMatrixAudit.mjs';
 
 import {
-    registerOperationalRevocationAuditSharedTests,
+    registerOperationalRevocationAuditSharedTests as test,
 } from './operationalRevocationMutationMatrixAuditSharedTests.mjs';
 
-registerOperationalRevocationAuditSharedTests({
+test({
     analyzeRepository,
     DOMAIN_TABLES,
     renderCsv,
