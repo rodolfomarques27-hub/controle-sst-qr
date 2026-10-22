@@ -1236,7 +1236,11 @@ export function AppContentRouter({
                 />
             )}
 
-            {tela === "cameraIa" && <CameraIaPreviewPage />}
+            {tela === "cameraIa" && (
+                <CameraIaPreviewPage
+                    usuario={usuario}
+                />
+            )}
             {tela === "vistoriaExtintores" && <VistoriaExtintores />}
             {tela === "mapaObra" && <MapaObra empresasBanco={empresasBanco} obrasEmpresasBanco={obrasEmpresasBanco} auditoriasCampo={auditoriasCampo} />}
             {tela === "mapaObraVisualizacao" && <MapaObraVisualizacao auditoriasCampo={auditoriasCampo} />}

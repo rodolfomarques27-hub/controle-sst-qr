@@ -1,8 +1,11 @@
 import { createGatewayRuntime } from '../src/index.mjs';
 import { createHealthServer } from '../src/http/healthServer.mjs';
+import { existsSync } from 'node:fs';
+import { isAbsolute, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createFacePresenceDevMonitor } from './facePresenceDev.mjs';
 import { createFaceVerificationDevMonitor } from './faceVerificationDev.mjs';
+import { createPpePresenceDevMonitor } from './ppePresenceDev.mjs';
 
 const rawPort = process.env.SAFESCAN_DEV_GATEWAY_PORT;
 
@@ -39,6 +42,70 @@ const faceMonitor = faceEnabled ? (verifyEnabled ? createFaceVerificationDevMoni
   cameraId: runtime.config.camera.id,
   modelPath: fileURLToPath(new URL('../models/face_detection_yunet_2026may.onnx', import.meta.url)),
 })) : null;
+
+const ppeEnabled =
+  process.env.SAFESCAN_DEV_ENABLE_PPE_DETECTION === '1';
+
+let ppeModelPath = null;
+
+if (ppeEnabled) {
+  if (
+    !cameraEnabled ||
+    process.env.SAFESCAN_VISION_RTSP_INPUT_MODE !== 'go2rtc_local'
+  ) {
+    throw new Error('SAFE_STOP_PPE_LOCAL_RELAY_REQUIRED');
+  }
+
+  const rawPpeModelPath =
+    String(
+      process.env.SAFESCAN_PPE_MODEL_PATH ?? ''
+    ).trim();
+
+  if (!rawPpeModelPath || rawPpeModelPath.includes('\0')) {
+    throw new Error('SAFE_STOP_PPE_MODEL_PATH_REQUIRED');
+  }
+
+  ppeModelPath =
+    resolve(rawPpeModelPath);
+
+  const repoRoot =
+    resolve(
+      fileURLToPath(
+        new URL('../../..', import.meta.url)
+      )
+    );
+
+  const modelRelativeToRepo =
+    relative(
+      repoRoot,
+      ppeModelPath
+    );
+
+  const modelOutsideRepo =
+    modelRelativeToRepo === '..' ||
+    modelRelativeToRepo.startsWith(`..${sep}`) ||
+    isAbsolute(modelRelativeToRepo);
+
+  if (!modelOutsideRepo) {
+    throw new Error('SAFE_STOP_PPE_MODEL_MUST_BE_EXTERNAL');
+  }
+
+  if (!existsSync(ppeModelPath)) {
+    throw new Error('SAFE_STOP_PPE_MODEL_NOT_FOUND');
+  }
+}
+
+const ppeMonitor =
+  ppeEnabled
+    ? createPpePresenceDevMonitor({
+        runtime,
+        cameraId:
+          runtime.config.camera.id,
+        modelPath:
+          ppeModelPath,
+      })
+    : null;
+
 const host = '127.0.0.1';
 
 const HEALTH = new Set(['ONLINE', 'DEGRADED', 'OFFLINE']);
@@ -105,6 +172,29 @@ function getOperationalSnapshot() {
       faceVerification: state === 'FRAMES_RECENT'
         ? faceMonitor.verificationSnapshot() : { status: 'UNAVAILABLE' },
     } : {}),
+    ...(ppeMonitor ? {
+      ppeDetection: state === 'FRAMES_RECENT'
+        ? ppeMonitor.snapshot()
+        : {
+            status: 'STALE',
+            personCount: 0,
+            counts: {
+              hardhat: 0,
+              noHardhat: 0,
+              vest: 0,
+              noVest: 0,
+              person: 0,
+            },
+            maxConfidence: {
+              hardhat: 0,
+              noHardhat: 0,
+              vest: 0,
+              noVest: 0,
+              person: 0,
+            },
+            updatedAt: null,
+          },
+    } : {}),
   };
 }
 
@@ -122,6 +212,7 @@ async function shutdown() {
   stopping = true;
 
   try {
+    if (ppeMonitor) await ppeMonitor.stop();
     if (faceMonitor) await faceMonitor.stop();
     if (cameraEnabled) runtime.stopCamera(runtime.config.camera.id);
     await health.stop();
@@ -145,13 +236,25 @@ process.stdin.resume();
 try {
   await health.start();
   if (cameraEnabled) {
-    if (faceMonitor) {
+    if (faceMonitor || ppeMonitor) {
       await runtime.startCamera(runtime.config.camera.id);
-      faceMonitor.start();
+
+      if (faceMonitor) {
+        faceMonitor.start();
+      }
+
+      if (ppeMonitor) {
+        ppeMonitor.start();
+      }
     } else {
       runtime.startCamera(runtime.config.camera.id);
     }
+
     process.stdout.write('CAMERA_START_REQUESTED=TRUE\n');
+
+    if (ppeMonitor) {
+      process.stdout.write('PPE_MONITOR_START_REQUESTED=TRUE\n');
+    }
   }
   process.stdout.write('HTTP_ONLY_LISTENING=GREEN\n');
 } catch {

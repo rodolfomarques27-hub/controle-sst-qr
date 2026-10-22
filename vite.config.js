@@ -399,6 +399,127 @@ function safeScanDevGatewayHealthPlugin() {
                   ? v.status : 'UNAVAILABLE'
             };
           }
+          if (operational && payload.ppeDetection) {
+            const p = payload.ppeDetection;
+
+            const allowedPpeStates = new Set([
+              'INITIALIZING',
+              'WAITING_FOR_FRAMES',
+              'PPE_DETECTED',
+              'NO_PERSON',
+              'STALE',
+              'ERROR',
+              'UNAVAILABLE'
+            ]);
+
+            const classKeys = [
+              'hardhat',
+              'noHardhat',
+              'vest',
+              'noVest',
+              'person'
+            ];
+
+            const validCounts =
+              p?.counts &&
+              typeof p.counts === 'object' &&
+              !Array.isArray(p.counts) &&
+              classKeys.every(key =>
+                Number.isSafeInteger(p.counts[key]) &&
+                p.counts[key] >= 0 &&
+                p.counts[key] <= 50
+              );
+
+            const validConfidence =
+              p?.maxConfidence &&
+              typeof p.maxConfidence === 'object' &&
+              !Array.isArray(p.maxConfidence) &&
+              classKeys.every(key =>
+                typeof p.maxConfidence[key] === 'number' &&
+                Number.isFinite(p.maxConfidence[key]) &&
+                p.maxConfidence[key] >= 0 &&
+                p.maxConfidence[key] <= 1
+              );
+
+            const validPersonCount =
+              Number.isSafeInteger(p?.personCount) &&
+              p.personCount >= 0 &&
+              p.personCount <= 50;
+
+            const validState =
+              p &&
+              typeof p === 'object' &&
+              !Array.isArray(p) &&
+              allowedPpeStates.has(p.status);
+
+            const ppeStamp =
+              typeof p?.updatedAt === 'string'
+                ? Date.parse(p.updatedAt)
+                : Number.NaN;
+
+            const ppeMeasured =
+              p?.status === 'PPE_DETECTED' ||
+              p?.status === 'NO_PERSON';
+
+            const ppeFresh =
+              Number.isFinite(ppeStamp) &&
+              ppeStamp <= Date.now() &&
+              Date.now() - ppeStamp <= 10000 &&
+              operational.status === 'FRAMES_RECENT';
+
+            const ppeState =
+              validState &&
+              validCounts &&
+              validConfidence &&
+              validPersonCount &&
+              (!ppeMeasured || ppeFresh)
+                ? p.status
+                : 'UNAVAILABLE';
+
+            const measuredAndAvailable =
+              ppeState === 'PPE_DETECTED';
+
+            operational.ppeDetection = {
+              status:
+                ppeState,
+
+              personCount:
+                measuredAndAvailable
+                  ? p.personCount
+                  : 0,
+
+              counts:
+                Object.fromEntries(
+                  classKeys.map(key => [
+                    key,
+                    measuredAndAvailable
+                      ? p.counts[key]
+                      : 0
+                  ])
+                ),
+
+              maxConfidence:
+                Object.fromEntries(
+                  classKeys.map(key => [
+                    key,
+                    measuredAndAvailable
+                      ? p.maxConfidence[key]
+                      : 0
+                  ])
+                ),
+
+              updatedAt:
+                ppeMeasured &&
+                ppeFresh &&
+                validState &&
+                validCounts &&
+                validConfidence &&
+                validPersonCount
+                  ? new Date(ppeStamp).toISOString()
+                  : null
+            };
+          }
+
           return send(200, true, true, operational);
 
         } catch {
