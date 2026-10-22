@@ -155,7 +155,7 @@ function signedRequest(
             );
 
     return new Request(
-        "https://project.supabase.co/functions/v1/camera-ia-operational-ingest",
+        "https://project.supabase.co/camera-ia-operational-ingest",
         {
             method:
                 "POST",

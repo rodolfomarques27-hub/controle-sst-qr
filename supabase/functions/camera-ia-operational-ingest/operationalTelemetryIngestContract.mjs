@@ -1,4 +1,7 @@
-const PATH =
+const REQUEST_PATH =
+    "/camera-ia-operational-ingest";
+
+const SIGNED_PATH =
     "/functions/v1/camera-ia-operational-ingest";
 
 const SAFE_ID =
@@ -627,7 +630,7 @@ export function createOperationalTelemetryIngestContract({
 
         if (
             pathname !==
-            PATH
+            REQUEST_PATH
         ) {
             return response(
                 404,
@@ -880,7 +883,7 @@ export function createOperationalTelemetryIngestContract({
                 );
 
             const canonical =
-                `${timestamp}\n${nonce}\n${digest}\n${PATH}`;
+                `${timestamp}\n${nonce}\n${digest}\n${SIGNED_PATH}`;
 
             const hmacKey =
                 await cryptoImpl.subtle.importKey(
