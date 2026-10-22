@@ -18,6 +18,9 @@ import {
     carregarResumoDocumentalCameraIa,
 } from "../cameraIaDocumentalIntegration.js";
 import {
+    carregarTelemetriaOperacionalCameraIa,
+} from "../cameraIaOperationalTelemetryService.js";
+import {
     registrarAuditoriaSistemaService,
 } from "../../../services/auditoriaSistemaCrudService";
 
@@ -373,6 +376,7 @@ function FeedSintetico() {
 function FeedCameraLocal({
     iniciarAutomaticamente = false,
     onCameraStateChange,
+    telemetriaOperacional = null,
 }) {
     const [visualizando, setVisualizando] =
         useState(
@@ -401,16 +405,34 @@ function FeedCameraLocal({
             return;
         }
 
+        const statusOperacional =
+            ambienteLocal
+                ? estadoCamera
+                : (
+                    telemetriaOperacional
+                        ?.cameraStatus ||
+                    "AGUARDANDO"
+                );
+
+        const visualizacaoOperacional =
+            ambienteLocal
+                ? visualizando
+                : telemetriaOperacional
+                    ?.framesRecent ===
+                    true;
+
         onCameraStateChange({
             ambienteLocal,
-            visualizando,
+            visualizando:
+                visualizacaoOperacional,
             status:
-                estadoCamera,
+                statusOperacional,
         });
     }, [
         ambienteLocal,
         estadoCamera,
         onCameraStateChange,
+        telemetriaOperacional,
         visualizando,
     ]);
 
@@ -529,17 +551,125 @@ function FeedCameraLocal({
     }, [ambienteLocal, visualizando]);
 
     if (!ambienteLocal) {
-        return <div className="flex aspect-video items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-6 text-center">
-    <div>
-        <p className="text-sm font-black text-slate-800">
-            Visualização parada
-        </p>
+        const status =
+            telemetriaOperacional
+                ?.cameraStatus ||
+            "AGUARDANDO";
 
-        <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
-            Use Iniciar visualização para abrir a imagem real da câmera.
-        </p>
-    </div>
-</div>;
+        const online =
+            telemetriaOperacional
+                ?.framesRecent ===
+            true;
+
+        const statusInfo =
+            {
+                FRAMES_RECENT: {
+                    rotulo:
+                        "CÂMERA ONLINE",
+
+                    detalhe:
+                        "A câmera está enviando leituras operacionais recentes.",
+                },
+
+                SESSION_NO_RECENT_FRAMES: {
+                    rotulo:
+                        "SEM IMAGEM RECENTE",
+
+                    detalhe:
+                        "A câmera está cadastrada, mas não há leitura recente confirmada.",
+                },
+
+                NO_ACTIVE_SESSION: {
+                    rotulo:
+                        "SESSÃO INATIVA",
+
+                    detalhe:
+                        "A câmera não possui leitura operacional ativa neste momento.",
+                },
+
+                NO_CAMERA_CONFIGURED: {
+                    rotulo:
+                        "CÂMERA NÃO CONFIGURADA",
+
+                    detalhe:
+                        "Nenhuma câmera operacional foi confirmada para esta leitura.",
+                },
+
+                OFFLINE: {
+                    rotulo:
+                        "SEM TELEMETRIA RECENTE",
+
+                    detalhe:
+                        "A última leitura operacional recebida está desatualizada.",
+                },
+
+                AGUARDANDO: {
+                    rotulo:
+                        "AGUARDANDO CÂMERA",
+
+                    detalhe:
+                        "Aguardando telemetria autorizada da câmera.",
+                },
+            }[status] || {
+                rotulo:
+                    "EM CONFERÊNCIA",
+
+                detalhe:
+                    "Estado operacional da câmera ainda não confirmado.",
+            };
+
+        return (
+            <div className="min-w-0 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0">
+                        <p className="text-sm font-black text-slate-900">
+                            Câmera · estado operacional
+                        </p>
+
+                        <p className="text-xs font-semibold text-slate-500">
+                            Leitura segura da câmera cadastrada
+                        </p>
+                    </div>
+
+                    <span
+                        className={
+                            "rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wide ring-1 " +
+                            (
+                                online
+                                    ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                    : "bg-amber-50 text-amber-800 ring-amber-200"
+                            )
+                        }
+                    >
+                        {statusInfo.rotulo}
+                    </span>
+                </div>
+
+                <div className="flex aspect-video items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-6 text-center">
+                    <div className="max-w-xl">
+                        <Camera className="mx-auto h-10 w-10 text-slate-400" />
+
+                        <p className="mt-3 text-sm font-black text-slate-800">
+                            Vídeo ao vivo não habilitado nesta etapa
+                        </p>
+
+                        <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                            A produção recebe somente o estado operacional da câmera e a avaliação visual suportada de pessoa, capacete e colete.
+                        </p>
+                    </div>
+                </div>
+
+                <div
+                    role="status"
+                    aria-live="polite"
+                    className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
+                >
+                    <p className="text-xs font-semibold leading-5 text-slate-600">
+                        {statusInfo.detalhe}
+                    </p>
+                </div>
+            </div>
+        );
     }
 
     const descricaoEstado = {
@@ -4681,6 +4811,11 @@ export function CameraIaPreviewPage({
     ] = useState(null);
 
     const [
+        telemetriaOperacionalReal,
+        setTelemetriaOperacionalReal,
+    ] = useState(null);
+
+    const [
         testeIaExecucao,
         setTesteIaExecucao,
     ] = useState(0);
@@ -4697,6 +4832,133 @@ export function CameraIaPreviewPage({
             cenarioAtual
         ];
 
+    const empresaTelemetriaId =
+        resumoDocumentalReal
+            ?.colaborador
+            ?.empresaId ||
+        "";
+
+    useEffect(() => {
+        if (
+            import.meta.env.DEV
+        ) {
+            return undefined;
+        }
+
+        if (
+            !empresaTelemetriaId
+        ) {
+            setTelemetriaOperacionalReal(
+                null
+            );
+
+            setPpeVisualReal(
+                null
+            );
+
+            return undefined;
+        }
+
+        let ativo =
+            true;
+
+        let emCurso =
+            false;
+
+        const consultar =
+            async () => {
+                if (
+                    !ativo ||
+                    emCurso
+                ) {
+                    return;
+                }
+
+                emCurso =
+                    true;
+
+                try {
+                    const telemetria =
+                        await carregarTelemetriaOperacionalCameraIa({
+                            supabase,
+
+                            empresaId:
+                                empresaTelemetriaId,
+                        });
+
+                    if (!ativo) {
+                        return;
+                    }
+
+                    setTelemetriaOperacionalReal(
+                        telemetria
+                    );
+
+                    setPpeVisualReal(
+                        telemetria
+                            ?.ppe ||
+                        null
+                    );
+                }
+                catch {
+                    if (ativo) {
+                        setTelemetriaOperacionalReal(
+                            null
+                        );
+
+                        setPpeVisualReal(
+                            null
+                        );
+                    }
+                }
+                finally {
+                    emCurso =
+                        false;
+                }
+            };
+
+        void consultar();
+
+        const intervalo =
+            window.setInterval(
+                () => {
+                    void consultar();
+                },
+                5000
+            );
+
+        return () => {
+            ativo =
+                false;
+
+            window.clearInterval(
+                intervalo
+            );
+        };
+    }, [
+        empresaTelemetriaId,
+    ]);
+
+    const cameraCabecalhoOnline =
+        import.meta.env.DEV
+            ? true
+            : telemetriaOperacionalReal
+                ?.framesRecent ===
+                true;
+
+    const cameraCabecalhoStatus =
+        import.meta.env.DEV
+            ? "ONLINE"
+            : cameraCabecalhoOnline
+                ? "ONLINE"
+                : telemetriaOperacionalReal
+                    ? "SEM FRAMES"
+                    : "AGUARDANDO";
+
+    const cameraCabecalhoNome =
+        telemetriaOperacionalReal
+            ?.cameraNome ||
+        "Portaria 01";
 
     return (
         <section className="min-h-full bg-[#F4F6F9] p-3 sm:p-4 lg:p-5">
@@ -4738,11 +5000,20 @@ export function CameraIaPreviewPage({
 
                         <div className="flex flex-col gap-2 sm:flex-row">
                             <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/25 px-4 py-3 backdrop-blur-sm">
-                                <span className="h-3 w-3 rounded-full bg-emerald-400" />
+                                <span
+                                    className={
+                                        "h-3 w-3 rounded-full " +
+                                        (
+                                            cameraCabecalhoOnline
+                                                ? "bg-emerald-400"
+                                                : "bg-amber-400"
+                                        )
+                                    }
+                                />
 
                                 <div>
                                     <p className="text-sm font-black">
-                                        Portaria 01
+                                        {cameraCabecalhoNome}
                                     </p>
 
                                     <p className="text-[11px] font-semibold text-slate-300">
@@ -4750,8 +5021,17 @@ export function CameraIaPreviewPage({
                                     </p>
                                 </div>
 
-                                <span className="ml-auto rounded-full bg-emerald-500 px-3 py-1 text-[10px] font-black uppercase tracking-[0.08em]">
-                                    Online
+                                <span
+                                    className={
+                                        "ml-auto rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.08em] " +
+                                        (
+                                            cameraCabecalhoOnline
+                                                ? "bg-emerald-500"
+                                                : "bg-amber-500"
+                                        )
+                                    }
+                                >
+                                    {cameraCabecalhoStatus}
                                 </span>
                             </div>
 
@@ -4790,6 +5070,9 @@ export function CameraIaPreviewPage({
                                     }
                                     onCameraStateChange={
                                         setCameraOperacao
+                                    }
+                                    telemetriaOperacional={
+                                        telemetriaOperacionalReal
                                     }
                                 />
 
