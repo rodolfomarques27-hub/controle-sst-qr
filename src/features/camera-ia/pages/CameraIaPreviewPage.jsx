@@ -4860,6 +4860,7 @@ export function CameraIaPreviewPage({
                         ppeVisualReal
                     }
                 />
+                {import.meta.env.DEV ? (
                 <details className="mt-4 rounded-2xl border border-indigo-200 bg-white shadow-sm">
                     <summary className="cursor-pointer px-4 py-4 text-sm font-black text-indigo-900 sm:px-5">
                         Laboratório DEV · simulações e homologação visual
@@ -5175,9 +5176,12 @@ export function CameraIaPreviewPage({
                     </div>
                 </details>
 
+                ) : null}
+                {import.meta.env.DEV ? (
                 <footer className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-white/70 px-4 py-3 text-xs font-semibold text-slate-500">
                     CAM-IA-CONFIG-TESTE-01-A · configuração e teste pela interface · documentação e EPI visual em leitura · identidade e decisão automática não homologadas.
                 </footer>
+                ) : null}
             </div>
         </section>
     );
