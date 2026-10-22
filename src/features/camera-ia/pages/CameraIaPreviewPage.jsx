@@ -2911,772 +2911,1365 @@ function GatewayHealthIndicator({
   );
 }
 
-function CameraIaCadastroDevSelector({
-  usuario = null,
-  ppeVisual = null,
-  onResumoDocumentalChange,
+function CameraIaConferenciaOperacional({
+    usuario = null,
+    ppeVisual = null,
+    onResumoDocumentalChange,
+    onVinculoConferidoChange,
 }) {
-  const [empresas, setEmpresas] = useState([]);
-  const [empresaId, setEmpresaId] = useState("");
-  const [colaboradores, setColaboradores] = useState([]);
-  const [colaboradorId, setColaboradorId] = useState("");
-  const [ocupado, setOcupado] = useState(false);
-  const [erro, setErro] = useState("");
-  const [consultado, setConsultado] = useState(false);
-  const [vinculoConferido, setVinculoConferido] = useState(null);
-  const revisaoSelecao = useRef(0);
-  const [solicitacaoDev, setSolicitacaoDev] = useState(null);
-  const [agora, setAgora] = useState(() => Date.now());
-  const [mensagemStatusDev, setMensagemStatusDev] = useState("");
+    const [empresas, setEmpresas] = useState([]);
+    const [empresaId, setEmpresaId] = useState("");
+    const [colaboradores, setColaboradores] = useState([]);
+    const [colaboradorId, setColaboradorId] = useState("");
+    const [ocupado, setOcupado] = useState(false);
+    const [erro, setErro] = useState("");
+    const [consultado, setConsultado] = useState(false);
+    const [vinculoConferido, setVinculoConferido] = useState(null);
+    const revisaoSelecao = useRef(0);
 
-  const escolhido = colaboradores.find(
-    (item) => item.id === colaboradorId
-  );
-
-  async function exigirSessao() {
-    const { data, error } = await supabase.auth.getUser();
-
-    if (error || !data?.user?.id) {
-      throw new Error("AUTH_REQUIRED");
-    }
-  }
-
-  function invalidarConferencia() {
-    revisaoSelecao.current += 1;
-    setVinculoConferido(null);
-    setSolicitacaoDev(null);
-    setMensagemStatusDev("");
-
-    if (
-      typeof onResumoDocumentalChange ===
-      "function"
-    ) {
-      onResumoDocumentalChange(null);
-    }
-  }
-
-  async function carregarEmpresasAutorizadas() {
-    invalidarConferencia();
-    setOcupado(true);
-    setErro("");
-    setEmpresas([]);
-    setEmpresaId("");
-    setColaboradores([]);
-    setColaboradorId("");
-    setConsultado(false);
-
-    try {
-      await exigirSessao();
-
-      const { data, error } = await supabase
-        .from("empresas")
-        .select("id,nome")
-        .order("nome", { ascending: true })
-        .limit(100);
-
-      if (error || !Array.isArray(data)) {
-        throw new Error("COMPANIES_UNAVAILABLE");
-      }
-
-      setEmpresas(
-        data.filter(
-          (item) =>
-            typeof item?.id === "string" &&
-            typeof item?.nome === "string"
-        )
-      );
-
-      setConsultado(true);
-    } catch {
-      setErro(
-        "Consulta indisponível ou não autorizada para este usuário."
-      );
-    } finally {
-      setOcupado(false);
-    }
-  }
-
-  async function escolherEmpresa(id) {
-    invalidarConferencia();
-    setEmpresaId(id);
-    setColaboradorId("");
-    setColaboradores([]);
-    setErro("");
-
-    if (
-      !id ||
-      !empresas.some((item) => item.id === id)
-    ) {
-      return;
-    }
-
-    setOcupado(true);
-
-    try {
-      await exigirSessao();
-
-      const { data, error } = await supabase
-        .from("colaboradores")
-        .select("id,nome,empresa_id,status")
-        .eq("empresa_id", id)
-        .order("nome", { ascending: true })
-        .limit(100);
-
-      if (error || !Array.isArray(data)) {
-        throw new Error("COLLABORATORS_UNAVAILABLE");
-      }
-
-      setColaboradores(
-        data.filter(
-          (item) =>
-            typeof item?.id === "string" &&
-            typeof item?.nome === "string" &&
-            item?.empresa_id === id
-        )
-      );
-    } catch {
-      setErro(
-        "Colaboradores indisponíveis ou sem permissão de consulta."
-      );
-    } finally {
-      setOcupado(false);
-    }
-  }
-
-  async function conferirVinculoCadastral() {
-    const empresaAtual = empresaId;
-    const colaboradorAtual = colaboradorId;
-    const revisao = ++revisaoSelecao.current;
-
-    setVinculoConferido(null);
-    setSolicitacaoDev(null);
-    setErro("");
-    setOcupado(true);
-
-    if (
-      typeof onResumoDocumentalChange ===
-      "function"
-    ) {
-      onResumoDocumentalChange(null);
-    }
-
-    try {
-      const empresaValida = empresas.some(
-        (item) => item.id === empresaAtual
-      );
-
-      const colaboradorValido = colaboradores.some(
-        (item) =>
-          item.id === colaboradorAtual &&
-          item.empresa_id === empresaAtual
-      );
-
-      if (!empresaValida || !colaboradorValido) {
-        throw new Error("INVALID_SELECTION");
-      }
-
-      await exigirSessao();
-
-      // Conferencia somente leitura, sujeita a RLS.
-      // Nao envia dados ao Vision Gateway.
-      const { data, error } = await supabase
-        .from("colaboradores")
-        .select("id,nome,empresa_id,status")
-        .eq("id", colaboradorAtual)
-        .eq("empresa_id", empresaAtual)
-        .maybeSingle();
-
-      if (
-        error ||
-        !data ||
-        data.id !== colaboradorAtual ||
-        data.empresa_id !== empresaAtual ||
-        typeof data.nome !== "string"
-      ) {
-        throw new Error("CADASTRAL_LINK_UNAVAILABLE");
-      }
-
-      if (revisao !== revisaoSelecao.current) return;
-
-      const resumoDocumental =
-        await carregarResumoDocumentalCameraIa({
-          supabase,
-          empresaId:
-            empresaAtual,
-          colaboradorId:
-            colaboradorAtual,
-        });
-
-      if (
-        revisao !==
-        revisaoSelecao.current
-      ) {
-        return;
-      }
-
-      setVinculoConferido({
-        empresaId: empresaAtual,
-        colaboradorId: colaboradorAtual,
-        nome: data.nome,
-      });
-
-      if (
-        typeof onResumoDocumentalChange ===
-        "function"
-      ) {
-        onResumoDocumentalChange(
-          resumoDocumental
+    const escolhido =
+        colaboradores.find(
+            (item) =>
+                item.id === colaboradorId
         );
-      }
 
-      try {
-        const snapshot =
-          montarSnapshotAuditoriaCameraIa({
-            resumoDocumental,
-            ppeVisual,
-          });
+    function publicarResumo(valor) {
+        if (
+            typeof onResumoDocumentalChange ===
+            "function"
+        ) {
+            onResumoDocumentalChange(valor);
+        }
+    }
 
-        const auditoriaRegistrada =
-          await registrarAuditoriaSistemaService({
-            supabase,
-            usuario,
-            acao:
-              "CAMERA_IA_CONFERENCIA_REGISTRADA",
-            tabela:
-              "colaboradores",
-            descricao:
-              (
-                `Conferência operacional da Camera IA registrada para ` +
-                `${resumoDocumental.colaborador.nome}. ` +
-                `Decisão: CONFERÊNCIA MANUAL.`
-              ),
-            registroId:
-              resumoDocumental
-                .colaborador
-                .id,
-            dados:
-              snapshot,
-          });
+    function publicarVinculo(valor) {
+        if (
+            typeof onVinculoConferidoChange ===
+            "function"
+        ) {
+            onVinculoConferidoChange(valor);
+        }
+    }
+
+    async function exigirSessao() {
+        const {
+            data,
+            error,
+        } =
+            await supabase.auth.getUser();
 
         if (
-          !auditoriaRegistrada
+            error ||
+            !data?.user?.id
         ) {
-          console.warn(
-            "A conferência foi concluída, mas o evento de auditoria da Camera IA não foi persistido."
-          );
+            throw new Error(
+                "AUTH_REQUIRED"
+            );
         }
-      } catch (auditError) {
-        console.warn(
-          "Falha não bloqueante ao registrar auditoria da Camera IA:",
-          auditError
-        );
-      }
-    } catch {
-      if (revisao === revisaoSelecao.current) {
-        setVinculoConferido(null);
-
-        if (
-          typeof onResumoDocumentalChange ===
-          "function"
-        ) {
-          onResumoDocumentalChange(null);
-        }
-
-        setErro(
-          "Não foi possível conferir o vínculo cadastral ou a documentação nesta sessão."
-        );
-      }
-    } finally {
-      if (revisao === revisaoSelecao.current) {
-        setOcupado(false);
-      }
     }
-  }
-  useEffect(() => {
-    if (!solicitacaoDev) return undefined;
 
-    const timer = setInterval(() => {
-      const instante = Date.now();
-      setAgora(instante);
-
-      if (instante >= solicitacaoDev.expiresAt) {
-        setSolicitacaoDev(null);
-        setMensagemStatusDev(
-          "Prazo encerrado. Nenhuma verificação facial executada."
-        );
-      }
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [solicitacaoDev]);
-
-  useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange((evento) => {
-      if (evento === "SIGNED_OUT" || evento === "USER_DELETED") {
+    function invalidarConferencia() {
         revisaoSelecao.current += 1;
+
         setVinculoConferido(null);
-        setSolicitacaoDev(null);
-      }
-    });
+        publicarVinculo(null);
+        publicarResumo(null);
+    }
 
-    return () => data?.subscription?.unsubscribe();
-  }, []);
+    async function carregarEmpresasAutorizadas() {
+        invalidarConferencia();
 
-  async function prepararSolicitacaoDev() {
-    const empresaAtual = empresaId;
-    const colaboradorAtual = colaboradorId;
-    const versao = ++revisaoSelecao.current;
+        setOcupado(true);
+        setErro("");
+        setEmpresas([]);
+        setEmpresaId("");
+        setColaboradores([]);
+        setColaboradorId("");
+        setConsultado(false);
 
-    setSolicitacaoDev(null);
-    setMensagemStatusDev("");
-    setErro("");
-    setOcupado(true);
+        try {
+            await exigirSessao();
 
-    try {
-      if (
-        !vinculoConferido ||
-        vinculoConferido.empresaId !== empresaAtual ||
-        vinculoConferido.colaboradorId !== colaboradorAtual
-      ) {
-        throw new Error("VINCULO_NAO_CONFERIDO");
-      }
+            const {
+                data,
+                error,
+            } =
+                await supabase
+                    .from("empresas")
+                    .select("id,nome")
+                    .order(
+                        "nome",
+                        {
+                            ascending:
+                                true,
+                        }
+                    )
+                    .limit(100);
 
-      const { data: auth, error: authError } =
-        await supabase.auth.getUser();
+            if (
+                error ||
+                !Array.isArray(data)
+            ) {
+                throw new Error(
+                    "COMPANIES_UNAVAILABLE"
+                );
+            }
 
-      if (authError || !auth?.user?.id) {
-        throw new Error("AUTH_REQUIRED");
-      }
+            setEmpresas(
+                data.filter(
+                    (item) =>
+                        typeof item?.id ===
+                            "string" &&
+                        typeof item?.nome ===
+                            "string"
+                )
+            );
 
-      const { data: registro, error: registroError } =
-        await supabase
-          .from("colaboradores")
-          .select("id,empresa_id")
-          .eq("id", colaboradorAtual)
-          .eq("empresa_id", empresaAtual)
-          .maybeSingle();
-
-      if (
-        registroError ||
-        registro?.id !== colaboradorAtual ||
-        registro?.empresa_id !== empresaAtual
-      ) {
-        throw new Error("VINCULO_INDISPONIVEL");
-      }
-
-      if (versao !== revisaoSelecao.current) return;
-
-      const { data: sessao, error: erroSessao } =
-        await supabase.auth.getSession();
-
-      const token = sessao?.session?.access_token;
-
-      if (
-        erroSessao ||
-        !token ||
-        sessao.session.user?.id !== auth.user.id
-      ) {
-        throw new Error("AUTH_SESSION_UNAVAILABLE");
-      }
-
-      const resposta = await fetch(
-        "/__safescan-dev/identity-request",
-        {
-          method: "POST",
-          credentials: "same-origin",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            empresaId: empresaAtual,
-            colaboradorId: colaboradorAtual,
-          }),
-          signal: AbortSignal.timeout(10000),
+            setConsultado(true);
         }
-      );
-
-      if (resposta.status !== 201) {
-        throw new Error("BACKEND_REQUEST_DENIED");
-      }
-
-      const recibo = await resposta.json();
-
-      if (
-        recibo?.verification !== "NOT_PERFORMED" ||
-        recibo?.expiresInSeconds !== 60
-      ) {
-        throw new Error("BACKEND_RECEIPT_INVALID");
-      }
-
-      const identificador = recibo.requestId;
-
-      if (versao !== revisaoSelecao.current) return;
-
-      if (!identificador) {
-        throw new Error("REQUEST_ID_UNAVAILABLE");
-      }
-
-      const instante = Date.now();
-      setAgora(instante);
-
-      setSolicitacaoDev({
-        requestId: identificador,
-        empresaId: empresaAtual,
-        colaboradorId: colaboradorAtual,
-        userId: auth.user.id,
-        expiresAt: instante + 60000,
-      });
-    } catch {
-      if (versao === revisaoSelecao.current) {
-        setErro(
-          "Não foi possível preparar a solicitação nesta sessão."
-        );
-      }
-    } finally {
-      if (versao === revisaoSelecao.current) {
-        setOcupado(false);
-      }
-    }
-  }
-  async function administrarSolicitacaoDev(acao) {
-    const atual = solicitacaoDev;
-    const revisao = revisaoSelecao.current;
-
-    if (
-      !atual ||
-      ocupado ||
-      Date.now() >= atual.expiresAt ||
-      (acao !== "GET" && acao !== "DELETE" && acao !== "VERIFY")
-    ) {
-      return;
+        catch {
+            setErro(
+                "Consulta indisponível ou não autorizada para este usuário."
+            );
+        }
+        finally {
+            setOcupado(false);
+        }
     }
 
-    setOcupado(true);
-    setErro("");
+    async function escolherEmpresa(id) {
+        invalidarConferencia();
 
-    try {
-      const { data, error } = await supabase.auth.getSession();
-      const sessao = data?.session;
+        setEmpresaId(id);
+        setColaboradorId("");
+        setColaboradores([]);
+        setErro("");
 
-      if (
-        error ||
-        !sessao?.access_token ||
-        sessao.user?.id !== atual.userId
-      ) {
-        throw new Error("SESSION_UNAVAILABLE");
-      }
+        if (
+            !id ||
+            !empresas.some(
+                (item) =>
+                    item.id === id
+            )
+        ) {
+            return;
+        }
 
-      const url =
-        (acao === "VERIFY"
-          ? "/__safescan-dev/identity-request/verify?requestId="
-          : "/__safescan-dev/identity-request/status?requestId=") +
-        encodeURIComponent(atual.requestId);
+        setOcupado(true);
 
-      const response = await fetch(url, {
-        method: acao === "VERIFY" ? "POST" : acao,
-        credentials: "same-origin",
-        headers: {
-          Authorization: `Bearer ${sessao.access_token}`,
+        try {
+            await exigirSessao();
+
+            const {
+                data,
+                error,
+            } =
+                await supabase
+                    .from("colaboradores")
+                    .select(
+                        "id,nome,empresa_id,status"
+                    )
+                    .eq(
+                        "empresa_id",
+                        id
+                    )
+                    .order(
+                        "nome",
+                        {
+                            ascending:
+                                true,
+                        }
+                    )
+                    .limit(100);
+
+            if (
+                error ||
+                !Array.isArray(data)
+            ) {
+                throw new Error(
+                    "COLLABORATORS_UNAVAILABLE"
+                );
+            }
+
+            setColaboradores(
+                data.filter(
+                    (item) =>
+                        typeof item?.id ===
+                            "string" &&
+                        typeof item?.nome ===
+                            "string" &&
+                        item?.empresa_id ===
+                            id
+                )
+            );
+        }
+        catch {
+            setErro(
+                "Colaboradores indisponíveis ou sem permissão de consulta."
+            );
+        }
+        finally {
+            setOcupado(false);
+        }
+    }
+
+    async function conferirVinculoCadastral() {
+        const empresaAtual =
+            empresaId;
+
+        const colaboradorAtual =
+            colaboradorId;
+
+        const revisao =
+            ++revisaoSelecao.current;
+
+        setVinculoConferido(null);
+        publicarVinculo(null);
+        publicarResumo(null);
+        setErro("");
+        setOcupado(true);
+
+        try {
+            const empresaValida =
+                empresas.some(
+                    (item) =>
+                        item.id ===
+                        empresaAtual
+                );
+
+            const colaboradorValido =
+                colaboradores.some(
+                    (item) =>
+                        item.id ===
+                            colaboradorAtual &&
+                        item.empresa_id ===
+                            empresaAtual
+                );
+
+            if (
+                !empresaValida ||
+                !colaboradorValido
+            ) {
+                throw new Error(
+                    "INVALID_SELECTION"
+                );
+            }
+
+            await exigirSessao();
+
+            // Conferência somente leitura, sujeita a RLS.
+            // Não envia dados ao Vision Gateway.
+            const {
+                data,
+                error,
+            } =
+                await supabase
+                    .from("colaboradores")
+                    .select(
+                        "id,nome,empresa_id,status"
+                    )
+                    .eq(
+                        "id",
+                        colaboradorAtual
+                    )
+                    .eq(
+                        "empresa_id",
+                        empresaAtual
+                    )
+                    .maybeSingle();
+
+            if (
+                error ||
+                !data ||
+                data.id !==
+                    colaboradorAtual ||
+                data.empresa_id !==
+                    empresaAtual ||
+                typeof data.nome !==
+                    "string"
+            ) {
+                throw new Error(
+                    "CADASTRAL_LINK_UNAVAILABLE"
+                );
+            }
+
+            if (
+                revisao !==
+                revisaoSelecao.current
+            ) {
+                return;
+            }
+
+            const resumoDocumental =
+                await carregarResumoDocumentalCameraIa({
+                    supabase,
+                    empresaId:
+                        empresaAtual,
+                    colaboradorId:
+                        colaboradorAtual,
+                });
+
+            if (
+                revisao !==
+                revisaoSelecao.current
+            ) {
+                return;
+            }
+
+            const vinculo = {
+                empresaId:
+                    empresaAtual,
+                colaboradorId:
+                    colaboradorAtual,
+                nome:
+                    data.nome,
+            };
+
+            setVinculoConferido(
+                vinculo
+            );
+
+            publicarVinculo(
+                vinculo
+            );
+
+            publicarResumo(
+                resumoDocumental
+            );
+
+            try {
+                const snapshot =
+                    montarSnapshotAuditoriaCameraIa({
+                        resumoDocumental,
+                        ppeVisual,
+                    });
+
+                const auditoriaRegistrada =
+                    await registrarAuditoriaSistemaService({
+                        supabase,
+                        usuario,
+                        acao:
+                            "CAMERA_IA_CONFERENCIA_REGISTRADA",
+                        tabela:
+                            "colaboradores",
+                        descricao:
+                            (
+                                `Conferência operacional da Camera IA registrada para ` +
+                                `${resumoDocumental.colaborador.nome}. ` +
+                                `Decisão: CONFERÊNCIA MANUAL.`
+                            ),
+                        registroId:
+                            resumoDocumental
+                                .colaborador
+                                .id,
+                        dados:
+                            snapshot,
+                    });
+
+                if (
+                    !auditoriaRegistrada
+                ) {
+                    console.warn(
+                        "A conferência foi concluída, mas o evento de auditoria da Camera IA não foi persistido."
+                    );
+                }
+            }
+            catch (auditError) {
+                console.warn(
+                    "Falha não bloqueante ao registrar auditoria da Camera IA:",
+                    auditError
+                );
+            }
+        }
+        catch {
+            if (
+                revisao ===
+                revisaoSelecao.current
+            ) {
+                setVinculoConferido(null);
+                publicarVinculo(null);
+                publicarResumo(null);
+
+                setErro(
+                    "Não foi possível conferir o vínculo cadastral ou a documentação nesta sessão."
+                );
+            }
+        }
+        finally {
+            if (
+                revisao ===
+                revisaoSelecao.current
+            ) {
+                setOcupado(false);
+            }
+        }
+    }
+
+    useEffect(
+        () => {
+            const {
+                data,
+            } =
+                supabase.auth.onAuthStateChange(
+                    (evento) => {
+                        if (
+                            evento ===
+                                "SIGNED_OUT" ||
+                            evento ===
+                                "USER_DELETED"
+                        ) {
+                            revisaoSelecao.current +=
+                                1;
+
+                            setVinculoConferido(null);
+                            publicarVinculo(null);
+                            publicarResumo(null);
+                        }
+                    }
+                );
+
+            return () =>
+                data?.subscription?.unsubscribe();
         },
-        signal: AbortSignal.timeout(10000),
-      });
+        []
+    );
 
-      if (acao === "VERIFY") {
-        if (response.status !== 409) {
-          throw new Error("BIOMETRIC_GUARD_INVALID");
-        }
+    return (
+        <section
+            aria-label="Conferência cadastral e documental"
+            className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
+        >
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                <div>
+                    <p className="text-xs font-black uppercase tracking-[0.08em] text-slate-500">
+                        Conferência operacional
+                    </p>
 
-        const bloqueio = await response.json();
+                    <h2 className="mt-1 text-base font-black text-slate-950">
+                        Conferência cadastral e documental
+                    </h2>
 
-        if (
-          bloqueio?.code !== "BIOMETRIC_EXECUTION_DISABLED" ||
-          bloqueio?.verification !== "NOT_PERFORMED" ||
-          bloqueio?.accessRelease !== "DENIED" ||
-          !Array.isArray(bloqueio?.blockers) ||
-          bloqueio.blockers.length !== 4
-        ) {
-          throw new Error("BIOMETRIC_GUARD_INVALID");
-        }
+                    <p className="mt-1 max-w-3xl text-xs font-semibold leading-5 text-slate-600">
+                        Selecione a empresa e o colaborador para conferir o vínculo cadastral e carregar os documentos disponíveis nesta sessão.
+                    </p>
+                </div>
 
-        if (revisao !== revisaoSelecao.current) return;
+                <span className="w-fit rounded-full bg-sky-100 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-sky-800">
+                    Leitura autenticada
+                </span>
+            </div>
 
-        setMensagemStatusDev(
-          "O backend DEV bloqueou a verificação facial. " +
-          "Autorização, referência, PAD e critério de decisão " +
-          "ainda não estão homologados. Nenhuma biometria executada."
-        );
-        return;
-      }
+            <button
+                type="button"
+                disabled={
+                    ocupado
+                }
+                onClick={
+                    carregarEmpresasAutorizadas
+                }
+                className="mt-4 rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+                {
+                    ocupado
+                        ? "Consultando..."
+                        : "Consultar empresas autorizadas"
+                }
+            </button>
 
-      if (!response.ok) {
-        throw new Error("BACKEND_STATUS_UNAVAILABLE");
-      }
+            {
+                consultado && (
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        <label className="text-xs font-bold text-slate-700">
+                            Empresa
 
-      const recibo = await response.json();
+                            <select
+                                value={
+                                    empresaId
+                                }
+                                disabled={
+                                    ocupado
+                                }
+                                onChange={
+                                    (event) => {
+                                        void escolherEmpresa(
+                                            event.target.value
+                                        );
+                                    }
+                                }
+                                className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs"
+                            >
+                                <option value="">
+                                    Selecione uma empresa
+                                </option>
 
-      if (revisao !== revisaoSelecao.current) return;
+                                {
+                                    empresas.map(
+                                        (item) => (
+                                            <option
+                                                key={
+                                                    item.id
+                                                }
+                                                value={
+                                                    item.id
+                                                }
+                                            >
+                                                {
+                                                    item.nome
+                                                }
+                                            </option>
+                                        )
+                                    )
+                                }
+                            </select>
+                        </label>
 
-      if (acao === "DELETE") {
-        if (
-          recibo?.cancelled !== true ||
-          recibo?.verification !== "NOT_PERFORMED"
-        ) {
-          throw new Error("INVALID_CANCEL_RECEIPT");
-        }
+                        <label className="text-xs font-bold text-slate-700">
+                            Colaborador
+
+                            <select
+                                value={
+                                    colaboradorId
+                                }
+                                disabled={
+                                    ocupado ||
+                                    !empresaId
+                                }
+                                onChange={
+                                    (event) => {
+                                        invalidarConferencia();
+
+                                        setColaboradorId(
+                                            event.target.value
+                                        );
+                                    }
+                                }
+                                className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs"
+                            >
+                                <option value="">
+                                    Selecione um colaborador
+                                </option>
+
+                                {
+                                    colaboradores.map(
+                                        (item) => (
+                                            <option
+                                                key={
+                                                    item.id
+                                                }
+                                                value={
+                                                    item.id
+                                                }
+                                            >
+                                                {
+                                                    item.nome
+                                                }
+                                            </option>
+                                        )
+                                    )
+                                }
+                            </select>
+                        </label>
+                    </div>
+                )
+            }
+
+            {
+                escolhido && (
+                    <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <p className="text-xs font-bold text-slate-800">
+                            Colaborador selecionado: {
+                                escolhido.nome
+                            }
+                        </p>
+
+                        <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-600">
+                            Execute a conferência para validar o vínculo cadastral e carregar a documentação disponível.
+                        </p>
+                    </div>
+                )
+            }
+
+            {
+                escolhido && (
+                    <button
+                        type="button"
+                        disabled={
+                            ocupado
+                        }
+                        onClick={
+                            () => {
+                                void conferirVinculoCadastral();
+                            }
+                        }
+                        className="mt-3 rounded-xl border border-sky-300 bg-sky-50 px-4 py-2.5 text-xs font-black text-sky-900 transition hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        {
+                            ocupado
+                                ? "Conferindo cadastro..."
+                                : "Conferir vínculo e documentação"
+                        }
+                    </button>
+                )
+            }
+
+            {
+                vinculoConferido &&
+                vinculoConferido.empresaId ===
+                    empresaId &&
+                vinculoConferido.colaboradorId ===
+                    colaboradorId && (
+                    <div
+                        role="status"
+                        className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3"
+                    >
+                        <p className="text-xs font-black text-emerald-900">
+                            Vínculo cadastral conferido
+                        </p>
+
+                        <p className="mt-1 text-xs font-semibold leading-5 text-emerald-800">
+                            {
+                                vinculoConferido.nome
+                            } pertence à empresa selecionada e está acessível nesta sessão autenticada. A documentação disponível foi carregada para conferência manual.
+                        </p>
+                    </div>
+                )
+            }
+
+            {
+                erro && (
+                    <p
+                        role="alert"
+                        className="mt-3 text-xs font-bold text-rose-700"
+                    >
+                        {
+                            erro
+                        }
+                    </p>
+                )
+            }
+
+            <p className="mt-3 text-[10px] font-semibold leading-5 text-slate-500">
+                Consulta autenticada e somente leitura, sujeita às permissões RLS existentes. A conferência não libera acesso físico automaticamente.
+            </p>
+        </section>
+    );
+}
+
+function CameraIaBiometriaDevPanel({
+    vinculoConferido = null,
+}) {
+    const [
+        solicitacaoDev,
+        setSolicitacaoDev,
+    ] = useState(null);
+
+    const [
+        agora,
+        setAgora,
+    ] = useState(
+        () =>
+            Date.now()
+    );
+
+    const [
+        mensagemStatusDev,
+        setMensagemStatusDev,
+    ] = useState("");
+
+    const [
+        ocupado,
+        setOcupado,
+    ] = useState(false);
+
+    const [
+        erro,
+        setErro,
+    ] = useState("");
+
+    const revisaoSolicitacaoDev =
+        useRef(0);
+
+    const empresaId =
+        vinculoConferido
+            ?.empresaId ||
+        "";
+
+    const colaboradorId =
+        vinculoConferido
+            ?.colaboradorId ||
+        "";
+
+    useEffect(
+        () => {
+            revisaoSolicitacaoDev.current +=
+                1;
+
+            setSolicitacaoDev(null);
+            setMensagemStatusDev("");
+            setErro("");
+        },
+        [
+            empresaId,
+            colaboradorId,
+        ]
+    );
+
+    useEffect(
+        () => {
+            if (
+                !solicitacaoDev
+            ) {
+                return undefined;
+            }
+
+            const timer =
+                setInterval(
+                    () => {
+                        const instante =
+                            Date.now();
+
+                        setAgora(
+                            instante
+                        );
+
+                        if (
+                            instante >=
+                            solicitacaoDev.expiresAt
+                        ) {
+                            setSolicitacaoDev(null);
+
+                            setMensagemStatusDev(
+                                "Prazo encerrado. Nenhuma verificação facial executada."
+                            );
+                        }
+                    },
+                    1000
+                );
+
+            return () =>
+                clearInterval(timer);
+        },
+        [
+            solicitacaoDev,
+        ]
+    );
+
+    useEffect(
+        () => {
+            const {
+                data,
+            } =
+                supabase.auth.onAuthStateChange(
+                    (evento) => {
+                        if (
+                            evento ===
+                                "SIGNED_OUT" ||
+                            evento ===
+                                "USER_DELETED"
+                        ) {
+                            revisaoSolicitacaoDev.current +=
+                                1;
+
+                            setSolicitacaoDev(null);
+                            setMensagemStatusDev("");
+                        }
+                    }
+                );
+
+            return () =>
+                data?.subscription?.unsubscribe();
+        },
+        []
+    );
+
+    async function prepararSolicitacaoDev() {
+        const empresaAtual =
+            empresaId;
+
+        const colaboradorAtual =
+            colaboradorId;
+
+        const versao =
+            ++revisaoSolicitacaoDev.current;
 
         setSolicitacaoDev(null);
-        setMensagemStatusDev(
-          "Cancelamento confirmado pelo backend DEV."
-        );
-      } else {
-        if (
-          recibo?.requestId !== atual.requestId ||
-          recibo?.status !== "PENDING_NO_BIOMETRIC_REFERENCE" ||
-          recibo?.verification !== "NOT_PERFORMED" ||
-          !Number.isInteger(recibo?.expiresInSeconds) ||
-          recibo.expiresInSeconds < 1 ||
-          recibo.expiresInSeconds > 60
-        ) {
-          throw new Error("INVALID_STATUS_RECEIPT");
-        }
-
-        if (Date.now() >= atual.expiresAt) {
-          setSolicitacaoDev(null);
-          setMensagemStatusDev("Prazo encerrado.");
-        } else {
-          setMensagemStatusDev(
-            "Backend DEV confirmou a solicitação pendente. " +
-            "Identidade facial não verificada."
-          );
-        }
-      }
-    } catch {
-      if (revisao === revisaoSelecao.current) {
         setMensagemStatusDev("");
-        setErro(
-          "O backend não confirmou a consulta ou o cancelamento. " +
-          "A solicitação permanece sujeita ao prazo de 60 segundos."
-        );
-      }
-    } finally {
-      if (revisao === revisaoSelecao.current) {
-        setOcupado(false);
-      }
+        setErro("");
+        setOcupado(true);
+
+        try {
+            if (
+                !vinculoConferido ||
+                !empresaAtual ||
+                !colaboradorAtual
+            ) {
+                throw new Error(
+                    "VINCULO_NAO_CONFERIDO"
+                );
+            }
+
+            const {
+                data:
+                    auth,
+                error:
+                    authError,
+            } =
+                await supabase.auth.getUser();
+
+            if (
+                authError ||
+                !auth?.user?.id
+            ) {
+                throw new Error(
+                    "AUTH_REQUIRED"
+                );
+            }
+
+            const {
+                data:
+                    registro,
+                error:
+                    registroError,
+            } =
+                await supabase
+                    .from("colaboradores")
+                    .select(
+                        "id,empresa_id"
+                    )
+                    .eq(
+                        "id",
+                        colaboradorAtual
+                    )
+                    .eq(
+                        "empresa_id",
+                        empresaAtual
+                    )
+                    .maybeSingle();
+
+            if (
+                registroError ||
+                registro?.id !==
+                    colaboradorAtual ||
+                registro?.empresa_id !==
+                    empresaAtual
+            ) {
+                throw new Error(
+                    "VINCULO_INDISPONIVEL"
+                );
+            }
+
+            if (
+                versao !==
+                revisaoSolicitacaoDev.current
+            ) {
+                return;
+            }
+
+            const {
+                data:
+                    sessao,
+                error:
+                    erroSessao,
+            } =
+                await supabase.auth.getSession();
+
+            const token =
+                sessao
+                    ?.session
+                    ?.access_token;
+
+            if (
+                erroSessao ||
+                !token ||
+                sessao.session.user?.id !==
+                    auth.user.id
+            ) {
+                throw new Error(
+                    "AUTH_SESSION_UNAVAILABLE"
+                );
+            }
+
+            const resposta =
+                await fetch(
+                    "/__safescan-dev/identity-request",
+                    {
+                        method:
+                            "POST",
+                        credentials:
+                            "same-origin",
+                        headers: {
+                            "Content-Type":
+                                "application/json",
+                            Authorization:
+                                `Bearer ${token}`,
+                        },
+                        body:
+                            JSON.stringify({
+                                empresaId:
+                                    empresaAtual,
+                                colaboradorId:
+                                    colaboradorAtual,
+                            }),
+                        signal:
+                            AbortSignal.timeout(
+                                10000
+                            ),
+                    }
+                );
+
+            if (
+                resposta.status !==
+                201
+            ) {
+                throw new Error(
+                    "BACKEND_REQUEST_DENIED"
+                );
+            }
+
+            const recibo =
+                await resposta.json();
+
+            if (
+                recibo?.verification !==
+                    "NOT_PERFORMED" ||
+                recibo?.expiresInSeconds !==
+                    60
+            ) {
+                throw new Error(
+                    "BACKEND_RECEIPT_INVALID"
+                );
+            }
+
+            if (
+                versao !==
+                revisaoSolicitacaoDev.current
+            ) {
+                return;
+            }
+
+            if (
+                !recibo?.requestId
+            ) {
+                throw new Error(
+                    "REQUEST_ID_UNAVAILABLE"
+                );
+            }
+
+            const instante =
+                Date.now();
+
+            setAgora(
+                instante
+            );
+
+            setSolicitacaoDev({
+                requestId:
+                    recibo.requestId,
+                empresaId:
+                    empresaAtual,
+                colaboradorId:
+                    colaboradorAtual,
+                userId:
+                    auth.user.id,
+                expiresAt:
+                    instante +
+                    60000,
+            });
+        }
+        catch {
+            if (
+                versao ===
+                revisaoSolicitacaoDev.current
+            ) {
+                setErro(
+                    "Não foi possível preparar a solicitação DEV nesta sessão."
+                );
+            }
+        }
+        finally {
+            if (
+                versao ===
+                revisaoSolicitacaoDev.current
+            ) {
+                setOcupado(false);
+            }
+        }
     }
-  }
-  return (
-    <section
-      aria-label="Vínculo cadastral experimental"
-      className="mt-3 rounded-xl border border-indigo-200 bg-indigo-50/40 p-3"
-    >
-      <p className="text-xs font-black text-slate-900">
-        DEMO-01D2 · Seleção cadastral (DEV)
-      </p>
 
-      <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-600">
-        Consulta autenticada e somente leitura. A pessoa escolhida é
-        uma identidade alegada, não identificada pela câmera.
-        Sem cadastro biométrico ou liberação de acesso.
-      </p>
+    async function administrarSolicitacaoDev(
+        acao
+    ) {
+        const atual =
+            solicitacaoDev;
 
-      <button
-        type="button"
-        disabled={ocupado}
-        onClick={carregarEmpresasAutorizadas}
-        className="mt-3 rounded-lg border border-indigo-300 bg-white px-3 py-2 text-xs font-bold text-indigo-800 disabled:opacity-50"
-      >
-        {ocupado
-          ? "Consultando..."
-          : "Consultar empresas autorizadas"}
-      </button>
+        const revisao =
+            revisaoSolicitacaoDev.current;
 
-      {consultado && (
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <label className="text-xs font-bold text-slate-700">
-            Empresa
-            <select
-              value={empresaId}
-              disabled={ocupado}
-              onChange={(event) => {
-                void escolherEmpresa(event.target.value);
-              }}
-              className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 text-xs"
-            >
-              <option value="">
-                Selecione uma empresa
-              </option>
+        if (
+            !atual ||
+            ocupado ||
+            Date.now() >=
+                atual.expiresAt ||
+            (
+                acao !== "GET" &&
+                acao !== "DELETE" &&
+                acao !== "VERIFY"
+            )
+        ) {
+            return;
+        }
 
-              {empresas.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.nome}
-                </option>
-              ))}
-            </select>
-          </label>
+        setOcupado(true);
+        setErro("");
 
-          <label className="text-xs font-bold text-slate-700">
-            Colaborador
-            <select
-              value={colaboradorId}
-              disabled={ocupado || !empresaId}
-              onChange={(event) => {
-                invalidarConferencia();
-                setColaboradorId(event.target.value);
-              }}
-              className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2 text-xs"
-            >
-              <option value="">
-                Selecione um colaborador
-              </option>
+        try {
+            const {
+                data,
+                error,
+            } =
+                await supabase.auth.getSession();
 
-              {colaboradores.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.nome}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      )}
+            const sessao =
+                data?.session;
 
-      {escolhido && (
-        <p
-          role="status"
-          className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs font-bold text-amber-900"
+            if (
+                error ||
+                !sessao?.access_token ||
+                sessao.user?.id !==
+                    atual.userId
+            ) {
+                throw new Error(
+                    "SESSION_UNAVAILABLE"
+                );
+            }
+
+            const url =
+                (
+                    acao ===
+                    "VERIFY"
+                        ? "/__safescan-dev/identity-request/verify?requestId="
+                        : "/__safescan-dev/identity-request/status?requestId="
+                ) +
+                encodeURIComponent(
+                    atual.requestId
+                );
+
+            const response =
+                await fetch(
+                    url,
+                    {
+                        method:
+                            acao ===
+                            "VERIFY"
+                                ? "POST"
+                                : acao,
+                        credentials:
+                            "same-origin",
+                        headers: {
+                            Authorization:
+                                `Bearer ${sessao.access_token}`,
+                        },
+                        signal:
+                            AbortSignal.timeout(
+                                10000
+                            ),
+                    }
+                );
+
+            if (
+                acao ===
+                "VERIFY"
+            ) {
+                if (
+                    response.status !==
+                    409
+                ) {
+                    throw new Error(
+                        "BIOMETRIC_GUARD_INVALID"
+                    );
+                }
+
+                const bloqueio =
+                    await response.json();
+
+                if (
+                    bloqueio?.code !==
+                        "BIOMETRIC_EXECUTION_DISABLED" ||
+                    bloqueio?.verification !==
+                        "NOT_PERFORMED" ||
+                    bloqueio?.accessRelease !==
+                        "DENIED" ||
+                    !Array.isArray(
+                        bloqueio?.blockers
+                    ) ||
+                    bloqueio.blockers.length !==
+                        4
+                ) {
+                    throw new Error(
+                        "BIOMETRIC_GUARD_INVALID"
+                    );
+                }
+
+                if (
+                    revisao !==
+                    revisaoSolicitacaoDev.current
+                ) {
+                    return;
+                }
+
+                setMensagemStatusDev(
+                    "O backend DEV bloqueou a verificação facial. Autorização, referência, PAD e critério de decisão ainda não estão homologados. Nenhuma biometria executada."
+                );
+
+                return;
+            }
+
+            if (
+                !response.ok
+            ) {
+                throw new Error(
+                    "BACKEND_STATUS_UNAVAILABLE"
+                );
+            }
+
+            const recibo =
+                await response.json();
+
+            if (
+                revisao !==
+                revisaoSolicitacaoDev.current
+            ) {
+                return;
+            }
+
+            if (
+                acao ===
+                "DELETE"
+            ) {
+                if (
+                    recibo?.cancelled !==
+                        true ||
+                    recibo?.verification !==
+                        "NOT_PERFORMED"
+                ) {
+                    throw new Error(
+                        "INVALID_CANCEL_RECEIPT"
+                    );
+                }
+
+                setSolicitacaoDev(null);
+
+                setMensagemStatusDev(
+                    "Cancelamento confirmado pelo backend DEV."
+                );
+            }
+            else {
+                if (
+                    recibo?.requestId !==
+                        atual.requestId ||
+                    recibo?.status !==
+                        "PENDING_NO_BIOMETRIC_REFERENCE" ||
+                    recibo?.verification !==
+                        "NOT_PERFORMED" ||
+                    !Number.isInteger(
+                        recibo?.expiresInSeconds
+                    ) ||
+                    recibo.expiresInSeconds <
+                        1 ||
+                    recibo.expiresInSeconds >
+                        60
+                ) {
+                    throw new Error(
+                        "INVALID_STATUS_RECEIPT"
+                    );
+                }
+
+                if (
+                    Date.now() >=
+                    atual.expiresAt
+                ) {
+                    setSolicitacaoDev(null);
+                    setMensagemStatusDev(
+                        "Prazo encerrado."
+                    );
+                }
+                else {
+                    setMensagemStatusDev(
+                        "Backend DEV confirmou a solicitação pendente. Identidade facial não verificada."
+                    );
+                }
+            }
+        }
+        catch {
+            if (
+                revisao ===
+                revisaoSolicitacaoDev.current
+            ) {
+                setMensagemStatusDev("");
+
+                setErro(
+                    "O backend não confirmou a consulta ou o cancelamento. A solicitação permanece sujeita ao prazo de 60 segundos."
+                );
+            }
+        }
+        finally {
+            if (
+                revisao ===
+                revisaoSolicitacaoDev.current
+            ) {
+                setOcupado(false);
+            }
+        }
+    }
+
+    return (
+        <section
+            aria-label="Biometria DEV"
+            className="rounded-xl border border-indigo-200 bg-indigo-50/40 p-3"
         >
-          Identidade alegada: {escolhido.nome}.
-          Cadastro selecionado para demonstração;
-          nenhuma correspondência SFace com esse colaborador foi realizada.
-        </p>
-      )}
-
-      {escolhido && (
-        <button
-          type="button"
-          disabled={ocupado}
-          onClick={() => {
-            void conferirVinculoCadastral();
-          }}
-          className="mt-3 rounded-lg border border-indigo-300 bg-white px-3 py-2 text-xs font-bold text-indigo-800 disabled:opacity-50"
-        >
-          {ocupado
-            ? "Conferindo cadastro..."
-            : "Conferir vínculo cadastral"}
-        </button>
-      )}
-
-      {vinculoConferido &&
-        vinculoConferido.empresaId === empresaId &&
-        vinculoConferido.colaboradorId === colaboradorId && (
-          <p
-            role="status"
-            className="mt-2 rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs font-semibold text-sky-900"
-          >
-            Cadastro encontrado: {vinculoConferido.nome}.
-            O registro pertence à empresa selecionada e está
-            acessível nesta sessão autenticada.
-            Isso não confirma que a pessoa diante da câmera
-            é esse colaborador.
-            Verificação biométrica vinculada: pendente.
-          </p>
-        )}
-
-      {vinculoConferido &&
-        vinculoConferido.empresaId === empresaId &&
-        vinculoConferido.colaboradorId === colaboradorId && (
-          <button
-            type="button"
-            disabled={ocupado}
-            onClick={() => {
-              void prepararSolicitacaoDev();
-            }}
-            className="mt-3 rounded-lg border border-indigo-300 bg-white px-3 py-2 text-xs font-bold text-indigo-800 disabled:opacity-50"
-          >
-            {ocupado
-              ? "Preparando..."
-              : "Preparar solicitação 1:1 (DEV)"}
-          </button>
-        )}
-
-      {solicitacaoDev &&
-        solicitacaoDev.empresaId === empresaId &&
-        solicitacaoDev.colaboradorId === colaboradorId &&
-        agora < solicitacaoDev.expiresAt && (
-          <div
-            role="status"
-            className="mt-3 rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900"
-          >
-            <p className="font-bold">
-              Pré-solicitação autenticada no backend DEV · expira em{" "}
-              {Math.ceil((solicitacaoDev.expiresAt - agora) / 1000)} s
+            <p className="text-xs font-black text-indigo-900">
+                Biometria DEV · bloqueio de homologação
             </p>
-            <p className="mt-1">
-              Cadastro conferido nesta sessão. Identidade facial: inconclusiva.
+
+            <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-600">
+                Este painel permanece exclusivamente no laboratório. Nenhuma biometria facial está homologada e nenhuma decisão de acesso físico é executada.
             </p>
-            <p>
-              Solicitação registrada no backend DEV. Nenhuma imagem ou embedding enviado. Verificação facial não executada.
+
+            {
+                !vinculoConferido && (
+                    <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs font-semibold text-amber-900">
+                        Faça primeiro a conferência cadastral e documental na área operacional.
+                    </p>
+                )
+            }
+
+            {
+                vinculoConferido && (
+                    <>
+                        <p className="mt-3 rounded-lg border border-sky-200 bg-sky-50 p-2 text-xs font-semibold text-sky-900">
+                            Vínculo recebido da conferência operacional: {
+                                vinculoConferido.nome
+                            }.
+                        </p>
+
+                        <button
+                            type="button"
+                            disabled={
+                                ocupado
+                            }
+                            onClick={
+                                () => {
+                                    void prepararSolicitacaoDev();
+                                }
+                            }
+                            className="mt-3 rounded-lg border border-indigo-300 bg-white px-3 py-2 text-xs font-bold text-indigo-800 disabled:opacity-50"
+                        >
+                            {
+                                ocupado
+                                    ? "Preparando..."
+                                    : "Preparar solicitação 1:1 (DEV)"
+                            }
+                        </button>
+                    </>
+                )
+            }
+
+            {
+                solicitacaoDev &&
+                agora <
+                    solicitacaoDev.expiresAt && (
+                    <div
+                        role="status"
+                        className="mt-3 rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900"
+                    >
+                        <p className="font-bold">
+                            Pré-solicitação autenticada no backend DEV · expira em{" "}
+                            {
+                                Math.ceil(
+                                    (
+                                        solicitacaoDev.expiresAt -
+                                        agora
+                                    ) /
+                                    1000
+                                )
+                            } s
+                        </p>
+
+                        <p className="mt-1">
+                            Vínculo cadastral previamente conferido. Identidade facial: inconclusiva.
+                        </p>
+
+                        <p>
+                            Solicitação registrada no backend DEV. Nenhuma imagem ou embedding enviado. Verificação facial não executada.
+                        </p>
+
+                        <button
+                            type="button"
+                            disabled={ocupado}
+                            onClick={() => {
+                                void administrarSolicitacaoDev("GET");
+                            }}
+                            className="mr-2 mt-2 rounded-lg border border-indigo-300 bg-white px-2 py-1 font-semibold text-indigo-800 disabled:opacity-50"
+                        >
+                            Consultar status no backend
+                        </button>
+
+                        <button
+                            type="button"
+                            disabled={ocupado}
+                            onClick={() => {
+                                void administrarSolicitacaoDev("VERIFY");
+                            }}
+                            className="mr-2 mt-2 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 font-semibold text-amber-900 disabled:opacity-50"
+                        >
+                            Conferir bloqueio biométrico
+                        </button>
+
+                        <button
+                            type="button"
+                            disabled={ocupado}
+                            onClick={() => {
+                                void administrarSolicitacaoDev("DELETE");
+                            }}
+                            className="mt-2 rounded-lg border border-slate-300 bg-white px-2 py-1 font-semibold"
+                        >
+                            Cancelar solicitação
+                        </button>
+                    </div>
+                )
+            }
+
+            {
+                mensagemStatusDev && (
+                    <p
+                        role="status"
+                        className="mt-2 rounded-lg border border-sky-200 bg-sky-50 p-2 text-xs font-semibold text-sky-900"
+                    >
+                        {
+                            mensagemStatusDev
+                        }
+                    </p>
+                )
+            }
+
+            {
+                erro && (
+                    <p
+                        role="alert"
+                        className="mt-2 text-xs font-bold text-rose-700"
+                    >
+                        {
+                            erro
+                        }
+                    </p>
+                )
+            }
+
+            <p className="mt-2 text-[10px] font-semibold text-slate-500">
+                Sem cadastro biométrico homologado, sem liberação automática e sem acionamento físico.
             </p>
-            <button
-              type="button"
-              disabled={ocupado}
-              onClick={() => {
-                void administrarSolicitacaoDev("GET");
-              }}
-              className="mr-2 mt-2 rounded-lg border border-indigo-300 bg-white px-2 py-1 font-semibold text-indigo-800 disabled:opacity-50"
-            >
-              Consultar status no backend
-            </button>
-            <button
-              type="button"
-              disabled={ocupado}
-              onClick={() => {
-                void administrarSolicitacaoDev("VERIFY");
-              }}
-              className="mr-2 mt-2 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 font-semibold text-amber-900 disabled:opacity-50"
-            >
-              Conferir bloqueio biométrico
-            </button>
-            <button
-              type="button"
-              disabled={ocupado}
-              onClick={() => {
-                void administrarSolicitacaoDev("DELETE");
-              }}
-              className="mt-2 rounded-lg border border-slate-300 bg-white px-2 py-1 font-semibold"
-            >
-              Cancelar solicitação
-            </button>
-          </div>
-        )}
-
-      {mensagemStatusDev && (
-        <p
-          role="status"
-          className="mt-2 rounded-lg border border-sky-200 bg-sky-50 p-2 text-xs font-semibold text-sky-900"
-        >
-          {mensagemStatusDev}
-        </p>
-      )}
-
-      {erro && (
-        <p
-          role="alert"
-          className="mt-2 text-xs font-bold text-rose-700"
-        >
-          {erro}
-        </p>
-      )}
-
-      <p className="mt-2 text-[10px] font-semibold text-slate-500">
-        Sujeito às permissões RLS existentes.
-        Sem CPF, foto ou embeddings.
-        Após a conferência cadastral, os documentos usam leitura real.
-        O EPI visual utiliza leitura real independente da identidade alegada.
-        Biometria facial e decisão automática permanecem NÃO HOMOLOGADAS.
-      </p>
-    </section>
-  );
+        </section>
+    );
 }
 function DecisaoOperadorCameraIa({
     usuario = null,
@@ -4078,6 +4671,11 @@ export function CameraIaPreviewPage({
     ] = useState(null);
 
     const [
+        vinculoConferidoOperacional,
+        setVinculoConferidoOperacional,
+    ] = useState(null);
+
+    const [
         cameraOperacao,
         setCameraOperacao,
     ] = useState(null);
@@ -4163,6 +4761,21 @@ export function CameraIaPreviewPage({
                         </div>
                     </div>
                 </header>
+
+                <CameraIaConferenciaOperacional
+                    usuario={
+                        usuario
+                    }
+                    ppeVisual={
+                        ppeVisualReal
+                    }
+                    onResumoDocumentalChange={
+                        setResumoDocumentalReal
+                    }
+                    onVinculoConferidoChange={
+                        setVinculoConferidoOperacional
+                    }
+                />
 
                 <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
                     <main className="min-w-0 space-y-4">
@@ -4361,24 +4974,17 @@ export function CameraIaPreviewPage({
 
 <details className="mt-4 rounded-2xl border border-indigo-200 bg-indigo-50/40">
                                             <summary className="cursor-pointer px-4 py-3 text-xs font-black text-indigo-800">
-                                                Desenvolvimento · seleção cadastral e biometria DEV
+                                                Biometria DEV · bloqueio e homologação
                                             </summary>
 
                                             <div className="border-t border-indigo-200 p-3">
-                                                <CameraIaCadastroDevSelector
-                                                    usuario={
-                                                        usuario
-                                                    }
-                                                    ppeVisual={
-                                                        ppeVisualReal
-                                                    }
-                                                    onResumoDocumentalChange={
-                                                        setResumoDocumentalReal
+                                                <CameraIaBiometriaDevPanel
+                                                    vinculoConferido={
+                                                        vinculoConferidoOperacional
                                                     }
                                                 />
                                             </div>
                                         </details>
-
                         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                             <div className="mb-3">
                                 <h3 className="text-sm font-black text-slate-900">
