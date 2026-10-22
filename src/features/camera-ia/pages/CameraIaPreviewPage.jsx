@@ -682,6 +682,17 @@ function resumirPpeVisual(
             detalhe,
     });
 
+    const semEvidenciaConclusiva = (
+        epi
+    ) => ({
+        badge:
+            "conferencia",
+        texto:
+            "SEM EVIDÊNCIA CONCLUSIVA",
+        detalhe:
+            `Detector executado sem confirmar presença nem ausência de ${epi}.`,
+    });
+
     if (
         !ppeVisual ||
         ppeVisual.status !==
@@ -769,7 +780,9 @@ function resumirPpeVisual(
                             )
                         ),
                 }
-                : naoAvaliado();
+                : semEvidenciaConclusiva(
+                    "capacete",
+                );
 
     const colete =
         Number(
@@ -812,7 +825,9 @@ function resumirPpeVisual(
                             )
                         ),
                 }
-                : naoAvaliado();
+                : semEvidenciaConclusiva(
+                    "colete",
+                );
 
     const quantidadePessoa =
         Number(
@@ -1588,11 +1603,25 @@ function ConfigTesteIaPanel({
     testeAtivo = false,
     onIniciarTeste,
 }) {
+    const streamStatus =
+        telemetriaCamera?.status ||
+        "INDEFINIDO";
+
+    const telemetriaConfirmaGateway =
+        [
+            "FRAMES_RECENT",
+            "SESSION_NO_RECENT_FRAMES",
+            "NO_ACTIVE_SESSION",
+            "NO_CAMERA_CONFIGURED",
+        ].includes(
+            streamStatus
+        );
+
     const cameraStatus =
         cameraOperacao?.status ||
         "PARADO";
 
-    const cameraInfo =
+    const cameraInfoPorEstado =
         {
             PARADO: {
                 valor:
@@ -1665,66 +1694,112 @@ function ConfigTesteIaPanel({
                 "Estado da câmera ainda não disponível.",
         };
 
-    const gatewayInfo =
-        !testeAtivo
+    const cameraFalhaExplicita =
+        [
+            "OFFLINE",
+            "ERRO",
+            "RECONECTANDO",
+        ].includes(
+            cameraStatus
+        );
+
+    const cameraInfo =
+        streamStatus ===
+            "FRAMES_RECENT"
+        && !cameraFalhaExplicita
             ? {
                 valor:
-                    "NÃO TESTADO",
+                    "DISPONÍVEL",
+                tom:
+                    "verde",
+                detalhe:
+                    "Quadros recentes confirmam a câmera ativa pelo Vision Gateway.",
+            }
+            : cameraInfoPorEstado;
+
+    const gatewayInfoPorEstado =
+        {
+            VERIFICANDO: {
+                valor:
+                    "VERIFICANDO",
                 tom:
                     "cinza",
                 detalhe:
-                    "Clique em INICIAR TESTE para verificar o Vision Gateway.",
-            }
-            : (
-                {
-                    VERIFICANDO: {
+                    "Conferindo o Vision Gateway.",
+            },
+
+            NAO_CONFIGURADO: {
+                valor:
+                    "NÃO CONFIGURADO",
+                tom:
+                    "vermelho",
+                detalhe:
+                    "Configuração operacional não confirmada.",
+            },
+
+            INDISPONIVEL: {
+                valor:
+                    "INDISPONÍVEL",
+                tom:
+                    "vermelho",
+                detalhe:
+                    "O Vision Gateway não respondeu.",
+            },
+
+            RESPONDENDO: {
+                valor:
+                    "DISPONÍVEL",
+                tom:
+                    "verde",
+                detalhe:
+                    "Vision Gateway respondendo normalmente.",
+            },
+        }[estadoGateway] || {
+            valor:
+                "NÃO AVALIADO",
+            tom:
+                "cinza",
+            detalhe:
+                "Estado ainda não disponível.",
+        };
+
+    const gatewayFalhaExplicita =
+        [
+            "NAO_CONFIGURADO",
+            "INDISPONIVEL",
+        ].includes(
+            estadoGateway
+        );
+
+    const gatewayConfirmado =
+        estadoGateway ===
+            "RESPONDENDO"
+        || telemetriaConfirmaGateway;
+
+    const gatewayInfo =
+        gatewayFalhaExplicita
+            ? gatewayInfoPorEstado
+            : gatewayConfirmado
+                ? {
+                    valor:
+                        "DISPONÍVEL",
+                    tom:
+                        "verde",
+                    detalhe:
+                        telemetriaConfirmaGateway
+                            ? "Telemetria operacional recebida do Vision Gateway."
+                            : "Vision Gateway respondendo normalmente.",
+                }
+                : !testeAtivo
+                    ? {
                         valor:
-                            "VERIFICANDO",
+                            "NÃO TESTADO",
                         tom:
                             "cinza",
                         detalhe:
-                            "Conferindo o Vision Gateway.",
-                    },
-
-                    NAO_CONFIGURADO: {
-                        valor:
-                            "NÃO CONFIGURADO",
-                        tom:
-                            "vermelho",
-                        detalhe:
-                            "Configuração operacional não confirmada.",
-                    },
-
-                    INDISPONIVEL: {
-                        valor:
-                            "INDISPONÍVEL",
-                        tom:
-                            "vermelho",
-                        detalhe:
-                            "O Vision Gateway não respondeu.",
-                    },
-
-                    RESPONDENDO: {
-                        valor:
-                            "DISPONÍVEL",
-                        tom:
-                            "verde",
-                        detalhe:
-                            "Vision Gateway respondendo normalmente.",
-                    },
-                }[estadoGateway] || {
-                    valor:
-                        "NÃO AVALIADO",
-                    tom:
-                        "cinza",
-                    detalhe:
-                        "Estado ainda não disponível.",
-                }
-            );
-
-    const streamStatus =
-        telemetriaCamera?.status ||
-        "INDEFINIDO";
+                            "Clique em INICIAR TESTE para verificar o Vision Gateway.",
+                    }
+                    : gatewayInfoPorEstado;
 
     const streamInfo =
         {
@@ -2160,7 +2235,12 @@ function ConfigTesteIaPanel({
                     }
                     detalhe={
                         ppeMedido
-                            ? "Resultado da detecção visual."
+                            ? (
+                                ppeResumo
+                                    .capacete
+                                    .detalhe ||
+                                "Resultado da detecção visual."
+                            )
                             : "Sem medição visual válida."
                     }
                     tom={
@@ -2182,7 +2262,12 @@ function ConfigTesteIaPanel({
                     }
                     detalhe={
                         ppeMedido
-                            ? "Resultado da detecção visual."
+                            ? (
+                                ppeResumo
+                                    .colete
+                                    .detalhe ||
+                                "Resultado da detecção visual."
+                            )
                             : "Sem medição visual válida."
                     }
                     tom={
