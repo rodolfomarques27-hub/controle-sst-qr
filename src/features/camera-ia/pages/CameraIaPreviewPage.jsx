@@ -3632,9 +3632,9 @@ function DecisaoOperadorCameraIa({
             rotulo:
                 "Autorizar acesso",
             classe:
-                "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100",
+                "border-slate-200 bg-emerald-50 text-emerald-800",
             classeAtiva:
-                "border-emerald-600 bg-emerald-600 text-white",
+                "border-slate-200 bg-emerald-600 text-white",
         },
         {
             valor:
@@ -3642,9 +3642,9 @@ function DecisaoOperadorCameraIa({
             rotulo:
                 "Negar acesso",
             classe:
-                "border-red-300 bg-red-50 text-red-800 hover:bg-red-100",
+                "border-slate-200 bg-red-50 text-red-800",
             classeAtiva:
-                "border-red-600 bg-red-600 text-white",
+                "border-slate-200 bg-red-600 text-white",
         },
         {
             valor:
@@ -3652,9 +3652,9 @@ function DecisaoOperadorCameraIa({
             rotulo:
                 "Manter em conferência",
             classe:
-                "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100",
+                "border-slate-200 bg-amber-50 text-amber-800",
             classeAtiva:
-                "border-amber-500 bg-amber-500 text-white",
+                "border-slate-200 bg-amber-500 text-white",
         },
     ];
 
@@ -3909,7 +3909,7 @@ function DecisaoOperadorCameraIa({
                             null
                         );
                     }}
-                    className="mt-2 w-full resize-y rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+                    className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition disabled:cursor-not-allowed"
                 />
             </div>
 
@@ -3967,7 +3967,7 @@ function DecisaoOperadorCameraIa({
                     onClick={
                         registrarDecisao
                     }
-                    className="rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-black text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-black text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     {registrando
                         ? "Registrando..."
@@ -4167,7 +4167,7 @@ export function CameraIaPreviewPage({
                         Laboratório DEV · simulações e homologação visual
                     </summary>
 
-                    <div className="space-y-4 border-t border-indigo-100 bg-indigo-50/30 p-4 sm:p-5">
+                    <div className="space-y-4 border-t border-indigo-100 bg-indigo-50/40 p-4 sm:p-5">
                         <div className="rounded-2xl border border-indigo-200 bg-white px-4 py-3">
                             <p className="text-xs font-black uppercase tracking-[0.08em] text-indigo-800">
                                 Área isolada de desenvolvimento
