@@ -31,6 +31,10 @@ import {
     createRtspSession,
 } from "./rtsp/rtspSession.mjs";
 
+import {
+    createOperationalTelemetryRuntime,
+} from "./http/operationalTelemetryRuntime.mjs";
+
 function requireCameraId(
     cameraId,
 ) {
@@ -939,6 +943,32 @@ async function runMain() {
     const runtime =
         await startGateway();
 
+    const operationalTelemetry =
+        process.env
+            .SAFESCAN_OPERATIONAL_TELEMETRY_ENABLE ===
+        "1"
+            ? createOperationalTelemetryRuntime({
+                runtime,
+                env:
+                    process.env,
+            })
+            : null;
+
+    if (operationalTelemetry) {
+        await operationalTelemetry.start();
+
+        runtime.logger.info(
+            "vision.gateway.operational_telemetry_started",
+            {
+                cameraId:
+                    runtime.config
+                        .camera
+                        ?.id ??
+                    null,
+            },
+        );
+    }
+
     let stopping =
         false;
 
@@ -959,6 +989,20 @@ async function runMain() {
                     signal,
                 },
             );
+
+            if (operationalTelemetry) {
+                try {
+                    await operationalTelemetry.stop();
+                }
+                catch (error) {
+                    runtime.logger.error(
+                        "vision.gateway.operational_telemetry_stop_failed",
+                        {
+                            error,
+                        },
+                    );
+                }
+            }
 
             for (
                 const cameraId of
