@@ -371,6 +371,39 @@ export const MATRIZ_COMERCIAL_MODULOS_SAFESCAN =
                         "relatorios.exportacoes_avancadas",
                     ]),
             }),
+        controle_acesso_ia:
+            Object.freeze({
+                chave:
+                    "controle_acesso_ia",
+
+                nome:
+                    "Controle de Acesso IA",
+
+                grupo:
+                    GRUPOS_COMERCIAIS_SAFESCAN
+                        .ADICIONAL,
+
+                obrigatorioPlanoBase:
+                    false,
+
+                gerenciavelContrato:
+                    true,
+
+                telas:
+                    Object.freeze([
+                        "cameraIa",
+                    ]),
+
+                capacidades:
+                    Object.freeze([
+                        "controle_acesso_ia.operacao",
+                        "controle_acesso_ia.camera",
+                        "controle_acesso_ia.epi_visual",
+                        "controle_acesso_ia.documentacao",
+                        "controle_acesso_ia.decisao_assistida",
+                        "controle_acesso_ia.auditoria",
+                    ]),
+            }),
     });
 
 export const APRESENTACAO_PLANO_BASE_SAFESCAN =
