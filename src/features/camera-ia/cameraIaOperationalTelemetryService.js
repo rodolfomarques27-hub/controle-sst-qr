@@ -4,6 +4,9 @@ const UUID =
 const STALE_AFTER_MS =
     15000;
 
+const CLOCK_SKEW_TOLERANCE_MS =
+    30000;
+
 function safeCount(
     value,
 ) {
@@ -113,9 +116,11 @@ export function normalizarTelemetriaOperacionalCameraIa(
         receivedAt;
 
     const fresh =
-        age >= 0 &&
+        age >=
+            -CLOCK_SKEW_TOLERANCE_MS &&
         age <=
-            STALE_AFTER_MS;
+            STALE_AFTER_MS +
+            CLOCK_SKEW_TOLERANCE_MS;
 
     const cameraStatus =
         fresh

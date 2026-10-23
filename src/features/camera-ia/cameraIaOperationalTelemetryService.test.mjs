@@ -173,3 +173,59 @@ test(
         );
     },
 );
+
+test(
+    "aceita telemetria com relogio cliente ate 30 segundos atrasado",
+    () => {
+        const result =
+            normalizarTelemetriaOperacionalCameraIa(
+                row(),
+                Date.parse(
+                    "2026-10-22T15:59:39.000Z",
+                ),
+            );
+
+        assert.equal(
+            result.framesRecent,
+            true,
+        );
+
+        assert.equal(
+            result.cameraStatus,
+            "FRAMES_RECENT",
+        );
+
+        assert.equal(
+            result.ppe.status,
+            "PPE_DETECTED",
+        );
+    },
+);
+
+test(
+    "aceita janela de frescor com relogio cliente ate 30 segundos adiantado",
+    () => {
+        const result =
+            normalizarTelemetriaOperacionalCameraIa(
+                row(),
+                Date.parse(
+                    "2026-10-22T16:00:54.000Z",
+                ),
+            );
+
+        assert.equal(
+            result.framesRecent,
+            true,
+        );
+
+        assert.equal(
+            result.cameraStatus,
+            "FRAMES_RECENT",
+        );
+
+        assert.equal(
+            result.ppe.status,
+            "PPE_DETECTED",
+        );
+    },
+);
